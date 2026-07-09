@@ -1,0 +1,625 @@
+<title>Crypto Strategy Lab</title>
+<style>
+  :root {
+    --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e;
+    --muted: #898781; --grid: #e1e0d9; --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --s1: #2a78d6; --s2: #1baf7a; --s3: #eda100;
+    --good: #006300; --bad: #d03b3b;
+    --pill-bg: #eef3fb; --hover: rgba(11,11,11,0.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+      --muted: #898781; --grid: #2c2c2a; --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --s1: #3987e5; --s2: #199e70; --s3: #c98500;
+      --good: #0ca30c; --bad: #e66767;
+      --pill-bg: #16273d; --hover: rgba(255,255,255,0.06);
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+    --muted: #898781; --grid: #2c2c2a; --baseline: #383835;
+    --border: rgba(255,255,255,0.10);
+    --s1: #3987e5; --s2: #199e70; --s3: #c98500;
+    --good: #0ca30c; --bad: #e66767;
+    --pill-bg: #16273d; --hover: rgba(255,255,255,0.06);
+  }
+  :root[data-theme="light"] {
+    --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e;
+    --muted: #898781; --grid: #e1e0d9; --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --s1: #2a78d6; --s2: #1baf7a; --s3: #eda100;
+    --good: #006300; --bad: #d03b3b;
+    --pill-bg: #eef3fb; --hover: rgba(11,11,11,0.04);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 24px 20px 64px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 16px; margin-bottom: 6px; }
+  h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  .badge {
+    font-size: 12px; color: var(--ink-2); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px;
+    white-space: nowrap;
+  }
+  .badge b { color: var(--ink); font-weight: 600; }
+  .subtitle { color: var(--ink-2); margin: 0 0 18px; font-size: 14px; max-width: 68ch; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--grid); margin-bottom: 20px; overflow-x: auto; }
+  .tabs button {
+    appearance: none; background: none; border: none; cursor: pointer;
+    font: 600 12px/1 system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); padding: 10px 12px 12px; border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  .tabs button:hover { color: var(--ink-2); background: var(--hover); }
+  .tabs button:focus-visible { outline: 2px solid var(--s1); outline-offset: -2px; }
+  .tabs button.active { color: var(--ink); border-bottom-color: var(--s1); }
+  section { display: none; }
+  section.active { display: block; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 4px; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+  .note { font-size: 13px; color: var(--ink-2); max-width: 70ch; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin: 10px 0 14px; }
+  .controls label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-2); }
+  select, input[type="number"] {
+    font: 14px system-ui, sans-serif; color: var(--ink); background: var(--page);
+    border: 1px solid var(--baseline); border-radius: 6px; padding: 7px 9px; min-width: 110px;
+  }
+  select:focus-visible, input:focus-visible, .btn:focus-visible { outline: 2px solid var(--s1); outline-offset: 1px; }
+  .btn {
+    font: 600 13px system-ui, sans-serif; color: #fff; background: var(--s1);
+    border: none; border-radius: 6px; padding: 9px 16px; cursor: pointer;
+  }
+  .btn.secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--baseline); }
+  .btn:hover { filter: brightness(1.08); }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+  th:first-child, td:first-child { text-align: left; }
+  td { font-variant-numeric: tabular-nums; }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover td { background: var(--hover); }
+  .up { color: var(--good); } .down { color: var(--bad); }
+  .chip { display: inline-block; font-size: 12px; border: 1px solid var(--border); background: var(--page); border-radius: 999px; padding: 1px 9px; color: var(--ink-2); }
+  .readings { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 14px 0; }
+  .reading { background: var(--page); border: 1px solid var(--border); border-radius: 6px; padding: 9px 11px; }
+  .reading .k { font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+  .reading .v { font-size: 14px; font-weight: 600; margin-top: 2px; }
+  .chart { position: relative; margin: 8px 0 4px; }
+  .chart svg { display: block; width: 100%; height: auto; }
+  .tooltip {
+    position: absolute; pointer-events: none; display: none; z-index: 5;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 10px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .tooltip .d { color: var(--muted); margin-bottom: 3px; }
+  .tooltip .row { display: flex; align-items: center; gap: 6px; }
+  .tooltip .sw { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--ink-2); margin-top: 6px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .verdict { border-left: 3px solid var(--s1); padding: 8px 14px; background: var(--page); border-radius: 0 6px 6px 0; font-size: 14px; margin-top: 14px; max-width: 75ch; }
+  .disclaimer { font-size: 12.5px; color: var(--muted); margin-top: 26px; max-width: 75ch; }
+  .learn h3 { font-size: 14.5px; margin: 18px 0 6px; }
+  .learn p, .learn li { font-size: 14px; color: var(--ink-2); max-width: 70ch; }
+  @media (prefers-reduced-motion: no-preference) {
+    .tabs button, .btn, tr.clickable td { transition: background 0.12s ease, color 0.12s ease; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Crypto Strategy Lab</h1>
+    <span class="badge">Data <b id="freshness"></b> · daily closes · EUR · CoinGecko</span>
+    <span class="badge">Read-only — <b>no real money</b></span>
+  </header>
+  <p class="subtitle">Study how strategies would have performed on real historical prices.
+    Everything here describes the past — nothing on this page predicts, recommends, or trades.</p>
+
+  <nav class="tabs" role="tablist">
+    <button class="active" data-tab="scan">Market Scan</button>
+    <button data-tab="backtest">Backtest Lab</button>
+    <button data-tab="grid">Grid</button>
+    <button data-tab="paper">Paper Portfolio</button>
+    <button data-tab="learn">Learn</button>
+  </nav>
+
+  <section id="tab-scan" class="active">
+    <div class="card">
+      <p class="eyebrow">Indicator readings — descriptive, not advice</p>
+      <h2>All markets at a glance</h2>
+      <p class="note">Computed from 365 days of daily closes with a unit-tested indicator engine
+        (trend from 50/200-day averages, momentum from 14-day RSI, MACD, volatility from 30-day returns,
+        volume vs its 20-day average). Click a row for the full reading.</p>
+      <div class="tablewrap"><table id="scan-table"></table></div>
+    </div>
+    <div class="card" id="scan-detail" hidden></div>
+  </section>
+
+  <section id="tab-backtest">
+    <div class="card">
+      <p class="eyebrow">Historical simulation</p>
+      <h2>Strategy vs. strategy on real past prices</h2>
+      <div class="controls">
+        <label>Asset <select id="bt-coin"></select></label>
+        <label>Window <select id="bt-days">
+          <option value="90">Last 90 days</option>
+          <option value="180">Last 180 days</option>
+          <option value="365" selected>Last 365 days</option>
+        </select></label>
+        <label>Starting capital (€) <input type="number" id="bt-capital" value="1000" min="10" step="10"></label>
+        <button class="btn" id="bt-run">Run backtest</button>
+      </div>
+      <div id="bt-output"></div>
+    </div>
+  </section>
+
+  <section id="tab-grid">
+    <div class="card">
+      <p class="eyebrow">Historical simulation — local engine, daily closes</p>
+      <h2>Grid strategy</h2>
+      <p class="note">Splits capital into equal lots across evenly spaced price levels: a lot buys when price
+        falls through its level and sells when price recovers to the level above. Simulated by our own
+        tested engine on daily closes, so intraday fills are not captured — treat results as approximate.</p>
+      <div class="controls">
+        <label>Asset <select id="gr-coin"></select></label>
+        <label>Window <select id="gr-days">
+          <option value="30">Last 30 days</option>
+          <option value="90" selected>Last 90 days</option>
+          <option value="180">Last 180 days</option>
+        </select></label>
+        <label>Range around start (±%) <input type="number" id="gr-range" value="10" min="2" max="50" step="1"></label>
+        <label>Levels <input type="number" id="gr-levels" value="5" min="3" max="11" step="1"></label>
+        <label>Capital (€) <input type="number" id="gr-capital" value="1000" min="10" step="10"></label>
+        <button class="btn" id="gr-run">Run grid</button>
+      </div>
+      <div id="gr-output"></div>
+    </div>
+  </section>
+
+  <section id="tab-paper">
+    <div class="card">
+      <p class="eyebrow">Practice with fake money</p>
+      <h2>Paper portfolio</h2>
+      <p class="note">You start with €1,000 of pretend money. Trades execute at the latest daily close in this
+        page's dataset (see the date in the header) — prices are frozen at publish time, so this is for
+        practicing the mechanics and record-keeping, not live trading. Your portfolio is saved in this browser.</p>
+      <div class="controls">
+        <label>Asset <select id="pp-coin"></select></label>
+        <label>Amount (€) <input type="number" id="pp-amount" value="100" min="1" step="1"></label>
+        <button class="btn" id="pp-buy">Buy</button>
+        <button class="btn secondary" id="pp-sell">Sell</button>
+        <button class="btn secondary" id="pp-reset">Reset portfolio</button>
+      </div>
+      <div id="pp-output"></div>
+    </div>
+  </section>
+
+  <section id="tab-learn" class="learn">
+    <div class="card">
+      <p class="eyebrow">The honest basics</p>
+      <h2>What this lab can and cannot tell you</h2>
+      <h3>Backtests describe the past, not the future</h3>
+      <p>A strategy that beat buy-and-hold over the last year did so in one specific market. The next year
+        is a different market. Professionals treat a good backtest as a reason to keep testing —
+        out-of-sample, across assets, across time windows — never as proof.</p>
+      <h3>Most strategies do not beat simply holding</h3>
+      <p>After fees, spreads, and mistimed entries, most rule-based retail strategies underperform doing
+        nothing. When a backtest here shows a strategy winning, check its maximum drawdown too:
+        a higher return with a much deeper drawdown is not a better strategy, it is a riskier one.</p>
+      <h3>Indicators describe, they don't predict</h3>
+      <p>"Oversold" (RSI below 30) means price fell hard recently — it does not mean price must bounce.
+        Markets that crash get more oversold. Every reading in the Market Scan is a description of what
+        already happened.</p>
+      <h3>Risk management is the only part you control</h3>
+      <p>You cannot control returns. You can control position size (never risk more than a small
+        fraction on one idea), diversification, and having a written plan for when you are wrong.
+        That is what separates investing from gambling.</p>
+      <h3>The safe path to ever trading live</h3>
+      <p>1) Learn the mechanics with paper trading. 2) Backtest ideas and study drawdowns.
+        3) Validate out-of-sample. 4) If ever going live: tiny size, hard stop-losses,
+        human confirmation on every order, and money you can afford to lose entirely.</p>
+    </div>
+  </section>
+
+  <p class="disclaimer">This tool is educational. It is not financial advice, it does not predict prices,
+    and it cannot place orders. Cryptocurrency is highly volatile; you can lose everything you put in.
+    Historical data: CoinGecko public API, daily closes, EUR.</p>
+</div>
+
+<script>
+(function () {
+/*__INDICATORS__*/
+})();
+</script>
+<script>
+(function () {
+/*__STRATEGY__*/
+})();
+</script>
+<script>
+const DATASET = /*__DATASET__*/;
+</script>
+<script>
+(function () {
+  'use strict';
+  const I = window.Indicators, S = window.Strategy;
+  const coins = DATASET.coins;
+  const $ = id => document.getElementById(id);
+
+  /* ---------- formatting ---------- */
+  const eur = v => '€' + v.toLocaleString('en-IE', {
+    minimumFractionDigits: v < 10 ? 4 : 2, maximumFractionDigits: v < 10 ? 4 : 2 });
+  const eur0 = v => '€' + v.toLocaleString('en-IE', { maximumFractionDigits: 0 });
+  const pct = (v, dp = 1) => v === null ? '—' :
+    (v > 0 ? '+' : '') + v.toFixed(dp) + '%';
+  const pctCls = v => v === null ? '' : v >= 0 ? 'up' : 'down';
+
+  $('freshness').textContent = DATASET.generatedAt.slice(0, 10);
+
+  /* ---------- tabs ---------- */
+  document.querySelectorAll('.tabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+      btn.classList.add('active');
+      $('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  /* ---------- coin selects ---------- */
+  ['bt-coin', 'gr-coin', 'pp-coin'].forEach(id => {
+    const sel = $(id);
+    coins.forEach((c, i) => {
+      const o = document.createElement('option');
+      o.value = i; o.textContent = c.symbol + ' · ' + c.name;
+      sel.appendChild(o);
+    });
+  });
+
+  /* ---------- SVG line chart with crosshair tooltip ---------- */
+  const NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  /* series: [{name, colorVar, values}], values may contain nulls; dates aligned */
+  function lineChart(container, dates, series, opts = {}) {
+    container.innerHTML = '';
+    container.className = 'chart';
+    const W = 900, H = opts.height || 300, padL = 64, padR = 96, padT = 14, padB = 26;
+    const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img',
+      'aria-label': opts.label || 'line chart' });
+    const all = series.flatMap(s => s.values.filter(v => v !== null));
+    let min = Math.min(...all), max = Math.max(...all);
+    if (min === max) { min -= 1; max += 1; }
+    const span = max - min; min -= span * 0.04; max += span * 0.04;
+    const x = i => padL + (W - padL - padR) * (i / Math.max(dates.length - 1, 1));
+    const y = v => padT + (H - padT - padB) * (1 - (v - min) / (max - min));
+
+    // horizontal grid + y labels
+    for (let t = 0; t <= 4; t++) {
+      const v = min + (max - min) * t / 4, yy = y(v);
+      svg.appendChild(svgEl('line', { x1: padL, x2: W - padR, y1: yy, y2: yy,
+        stroke: css('--grid'), 'stroke-width': 1 }));
+      const lab = svgEl('text', { x: padL - 8, y: yy + 4, 'text-anchor': 'end',
+        'font-size': 11, fill: css('--muted') });
+      lab.textContent = opts.fmt ? opts.fmt(v) : v.toFixed(0);
+      svg.appendChild(lab);
+    }
+    // x labels: 4 evenly spaced dates
+    for (let t = 0; t <= 3; t++) {
+      const i = Math.round((dates.length - 1) * t / 3);
+      const lab = svgEl('text', { x: x(i), y: H - 8, 'text-anchor': t === 0 ? 'start' : t === 3 ? 'end' : 'middle',
+        'font-size': 11, fill: css('--muted') });
+      lab.textContent = dates[i];
+      svg.appendChild(lab);
+    }
+    // series lines + direct end labels (nudged apart if they collide)
+    const endLabels = [];
+    series.forEach(s => {
+      const color = css(s.colorVar);
+      let d = '', pen = false;
+      s.values.forEach((v, i) => {
+        if (v === null) { pen = false; return; }
+        d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1);
+        pen = true;
+      });
+      svg.appendChild(svgEl('path', { d, fill: 'none', stroke: color,
+        'stroke-width': 2, 'stroke-linejoin': 'round' }));
+      let li = s.values.length - 1;
+      while (li >= 0 && s.values[li] === null) li--;
+      if (li >= 0) endLabels.push({ name: s.name, color, y: y(s.values[li]) + 4 });
+    });
+    endLabels.sort((a, b) => a.y - b.y);
+    for (let k = 1; k < endLabels.length; k++) {
+      if (endLabels[k].y - endLabels[k - 1].y < 14) endLabels[k].y = endLabels[k - 1].y + 14;
+    }
+    endLabels.forEach(l => {
+      const lab = svgEl('text', { x: W - padR + 8, y: l.y,
+        'font-size': 11.5, 'font-weight': 600, fill: l.color });
+      lab.textContent = l.name;
+      svg.appendChild(lab);
+    });
+    // crosshair + tooltip
+    const cross = svgEl('line', { y1: padT, y2: H - padB, stroke: css('--baseline'),
+      'stroke-width': 1, 'stroke-dasharray': '3 3', visibility: 'hidden' });
+    svg.appendChild(cross);
+    const tip = document.createElement('div');
+    tip.className = 'tooltip';
+    container.appendChild(svg);
+    container.appendChild(tip);
+    svg.addEventListener('mousemove', ev => {
+      const r = svg.getBoundingClientRect();
+      const mx = (ev.clientX - r.left) * W / r.width;
+      const i = Math.max(0, Math.min(dates.length - 1,
+        Math.round((mx - padL) / (W - padL - padR) * (dates.length - 1))));
+      cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i));
+      cross.setAttribute('visibility', 'visible');
+      let html = '<div class="d">' + dates[i] + '</div>';
+      series.forEach(s => {
+        const v = s.values[i];
+        html += '<div class="row"><span class="sw" style="background:' + css(s.colorVar) + '"></span>'
+          + s.name + ': <b>' + (v === null ? '—' : (opts.fmt ? opts.fmt(v) : v.toFixed(2))) + '</b></div>';
+      });
+      tip.innerHTML = html;
+      tip.style.display = 'block';
+      const left = ev.clientX - r.left;
+      tip.style.left = Math.min(left + 14, r.width - 170) + 'px';
+      tip.style.top = '10px';
+    });
+    svg.addEventListener('mouseleave', () => {
+      cross.setAttribute('visibility', 'hidden'); tip.style.display = 'none';
+    });
+    if (series.length > 1) {
+      const leg = document.createElement('div');
+      leg.className = 'legend';
+      series.forEach(s => {
+        const sp = document.createElement('span');
+        sp.innerHTML = '<i style="background:' + css(s.colorVar) + '"></i>' + s.name;
+        leg.appendChild(sp);
+      });
+      container.appendChild(leg);
+    }
+  }
+
+  function sparkline(values, w = 110, h = 30) {
+    const min = Math.min(...values), max = Math.max(...values);
+    const x = i => 2 + (w - 4) * i / (values.length - 1);
+    const y = v => 2 + (h - 4) * (1 - (max === min ? 0.5 : (v - min) / (max - min)));
+    let d = '';
+    values.forEach((v, i) => { d += (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); });
+    return '<svg width="' + w + '" height="' + h + '" aria-hidden="true">'
+      + '<path d="' + d + '" fill="none" stroke="' + css('--s1') + '" stroke-width="1.5"/></svg>';
+  }
+
+  /* ---------- Market Scan ---------- */
+  const analyses = coins.map(c => I.analyzeMarket(c.closes, c.volumes));
+  function renderScan() {
+    const t = $('scan-table');
+    let html = '<thead><tr><th>Asset</th><th>Price</th><th>7d</th><th>30d</th>'
+      + '<th>Trend</th><th>Momentum (RSI)</th><th>Volatility</th><th>90d</th></tr></thead><tbody>';
+    coins.forEach((c, i) => {
+      const a = analyses[i];
+      html += '<tr class="clickable" tabindex="0" role="button" data-i="' + i + '">'
+        + '<td><b>' + c.symbol + '</b> <span style="color:var(--muted)">' + c.name + '</span></td>'
+        + '<td>' + eur(a.price) + '</td>'
+        + '<td class="' + pctCls(a.change7d) + '">' + pct(a.change7d) + '</td>'
+        + '<td class="' + pctCls(a.change30d) + '">' + pct(a.change30d) + '</td>'
+        + '<td><span class="chip">' + a.trend + '</span></td>'
+        + '<td><span class="chip">' + a.momentum + '</span> ' + (a.rsi === null ? '' : a.rsi.toFixed(0)) + '</td>'
+        + '<td><span class="chip">' + a.volatilityRegime + '</span></td>'
+        + '<td>' + sparkline(c.closes.slice(-90)) + '</td></tr>';
+    });
+    t.innerHTML = html + '</tbody>';
+    t.querySelectorAll('tr.clickable').forEach(tr => {
+      const open = () => renderScanDetail(+tr.dataset.i);
+      tr.addEventListener('click', open);
+      tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    });
+  }
+  function renderScanDetail(i) {
+    const c = coins[i], a = analyses[i];
+    const box = $('scan-detail');
+    box.hidden = false;
+    const bbTxt = a.bollingerPosition === null ? '—'
+      : (a.bollingerPosition * 100).toFixed(0) + '% of band';
+    box.innerHTML = '<p class="eyebrow">Full reading — descriptive, not advice</p>'
+      + '<h2>' + c.name + ' (' + c.symbol + '/EUR)</h2>'
+      + '<div class="chart" id="scan-chart"></div>'
+      + '<div class="readings">'
+      + '<div class="reading"><div class="k">Price</div><div class="v">' + eur(a.price) + '</div></div>'
+      + '<div class="reading"><div class="k">Trend (50/200d)</div><div class="v">' + a.trend + '</div></div>'
+      + '<div class="reading"><div class="k">RSI 14</div><div class="v">' + (a.rsi === null ? '—' : a.rsi.toFixed(1) + ' · ' + a.momentum) + '</div></div>'
+      + '<div class="reading"><div class="k">MACD</div><div class="v">' + a.macdState + '</div></div>'
+      + '<div class="reading"><div class="k">Bollinger position</div><div class="v">' + bbTxt + '</div></div>'
+      + '<div class="reading"><div class="k">Volatility (30d, ann.)</div><div class="v">'
+        + (a.volatility30d === null ? '—' : a.volatility30d.toFixed(0) + '% · ' + a.volatilityRegime) + '</div></div>'
+      + '<div class="reading"><div class="k">Volume vs 20d avg</div><div class="v">'
+        + (a.volumeRatio === null ? '—' : (a.volumeRatio * 100).toFixed(0) + '%') + '</div></div>'
+      + '<div class="reading"><div class="k">Worst drawdown, 1y</div><div class="v down">−'
+        + a.maxDrawdown365.toFixed(1) + '%</div></div>'
+      + '</div>'
+      + '<p class="note">' + describe(c, a) + '</p>';
+    const sma50 = I.sma(c.closes, 50), sma200 = I.sma(c.closes, 200);
+    lineChart($('scan-chart'), c.dates, [
+      { name: 'Price', colorVar: '--s1', values: c.closes },
+      { name: 'SMA 50', colorVar: '--s2', values: sma50 },
+      { name: 'SMA 200', colorVar: '--s3', values: sma200 },
+    ], { fmt: v => v < 10 ? v.toFixed(3) : Math.round(v).toLocaleString(), label: c.symbol + ' price with moving averages', height: 300 });
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function describe(c, a) {
+    const parts = [];
+    parts.push(c.symbol + ' closed at ' + eur(a.price) + ', '
+      + pct(a.change30d) + ' over 30 days.');
+    parts.push('Price is in a ' + a.trend + ' by the 50/200-day average test, momentum reads '
+      + a.momentum + ' (RSI ' + (a.rsi === null ? '—' : a.rsi.toFixed(0)) + '), and MACD is ' + a.macdState + '.');
+    parts.push('30-day volatility annualizes to ' + (a.volatility30d === null ? '—' : a.volatility30d.toFixed(0))
+      + '% — ' + a.volatilityRegime + ' for crypto. Over the past year the worst peak-to-trough fall was −'
+      + a.maxDrawdown365.toFixed(0) + '%.');
+    parts.push('These are observations about the past, not signals about the future.');
+    return parts.join(' ');
+  }
+  renderScan();
+
+  /* ---------- Backtest Lab ---------- */
+  function runBacktest() {
+    const c = coins[+$('bt-coin').value];
+    const days = +$('bt-days').value;
+    const capital = Math.max(10, +$('bt-capital').value || 1000);
+    const closes = c.closes.slice(-days), dates = c.dates.slice(-days);
+    const runs = [
+      { name: 'Buy & Hold', colorVar: '--s1', r: S.buyHold(closes, capital) },
+      { name: 'DCA weekly', colorVar: '--s2', r: S.dca(closes, capital, 7) },
+      { name: 'Trend 20/50', colorVar: '--s3', r: S.trendFollow(closes, capital, 20, 50) },
+    ];
+    const out = $('bt-output');
+    out.innerHTML = '<div class="chart" id="bt-chart"></div>'
+      + '<div class="tablewrap"><table><thead><tr><th>Strategy</th><th>Final value</th>'
+      + '<th>Return</th><th>Max drawdown</th><th>Trades</th></tr></thead><tbody>'
+      + runs.map(x => '<tr><td><b>' + x.name + '</b></td><td>' + eur0(x.r.finalValue) + '</td>'
+        + '<td class="' + pctCls(x.r.returnPct) + '">' + pct(x.r.returnPct) + '</td>'
+        + '<td class="down">−' + x.r.maxDrawdownPct.toFixed(1) + '%</td>'
+        + '<td>' + x.r.trades + '</td></tr>').join('')
+      + '</tbody></table></div>'
+      + '<div class="verdict">' + verdict(c, runs, days) + '</div>';
+    lineChart($('bt-chart'), dates, runs.map(x => ({
+      name: x.name, colorVar: x.colorVar, values: x.r.equity })),
+      { fmt: v => '€' + Math.round(v).toLocaleString(), label: 'equity curves', height: 300 });
+  }
+  function verdict(c, runs, days) {
+    const sorted = [...runs].sort((a, b) => b.r.returnPct - a.r.returnPct);
+    const best = sorted[0], hold = runs[0];
+    let s = 'Over these ' + days + ' days of real ' + c.symbol + '/EUR history, <b>' + best.name
+      + '</b> came out ahead (' + pct(best.r.returnPct) + ' vs ' + pct(hold.r.returnPct)
+      + ' for buy &amp; hold), with a worst drawdown of −' + best.r.maxDrawdownPct.toFixed(1) + '%.';
+    if (best.r.returnPct <= 0) s += ' Note that <b>every strategy lost money</b> in this window — a falling market punishes them all.';
+    s += ' This is one asset over one past window. It says nothing about the next ' + days + ' days.';
+    return s;
+  }
+  $('bt-run').addEventListener('click', runBacktest);
+  runBacktest();
+
+  /* ---------- Grid ---------- */
+  function runGrid() {
+    const c = coins[+$('gr-coin').value];
+    const days = +$('gr-days').value;
+    const rangePct = Math.min(50, Math.max(2, +$('gr-range').value || 10));
+    const levels = Math.min(11, Math.max(3, +$('gr-levels').value || 5));
+    const capital = Math.max(10, +$('gr-capital').value || 1000);
+    const closes = c.closes.slice(-days), dates = c.dates.slice(-days);
+    const start = closes[0];
+    const lower = start * (1 - rangePct / 100), upper = start * (1 + rangePct / 100);
+    const grid = S.gridBacktest(closes, capital, lower, upper, levels);
+    const hold = S.buyHold(closes, capital);
+    const out = $('gr-output');
+    out.innerHTML = '<div class="chart" id="gr-chart"></div>'
+      + '<div class="tablewrap"><table><thead><tr><th>Strategy</th><th>Final value</th>'
+      + '<th>Return</th><th>Max drawdown</th><th>Trades</th></tr></thead><tbody>'
+      + [['Grid ±' + rangePct + '% · ' + levels + ' levels', grid], ['Buy & Hold', hold]]
+        .map(([n, r]) => '<tr><td><b>' + n + '</b></td><td>' + eur0(r.finalValue) + '</td>'
+        + '<td class="' + pctCls(r.returnPct) + '">' + pct(r.returnPct) + '</td>'
+        + '<td class="down">−' + r.maxDrawdownPct.toFixed(1) + '%</td><td>' + r.trades + '</td></tr>').join('')
+      + '</tbody></table></div>'
+      + '<div class="verdict">Grid range ' + eur(lower) + ' – ' + eur(upper) + ' around the window\'s starting price. '
+      + (grid.trades === 0 ? 'Price never crossed a grid level in this window, so no trades happened. '
+        : grid.trades + ' simulated fills. ')
+      + 'Grids earn from sideways chop and lose when price trends out of the range — check both rows above. Past window only.</div>';
+    lineChart($('gr-chart'), dates, [
+      { name: 'Grid equity', colorVar: '--s1', values: grid.equity },
+      { name: 'Buy & Hold', colorVar: '--s2', values: hold.equity },
+    ], { fmt: v => '€' + Math.round(v).toLocaleString(), label: 'grid vs hold equity', height: 280 });
+  }
+  $('gr-run').addEventListener('click', runGrid);
+  runGrid();
+
+  /* ---------- Paper Portfolio ---------- */
+  const PP_KEY = 'paper-portfolio-v2';
+  function ppLoad() {
+    try {
+      const p = JSON.parse(localStorage.getItem(PP_KEY));
+      if (p && typeof p.cash === 'number' && p.holdings) return p;
+    } catch (e) { /* fall through */ }
+    return { cash: 1000, holdings: {}, history: [] };
+  }
+  function ppSave(p) { localStorage.setItem(PP_KEY, JSON.stringify(p)); }
+  function lastPrice(sym) {
+    const c = coins.find(x => x.symbol === sym);
+    return c.closes[c.closes.length - 1];
+  }
+  function ppRender() {
+    const p = ppLoad();
+    let mkt = 0;
+    const rows = Object.entries(p.holdings).filter(([, u]) => u > 1e-12).map(([sym, units]) => {
+      const px = lastPrice(sym), val = units * px;
+      mkt += val;
+      const cost = p.history.filter(h => h.sym === sym)
+        .reduce((a, h) => a + (h.side === 'buy' ? h.eur : -h.eur), 0);
+      return '<tr><td><b>' + sym + '</b></td><td>' + units.toFixed(6) + '</td>'
+        + '<td>' + eur(px) + '</td><td>' + eur0(val) + '</td>'
+        + '<td class="' + (val - cost >= 0 ? 'up' : 'down') + '">' + pct(cost > 0 ? (val / cost - 1) * 100 : null) + '</td></tr>';
+    });
+    const total = p.cash + mkt;
+    const ret = (total / 1000 - 1) * 100;
+    $('pp-output').innerHTML =
+      '<div class="readings">'
+      + '<div class="reading"><div class="k">Total value</div><div class="v">' + eur0(total) + '</div></div>'
+      + '<div class="reading"><div class="k">Cash</div><div class="v">' + eur0(p.cash) + '</div></div>'
+      + '<div class="reading"><div class="k">In positions</div><div class="v">' + eur0(mkt) + '</div></div>'
+      + '<div class="reading"><div class="k">P&amp;L since start</div><div class="v ' + (ret >= 0 ? 'up' : 'down') + '">' + pct(ret) + '</div></div>'
+      + '</div>'
+      + (rows.length
+        ? '<div class="tablewrap"><table><thead><tr><th>Asset</th><th>Units</th><th>Price</th><th>Value</th><th>P&amp;L vs cost</th></tr></thead><tbody>'
+          + rows.join('') + '</tbody></table></div>'
+        : '<p class="note">No positions yet. Pick an asset and amount above, then press Buy.</p>')
+      + (p.history.length
+        ? '<p class="eyebrow" style="margin-top:16px">Trade history</p><div class="tablewrap"><table><thead><tr><th>When</th><th>Side</th><th>Asset</th><th>Amount</th><th>Price</th></tr></thead><tbody>'
+          + p.history.slice().reverse().map(h => '<tr><td>' + h.ts + '</td><td>' + h.side.toUpperCase()
+            + '</td><td>' + h.sym + '</td><td>' + eur0(h.eur) + '</td><td>' + eur(h.px) + '</td></tr>').join('')
+          + '</tbody></table></div>'
+        : '');
+  }
+  function ppTrade(side) {
+    const p = ppLoad();
+    const c = coins[+$('pp-coin').value];
+    const eurAmt = Math.max(1, +$('pp-amount').value || 0);
+    const px = lastPrice(c.symbol);
+    if (side === 'buy') {
+      if (eurAmt > p.cash + 1e-9) { alert('Not enough paper cash: you have ' + eur0(p.cash) + '.'); return; }
+      p.cash -= eurAmt;
+      p.holdings[c.symbol] = (p.holdings[c.symbol] || 0) + eurAmt / px;
+    } else {
+      const units = p.holdings[c.symbol] || 0;
+      const unitsToSell = eurAmt / px;
+      if (unitsToSell > units + 1e-12) {
+        alert('You only hold ' + eur0(units * px) + ' of ' + c.symbol + '.'); return;
+      }
+      p.holdings[c.symbol] = units - unitsToSell;
+      p.cash += eurAmt;
+    }
+    p.history.push({ ts: new Date().toISOString().slice(0, 16).replace('T', ' '), side, sym: c.symbol, eur: eurAmt, px });
+    ppSave(p); ppRender();
+  }
+  $('pp-buy').addEventListener('click', () => ppTrade('buy'));
+  $('pp-sell').addEventListener('click', () => ppTrade('sell'));
+  $('pp-reset').addEventListener('click', () => {
+    if (confirm('Reset the paper portfolio back to €1,000?')) { localStorage.removeItem(PP_KEY); ppRender(); }
+  });
+  ppRender();
+})();
+</script>
