@@ -186,5 +186,33 @@ function close(a, b, eps = 1e-9) {
   check('grid invalid throws', (() => { try { S.gridBacktest([1], 100, 110, 90, 3); return false; } catch { return true; } })());
 }
 
+/* ---------- ATR (Wilder) ---------- */
+{
+  // period 2: TR1 = max(11-9,|11-9|,|9-9|) = 2; TR2 = max(12-10,|12-10|,|10-10|) = 2
+  // ATR[2] = mean(TR1,TR2) = 2
+  const r = I.atr([10, 11, 12], [8, 9, 10], [9, 10, 11], 2);
+  check('atr known value', close(r[2], 2));
+  check('atr warmup nulls', r[0] === null && r[1] === null);
+  check('atr length preserved', r.length === 3);
+
+  // Gap day dominates: TR at idx1 = max(14-12, |14-9.5|, |12-9.5|) = 4.5
+  // period 1 -> ATR[1] = 4.5, ATR[2] = (4.5*0 + TR2)/1 = TR2 = max(1, |13.5-13|, |12.5-13|) = 1
+  const r2 = I.atr([10, 14, 13.5], [9, 12, 12.5], [9.5, 13, 13.2], 1);
+  check('atr gap true range', close(r2[1], 4.5));
+
+  // Wilder smoothing, period 2: TR3 = max(18-12, |18-11|, |12-11|) = 7
+  // ATR[2] = 2, ATR[3] = (2*1 + 7)/2 = 4.5
+  const r3 = I.atr([10, 11, 12, 18], [8, 9, 10, 12], [9, 10, 11, 17], 2);
+  check('atr wilder smoothing', close(r3[3], 4.5));
+
+  // Close-only degradation: h=l=c -> TR = |c - prevC|
+  const c = [100, 102, 99, 99];
+  const r4 = I.atr(c, c, c, 2);
+  check('atr close-only equals mean abs delta', close(r4[2], (2 + 3) / 2)); // TRs: 2,3
+  check('atr close-only smoothing', close(r4[3], (2.5 * 1 + 0) / 2));
+  check('atr flat series is zero', close(I.atr([5,5,5,5],[5,5,5,5],[5,5,5,5], 2)[3], 0));
+  check('atr short input all null', I.atr([1,2],[1,2],[1,2], 5).every(v => v === null));
+}
+
 console.log(`\n${pass} passed, ${fail} failed, ${pass + fail} total`);
 process.exit(fail === 0 ? 0 : 1);
