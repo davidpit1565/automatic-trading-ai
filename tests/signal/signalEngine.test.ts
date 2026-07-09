@@ -14,7 +14,6 @@ import {
   evaluateScan,
   generateSignals,
   MAX_CONFIDENCE,
-  positionSize,
 } from '../../src/core/signal/signalEngine';
 
 const ANCHOR = 1_700_000_000_000;
@@ -192,47 +191,7 @@ describe('evaluateScan — rejections', () => {
   });
 });
 
-describe('positionSize', () => {
-  it('sizes so that the stop-loss loss equals the risked amount', () => {
-    const result = positionSize({
-      accountEquity: 10_000,
-      riskPerTradePct: 1,
-      entry: 100,
-      stopLoss: 95,
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.value.riskAmount).toBeCloseTo(100, 10);
-    expect(result.value.quantity).toBeCloseTo(20, 10); // 100 / (100 - 95)
-    expect(result.value.notional).toBeCloseTo(2_000, 10);
-    expect(result.value.cappedByMaxPosition).toBe(false);
-  });
-
-  it('caps the position at the configured share of equity', () => {
-    const result = positionSize({
-      accountEquity: 10_000,
-      riskPerTradePct: 1,
-      entry: 100,
-      stopLoss: 99.5, // tight stop would imply 20,000 notional
-      maxPositionPct: 10,
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.value.notional).toBeCloseTo(1_000, 10);
-    expect(result.value.quantity).toBeCloseTo(10, 10);
-    expect(result.value.cappedByMaxPosition).toBe(true);
-  });
-
-  it('rejects invalid inputs', () => {
-    const base = { accountEquity: 10_000, riskPerTradePct: 1, entry: 100, stopLoss: 95 };
-    expect(positionSize({ ...base, accountEquity: 0 }).ok).toBe(false);
-    expect(positionSize({ ...base, riskPerTradePct: 0 }).ok).toBe(false);
-    expect(positionSize({ ...base, riskPerTradePct: 101 }).ok).toBe(false);
-    expect(positionSize({ ...base, stopLoss: 100 }).ok).toBe(false); // stop at entry
-    expect(positionSize({ ...base, stopLoss: 105 }).ok).toBe(false); // stop above entry
-    expect(positionSize({ ...base, entry: -1 }).ok).toBe(false);
-  });
-});
+// Position sizing moved to the Risk Engine in Stage 3 — see tests/risk.
 
 describe('generateSignals', () => {
   it('splits a market scan into ranked opportunities and explained rejections', () => {

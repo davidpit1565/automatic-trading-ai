@@ -141,6 +141,38 @@ describe('Market Scan view (DOM integration)', () => {
     expect(rejections).toBeGreaterThan(0);
   });
 
+  it('every qualifying opportunity carries a Risk Engine verdict panel', async () => {
+    const { container, data } = await renderAndScan();
+    const symbols = data.instruments.map((i) => i.symbol);
+    const expected = await scanMarket(data.source, symbols, '1h', 150);
+    const details = [...container.querySelectorAll<HTMLTableRowElement>('.scan-detail')];
+
+    let riskPanels = 0;
+    expected.results.forEach((scan, i) => {
+      const decision = evaluateScan(scan);
+      const panel = details[i]!.querySelector('.risk-panel');
+      if (decision.kind === 'opportunity') {
+        riskPanels++;
+        expect(panel, `${scan.symbol} opportunity must include a risk panel`).not.toBeNull();
+        const text = panel!.textContent!;
+        // Approved or refused — either way the decision explains itself.
+        if (panel!.className.includes('risk-approved')) {
+          expect(text).toContain('approved');
+          expect(text).toMatch(/Risk .*%/);
+          expect(text).toContain('Portfolio exposure after');
+        } else {
+          expect(panel!.className).toContain('risk-refused');
+          expect(text).toContain('refused to protect the portfolio');
+          expect(panel!.querySelectorAll('li').length).toBeGreaterThan(0);
+        }
+      } else {
+        // No risk assessment without a qualifying signal.
+        expect(panel).toBeNull();
+      }
+    });
+    expect(riskPanels).toBeGreaterThan(0);
+  });
+
   it('reports symbols that could not be scanned instead of hiding them', async () => {
     const data = await makeData();
     const failingSource = {

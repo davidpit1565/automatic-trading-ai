@@ -102,6 +102,21 @@ try {
     panels.every((t) => !/guaranteed|certain profit|will rise/i.test(t)),
   );
 
+  // Risk Engine verdicts: every LONG setup gets one; refusals explain themselves.
+  const setupCount = panels.filter((t) => t.includes('LONG setup')).length;
+  const riskPanels = await page.$$eval('.scan-detail .risk-panel', (els) =>
+    els.map((e) => ({ cls: e.className, text: e.textContent })),
+  );
+  check('risk verdict for every qualifying setup', riskPanels.length === setupCount);
+  check(
+    'risk verdicts are approved-with-sizing or refused-with-reasons',
+    riskPanels.every(
+      (p) =>
+        (p.cls.includes('risk-approved') && p.text.includes('Size')) ||
+        (p.cls.includes('risk-refused') && p.text.includes('protect the portfolio')),
+    ),
+  );
+
   await scanRows[0].click();
   check('detail collapses on second click', await page.$eval('.scan-detail', (e) => e.hidden));
 } finally {

@@ -6,10 +6,13 @@
  * explains the score, plus any warnings — transparency over certainty.
  */
 
+import { LocalStorageStore } from '../../core/data/storage';
+import { PaperPortfolio } from '../../core/portfolio/paperPortfolio';
+import { DailyLossTracker } from '../../core/risk/dailyLoss';
+import { assessTrade, type PortfolioRiskState } from '../../core/risk/riskEngine';
 import { scanMarket, type MarketScan, type ScanResult } from '../../core/scan/marketScanner';
 import {
   evaluateScan,
-  positionSize,
   MAX_CONFIDENCE,
   type SignalDecision,
 } from '../../core/signal/signalEngine';
@@ -21,10 +24,26 @@ const TIMEFRAMES: Timeframe[] = ['15m', '1h', '4h', '1d'];
 const SCAN_SYMBOL_LIMIT = 12;
 const SCAN_CANDLES = 150;
 
-/** Illustrative sizing example shown with each opportunity, clearly labelled. */
-const EXAMPLE_EQUITY = 10_000;
-const EXAMPLE_RISK_PCT = 1;
-const EXAMPLE_MAX_POSITION_PCT = 25;
+/** Risk assessments are made against the live paper portfolio state. */
+interface RiskContext {
+  readonly portfolio: PortfolioRiskState;
+  readonly dailyLossSoFar: number;
+}
+
+function buildRiskContext(): RiskContext {
+  const store = new LocalStorageStore();
+  const paper = new PaperPortfolio(store);
+  return {
+    portfolio: {
+      // Positions valued at cost — a conservative basis for exposure checks.
+      equity: paper.equity({}),
+      openPositions: paper
+        .positions()
+        .map((p) => ({ symbol: p.symbol, quantity: p.quantity, entryPrice: p.avgCost })),
+    },
+    dailyLossSoFar: new DailyLossTracker(store).lossToday(Date.now()),
+  };
+}
 
 export function renderMarketScanView(container: HTMLElement, data: ActiveDataSource): void {
   container.innerHTML = `
@@ -64,7 +83,7 @@ export function renderMarketScanView(container: HTMLElement, data: ActiveDataSou
       const symbols = data.instruments.slice(0, SCAN_SYMBOL_LIMIT).map((i) => i.symbol);
       const scan = await scanMarket(data.source, symbols, timeframe, SCAN_CANDLES);
       status.textContent = `Scanned ${scan.results.length} markets on ${timeframe} · source: ${data.source.name}`;
-      renderScanTable(results, scan);
+      renderScanTable(results, scan, buildRiskContext());
     } catch (cause) {
       status.textContent = '';
       results.innerHTML = `<p class="error-line">Scan failed: ${escapeHtml(String(cause))}</p>`;
@@ -74,7 +93,7 @@ export function renderMarketScanView(container: HTMLElement, data: ActiveDataSou
   });
 }
 
-function renderScanTable(container: HTMLElement, scan: MarketScan): void {
+function renderScanTable(container: HTMLElement, scan: MarketScan, risk: RiskContext): void {
   if (scan.results.length === 0) {
     container.innerHTML = '<p class="error-line">No markets could be scanned.</p>';
     renderFailures(container, scan);
@@ -114,7 +133,7 @@ function renderScanTable(container: HTMLElement, scan: MarketScan): void {
       <td>${temperatureBadge(result)}</td>
     `;
 
-    const detail = buildDetailRow(result);
+    const detail = buildDetailRow(result, risk);
     detail.hidden = true;
     row.addEventListener('click', () => {
       detail.hidden = !detail.hidden;
@@ -136,7 +155,7 @@ function temperatureBadge(result: ScanResult): string {
   return `<span class="badge badge-${result.temperature}">${labels[result.temperature]}</span>`;
 }
 
-function buildDetailRow(result: ScanResult): HTMLTableRowElement {
+function buildDetailRow(result: ScanResult, risk: RiskContext): HTMLTableRowElement {
   const detail = document.createElement('tr');
   detail.className = 'scan-detail';
   const componentsHtml = result.components
@@ -167,14 +186,14 @@ function buildDetailRow(result: ScanResult): HTMLTableRowElement {
         Stoch %D ${formatNumber(s.stochasticD)} ·
         based on ${result.candleCount} candles (${result.timeframe})
       </p>
-      ${signalPanelHtml(evaluateScan(result))}
+      ${signalPanelHtml(evaluateScan(result), risk)}
     </td>
   `;
   return detail;
 }
 
 /** Render the Signal Engine's decision — opportunity plan or explained pass. */
-function signalPanelHtml(decision: SignalDecision): string {
+function signalPanelHtml(decision: SignalDecision, risk: RiskContext): string {
   if (decision.kind === 'rejected') {
     const reasons =
       decision.reasons.length > 0
@@ -189,22 +208,6 @@ function signalPanelHtml(decision: SignalDecision): string {
   }
 
   const o = decision.opportunity;
-  const sizing = positionSize({
-    accountEquity: EXAMPLE_EQUITY,
-    riskPerTradePct: EXAMPLE_RISK_PCT,
-    entry: o.levels.entry,
-    stopLoss: o.levels.stopLoss,
-    maxPositionPct: EXAMPLE_MAX_POSITION_PCT,
-  });
-  const sizingHtml = sizing.ok
-    ? `<div class="signal-sizing">
-         Example sizing (${EXAMPLE_RISK_PCT}% risk on a ${formatPrice(EXAMPLE_EQUITY)} paper account):
-         ${sizing.value.quantity.toLocaleString('en-US', { maximumFractionDigits: 6 })} units
-         ≈ ${formatPrice(sizing.value.notional)} notional, ${formatPrice(sizing.value.riskAmount)} at risk
-         ${sizing.value.cappedByMaxPosition ? ` (capped at ${EXAMPLE_MAX_POSITION_PCT}% of equity)` : ''}
-       </div>`
-    : '';
-
   return `
     <div class="signal-panel signal-opportunity">
       <div class="signal-title">
@@ -217,7 +220,50 @@ function signalPanelHtml(decision: SignalDecision): string {
         <span>R/R ${o.levels.riskReward.toFixed(1)}</span>
       </div>
       <p class="signal-explanation">${escapeHtml(o.explanation)}</p>
-      ${sizingHtml}
+    </div>
+    ${riskPanelHtml(decision, risk)}
+  `;
+}
+
+/**
+ * Render the Risk Engine's verdict for a qualifying opportunity, assessed
+ * against the live paper portfolio. A refusal is protective behaviour and is
+ * presented as such, never as an error.
+ */
+function riskPanelHtml(
+  decision: Extract<SignalDecision, { kind: 'opportunity' }>,
+  risk: RiskContext,
+): string {
+  const assessment = assessTrade(decision.opportunity, risk.portfolio, {
+    dailyLossSoFar: risk.dailyLossSoFar,
+  });
+  const reasonsHtml = `<ul>${assessment.reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join('')}</ul>`;
+
+  if (!assessment.approved) {
+    return `
+      <div class="risk-panel risk-refused">
+        <div class="signal-title">Risk Engine: trade refused to protect the portfolio</div>
+        ${reasonsHtml}
+      </div>
+    `;
+  }
+
+  const warningsHtml =
+    assessment.warnings.length > 0
+      ? `<ul class="scan-warnings">${assessment.warnings.map((w) => `<li>⚠ ${escapeHtml(w)}</li>`).join('')}</ul>`
+      : '';
+  return `
+    <div class="risk-panel risk-approved">
+      <div class="signal-title">Risk Engine: approved for the current paper portfolio</div>
+      <div class="signal-levels">
+        <span>Size ${assessment.positionSize.toLocaleString('en-US', { maximumFractionDigits: 6 })} units</span>
+        <span>Value ${formatPrice(assessment.positionValue)}</span>
+        <span>Risk ${formatPrice(assessment.riskAmount)} (${assessment.riskPercentage.toFixed(2)}%)</span>
+        <span>R/R ${assessment.rewardRiskRatio.toFixed(1)}</span>
+        <span>Portfolio exposure after: ${assessment.portfolioExposure.toFixed(1)}%</span>
+      </div>
+      ${reasonsHtml}
+      ${warningsHtml}
     </div>
   `;
 }

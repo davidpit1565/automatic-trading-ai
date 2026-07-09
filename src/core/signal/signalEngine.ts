@@ -15,8 +15,7 @@
  */
 
 import type { MarketScan, ScanResult } from '../scan/marketScanner';
-import type { Result, Timeframe } from '../types';
-import { err, ok } from '../types';
+import type { Timeframe } from '../types';
 
 export interface SignalCriteria {
   /** Minimum scanner score (bullish evidence) to consider a long setup. */
@@ -280,71 +279,11 @@ function validateCriteria(criteria: SignalCriteria): void {
 }
 
 // ---------------------------------------------------------------------------
-// Position sizing.
-//
-// Risk-based sizing: risk a fixed fraction of equity between entry and stop.
-// This will move behind the dedicated Risk Engine in Stage 3; the contract
-// (inputs -> Result) is designed so call sites will not change.
-// ---------------------------------------------------------------------------
-
-export interface PositionSizeInput {
-  readonly accountEquity: number;
-  /** Percentage of equity to risk if the stop loss is hit, e.g. 1 = 1%. */
-  readonly riskPerTradePct: number;
-  readonly entry: number;
-  readonly stopLoss: number;
-  /** Optional cap on position notional as % of equity. */
-  readonly maxPositionPct?: number;
-}
-
-export interface PositionSizeResult {
-  readonly quantity: number;
-  /** Amount lost if the stop is hit (before fees/slippage). */
-  readonly riskAmount: number;
-  /** Position value at entry. */
-  readonly notional: number;
-  readonly cappedByMaxPosition: boolean;
-}
-
-export function positionSize(input: PositionSizeInput): Result<PositionSizeResult> {
-  const { accountEquity, riskPerTradePct, entry, stopLoss, maxPositionPct } = input;
-  if (!(accountEquity > 0)) return err(`accountEquity must be > 0, got ${accountEquity}`);
-  if (!(riskPerTradePct > 0) || riskPerTradePct > 100) {
-    return err(`riskPerTradePct must be in (0, 100], got ${riskPerTradePct}`);
-  }
-  if (!(entry > 0)) return err(`entry must be > 0, got ${entry}`);
-  if (!(stopLoss > 0) || stopLoss >= entry) {
-    return err(`stopLoss must be positive and below entry (entry ${entry}, stop ${stopLoss})`);
-  }
-  if (maxPositionPct !== undefined && !(maxPositionPct > 0)) {
-    return err(`maxPositionPct must be > 0, got ${maxPositionPct}`);
-  }
-
-  const riskAmount = accountEquity * (riskPerTradePct / 100);
-  const riskPerUnit = entry - stopLoss;
-  let quantity = riskAmount / riskPerUnit;
-  let notional = quantity * entry;
-  let capped = false;
-
-  if (maxPositionPct !== undefined) {
-    const maxNotional = accountEquity * (maxPositionPct / 100);
-    if (notional > maxNotional) {
-      quantity = maxNotional / entry;
-      notional = maxNotional;
-      capped = true;
-    }
-  }
-
-  return ok({
-    quantity,
-    riskAmount: capped ? quantity * riskPerUnit : riskAmount,
-    notional,
-    cappedByMaxPosition: capped,
-  });
-}
-
-// ---------------------------------------------------------------------------
 // Market-wide signal generation.
+//
+// Position sizing lives in the Risk Engine (src/core/risk) as of Stage 3 —
+// the Signal Engine identifies opportunities; the Risk Engine decides
+// whether the portfolio can safely take them and at what size.
 // ---------------------------------------------------------------------------
 
 export interface SignalReport {

@@ -18,10 +18,16 @@ Stage 6), every live order will require explicit human confirmation.
   into a transparent, component-by-component score breakdown.
 - **Stage 2 — complete**: explainable Signal Engine on top of the verified scanner —
   quality gates (evidence score, ADX trend strength, RSI overextension, volatility
-  ceiling), ATR-derived entry / stop loss / take profit with risk/reward, risk-based
-  position sizing, and a confidence score (hard-capped below 100) whose components are
-  itemised. Rejections list every failed check; opportunities explain themselves in
-  plain language. Long-only: bearish evidence yields an explained pass, never a short.
+  ceiling), ATR-derived entry / stop loss / take profit with risk/reward, and a
+  confidence score (hard-capped below 100) whose components are itemised. Rejections
+  list every failed check; opportunities explain themselves in plain language.
+  Long-only: bearish evidence yields an explained pass, never a short.
+- **Stage 3 — complete**: Risk Management Engine between signals and proposals —
+  risk-based position sizing with a hard 1% per-trade ceiling, 20% single-position and
+  per-asset caps, 60% total-exposure limit, max open positions, daily loss protection
+  with automatic next-day reset, risk/reward and stop-distance validation, and a fully
+  explainable `TradeRiskAssessment`. Refusing a trade is a success condition. See
+  `ROADMAP.md` for stage-by-stage status.
 
 ## Architecture
 
@@ -35,8 +41,9 @@ Strategy Engine (src/core/strategies)   Buy & Hold, DCA, SMA-cross trend, grid
 Backtesting (src/core/backtest)     fills, fees, equity curve, P&L, drawdown, stats
 Portfolio (src/core/portfolio)      paper trading with average-cost accounting
 Monitoring (src/core/scan)          market scanner: scoring + hot/cold/neutral
-Signal Engine (src/core/signal)     quality gates, trade levels, confidence,
-                                    position sizing (moves behind Risk Engine in Stage 3)
+Signal Engine (src/core/signal)     quality gates, trade levels, confidence
+Risk Engine (src/core/risk)         position sizing, exposure limits, daily loss
+                                    protection, trade approval/refusal with reasons
 UI (src/ui + index.html)            Backtesting Lab · Grid Simulation ·
                                     Paper Portfolio · Market Scan · Learn
 ```
@@ -60,9 +67,11 @@ Every feature follows TDD: tests first, then implementation, then regression run
 
 ## Roadmap
 
-Stage 3 Risk Management → Stage 4 Market Monitoring → Stage 5 Position Tracking →
+Stage 3.5 Validation Harness (walk-forward, out-of-sample, fee/slippage modelling,
+overfitting detection) → Stage 4 Market Monitoring → Stage 5 Position Tracking →
 Stage 6 Execution Preparation (human confirmation mandatory) → Stage 7 Performance
-Feedback. Each stage proceeds only after the previous one is verified.
+Feedback. Each stage proceeds only after the previous one is verified — details in
+`ROADMAP.md`.
 
 > Educational and analytical tool. Not financial advice. Past performance never
 > guarantees future results.

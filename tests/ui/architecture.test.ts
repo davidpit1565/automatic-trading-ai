@@ -53,6 +53,7 @@ describe('UI layer architecture', () => {
       /^\.{1,2}\/(?!\.)/, // relative UI-internal imports
       /core\/scan\/marketScanner$/,
       /core\/signal\/signalEngine$/,
+      /core\/risk\/(riskEngine|dailyLoss)$/,
       /core\/backtest\/engine$/,
       /core\/strategies$/,
       /core\/portfolio\/paperPortfolio$/,
@@ -89,5 +90,22 @@ describe('core layering', () => {
   it('the scanner uses the indicator engine (single source of indicator math)', () => {
     const scanner = readFileSync(join(root, 'src/core/scan/marketScanner.ts'), 'utf8');
     expect(scanner).toMatch(/from\s+['"]\.\.\/indicators['"]/);
+  });
+
+  it('the risk engine consumes Signal Engine output only — no indicators, no market data', () => {
+    const riskFiles = collectFiles(join(root, 'src/core/risk'));
+    for (const file of riskFiles) {
+      const text = readFileSync(file, 'utf8');
+      expect(text, `${file} must not reach below the Signal Engine`).not.toMatch(
+        /from\s+['"][^'"]*(indicators|scan|strategies|backtest|revolutClient|synthetic)/,
+      );
+    }
+  });
+
+  it('position sizing lives in the Risk Engine, not the Signal Engine', () => {
+    const signal = readFileSync(join(root, 'src/core/signal/signalEngine.ts'), 'utf8');
+    expect(signal).not.toMatch(/function\s+positionSize|export.*positionSize/);
+    const riskEngine = readFileSync(join(root, 'src/core/risk/riskEngine.ts'), 'utf8');
+    expect(riskEngine).toContain('export function calculatePositionSize');
   });
 });
