@@ -1,0 +1,352 @@
+:root {
+  --bg: #0f1420;
+  --surface: #1a2130;
+  --surface-raised: #222b3e;
+  --border: #2e3950;
+  --text: #e8ecf4;
+  --text-dim: #98a3b8;
+  --accent: #4f8ef7;
+  --hot: #2fbf71;
+  --cold: #e4574f;
+  --neutral: #8b93a5;
+  --warn: #e0a83a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.app-header {
+  padding: 1.25rem 1.5rem 0.75rem;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.app-tagline {
+  margin: 0.25rem 0 0;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.data-source-banner {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: rgba(224, 168, 58, 0.15);
+  border: 1px solid var(--warn);
+  color: var(--warn);
+}
+
+.data-source-banner.live {
+  background: rgba(47, 191, 113, 0.12);
+  border-color: var(--hot);
+  color: var(--hot);
+}
+
+/* ---------- Tabs ---------- */
+
+.tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-button {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  padding: 0.6rem 1rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.tab-button:hover {
+  color: var(--text);
+}
+
+.tab-button.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-panel {
+  display: none;
+  padding: 1.25rem 1.5rem 2rem;
+  max-width: 1100px;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+/* ---------- Shared controls ---------- */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.control input,
+.control select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9rem;
+  min-width: 7rem;
+}
+
+.control-checkboxes {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+button.primary {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+button.primary:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+button.secondary {
+  background: var(--surface-raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+.status-line {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: 0.5rem 0;
+  min-height: 1.2rem;
+}
+
+.error-line {
+  color: var(--cold);
+}
+
+/* ---------- Tables ---------- */
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  background: var(--surface);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.55rem 0.75rem;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table th:first-child,
+.data-table td:first-child {
+  text-align: left;
+}
+
+.data-table thead th {
+  background: var(--surface-raised);
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.positive {
+  color: var(--hot);
+}
+
+.negative {
+  color: var(--cold);
+}
+
+/* ---------- Market Scan ---------- */
+
+.scan-row {
+  cursor: pointer;
+}
+
+.scan-row:hover {
+  background: var(--surface-raised);
+}
+
+.scan-row.expanded {
+  background: var(--surface-raised);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.badge-hot {
+  background: rgba(47, 191, 113, 0.18);
+  color: var(--hot);
+  border: 1px solid var(--hot);
+}
+
+.badge-cold {
+  background: rgba(228, 87, 79, 0.18);
+  color: var(--cold);
+  border: 1px solid var(--cold);
+}
+
+.badge-neutral {
+  background: rgba(139, 147, 165, 0.15);
+  color: var(--neutral);
+  border: 1px solid var(--neutral);
+}
+
+.scan-detail td {
+  background: var(--bg);
+  padding: 0.9rem 1rem;
+}
+
+.scan-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.75rem;
+}
+
+.scan-component {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+}
+
+.scan-component .label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.scan-component .detail {
+  font-size: 0.85rem;
+  margin: 0.15rem 0;
+}
+
+.scan-component .contribution {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.scan-warnings {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--warn);
+}
+
+.scan-warnings li {
+  margin: 0.15rem 0;
+}
+
+.scan-failures {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+/* ---------- Cards ---------- */
+
+.result-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.stat-card .stat-label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-card .stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 0.15rem;
+}
+
+.learn-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  max-width: 760px;
+}
+
+.learn-card h3 {
+  margin-top: 0;
+}
+
+.app-footer {
+  padding: 1rem 1.5rem 2rem;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+
+.disclaimer {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  margin-top: 1rem;
+}
