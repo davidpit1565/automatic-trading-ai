@@ -214,5 +214,58 @@ function close(a, b, eps = 1e-9) {
   check('atr short input all null', I.atr([1,2],[1,2],[1,2], 5).every(v => v === null));
 }
 
+/* ---------- realistic execution costs (all optional, default zero) ----------
+ * Model (documented in strategy.js):
+ *   buy exec  = close × (1 + (spreadPct/2 + slippagePct)/100)
+ *   sell exec = close × (1 − (spreadPct/2 + slippagePct)/100)
+ *   fee: buy spends N cash → units = N(1 − feePct/100)/execPrice
+ *        sell → cash += units·execPrice·(1 − feePct/100)
+ *   open positions are marked at close (no hypothetical exit costs)
+ */
+{
+  // fee only: units = 990/100 = 9.9 → final 9.9·110 = 1089
+  const r = S.buyHold([100, 110], 1000, { feePct: 1 });
+  check('cost: buyHold fee', close(r.finalValue, 1089));
+
+  // spread only: buy exec = 100·1.005 → final = 1000/100.5·110
+  const r2 = S.buyHold([100, 110], 1000, { spreadPct: 1 });
+  check('cost: buyHold spread', close(r2.finalValue, 1000 / 100.5 * 110, 1e-9));
+
+  // slippage acts like extra half-spread on top: 0.5% slippage = same exec as 1% spread
+  const r3 = S.buyHold([100, 110], 1000, { slippagePct: 0.5 });
+  check('cost: buyHold slippage', close(r3.finalValue, 1000 / 100.5 * 110, 1e-9));
+
+  // defaults unchanged: zero costs reproduce the original numbers
+  const r4 = S.buyHold([100, 110], 1000, {});
+  check('cost: zero-cost default identical', close(r4.finalValue, 1100));
+
+  // dca with 1% fee: two buys of 500 → 4.95 + 2.475 units → 7.425·200 = 1485
+  const r5 = S.dca([100, 200], 1000, 1, { feePct: 1 });
+  check('cost: dca fee', close(r5.finalValue, 1485));
+
+  // trendFollow round trip with 1% fee: buy at 12 (units 990/12 = 82.5),
+  // exit at 12 → proceeds 990, fee → 980.1
+  const r6 = S.trendFollow([10, 12, 14, 12, 10], 1000, 1, 2, { feePct: 1 });
+  check('cost: trendFollow round-trip fees', close(r6.finalValue, 980.1));
+
+  // grid with 1% fee on the known [100,90,100] case:
+  // buy lot 495/90 units at 90; sell at 100 → 550·0.99 = 544.5; final 1044.5
+  const r7 = S.gridBacktest([100, 90, 100], 1000, 90, 110, 3, { feePct: 1 });
+  check('cost: grid fees', close(r7.finalValue, 1044.5));
+
+  // execution delay: signal at bar1 (12>11), executes bar2 at 14
+  // final = 1000/14·16; equity flat at 1000 until the fill
+  const r8 = S.trendFollow([10, 12, 14, 16], 1000, 1, 2, { delayBars: 1 });
+  check('cost: delay shifts fill', close(r8.finalValue, 1000 / 14 * 16, 1e-9));
+  check('cost: delay equity flat before fill', close(r8.equity[1], 1000) && close(r8.equity[2], 1000));
+  check('cost: delay trade count', r8.trades === 1);
+
+  // trade log records executions
+  const r9 = S.trendFollow([10, 12, 14, 12, 10], 1000, 1, 2, {});
+  check('cost: trade log length matches trades', Array.isArray(r9.tradeLog) && r9.tradeLog.length === r9.trades);
+  check('cost: trade log sides', r9.tradeLog[0].side === 'buy' && r9.tradeLog[1].side === 'sell');
+  check('cost: trade log has bar+price+units', r9.tradeLog.every(t => 'bar' in t && 'price' in t && 'units' in t));
+}
+
 console.log(`\n${pass} passed, ${fail} failed, ${pass + fail} total`);
 process.exit(fail === 0 ? 0 : 1);
