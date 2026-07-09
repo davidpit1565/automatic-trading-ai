@@ -147,6 +147,7 @@
   <nav class="tabs" role="tablist">
     <button class="active" data-tab="scan">Market Scan</button>
     <button data-tab="signals">Signals</button>
+    <button data-tab="validate">Validation</button>
     <button data-tab="backtest">Backtest Lab</button>
     <button data-tab="grid">Grid</button>
     <button data-tab="paper">Paper Portfolio</button>
@@ -179,6 +180,26 @@
         <button class="btn" id="sg-run">Recalculate</button>
       </div>
       <div id="sg-output"></div>
+    </div>
+  </section>
+
+  <section id="tab-validate">
+    <div class="card">
+      <p class="eyebrow">Walk-forward validation — does the strategy survive unseen data?</p>
+      <h2>Out-of-sample stress test, after realistic costs</h2>
+      <p class="note">The harness splits history into rolling windows: it optimizes the trend strategy's
+        parameters on each training window, then measures them on the following unseen window, after
+        trading fees, spread, slippage, and a one-day execution delay. If performance collapses outside
+        the training data, the strategy is <b>rejected</b> — that's the point. A strategy that only
+        works on the period it was tuned on is a curve fit, not an edge.</p>
+      <div class="controls">
+        <label>Asset <select id="vl-coin"></select></label>
+        <label>Fee per trade (%) <input type="number" id="vl-fee" value="0.25" min="0" max="2" step="0.05"></label>
+        <label>Spread (%) <input type="number" id="vl-spread" value="0.1" min="0" max="2" step="0.05"></label>
+        <label>Slippage (%) <input type="number" id="vl-slip" value="0.05" min="0" max="2" step="0.05"></label>
+        <button class="btn" id="vl-run">Run validation</button>
+      </div>
+      <div id="vl-output"></div>
     </div>
   </section>
 
@@ -294,6 +315,16 @@
 })();
 </script>
 <script>
+(function () {
+/*__VALIDATION__*/
+})();
+</script>
+<script>
+(function () {
+/*__EXECUTION__*/
+})();
+</script>
+<script>
 const DATASET = /*__DATASET__*/;
 </script>
 <script>
@@ -324,7 +355,7 @@ const DATASET = /*__DATASET__*/;
   });
 
   /* ---------- coin selects ---------- */
-  ['bt-coin', 'gr-coin', 'pp-coin'].forEach(id => {
+  ['bt-coin', 'gr-coin', 'pp-coin', 'vl-coin'].forEach(id => {
     const sel = $(id);
     coins.forEach((c, i) => {
       const o = document.createElement('option');
@@ -559,7 +590,8 @@ const DATASET = /*__DATASET__*/;
           + planCell('Risk / reward', rec.riskReward.toFixed(2))
           + planCell('Position', eur0(rec.positionEur))
           + planCell('Risk if stopped', eur0(rec.riskEur))
-          + '</div><ul>' + rec.explanation.map(e => '<li>' + e + '</li>').join('') + '</ul></div>';
+          + '</div><ul>' + rec.explanation.map(e => '<li>' + e + '</li>').join('') + '</ul>'
+          + proposalPreview(c, s, rec) + '</div>';
       } else {
         html += '<ul>' + (s.rejections.length ? s.rejections : rec.rejections)
           .map(r => '<li>✕ ' + r + '</li>').join('') + '</ul>';
@@ -573,8 +605,74 @@ const DATASET = /*__DATASET__*/;
   function planCell(k, v) {
     return '<div class="reading"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
   }
+  /* Preview of the exact proposal the execution layer would put in front
+   * of a human. Display only: this page has no connection and no way to
+   * place orders — confirmation happens nowhere on this dashboard. */
+  function proposalPreview(c, s, rec) {
+    const Ex = window.Execution;
+    try {
+      const p = Ex.createTradeProposal({ pair: c.symbol + '-EUR', signal: s, recommendation: rec });
+      const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      return '<details class="sig-details"><summary>Proposal text (what a human would be asked to confirm)</summary>'
+        + '<pre style="font-size:12px;overflow-x:auto;color:var(--ink-2)">' + esc(Ex.formatProposal(p)) + '</pre></details>';
+    } catch (e) { return ''; }
+  }
   $('sg-run').addEventListener('click', renderSignals);
   renderSignals();
+
+  /* ---------- Validation (presentation only — all numbers from engines) ---------- */
+  const Vl = window.Validation;
+  function renderValidation() {
+    const c = coins[+$('vl-coin').value];
+    const costs = {
+      feePct: Math.max(0, +$('vl-fee').value || 0),
+      spreadPct: Math.max(0, +$('vl-spread').value || 0),
+      slippagePct: Math.max(0, +$('vl-slip').value || 0),
+      delayBars: 1,
+    };
+    const r = Vl.walkForward(c.closes, {
+      paramGrid: [{ fast: 10, slow: 50 }, { fast: 20, slow: 50 }, { fast: 20, slow: 100 }],
+      trainBars: 120, testBars: 40, step: 40, costs,
+    });
+    const a = r.aggregate;
+    const verdictCls = r.report.verdict === 'acceptable' ? 'up' : 'down';
+    let html = '<div class="readings">'
+      + '<div class="reading"><div class="k">Verdict</div><div class="v ' + verdictCls + '">' + r.report.verdict.toUpperCase() + '</div></div>'
+      + '<div class="reading"><div class="k">Out-of-sample return</div><div class="v ' + pctCls(a.outSampleReturnPct) + '">' + pct(a.outSampleReturnPct) + '</div></div>'
+      + '<div class="reading"><div class="k">Buy &amp; hold (same windows)</div><div class="v ' + pctCls(a.benchmarkOosReturnPct) + '">' + pct(a.benchmarkOosReturnPct) + '</div></div>'
+      + '<div class="reading"><div class="k">In-sample mean</div><div class="v ' + pctCls(a.inSampleMeanReturnPct) + '">' + pct(a.inSampleMeanReturnPct) + '</div></div>'
+      + '<div class="reading"><div class="k">OOS trades</div><div class="v">' + a.trades + '</div></div>'
+      + '<div class="reading"><div class="k">Win rate</div><div class="v">' + (a.winRate === null ? '—' : (a.winRate * 100).toFixed(0) + '%') + '</div></div>'
+      + '</div>';
+    if (r.report.flags.length) {
+      html += '<ul>' + r.report.flags.map(f => '<li>⚑ ' + f + '</li>').join('') + '</ul>';
+    }
+    html += '<div class="tablewrap"><table><thead><tr><th>Window</th><th>Train (bars)</th><th>Test (bars)</th>'
+      + '<th>Best params</th><th>In-sample</th><th>Out-of-sample</th><th>Trades</th></tr></thead><tbody>'
+      + r.windows.map((w, i) => '<tr><td>' + (i + 1) + '</td>'
+        + '<td>' + w.trainStart + '–' + w.trainEnd + '</td>'
+        + '<td>' + w.testStart + '–' + w.testEnd + '</td>'
+        + '<td>SMA ' + w.params.fast + '/' + w.params.slow + '</td>'
+        + '<td class="' + pctCls(w.inSampleReturnPct) + '">' + pct(w.inSampleReturnPct) + '</td>'
+        + '<td class="' + pctCls(w.outSampleReturnPct) + '">' + pct(w.outSampleReturnPct) + '</td>'
+        + '<td>' + w.trades + '</td></tr>').join('')
+      + '</tbody></table></div>'
+      + '<div class="verdict">' + validationVerdictText(c, r) + '</div>';
+    $('vl-output').innerHTML = html;
+  }
+  function validationVerdictText(c, r) {
+    const a = r.aggregate;
+    let s = 'On ' + c.symbol + '/EUR, parameters tuned on each training window returned '
+      + pct(a.inSampleMeanReturnPct) + ' on average in training but ' + pct(a.outSampleReturnPct)
+      + ' compounded on unseen data, after costs (buy &amp; hold over the same test windows: '
+      + pct(a.benchmarkOosReturnPct) + ').';
+    s += r.report.verdict === 'acceptable'
+      ? ' The edge survived out of sample in this history — worth continued paper testing, never a guarantee.'
+      : ' The harness <b>' + r.report.verdict + '</b> this strategy on this history — trading it live would mean betting on a pattern that already failed to generalize.';
+    return s;
+  }
+  $('vl-run').addEventListener('click', renderValidation);
+  renderValidation();
 
   /* ---------- Backtest Lab ---------- */
   function runBacktest() {

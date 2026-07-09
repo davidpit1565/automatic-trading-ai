@@ -17,9 +17,11 @@ const indicators = read('src/indicators.js');
 const strategy = read('src/strategy.js');
 const signals = read('src/signals.js');
 const risk = read('src/risk.js');
+const validation = read('src/validation.js');
+const execution = read('src/execution.js');
 const dataset = read('data/dataset.json');
 
-for (const marker of ['/*__INDICATORS__*/', '/*__STRATEGY__*/', '/*__SIGNALS__*/', '/*__RISK__*/', '/*__DATASET__*/']) {
+for (const marker of ['/*__INDICATORS__*/', '/*__STRATEGY__*/', '/*__SIGNALS__*/', '/*__RISK__*/', '/*__VALIDATION__*/', '/*__EXECUTION__*/', '/*__DATASET__*/']) {
   const n = template.split(marker).length - 1;
   if (n !== 1) { console.error(`FAIL: marker ${marker} appears ${n} times`); process.exit(1); }
 }
@@ -31,6 +33,8 @@ const html = template
   .replace('/*__STRATEGY__*/', BEGIN('strategy') + strategy + END('strategy'))
   .replace('/*__SIGNALS__*/', BEGIN('signals') + signals + END('signals'))
   .replace('/*__RISK__*/', BEGIN('risk') + risk + END('risk'))
+  .replace('/*__VALIDATION__*/', BEGIN('validation') + validation + END('validation'))
+  .replace('/*__EXECUTION__*/', BEGIN('execution') + execution + END('execution'))
   .replace('/*__DATASET__*/', dataset);
 
 const outPath = path.join(root, 'dashboard', 'index.html');
@@ -48,6 +52,8 @@ if (extract(built, 'indicators') !== indicators) { console.error('FAIL: indicato
 if (extract(built, 'strategy') !== strategy) { console.error('FAIL: strategy drifted'); ok = false; }
 if (extract(built, 'signals') !== signals) { console.error('FAIL: signals drifted'); ok = false; }
 if (extract(built, 'risk') !== risk) { console.error('FAIL: risk drifted'); ok = false; }
+if (extract(built, 'validation') !== validation) { console.error('FAIL: validation drifted'); ok = false; }
+if (extract(built, 'execution') !== execution) { console.error('FAIL: execution drifted'); ok = false; }
 if (!built.includes('"generatedAt"')) { console.error('FAIL: dataset not embedded'); ok = false; }
 if (!ok) process.exit(1);
 console.log(`OK: built dashboard/index.html (${(built.length / 1024).toFixed(0)} KB); embedded engines byte-identical to tested source.`);

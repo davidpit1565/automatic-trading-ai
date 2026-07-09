@@ -73,13 +73,37 @@ never guessing, never promising profits.
   per-asset direction, confidence, indicator breakdown, and — when gates
   pass — the complete plan (entry/stop/target/R/R/size/risk).
 
-## Remaining stages (each gated: tests pass before the next begins)
+### Stage 3.5 — Validation harness ✅
+- Strategy engine extended with a realistic cost model (fees, spread,
+  slippage, one-bar execution delay) and per-execution trade logs;
+  zero-cost defaults reproduce the original verified numbers exactly.
+- `src/validation.js`: rolling walk-forward splits, per-window
+  train-optimize → test-evaluate, buy & hold benchmark on the same test
+  windows, round-trip win rates, and an overfitting report with explicit
+  rules (no in-sample edge / OOS collapse / unrealistic win rate →
+  rejected; thin samples or >3 parameters → caution).
+- Test gate: 33 validation assertions incl. a seeded-noise deliberately
+  overfit case that must not pass; costs-never-improve property;
+  walk-forward on real BTC after costs (current verdict: rejected —
+  trend-following lost 18% OOS; the harness refusing it is the product
+  working). Dashboard "Validation" tab runs the same engine.
 
-### Stage 3.5 — Validation harness
-Walk-forward / out-of-sample splits, fee & slippage modeling, benchmark
-comparison vs buy-and-hold, and an overfitting sanity report per strategy.
-Test gate: known-answer tests on synthetic series; a deliberately
-overfit strategy must be flagged.
+### Execution boundary — Revolut X connector module ✅ (architecture only)
+- `src/execution.js`, strictly isolated from analysis: injected transport
+  (no network code, no credentials), permission modes
+  disconnected → read-only (required first) → trading; proposals built
+  only from risk-engine-valid output; literal "CONFIRM TRADE" human gate;
+  hard guardrails (max position, cumulative daily loss cap, portfolio
+  exposure cap, emergency stop); immutable action/refusal log.
+- Test gate: 30 assertions with a recording mock transport proving the
+  order endpoint is unreachable without mode + confirmation + guardrails;
+  full pipeline integration (signal → risk → proposal → gate → boundary).
+- A REAL transport stays unwired until: Revolut X reconnected (fresh
+  keypair — see below), validation harness passes a strategy, paper
+  trading proves behavior, risk limits tested, security review complete.
+  There is deliberately no code path to an unattended order.
+
+## Remaining stages (each gated: tests pass before the next begins)
 
 ### Stage 4 — Scheduled monitoring & alerts
 A scheduled routine refreshes data, runs the scan + signal engine, and
