@@ -25,12 +25,16 @@ describe('dashboard shell', () => {
     expect(html).toMatch(/data-tab="scan"[^>]*>Market Scan</);
   });
 
-  it('places the Market Scan panel before the Learn panel', () => {
-    const scanIndex = html.indexOf('id="tab-scan"');
-    const learnIndex = html.indexOf('id="tab-learn"');
-    expect(scanIndex).toBeGreaterThan(-1);
-    expect(learnIndex).toBeGreaterThan(-1);
-    expect(scanIndex).toBeLessThan(learnIndex);
+  it('places Market Scan immediately before Learn (buttons and panels)', () => {
+    const buttonOrder = [...html.matchAll(/data-tab="(\w+)"/g)].map((m) => m[1]);
+    const scanButton = buttonOrder.indexOf('scan');
+    expect(scanButton).toBeGreaterThan(-1);
+    expect(buttonOrder[scanButton + 1]).toBe('learn');
+
+    const panelOrder = [...html.matchAll(/id="tab-(\w+)"/g)].map((m) => m[1]);
+    const scanPanel = panelOrder.indexOf('scan');
+    expect(scanPanel).toBeGreaterThan(-1);
+    expect(panelOrder[scanPanel + 1]).toBe('learn');
   });
 
   it('loads the UI entry module and stylesheet', () => {

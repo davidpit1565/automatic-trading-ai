@@ -1,0 +1,92 @@
+/**
+ * Architecture rules, enforced as tests.
+ *
+ * The UI layer is presentation only: it must consume the verified core
+ * modules (Market Scanner, backtesting, strategies, portfolio, data layer)
+ * and must never re-implement or directly invoke indicator mathematics —
+ * indicator access happens exclusively through the core layers.
+ */
+
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
+
+const root = resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
+const uiDir = join(root, 'src/ui');
+
+function collectFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+    entry.isDirectory() ? collectFiles(join(dir, entry.name)) : [join(dir, entry.name)],
+  );
+}
+
+const uiSources = collectFiles(uiDir)
+  .filter((file) => file.endsWith('.ts'))
+  .map((file) => ({ file: file.slice(root.length + 1), text: readFileSync(file, 'utf8') }));
+
+describe('UI layer architecture', () => {
+  it('found UI sources to check', () => {
+    expect(uiSources.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('never imports the indicator engine directly', () => {
+    for (const { file, text } of uiSources) {
+      expect(text, `${file} must not import core/indicators`).not.toMatch(
+        /from\s+['"][^'"]*core\/indicators/,
+      );
+    }
+  });
+
+  it('never calls indicator functions or re-implements indicator math', () => {
+    // Indicator engine entry points; any call in UI code means duplicated analysis.
+    const forbiddenCalls =
+      /\b(sma|ema|rsi|macd|bollinger|atr|adx|stochastic|obv|relativeVolume|volumeSma|trueRange)\s*\(/;
+    for (const { file, text } of uiSources) {
+      expect(text, `${file} must not perform indicator calculations`).not.toMatch(forbiddenCalls);
+    }
+  });
+
+  it('only imports from the verified core layers or sibling UI modules', () => {
+    const importPattern = /from\s+['"]([^'"]+)['"]/g;
+    const allowed = [
+      /^\.{1,2}\/(?!\.)/, // relative UI-internal imports
+      /core\/scan\/marketScanner$/,
+      /core\/backtest\/engine$/,
+      /core\/strategies$/,
+      /core\/portfolio\/paperPortfolio$/,
+      /core\/data\/(revolutClient|storage|synthetic)$/,
+      /core\/types$/,
+    ];
+    for (const { file, text } of uiSources) {
+      for (const match of text.matchAll(importPattern)) {
+        const specifier = match[1]!;
+        const ok = allowed.some((pattern) => pattern.test(specifier));
+        expect(ok, `${file} imports unexpected module '${specifier}'`).toBe(true);
+      }
+    }
+  });
+
+  it('the Market Scan view consumes the verified scanner', () => {
+    const view = uiSources.find(({ file }) => file.endsWith('marketScanView.ts'));
+    expect(view).toBeDefined();
+    expect(view!.text).toMatch(/import\s+\{[^}]*\bscanMarket\b[^}]*\}\s+from\s+['"].*core\/scan\/marketScanner['"]/);
+  });
+});
+
+describe('core layering', () => {
+  it('the indicator engine imports nothing above the data layer', () => {
+    const indicatorFiles = collectFiles(join(root, 'src/core/indicators'));
+    for (const file of indicatorFiles) {
+      const text = readFileSync(file, 'utf8');
+      expect(text, `${file} must not depend on higher layers`).not.toMatch(
+        /from\s+['"][^'"]*(strategies|backtest|scan|portfolio|ui)\//,
+      );
+    }
+  });
+
+  it('the scanner uses the indicator engine (single source of indicator math)', () => {
+    const scanner = readFileSync(join(root, 'src/core/scan/marketScanner.ts'), 'utf8');
+    expect(scanner).toMatch(/from\s+['"]\.\.\/indicators['"]/);
+  });
+});
