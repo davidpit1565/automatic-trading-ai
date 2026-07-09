@@ -7,6 +7,12 @@
  */
 
 import { scanMarket, type MarketScan, type ScanResult } from '../../core/scan/marketScanner';
+import {
+  evaluateScan,
+  positionSize,
+  MAX_CONFIDENCE,
+  type SignalDecision,
+} from '../../core/signal/signalEngine';
 import type { Timeframe } from '../../core/types';
 import type { ActiveDataSource } from '../dataSource';
 import { escapeHtml, formatNumber, formatPct, formatPrice, signClass } from '../format';
@@ -14,6 +20,11 @@ import { escapeHtml, formatNumber, formatPct, formatPrice, signClass } from '../
 const TIMEFRAMES: Timeframe[] = ['15m', '1h', '4h', '1d'];
 const SCAN_SYMBOL_LIMIT = 12;
 const SCAN_CANDLES = 150;
+
+/** Illustrative sizing example shown with each opportunity, clearly labelled. */
+const EXAMPLE_EQUITY = 10_000;
+const EXAMPLE_RISK_PCT = 1;
+const EXAMPLE_MAX_POSITION_PCT = 25;
 
 export function renderMarketScanView(container: HTMLElement, data: ActiveDataSource): void {
   container.innerHTML = `
@@ -156,9 +167,59 @@ function buildDetailRow(result: ScanResult): HTMLTableRowElement {
         Stoch %D ${formatNumber(s.stochasticD)} ·
         based on ${result.candleCount} candles (${result.timeframe})
       </p>
+      ${signalPanelHtml(evaluateScan(result))}
     </td>
   `;
   return detail;
+}
+
+/** Render the Signal Engine's decision — opportunity plan or explained pass. */
+function signalPanelHtml(decision: SignalDecision): string {
+  if (decision.kind === 'rejected') {
+    const reasons =
+      decision.reasons.length > 0
+        ? `<ul>${decision.reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join('')}</ul>`
+        : '';
+    return `
+      <div class="signal-panel signal-rejected">
+        <div class="signal-title">Signal Engine: no qualifying setup</div>
+        ${reasons}
+      </div>
+    `;
+  }
+
+  const o = decision.opportunity;
+  const sizing = positionSize({
+    accountEquity: EXAMPLE_EQUITY,
+    riskPerTradePct: EXAMPLE_RISK_PCT,
+    entry: o.levels.entry,
+    stopLoss: o.levels.stopLoss,
+    maxPositionPct: EXAMPLE_MAX_POSITION_PCT,
+  });
+  const sizingHtml = sizing.ok
+    ? `<div class="signal-sizing">
+         Example sizing (${EXAMPLE_RISK_PCT}% risk on a ${formatPrice(EXAMPLE_EQUITY)} paper account):
+         ${sizing.value.quantity.toLocaleString('en-US', { maximumFractionDigits: 6 })} units
+         ≈ ${formatPrice(sizing.value.notional)} notional, ${formatPrice(sizing.value.riskAmount)} at risk
+         ${sizing.value.cappedByMaxPosition ? ` (capped at ${EXAMPLE_MAX_POSITION_PCT}% of equity)` : ''}
+       </div>`
+    : '';
+
+  return `
+    <div class="signal-panel signal-opportunity">
+      <div class="signal-title">
+        Signal Engine: LONG setup · confidence ${o.confidence.toFixed(0)}/${MAX_CONFIDENCE}
+      </div>
+      <div class="signal-levels">
+        <span>Entry ≈ ${formatPrice(o.levels.entry)}</span>
+        <span>Stop loss ${formatPrice(o.levels.stopLoss)}</span>
+        <span>Take profit ${formatPrice(o.levels.takeProfit)}</span>
+        <span>R/R ${o.levels.riskReward.toFixed(1)}</span>
+      </div>
+      <p class="signal-explanation">${escapeHtml(o.explanation)}</p>
+      ${sizingHtml}
+    </div>
+  `;
 }
 
 function renderFailures(container: HTMLElement, scan: MarketScan): void {

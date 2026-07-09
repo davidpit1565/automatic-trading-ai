@@ -12,6 +12,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { SyntheticDataSource } from '../../src/core/data/synthetic';
 import { scanMarket } from '../../src/core/scan/marketScanner';
+import { evaluateScan } from '../../src/core/signal/signalEngine';
 import type { ActiveDataSource } from '../../src/ui/dataSource';
 import { renderMarketScanView } from '../../src/ui/views/marketScanView';
 
@@ -105,6 +106,39 @@ describe('Market Scan view (DOM integration)', () => {
       const componentCards = details[i]!.querySelectorAll('.scan-component');
       expect(componentCards.length).toBe(scan.components.length);
     });
+  });
+
+  it('every detail row carries the Signal Engine decision for that scan', async () => {
+    const { container, data } = await renderAndScan();
+    const symbols = data.instruments.map((i) => i.symbol);
+    const expected = await scanMarket(data.source, symbols, '1h', 150);
+    const details = [...container.querySelectorAll<HTMLTableRowElement>('.scan-detail')];
+
+    let opportunities = 0;
+    let rejections = 0;
+    expected.results.forEach((scan, i) => {
+      const decision = evaluateScan(scan);
+      const panel = details[i]!.querySelector('.signal-panel');
+      expect(panel, `${scan.symbol} detail must include a signal panel`).not.toBeNull();
+      const text = panel!.textContent!;
+      if (decision.kind === 'opportunity') {
+        opportunities++;
+        expect(panel!.className).toContain('signal-opportunity');
+        expect(text).toContain('LONG setup');
+        expect(text).toContain(decision.opportunity.explanation);
+        expect(text).toMatch(/not a guarantee/);
+      } else {
+        rejections++;
+        expect(panel!.className).toContain('signal-rejected');
+        expect(text).toContain('no qualifying setup');
+        for (const reason of decision.reasons) {
+          expect(text).toContain(reason);
+        }
+      }
+    });
+    // The demo universe is built to contain both outcomes.
+    expect(opportunities).toBeGreaterThan(0);
+    expect(rejections).toBeGreaterThan(0);
   });
 
   it('reports symbols that could not be scanned instead of hiding them', async () => {

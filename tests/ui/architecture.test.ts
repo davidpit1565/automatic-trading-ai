@@ -52,6 +52,7 @@ describe('UI layer architecture', () => {
     const allowed = [
       /^\.{1,2}\/(?!\.)/, // relative UI-internal imports
       /core\/scan\/marketScanner$/,
+      /core\/signal\/signalEngine$/,
       /core\/backtest\/engine$/,
       /core\/strategies$/,
       /core\/portfolio\/paperPortfolio$/,

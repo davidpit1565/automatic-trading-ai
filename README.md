@@ -16,6 +16,12 @@ Stage 6), every live order will require explicit human confirmation.
 - **Stage 1 integration — complete**: Market Scan tab in the dashboard, powered by the
   indicator engine — hot / cold / neutral classification with clickable rows that expand
   into a transparent, component-by-component score breakdown.
+- **Stage 2 — complete**: explainable Signal Engine on top of the verified scanner —
+  quality gates (evidence score, ADX trend strength, RSI overextension, volatility
+  ceiling), ATR-derived entry / stop loss / take profit with risk/reward, risk-based
+  position sizing, and a confidence score (hard-capped below 100) whose components are
+  itemised. Rejections list every failed check; opportunities explain themselves in
+  plain language. Long-only: bearish evidence yields an explained pass, never a short.
 
 ## Architecture
 
@@ -29,6 +35,8 @@ Strategy Engine (src/core/strategies)   Buy & Hold, DCA, SMA-cross trend, grid
 Backtesting (src/core/backtest)     fills, fees, equity curve, P&L, drawdown, stats
 Portfolio (src/core/portfolio)      paper trading with average-cost accounting
 Monitoring (src/core/scan)          market scanner: scoring + hot/cold/neutral
+Signal Engine (src/core/signal)     quality gates, trade levels, confidence,
+                                    position sizing (moves behind Risk Engine in Stage 3)
 UI (src/ui + index.html)            Backtesting Lab · Grid Simulation ·
                                     Paper Portfolio · Market Scan · Learn
 ```
@@ -40,20 +48,21 @@ deterministic demo data — synthetic data is never presented as live prices.
 
 ```bash
 npm install
-npm test          # full test suite (vitest)
+npm test          # unit + integration suite (vitest)
 npm run typecheck # strict TypeScript, no emit
 npm run dev       # dashboard dev server
 npm run build     # typecheck + production build
+npm run preview   # serve the production build on :4173
+npm run test:e2e  # Chromium end-to-end test against the preview server
 ```
 
 Every feature follows TDD: tests first, then implementation, then regression run.
 
 ## Roadmap
 
-Stage 2 Signal Engine → Stage 3 Risk Management → Stage 4 Market Monitoring →
-Stage 5 Position Tracking → Stage 6 Execution Preparation (human confirmation
-mandatory) → Stage 7 Performance Feedback. Each stage proceeds only after the
-previous one is verified.
+Stage 3 Risk Management → Stage 4 Market Monitoring → Stage 5 Position Tracking →
+Stage 6 Execution Preparation (human confirmation mandatory) → Stage 7 Performance
+Feedback. Each stage proceeds only after the previous one is verified.
 
 > Educational and analytical tool. Not financial advice. Past performance never
 > guarantees future results.

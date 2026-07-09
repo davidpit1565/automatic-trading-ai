@@ -87,6 +87,21 @@ try {
   await scanRows[0].click();
   check('detail visible after click', !(await page.$eval('.scan-detail', (e) => e.hidden)));
   check('component breakdown rendered', (await page.$$('.scan-detail .scan-component')).length >= 4);
+
+  // Signal Engine panel present in every detail row, and honest about uncertainty.
+  const panels = await page.$$eval('.scan-detail .signal-panel', (els) =>
+    els.map((e) => e.textContent),
+  );
+  check('signal panel in every detail row', panels.length === scanRows.length);
+  check(
+    'signal panels are decisions (setup or explained pass)',
+    panels.every((t) => t.includes('LONG setup') || t.includes('no qualifying setup')),
+  );
+  check(
+    'no promises of profit anywhere',
+    panels.every((t) => !/guaranteed|certain profit|will rise/i.test(t)),
+  );
+
   await scanRows[0].click();
   check('detail collapses on second click', await page.$eval('.scan-detail', (e) => e.hidden));
 } finally {
