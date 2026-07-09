@@ -131,6 +131,20 @@ const SIGNAL_OK = { direction: 'bullish', confidence: 60, actionable: true };
   check('property: stop < entry < target always', orderHolds);
 }
 
+/* ---------- floating-point boundary regression ----------
+ * With messy real-world numbers, (target − entry)/stopDistance can come
+ * out as 1.4999999999999998 for the default 3×/2× plan; the minimum-R/R
+ * gate must not reject its own default by rounding noise.
+ */
+{
+  const r = R.buildRecommendation({
+    signal: SIGNAL_OK, price: 204.66760144, atr: 0.26454817875428327,
+    atrIsCloseOnly: true, equity: 1000, openRiskEur: 0,
+  });
+  check('float: boundary R/R accepted', r.valid === true);
+  check('float: R/R still reported ~1.5', close(r.riskReward, 1.5, 1e-9));
+}
+
 /* ---------- determinism ---------- */
 {
   const args = { signal: SIGNAL_OK, price: 100, atr: 5, atrIsCloseOnly: false, equity: 10000, openRiskEur: 0 };

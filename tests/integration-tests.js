@@ -72,5 +72,64 @@ for (const coin of DATASET.coins) {
   check('BTC: confidence reproducible on real data', s.confidence === expected);
 }
 
-console.log(`\n${pass} passed, ${fail} failed, ${pass + fail} total (actionable today: ${actionableCount}/8)`);
-process.exit(fail === 0 ? 0 : 1);
+// Walk-forward validation on real BTC data, after realistic costs
+{
+  const V = require('../src/validation');
+  const btc = DATASET.coins.find(c => c.symbol === 'BTC');
+  const r = V.walkForward(btc.closes, {
+    paramGrid: [{ fast: 10, slow: 50 }, { fast: 20, slow: 50 }, { fast: 20, slow: 100 }],
+    trainBars: 120, testBars: 40, step: 40,
+    costs: { feePct: 0.25, spreadPct: 0.1, slippagePct: 0.05, delayBars: 1 },
+  });
+  check('wf-real: windows produced', r.windows.length >= 4);
+  check('wf-real: verdict is a known value', ['acceptable', 'caution', 'rejected'].includes(r.report.verdict));
+  check('wf-real: benchmark computed', typeof r.aggregate.benchmarkOosReturnPct === 'number');
+  check('wf-real: deterministic', JSON.stringify(r) === JSON.stringify(V.walkForward(btc.closes, {
+    paramGrid: [{ fast: 10, slow: 50 }, { fast: 20, slow: 50 }, { fast: 20, slow: 100 }],
+    trainBars: 120, testBars: 40, step: 40,
+    costs: { feePct: 0.25, spreadPct: 0.1, slippagePct: 0.05, delayBars: 1 },
+  })));
+  console.log(`  BTC walk-forward: OOS ${r.aggregate.outSampleReturnPct.toFixed(1)}% vs hold ${r.aggregate.benchmarkOosReturnPct.toFixed(1)}%, ${r.aggregate.trades} trades → ${r.report.verdict}`);
+}
+
+// Full proposal pipeline: signal -> risk -> proposal -> human gate -> connector boundary
+(async () => {
+  const E = require('../src/execution');
+  // synthetic actionable setup (today's real market has none — verified above)
+  const closes = [];
+  let p = 100;
+  for (let i = 0; i < 180; i++) { p *= 1.004; closes.push(p); }
+  for (let i = 0; i < 60; i++) { p *= (i % 2 ? 1.0005 : 0.9995); closes.push(p); }
+  for (let i = 0; i < 10; i++) { p *= (i % 2 ? 0.999 : 1.003); closes.push(p); }
+  const vols = new Array(250).fill(1000).map((v, i) => i >= 240 ? 1600 : v);
+  const s = Sig.evaluateSignal(closes, vols);
+  const atrArr = I.atr(closes, closes, closes, 14);
+  const rec = R.buildRecommendation({
+    signal: s, price: closes[closes.length - 1], atr: atrArr[atrArr.length - 1],
+    atrIsCloseOnly: true, equity: EQUITY, openRiskEur: 0,
+  });
+  check('pipeline: fixture is actionable end-to-end', s.actionable && rec.valid);
+
+  const FIXED_NOW = () => 1751980000000;
+  const prop = E.createTradeProposal({ pair: 'TEST-EUR', signal: s, recommendation: rec, now: FIXED_NOW });
+  check('pipeline: proposal numbers match risk engine', prop.entry === rec.entry
+    && prop.stopLoss === rec.stopLoss && prop.takeProfit === rec.takeProfit
+    && prop.riskEur === rec.riskEur);
+  check('pipeline: proposal text renders', E.formatProposal(prop).includes('CONFIRM TRADE'));
+
+  const gate = E.confirmProposal(prop, 'CONFIRM TRADE', { now: FIXED_NOW });
+  check('pipeline: human gate passes exact phrase', gate.ok === true);
+
+  // read-only connector must still refuse the confirmed proposal
+  const calls = [];
+  const conn = E.createConnector({
+    mode: 'read-only', now: FIXED_NOW,
+    transport: { placeOrder: async () => { calls.push('placeOrder'); return { id: 'x' }; } },
+  });
+  let refused = false;
+  try { await conn.placeOrder(gate.proposal); } catch (e) { refused = true; }
+  check('pipeline: read-only boundary holds', refused && calls.length === 0);
+
+  console.log(`\n${pass} passed, ${fail} failed, ${pass + fail} total (actionable today: ${actionableCount}/8)`);
+  process.exit(fail === 0 ? 0 : 1);
+})();

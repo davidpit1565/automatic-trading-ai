@@ -63,7 +63,10 @@ function buildRecommendation({ signal, price, atr, atrIsCloseOnly, equity, openR
   const riskReward = (takeProfit - entry) / stopDistance;
 
   if (stopLoss <= 0) rejections.push(`stop-loss ${_n(stopLoss)} not positive — ATR too large relative to price for a sane stop`);
-  if (riskReward < cfg.minRiskReward) rejections.push(`risk/reward ${riskReward.toFixed(2)} below minimum ${cfg.minRiskReward}`);
+  // 1e-9 tolerance: riskReward is computed from floating-point subtraction,
+  // so a plan sitting exactly on the minimum (e.g. the default 3x/2x = 1.5)
+  // must not be rejected by rounding noise.
+  if (riskReward < cfg.minRiskReward - 1e-9) rejections.push(`risk/reward ${riskReward.toFixed(2)} below minimum ${cfg.minRiskReward}`);
   if (rejections.length) return _rejected(signal, rejections);
 
   const riskBudget = equity * cfg.riskPerTradePct / 100;
