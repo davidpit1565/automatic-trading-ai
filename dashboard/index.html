@@ -364,6 +364,32 @@ function maxDrawdown(values) {
   return maxDd;
 }
 
+/*
+ * Wilder's Average True Range. First value at index `period` (needs
+ * `period` true ranges, which start at index 1).
+ * With close-only data pass highs = lows = closes: TR then reduces to
+ * |close - prevClose|, which understates range-based ATR — callers must
+ * account for that when data has no highs/lows.
+ */
+function atr(highs, lows, closes, period = 14) {
+  const n = closes.length;
+  const out = new Array(n).fill(null);
+  if (n <= period) return out;
+  const tr = i => Math.max(
+    highs[i] - lows[i],
+    Math.abs(highs[i] - closes[i - 1]),
+    Math.abs(lows[i] - closes[i - 1]));
+  let sum = 0;
+  for (let i = 1; i <= period; i++) sum += tr(i);
+  let prev = sum / period;
+  out[period] = prev;
+  for (let i = period + 1; i < n; i++) {
+    prev = (prev * (period - 1) + tr(i)) / period;
+    out[i] = prev;
+  }
+  return out;
+}
+
 /* Latest volume relative to its N-day average (1.0 = average). */
 function volumeRatio(volumes, period = 20) {
   const avg = sma(volumes, period);
@@ -446,7 +472,7 @@ function analyzeMarket(closes, volumes) {
 }
 
 const api = {
-  sma, ema, rsi, macd, rollingStd, bollinger,
+  sma, ema, rsi, macd, rollingStd, bollinger, atr,
   annualizedVolatility, maxDrawdown, volumeRatio, pctChange, analyzeMarket,
 };
 if (typeof module !== 'undefined') module.exports = api;
