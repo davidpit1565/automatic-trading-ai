@@ -110,6 +110,23 @@
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
   .verdict { border-left: 3px solid var(--s1); padding: 8px 14px; background: var(--page); border-radius: 0 6px 6px 0; font-size: 14px; margin-top: 14px; max-width: 75ch; }
+  .sig-card { border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; background: var(--surface); }
+  .sig-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .sig-head h3 { margin: 0; font-size: 15px; }
+  .dir { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; border-radius: 999px; padding: 2px 10px; }
+  .dir.bullish { color: var(--good); border: 1px solid var(--good); }
+  .dir.bearish { color: var(--bad); border: 1px solid var(--bad); }
+  .dir.neutral { color: var(--muted); border: 1px solid var(--baseline); }
+  .conf { display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: 12.5px; color: var(--ink-2); }
+  .conf .bar { width: 110px; height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; }
+  .conf .bar i { display: block; height: 100%; background: var(--s1); border-radius: 3px; }
+  .sig-body { margin-top: 10px; }
+  .sig-body ul { margin: 6px 0; padding-left: 20px; font-size: 13.5px; color: var(--ink-2); }
+  .sig-body li { margin: 3px 0; max-width: 85ch; }
+  .plan { background: var(--page); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; margin-top: 10px; }
+  .plan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-bottom: 8px; }
+  details.sig-details summary { cursor: pointer; font-size: 12.5px; color: var(--muted); }
+  details.sig-details summary:focus-visible { outline: 2px solid var(--s1); }
   .disclaimer { font-size: 12.5px; color: var(--muted); margin-top: 26px; max-width: 75ch; }
   .learn h3 { font-size: 14.5px; margin: 18px 0 6px; }
   .learn p, .learn li { font-size: 14px; color: var(--ink-2); max-width: 70ch; }
@@ -129,6 +146,7 @@
 
   <nav class="tabs" role="tablist">
     <button class="active" data-tab="scan">Market Scan</button>
+    <button data-tab="signals">Signals</button>
     <button data-tab="backtest">Backtest Lab</button>
     <button data-tab="grid">Grid</button>
     <button data-tab="paper">Paper Portfolio</button>
@@ -145,6 +163,23 @@
       <div class="tablewrap"><table id="scan-table"></table></div>
     </div>
     <div class="card" id="scan-detail" hidden></div>
+  </section>
+
+  <section id="tab-signals">
+    <div class="card">
+      <p class="eyebrow">Rule engine output — study material, not financial advice</p>
+      <h2>Today's signals, with full reasoning</h2>
+      <p class="note">The signal engine scores every asset from the tested indicators
+        (trend 60%, momentum 40%, scaled by volatility and volume conditions), then quality gates
+        reject weak setups. For anything that survives, the risk engine drafts a complete plan —
+        entry, ATR-based stop and target, and a position sized so a stopped-out trade loses at most
+        1% of the equity you enter below. Every number is reproducible from the indicator values shown.</p>
+      <div class="controls">
+        <label>Study equity (€) <input type="number" id="sg-equity" value="1000" min="50" step="50"></label>
+        <button class="btn" id="sg-run">Recalculate</button>
+      </div>
+      <div id="sg-output"></div>
+    </div>
   </section>
 
   <section id="tab-backtest">
@@ -246,6 +281,16 @@
 <script>
 (function () {
 /*__STRATEGY__*/
+})();
+</script>
+<script>
+(function () {
+/*__SIGNALS__*/
+})();
+</script>
+<script>
+(function () {
+/*__RISK__*/
 })();
 </script>
 <script>
@@ -476,6 +521,60 @@ const DATASET = /*__DATASET__*/;
     return parts.join(' ');
   }
   renderScan();
+
+  /* ---------- Signals (presentation only — all numbers from engines) ---------- */
+  const Sg = window.Signals, Rk = window.Risk;
+  function renderSignals() {
+    const equity = Math.max(50, +$('sg-equity').value || 1000);
+    const cards = coins.map(c => {
+      const s = Sg.evaluateSignal(c.closes, c.volumes);
+      const atrArr = I.atr(c.closes, c.closes, c.closes, 14);
+      const atr = atrArr[atrArr.length - 1];
+      const rec = Rk.buildRecommendation({
+        signal: s, price: c.closes[c.closes.length - 1], atr,
+        atrIsCloseOnly: true, equity, openRiskEur: 0,
+      });
+      return { c, s, rec };
+    });
+    // actionable first, then by confidence
+    cards.sort((a, b) => (b.rec.valid - a.rec.valid) || (b.s.confidence - a.s.confidence));
+    const n = cards.filter(x => x.rec.valid).length;
+    let html = '<p class="note"><b>' + (n === 0
+      ? 'No asset passes the quality gates today.'
+      : n + ' of ' + coins.length + ' assets pass the quality gates today.')
+      + '</b> ' + (n === 0 ? 'That is the system working: refusing weak setups is the output, not a failure. ' : '')
+      + 'Gates and thresholds are fixed in the tested engine — nothing here is tuned to look busy.</p>';
+    for (const { c, s, rec } of cards) {
+      html += '<div class="sig-card">'
+        + '<div class="sig-head"><h3>' + c.symbol + ' <span style="color:var(--muted);font-weight:400">' + c.name + '</span></h3>'
+        + '<span class="dir ' + s.direction + '">' + s.direction + '</span>'
+        + '<span class="conf"><span class="bar"><i style="width:' + s.confidence + '%"></i></span>'
+        + s.confidence + '/100</span></div>'
+        + '<div class="sig-body">';
+      if (rec.valid) {
+        html += '<div class="plan"><div class="plan-grid">'
+          + planCell('Entry', eur(rec.entry))
+          + planCell('Stop loss', eur(rec.stopLoss))
+          + planCell('Take profit', eur(rec.takeProfit))
+          + planCell('Risk / reward', rec.riskReward.toFixed(2))
+          + planCell('Position', eur0(rec.positionEur))
+          + planCell('Risk if stopped', eur0(rec.riskEur))
+          + '</div><ul>' + rec.explanation.map(e => '<li>' + e + '</li>').join('') + '</ul></div>';
+      } else {
+        html += '<ul>' + (s.rejections.length ? s.rejections : rec.rejections)
+          .map(r => '<li>✕ ' + r + '</li>').join('') + '</ul>';
+      }
+      html += '<details class="sig-details"><summary>Indicator breakdown</summary><ul>'
+        + s.reasons.map(r => '<li>' + r + '</li>').join('') + '</ul></details>'
+        + '</div></div>';
+    }
+    $('sg-output').innerHTML = html;
+  }
+  function planCell(k, v) {
+    return '<div class="reading"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
+  }
+  $('sg-run').addEventListener('click', renderSignals);
+  renderSignals();
 
   /* ---------- Backtest Lab ---------- */
   function runBacktest() {

@@ -48,17 +48,34 @@ never guessing, never promising profits.
 - Market Scan tab: all-asset table + per-asset full reading with
   plain-language, past-tense descriptions.
 
+### Stage 2 — Signal engine ✅
+- `src/signals.js`: trend alignment (50/200-day structure), momentum
+  (RSI + MACD), volatility and volume condition factors, documented
+  confidence formula, quality gates (overbought, indicator conflict,
+  extreme volatility, no-short spot, minimum confidence). Every score is
+  reproducible from indicator values — the tests recompute it independently.
+- Test gate: 43 assertions passing (`tests/signals-tests.js`).
+- ATR added to the indicator engine (Wilder, H/L/C) with a documented
+  close-only degradation; measured ~2× understatement vs true-range ATR
+  on real BTC daily OHLC. ADX/Stochastic remain deferred until the data
+  layer carries real highs/lows — pseudo-variants would be false precision.
+
+### Stage 3 — Risk engine ✅
+- `src/risk.js`: 1% fixed risk per trade, 2×/3× ATR stop/target
+  (R/R 1.5 minimum), 20% max position, 5% max portfolio risk, minimum
+  position size, close-only ATR calibration (×2), full plain-language
+  plan or explicit rejection reasons. Long-only by design (spot market).
+- Test gate: 31 assertions incl. hand-computed sizing and hard-ceiling
+  property sweeps (`tests/risk-tests.js`); 50 integration assertions on
+  the real dataset (`tests/integration-tests.js`); full gate:
+  `bash tools/test-all.sh` (185 assertions).
+- Dashboard "Signals" tab renders the engines' output (no logic in UI):
+  per-asset direction, confidence, indicator breakdown, and — when gates
+  pass — the complete plan (entry/stop/target/R/R/size/risk).
+
 ## Remaining stages (each gated: tests pass before the next begins)
 
-### Stage 2 — Signal & risk engine
-Rule-based signal definitions (trend/momentum/mean-reversion confluence),
-each with: entry condition, invalidation (stop) level, target, and
-volatility-scaled position size capped at a fixed % risk per idea.
-Every signal carries a machine-checkable explanation of *why* it fired.
-Test gate: signal generation reproduces hand-computed cases; position
-sizes never exceed the risk cap under property tests.
-
-### Stage 3 — Validation harness
+### Stage 3.5 — Validation harness
 Walk-forward / out-of-sample splits, fee & slippage modeling, benchmark
 comparison vs buy-and-hold, and an overfitting sanity report per strategy.
 Test gate: known-answer tests on synthetic series; a deliberately
