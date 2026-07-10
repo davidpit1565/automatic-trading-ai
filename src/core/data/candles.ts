@@ -47,7 +47,8 @@ export function parseCandle(raw: unknown): Result<Candle> {
 
   if (typeof raw === 'object' && raw !== null) {
     const obj = raw as Record<string, unknown>;
-    const ts = pickNumber(obj, ['timestamp', 'time', 't', 'openTime', 'start_time', 'startTime']);
+    // 'start' is Revolut X's candle open-time key.
+    const ts = pickNumber(obj, ['timestamp', 'time', 't', 'start', 'openTime', 'start_time', 'startTime']);
     const open = pickNumber(obj, ['open', 'o']);
     const high = pickNumber(obj, ['high', 'h']);
     const low = pickNumber(obj, ['low', 'l']);

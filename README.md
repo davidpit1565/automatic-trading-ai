@@ -51,6 +51,34 @@ UI (src/ui + index.html)            Backtesting Lab · Grid Simulation ·
 If the live API is unreachable, the dashboard falls back to clearly-labelled
 deterministic demo data — synthetic data is never presented as live prices.
 
+## Connecting live Revolut X data
+
+Live market data comes from the official
+[Revolut X REST API](https://developer.revolut.com/docs/x-api) through a **local
+read-only proxy** (`server/revxProxy.mjs`). The proxy holds your credentials, signs
+requests (Ed25519), and only forwards whitelisted market-data GETs — it refuses
+orders, balances, and every account-mutating endpoint by construction, so it cannot
+trade. No Claude connectors or company integrations are involved; the app talks to
+Revolut X directly from your machine.
+
+1. Generate an Ed25519 keypair locally:
+   ```bash
+   openssl genpkey -algorithm ed25519 -out revx-private.pem
+   openssl pkey -in revx-private.pem -pubout -out revx-public.pem
+   ```
+2. In the **Revolut X web app**, create an API key, paste the contents of
+   `revx-public.pem`, and grant it **read-only** permissions (no trading).
+3. `cp .env.example .env` and fill in `REVX_API_KEY` and `REVX_PRIVATE_KEY_PATH`.
+   `.env` and `*.pem` are gitignored — never commit credentials.
+4. Run the proxy and the dashboard:
+   ```bash
+   npm run proxy   # terminal 1 — read-only signing proxy on :8788
+   npm run dev     # terminal 2 — dashboard (proxies /api/revx automatically)
+   ```
+
+The banner turns green when live data is flowing. Without the proxy or credentials,
+the app stays in clearly-labelled deterministic demo mode.
+
 ## Development
 
 ```bash

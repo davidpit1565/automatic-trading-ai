@@ -30,8 +30,9 @@ async function bootstrap(): Promise<void> {
       banner.textContent = `Connected to ${data.source.name} — live market data, read-only.`;
     } else {
       banner.textContent =
-        'Live market data unavailable — showing deterministic DEMO data. ' +
-        'Nothing on this screen reflects real market prices.';
+        'Live market data unavailable — showing deterministic DEMO data; nothing here ' +
+        'reflects real market prices. To go live, run the local proxy (npm run proxy) ' +
+        'with a read-only Revolut X API key — see README "Connecting live Revolut X data".';
     }
   }
 

@@ -1,10 +1,12 @@
 /**
  * Data source selection for the dashboard.
  *
- * Tries the live read-only Revolut X client first; if it is unreachable
- * (offline, CORS, API change) the app falls back to deterministic synthetic
- * data and says so loudly in the banner — demo data is never silently
- * presented as live market data.
+ * The browser talks to Revolut X through the local read-only signing proxy
+ * (`npm run proxy`), which holds the API credentials in .env and can only
+ * forward whitelisted market-data GETs. When the proxy is not running or
+ * not configured, the app falls back to deterministic synthetic data and
+ * says so loudly in the banner — demo data is never silently presented as
+ * live market data.
  */
 
 import type { MarketDataSource } from '../core/data/revolutClient';
@@ -19,10 +21,14 @@ export interface ActiveDataSource {
 }
 
 export async function initDataSource(): Promise<ActiveDataSource> {
-  const live = new RevolutXClient({ timeoutMs: 6000 });
+  const live = new RevolutXClient({ timeoutMs: 8000 });
   const instruments = await live.getInstruments();
   if (instruments.ok && instruments.value.length > 0) {
-    return { source: live, instruments: instruments.value, isLive: true };
+    return {
+      source: live,
+      instruments: [...instruments.value].sort((a, b) => a.symbol.localeCompare(b.symbol)),
+      isLive: true,
+    };
   }
 
   const demo = new SyntheticDataSource(Date.now());
