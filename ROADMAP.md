@@ -142,6 +142,9 @@ architecture's safety rails:
   fill, refusal, and kill-switch event recorded append-only.
 - Portfolio tab autopilot panel: start/stop with interval, run-cycle-now,
   kill switch, live audit trail.
+- Reload survival: the desired running state persists and resume() restores
+  the schedule on load — never past an engaged kill switch, which always
+  requires an explicit human restart. Full details: docs/paper-autopilot.md.
 
 **The live half of Stage 6 remains deliberately unbuilt.** Real-money
 orders would require the blocking human ConfirmationGate per the execution

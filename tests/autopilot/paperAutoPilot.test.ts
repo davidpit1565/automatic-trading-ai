@@ -184,6 +184,63 @@ describe('kill switch', () => {
   });
 });
 
+describe('reload survival', () => {
+  function makePersistentPilot(store: MemoryStore, scheduler: ManualScheduler) {
+    const journal = new TradeJournal(store);
+    const positions = new PositionEngine(store, journal);
+    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
+    return new PaperAutoPilot({
+      source: makeSource({ 'QUAL/USD': { drift: 0.001 } }),
+      symbols: ['QUAL/USD'],
+      timeframe: '1h',
+      scheduler,
+      portfolio,
+      positions,
+      killSwitch: new PersistedKillSwitch(store),
+      audit: new PersistedAuditLog(store),
+      getDailyLoss: () => 0,
+      clock: () => T,
+      store,
+    });
+  }
+
+  it('a started autopilot resumes after a reload (fresh instance, same store)', () => {
+    const store = new MemoryStore();
+    makePersistentPilot(store, new ManualScheduler()).start('30m');
+
+    // "Reload": brand-new instance and scheduler over the same storage.
+    const scheduler = new ManualScheduler();
+    const restored = makePersistentPilot(store, scheduler);
+    expect(restored.status().running).toBe(false); // not before resume()
+    expect(restored.resume()).toBe(true);
+    expect(restored.status().running).toBe(true);
+    expect(restored.status().interval).toBe('30m');
+    expect(scheduler.isRunning()).toBe(true);
+  });
+
+  it('a stopped autopilot stays stopped after a reload', () => {
+    const store = new MemoryStore();
+    const first = makePersistentPilot(store, new ManualScheduler());
+    first.start('15m');
+    first.stop();
+
+    const restored = makePersistentPilot(store, new ManualScheduler());
+    expect(restored.resume()).toBe(false);
+    expect(restored.status().running).toBe(false);
+  });
+
+  it('never auto-resumes past an engaged kill switch — restarting is a human decision', () => {
+    const store = new MemoryStore();
+    const first = makePersistentPilot(store, new ManualScheduler());
+    first.start('15m');
+    new PersistedKillSwitch(store).engage('emergency stop');
+
+    const restored = makePersistentPilot(store, new ManualScheduler());
+    expect(restored.resume()).toBe(false);
+    expect(restored.status().running).toBe(false);
+  });
+});
+
 describe('paper-only by construction', () => {
   it('declares paper mode and exposes no live capability', () => {
     const { pilot } = makePilot({ 'QUAL/USD': { drift: 0.001 } });

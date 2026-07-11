@@ -57,7 +57,10 @@ export function renderPositionsView(container: HTMLElement, data: ActiveDataSour
     killSwitch,
     audit,
     getDailyLoss: () => new DailyLossTracker(store).lossToday(Date.now()),
+    store,
   });
+  // Reload survival: pick the schedule back up if it was running.
+  autopilot.resume();
 
   container.innerHTML = `
     <h2>Portfolio</h2>

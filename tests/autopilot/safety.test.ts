@@ -51,4 +51,15 @@ describe('PersistedAuditLog', () => {
     view.pop();
     expect(log.entries()).toHaveLength(1);
   });
+
+  it('exposes no edit or delete capability of any kind', () => {
+    const log = new PersistedAuditLog(new MemoryStore());
+    const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(log)).filter(
+      (name) => name !== 'constructor',
+    );
+    expect(methods.sort()).toEqual(['append', 'entries']);
+    for (const name of methods) {
+      expect(name).not.toMatch(/delete|remove|clear|edit|update|set/i);
+    }
+  });
 });

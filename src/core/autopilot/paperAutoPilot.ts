@@ -18,6 +18,7 @@
  */
 
 import type { MarketDataSource } from '../data/revolutClient';
+import type { KeyValueStore } from '../data/storage';
 import type { ExecutionMode } from '../execution/types';
 import { MONITOR_INTERVALS, type MonitorInterval, type Scheduler } from '../monitor/scheduler';
 import type { PortfolioEngine } from '../position/portfolioEngine';
@@ -43,7 +44,16 @@ export interface AutoPilotOptions {
   readonly audit: PersistedAuditLog;
   readonly getDailyLoss: () => number;
   readonly clock?: () => number;
+  /** Persists the desired running state so the autopilot survives reloads. */
+  readonly store?: KeyValueStore;
 }
+
+interface PersistedAutopilotState {
+  desiredRunning: boolean;
+  interval: MonitorInterval | null;
+}
+
+const STATE_KEY = 'autopilot-state';
 
 export interface CycleResult {
   readonly timestamp: number;
@@ -80,11 +90,31 @@ export class PaperAutoPilot {
     this.options.scheduler.start(MONITOR_INTERVALS[interval], async () => {
       await this.runCycleOnce(this.clock());
     });
+    this.persistState({ desiredRunning: true, interval });
   }
 
   stop(): void {
     this.options.scheduler.stop();
     this.interval = null;
+    this.persistState({ desiredRunning: false, interval: null });
+  }
+
+  /**
+   * Resume after a reload if the autopilot was running when the app closed.
+   * Never resumes past an engaged kill switch: restarting after an
+   * emergency stop is always an explicit human decision.
+   * Returns true when scheduling was restored.
+   */
+  resume(): boolean {
+    const saved = this.options.store?.get<PersistedAutopilotState>(STATE_KEY);
+    if (!saved?.desiredRunning || saved.interval === null) return false;
+    if (this.options.killSwitch.isEngaged()) return false;
+    this.start(saved.interval);
+    return true;
+  }
+
+  private persistState(state: PersistedAutopilotState): void {
+    this.options.store?.set(STATE_KEY, state);
   }
 
   status(): AutoPilotStatus {

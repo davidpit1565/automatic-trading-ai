@@ -24,8 +24,10 @@ Stage 6), every live order will require explicit human confirmation.
   Long-only: bearish evidence yields an explained pass, never a short.
 - **Paper Autopilot — complete**: fully autonomous *simulated* trading — automatic
   pipeline-qualified entries, automatic stop/target exits, kill switch, append-only
-  audit log. Paper-only by construction (architecture-tested); live orders would always
-  require explicit human confirmation per trade.
+  audit log, and reload survival (a running autopilot resumes after refresh unless the
+  kill switch is engaged). Paper-only by construction (architecture-tested); live orders
+  would always require explicit human confirmation per trade. See
+  `docs/paper-autopilot.md`.
 - **Stage 5 — complete**: Position Tracking & Portfolio Analytics — position lifecycle
   with partial exits and MFE/MAE, portfolio engine (cash, equity, exposure, allocation,
   daily return), append-only trade journal, informational position monitoring (never
