@@ -100,10 +100,32 @@ Analysis only — no execution capability of any kind (enforced by tests).
 - Monitoring dashboard tab: scheduler status, last/next scan, current
   opportunities, watchlist management, opportunity history, alert history.
 
-## Next
+### Stage 5 — Position Tracking & Portfolio Analytics ✅
+No broker writes, no automatic execution, no auto-closing (enforced by tests).
 
-### Stage 5 — Position Tracking
-Open positions, P&L tracking, performance metrics, trade journal analytics.
+- Position Engine: open (only from approved Risk Engine proposals), partial
+  exits with proportional realized P&L, full close, fees, MFE/MAE excursion
+  tracking, persistence. One journal entry per completed trade.
+- Portfolio Engine: cash accounting coupled to positions, snapshots with
+  equity / invested capital / unrealized + realized P&L / total and daily
+  return (UTC-day anchored) / exposure / largest position / allocation /
+  cash available; configurable base currency.
+- Trade Journal: structured and append-only — id, asset, entry/exit
+  timestamps and prices, size, stop, target, exit reason, fees, slippage,
+  holding duration, MFE/MAE, realized P&L, return %, strategy version,
+  validation verdict, confidence, notes. Duplicate ids refused.
+- Position monitoring: pure insight function — P&L, distance to stop and
+  target, current risk/reward, time in trade, market regime, validation
+  deterioration. Informational warnings only; never closes positions.
+- Analytics reusing verified math (profitStats, maxDrawdownPct): win/loss
+  rate, profit factor, expectancy, average winner/loser, largest gain/loss,
+  win/loss streaks, average holding, equity curve, rolling drawdown,
+  recovery factor, Calmar (conventions documented in the module).
+- Portfolio dashboard tab: overview cards, open positions with live
+  insights and manual close / half-close, interactive journal, analytics
+  with equity + drawdown charts and monthly performance.
+
+## Next
 
 ### Stage 6 — Execution Preparation
 Prepare complete orders and full trade summaries. **Every live order requires

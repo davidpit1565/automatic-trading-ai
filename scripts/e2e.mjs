@@ -66,6 +66,47 @@ try {
   await page.waitForSelector('#pp-positions table', { timeout: 20000 });
   check('paper portfolio position row', (await page.$$('#pp-positions tbody tr')).length === 1);
 
+  // PORTFOLIO — full position lifecycle through the verified pipeline.
+  await page.click('[data-tab="positions"]');
+  await page.waitForSelector('#pf-open', { timeout: 10000 });
+  await page.waitForSelector('#pf-overview .stat-card', { timeout: 20000 });
+  check(
+    'portfolio overview cards rendered',
+    (await page.$$('#pf-overview .stat-card')).length >= 5,
+  );
+  // Try each demo symbol until one qualifies end-to-end (scan->signal->risk).
+  const pfSymbols = await page.$$eval('#pf-symbol option', (els) => els.map((e) => e.value));
+  let pfOpened = false;
+  for (const symbol of pfSymbols) {
+    await page.selectOption('#pf-symbol', symbol);
+    await page.click('#pf-open');
+    await page.waitForFunction(
+      () => {
+        const t = document.querySelector('#pf-status')?.textContent ?? '';
+        return t.includes('Opened') || t.includes('refused') || t.includes('no qualifying') || t.includes('No market data');
+      },
+      { timeout: 30000 },
+    );
+    const text = await page.$eval('#pf-status', (e) => e.textContent);
+    if (text.includes('Opened')) {
+      pfOpened = true;
+      break;
+    }
+  }
+  check('a position opened via the pipeline', pfOpened);
+  await page.waitForSelector('#pf-positions tbody tr', { timeout: 20000 });
+  check('open position row rendered', (await page.$$('#pf-positions tbody tr')).length >= 1);
+  await page.click('[data-close-all]');
+  await page.waitForSelector('#pf-journal tbody tr', { timeout: 20000 });
+  check('journal entry after close', (await page.$$('#pf-journal tbody tr')).length === 1);
+  await page.waitForSelector('#pf-analytics .stat-card', { timeout: 20000 });
+  const analyticsText = await page.$eval('#pf-analytics', (e) => e.textContent);
+  check(
+    'analytics render win rate, profit factor, drawdown',
+    ['Win rate', 'Profit factor', 'Max drawdown'].every((s) => analyticsText.includes(s)),
+  );
+  check('equity and drawdown charts rendered', (await page.$$('#pf-analytics svg')).length === 2);
+
   // MONITORING — manual scan through the full pipeline.
   await page.click('[data-tab="monitoring"]');
   await page.waitForSelector('#mon-scan-now', { timeout: 10000 });

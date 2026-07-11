@@ -9,6 +9,7 @@ import { renderGridView } from './views/gridView';
 import { renderMarketScanView } from './views/marketScanView';
 import { renderMonitoringView } from './views/monitoringView';
 import { renderPortfolioView } from './views/portfolioView';
+import { renderPositionsView } from './views/positionsView';
 import { renderValidationView } from './views/validationView';
 
 type ViewRenderer = (container: HTMLElement, data: ActiveDataSource) => void;
@@ -17,6 +18,7 @@ const VIEWS: Record<string, ViewRenderer | null> = {
   backtest: renderBacktestView,
   grid: renderGridView,
   portfolio: renderPortfolioView,
+  positions: renderPositionsView,
   validation: renderValidationView,
   monitoring: renderMonitoringView,
   scan: renderMarketScanView,

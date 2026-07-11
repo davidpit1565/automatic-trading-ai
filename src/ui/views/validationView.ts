@@ -15,6 +15,7 @@ import {
 import type { EquityPoint } from '../../core/backtest/metrics';
 import type { PerformanceReport } from '../../core/validation/performance';
 import type { Timeframe } from '../../core/types';
+import { lineChartSvg } from '../charts';
 import type { ActiveDataSource } from '../dataSource';
 import { escapeHtml, formatPct, formatPrice, signClass } from '../format';
 
@@ -235,27 +236,13 @@ function formatHold(ms: number | null): string {
 /** Plain SVG polyline of the out-of-sample equity curve (base 100). */
 function equityCurveSvg(curve: readonly EquityPoint[]): string {
   if (curve.length < 2) return '<p class="status-line">Not enough points for a curve.</p>';
-  const width = 800;
-  const height = 180;
-  const pad = 8;
-  const values = curve.map((p) => p.equity);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const points = curve
-    .map((point, i) => {
-      const x = pad + (i / (curve.length - 1)) * (width - 2 * pad);
-      const y = height - pad - ((point.equity - min) / span) * (height - 2 * pad);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
-  const last = values[values.length - 1]!;
-  const lineClass = last >= 100 ? 'equity-line-up' : 'equity-line-down';
-  return `
-    <svg class="equity-curve" viewBox="0 0 ${width} ${height}" role="img"
-         aria-label="Out-of-sample equity curve from ${values[0]!.toFixed(1)} to ${last.toFixed(1)}">
-      <polyline class="${lineClass}" fill="none" stroke-width="2" points="${points}" />
-    </svg>
-    <p class="status-line">Start 100 → end ${last.toFixed(1)} (${formatPct(last - 100)})</p>
-  `;
+  const last = curve[curve.length - 1]!.equity;
+  const chart = lineChartSvg(
+    curve.map((p) => ({ timestamp: p.timestamp, value: p.equity })),
+    {
+      lineClass: last >= 100 ? 'equity-line-up' : 'equity-line-down',
+      ariaLabel: `Out-of-sample equity curve from ${curve[0]!.equity.toFixed(1)} to ${last.toFixed(1)}`,
+    },
+  );
+  return `${chart}<p class="status-line">Start 100 → end ${last.toFixed(1)} (${formatPct(last - 100)})</p>`;
 }

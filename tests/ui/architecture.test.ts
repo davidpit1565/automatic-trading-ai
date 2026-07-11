@@ -57,6 +57,7 @@ describe('UI layer architecture', () => {
       /core\/validation\/(walkForward|robustness|performance)$/,
       /core\/backtest\/metrics$/,
       /core\/monitor\/(monitoringEngine|scheduler|watchlist|opportunityLog|alerts|validationProvider)$/,
+      /core\/position\/(positionEngine|portfolioEngine|tradeJournal|analytics|positionMonitor)$/,
       /core\/backtest\/engine$/,
       /core\/strategies$/,
       /core\/portfolio\/paperPortfolio$/,
@@ -156,6 +157,29 @@ describe('core layering', () => {
         /placeOrder|submitOrder|core\/execution/,
       );
     }
+  });
+
+  it('the position layer consumes trade proposals and never analyses or executes', () => {
+    const positionFiles = collectFiles(join(root, 'src/core/position'));
+    for (const file of positionFiles) {
+      const text = readFileSync(file, 'utf8');
+      expect(text, `${file} must not import indicators`).not.toMatch(
+        /from\s+['"][^'"]*\/indicators/,
+      );
+      expect(text, `${file} must not fetch market data`).not.toMatch(
+        /revolutClient|synthetic|\bfetch\s*\(/,
+      );
+      expect(text, `${file} must have no execution capability`).not.toMatch(
+        /placeOrder|submitOrder|core\/execution/,
+      );
+    }
+    // Analytics reuses verified math instead of duplicating it.
+    const analytics = readFileSync(join(root, 'src/core/position/analytics.ts'), 'utf8');
+    expect(analytics).toMatch(/from\s+['"]\.\.\/validation\/performance['"]/);
+    expect(analytics).toMatch(/maxDrawdownPct/);
+    // Positions open only from Risk Engine assessments.
+    const engine = readFileSync(join(root, 'src/core/position/positionEngine.ts'), 'utf8');
+    expect(engine).toContain('openFromAssessment');
   });
 
   it('position sizing lives in the Risk Engine, not the Signal Engine', () => {

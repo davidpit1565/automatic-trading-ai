@@ -22,6 +22,11 @@ Stage 6), every live order will require explicit human confirmation.
   confidence score (hard-capped below 100) whose components are itemised. Rejections
   list every failed check; opportunities explain themselves in plain language.
   Long-only: bearish evidence yields an explained pass, never a short.
+- **Stage 5 — complete**: Position Tracking & Portfolio Analytics — position lifecycle
+  with partial exits and MFE/MAE, portfolio engine (cash, equity, exposure, allocation,
+  daily return), append-only trade journal, informational position monitoring (never
+  auto-closes), analytics reusing the verified math, and a Portfolio dashboard tab with
+  equity/drawdown charts and monthly performance.
 - **Stage 4 — complete**: Market Monitoring — continuous scheduled scans through the
   verified pipeline on a replaceable scheduler (5m–1d), opportunity detection
   (none / watch / qualified), persistent watchlists with favourites, an append-only
@@ -59,6 +64,8 @@ Execution (src/core/execution)      DESIGN ONLY: contracts for Stage 6 (paper/li
 Monitoring (src/core/scan)          market scanner: scoring + hot/cold/neutral
 Monitor (src/core/monitor)          scheduled scans, watchlists, opportunity log,
                                     alerts — orchestrates the verified pipeline
+Position (src/core/position)        position lifecycle, portfolio accounting,
+                                    append-only trade journal, analytics
 Signal Engine (src/core/signal)     quality gates, trade levels, confidence
 Risk Engine (src/core/risk)         position sizing, exposure limits, daily loss
                                     protection, trade approval/refusal with reasons
@@ -113,10 +120,9 @@ Every feature follows TDD: tests first, then implementation, then regression run
 
 ## Roadmap
 
-Stage 5 Position Tracking → Stage 6 Execution Preparation (human confirmation
-mandatory; architecture already designed in `docs/execution-architecture.md`) →
-Stage 7 Performance Feedback. Each stage proceeds only after the previous one is
-verified — details in `ROADMAP.md`.
+Stage 6 Execution Preparation (human confirmation mandatory; architecture already
+designed in `docs/execution-architecture.md`) → Stage 7 Performance Feedback. Each
+stage proceeds only after the previous one is verified — details in `ROADMAP.md`.
 
 > Educational and analytical tool. Not financial advice. Past performance never
 > guarantees future results.
