@@ -22,6 +22,10 @@ Stage 6), every live order will require explicit human confirmation.
   confidence score (hard-capped below 100) whose components are itemised. Rejections
   list every failed check; opportunities explain themselves in plain language.
   Long-only: bearish evidence yields an explained pass, never a short.
+- **Paper Autopilot — complete**: fully autonomous *simulated* trading — automatic
+  pipeline-qualified entries, automatic stop/target exits, kill switch, append-only
+  audit log. Paper-only by construction (architecture-tested); live orders would always
+  require explicit human confirmation per trade.
 - **Stage 5 — complete**: Position Tracking & Portfolio Analytics — position lifecycle
   with partial exits and MFE/MAE, portfolio engine (cash, equity, exposure, allocation,
   daily return), append-only trade journal, informational position monitoring (never
@@ -66,6 +70,8 @@ Monitor (src/core/monitor)          scheduled scans, watchlists, opportunity log
                                     alerts — orchestrates the verified pipeline
 Position (src/core/position)        position lifecycle, portfolio accounting,
                                     append-only trade journal, analytics
+Autopilot (src/core/autopilot)      autonomous PAPER trading: kill switch,
+                                    audit log, no live path by construction
 Signal Engine (src/core/signal)     quality gates, trade levels, confidence
 Risk Engine (src/core/risk)         position sizing, exposure limits, daily loss
                                     protection, trade approval/refusal with reasons

@@ -125,9 +125,32 @@ No broker writes, no automatic execution, no auto-closing (enforced by tests).
   insights and manual close / half-close, interactive journal, analytics
   with equity + drawdown charts and monthly performance.
 
+### Stage 6 (paper half) — Paper Autopilot ✅
+Fully autonomous **simulated** trading, implementing the execution
+architecture's safety rails:
+
+- PaperAutoPilot: each cycle protects open positions first (automatic
+  stop-loss / take-profit exits at market data), then opens paper positions
+  for pipeline-qualified, risk-approved opportunities. Never pyramids an
+  already-held symbol. Paper-only by construction — architecture tests
+  assert no live mode string, no broker adapter, and no network path exists
+  anywhere in the automation layer.
+- PersistedKillSwitch (implements the KillSwitch contract): engages
+  instantly without confirmation, requires an explicit human actor to
+  disengage, survives reloads.
+- PersistedAuditLog (implements the AuditLog contract): every automated
+  fill, refusal, and kill-switch event recorded append-only.
+- Portfolio tab autopilot panel: start/stop with interval, run-cycle-now,
+  kill switch, live audit trail.
+
+**The live half of Stage 6 remains deliberately unbuilt.** Real-money
+orders would require the blocking human ConfirmationGate per the execution
+architecture — automation is permitted below that gate (simulation), never
+above it. This is a product principle, not a technical gap.
+
 ## Next
 
-### Stage 6 — Execution Preparation
+### Stage 6 (live half) — Execution Preparation
 Prepare complete orders and full trade summaries. **Every live order requires
 explicit human confirmation — no exceptions.** Never executes automatically.
 

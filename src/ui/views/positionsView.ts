@@ -7,7 +7,11 @@
  * always an explicit human action — nothing closes automatically.
  */
 
+import { PersistedAuditLog } from '../../core/autopilot/auditLog';
+import { PersistedKillSwitch } from '../../core/autopilot/killSwitch';
+import { PaperAutoPilot } from '../../core/autopilot/paperAutoPilot';
 import { LocalStorageStore } from '../../core/data/storage';
+import { IntervalScheduler, type MonitorInterval } from '../../core/monitor/scheduler';
 import {
   buildEquityCurve,
   monthlyPerformance,
@@ -41,13 +45,52 @@ export function renderPositionsView(container: HTMLElement, data: ActiveDataSour
     baseCurrency: BASE_CURRENCY,
   });
 
+  const killSwitch = new PersistedKillSwitch(store);
+  const audit = new PersistedAuditLog(store);
+  const autopilot = new PaperAutoPilot({
+    source: data.source,
+    symbols: data.instruments.slice(0, 12).map((i) => i.symbol),
+    timeframe: TIMEFRAME,
+    scheduler: new IntervalScheduler(),
+    portfolio,
+    positions,
+    killSwitch,
+    audit,
+    getDailyLoss: () => new DailyLossTracker(store).lossToday(Date.now()),
+  });
+
   container.innerHTML = `
     <h2>Portfolio</h2>
     <p class="status-line">
       Position tracking and analytics for simulated trades. Opening runs the full verified
-      pipeline (scan → signal → risk); closing is always your explicit action.
+      pipeline (scan → signal → risk); closing is your explicit action — or the paper
+      autopilot's, using simulated money only.
     </p>
     <div id="pf-overview"></div>
+
+    <h3>Paper Autopilot</h3>
+    <p class="status-line">
+      Trades completely autonomously with SIMULATED money: qualified entries via the
+      verified pipeline, automatic stop-loss / take-profit exits, everything audited.
+      No real orders exist anywhere in this platform — live trading would always require
+      your explicit confirmation per trade.
+    </p>
+    <div class="controls">
+      <label class="control">Cycle every
+        <select id="ap-interval">
+          ${(['5m', '15m', '30m', '1h', '4h', '1d'] as MonitorInterval[])
+            .map((i) => `<option value="${i}" ${i === '15m' ? 'selected' : ''}>${i}</option>`)
+            .join('')}
+        </select>
+      </label>
+      <button class="primary" id="ap-start">Start autopilot</button>
+      <button class="secondary" id="ap-stop">Stop</button>
+      <button class="secondary" id="ap-cycle">Run cycle now</button>
+      <button class="secondary" id="ap-kill">⛔ Kill switch</button>
+    </div>
+    <div class="status-line" id="ap-status"></div>
+    <div id="ap-audit"></div>
+
     <div class="controls">
       <label class="control">Market
         <select id="pf-symbol">
@@ -141,7 +184,91 @@ export function renderPositionsView(container: HTMLElement, data: ActiveDataSour
 
   container.querySelector('#pf-refresh')!.addEventListener('click', () => void refresh());
 
+  // ---- Autopilot controls -------------------------------------------------
+  const autopilotStatus = container.querySelector<HTMLElement>('#ap-status')!;
+
+  function refreshAutopilot(): void {
+    const status = autopilot.status();
+    const parts = [
+      status.killSwitchEngaged
+        ? '⛔ KILL SWITCH ENGAGED — all automation halted'
+        : status.running
+          ? `Autopilot RUNNING (paper money, every ${status.interval})`
+          : 'Autopilot stopped.',
+      status.lastCycleAt !== null
+        ? `Last cycle: ${new Date(status.lastCycleAt).toLocaleString()}`
+        : '',
+      status.running && status.nextCycleAt !== null
+        ? `Next: ${new Date(status.nextCycleAt).toLocaleString()}`
+        : '',
+      status.lastCycle !== null && !status.lastCycle.halted
+        ? `opened ${status.lastCycle.opened.length} / closed ${status.lastCycle.closed.length} / skipped ${status.lastCycle.skipped.length}`
+        : '',
+    ].filter(Boolean);
+    autopilotStatus.textContent = parts.join(' · ');
+    renderAudit(container.querySelector('#ap-audit')!, audit);
+  }
+
+  container.querySelector('#ap-start')!.addEventListener('click', () => {
+    const interval = container.querySelector<HTMLSelectElement>('#ap-interval')!
+      .value as MonitorInterval;
+    autopilot.start(interval);
+    refreshAutopilot();
+  });
+  container.querySelector('#ap-stop')!.addEventListener('click', () => {
+    autopilot.stop();
+    refreshAutopilot();
+  });
+  container.querySelector('#ap-cycle')!.addEventListener('click', () => {
+    autopilotStatus.textContent = 'Running autopilot cycle…';
+    void autopilot.runCycleOnce(Date.now()).then(async () => {
+      refreshAutopilot();
+      await refresh();
+    });
+  });
+  container.querySelector('#ap-kill')!.addEventListener('click', () => {
+    if (killSwitch.isEngaged()) {
+      killSwitch.disengage('dashboard-user');
+      audit.append({
+        timestamp: Date.now(),
+        intentId: 'kill-switch',
+        event: 'kill-switch-disengaged',
+        mode: 'paper',
+        detail: 'kill switch disengaged from the dashboard',
+      });
+    } else {
+      killSwitch.engage('engaged from the dashboard');
+      autopilot.stop();
+    }
+    refreshAutopilot();
+  });
+
+  refreshAutopilot();
   void refresh();
+}
+
+function renderAudit(element: Element, audit: PersistedAuditLog): void {
+  const entries = [...audit.entries()].reverse().slice(0, 15);
+  if (entries.length === 0) {
+    element.innerHTML = '<p class="status-line">No automated actions yet.</p>';
+    return;
+  }
+  element.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Time</th><th>Event</th><th>Detail</th></tr></thead>
+      <tbody>
+        ${entries
+          .map(
+            (e) => `<tr>
+              <td>${new Date(e.timestamp).toLocaleString()}</td>
+              <td>${escapeHtml(e.event)}</td>
+              <td>${escapeHtml(e.detail)}</td>
+            </tr>`,
+          )
+          .join('')}
+      </tbody>
+    </table>
+  `;
 }
 
 function renderOverview(

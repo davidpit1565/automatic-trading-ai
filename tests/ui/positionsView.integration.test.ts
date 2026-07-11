@@ -41,7 +41,10 @@ beforeEach(() => {
 describe('Portfolio view (DOM integration)', () => {
   it('exposes hooks and renders the overview from the Portfolio Engine', async () => {
     const container = await renderView();
-    for (const hook of ['#pf-symbol', '#pf-open', '#pf-refresh', '#pf-status', '#pf-positions', '#pf-journal', '#pf-analytics']) {
+    for (const hook of [
+      '#pf-symbol', '#pf-open', '#pf-refresh', '#pf-status', '#pf-positions', '#pf-journal', '#pf-analytics',
+      '#ap-interval', '#ap-start', '#ap-stop', '#ap-cycle', '#ap-kill', '#ap-status', '#ap-audit',
+    ]) {
       expect(container.querySelector(hook), `missing hook ${hook}`).not.toBeNull();
     }
     const overview = container.querySelector('#pf-overview')!.textContent!;
@@ -93,5 +96,40 @@ describe('Portfolio view (DOM integration)', () => {
     expect(analytics).toContain('Max drawdown');
     expect(container.querySelectorAll('#pf-analytics svg').length).toBe(2); // equity + drawdown
     expect(analytics).toContain('Monthly performance');
+  });
+
+  it('autopilot cycle acts autonomously on paper and audits everything', async () => {
+    const container = await renderView();
+    expect(container.querySelector('#ap-status')!.textContent).toContain('stopped');
+
+    container.querySelector<HTMLButtonElement>('#ap-cycle')!.click();
+    await waitFor(() =>
+      (container.querySelector('#ap-status')!.textContent ?? '').includes('Last cycle'),
+    );
+    const status = container.querySelector('#ap-status')!.textContent!;
+    expect(status).toMatch(/opened \d+ \/ closed \d+ \/ skipped \d+/);
+    // The demo universe has bullish markets: the audit shows fills or refusals.
+    await waitFor(() => container.querySelectorAll('#ap-audit tbody tr').length > 0);
+    expect(container.querySelectorAll('#ap-audit tbody tr').length).toBeGreaterThan(0);
+  });
+
+  it('the kill switch halts automation and is reflected in the status', async () => {
+    const container = await renderView();
+    container.querySelector<HTMLButtonElement>('#ap-kill')!.click();
+    expect(container.querySelector('#ap-status')!.textContent).toContain('KILL SWITCH ENGAGED');
+
+    container.querySelector<HTMLButtonElement>('#ap-cycle')!.click();
+    await waitFor(() =>
+      (container.querySelector('#ap-status')!.textContent ?? '').includes('Last cycle'),
+    );
+    // Halted cycle: no opens/closes happened.
+    await waitFor(() => container.querySelectorAll('#ap-audit tbody tr').length > 0);
+    const audit = container.querySelector('#ap-audit')!.textContent!;
+    expect(audit).toContain('kill switch');
+    expect(container.querySelectorAll('#pf-positions tbody tr').length).toBe(0);
+
+    // Disengage restores automation.
+    container.querySelector<HTMLButtonElement>('#ap-kill')!.click();
+    expect(container.querySelector('#ap-status')!.textContent).not.toContain('KILL SWITCH ENGAGED');
   });
 });

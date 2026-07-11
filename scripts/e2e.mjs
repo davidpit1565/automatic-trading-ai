@@ -107,6 +107,31 @@ try {
   );
   check('equity and drawdown charts rendered', (await page.$$('#pf-analytics svg')).length === 2);
 
+  // PAPER AUTOPILOT — autonomous simulated cycle + kill switch.
+  check(
+    'autopilot starts stopped',
+    (await page.$eval('#ap-status', (e) => e.textContent)).includes('stopped'),
+  );
+  await page.click('#ap-cycle');
+  await page.waitForFunction(
+    () => document.querySelector('#ap-status')?.textContent?.includes('Last cycle'),
+    { timeout: 60000 },
+  );
+  const apStatus = await page.$eval('#ap-status', (e) => e.textContent);
+  check('autopilot cycle reports actions', /opened \d+ \/ closed \d+/.test(apStatus));
+  await page.waitForSelector('#ap-audit tbody tr', { timeout: 20000 });
+  check('audit log populated', (await page.$$('#ap-audit tbody tr')).length > 0);
+  await page.click('#ap-kill');
+  check(
+    'kill switch halts automation',
+    (await page.$eval('#ap-status', (e) => e.textContent)).includes('KILL SWITCH ENGAGED'),
+  );
+  await page.click('#ap-kill'); // disengage for a clean state
+  check(
+    'kill switch disengages explicitly',
+    !(await page.$eval('#ap-status', (e) => e.textContent)).includes('KILL SWITCH'),
+  );
+
   // MONITORING — manual scan through the full pipeline.
   await page.click('[data-tab="monitoring"]');
   await page.waitForSelector('#mon-scan-now', { timeout: 10000 });

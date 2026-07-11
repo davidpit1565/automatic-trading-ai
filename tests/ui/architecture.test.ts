@@ -58,6 +58,7 @@ describe('UI layer architecture', () => {
       /core\/backtest\/metrics$/,
       /core\/monitor\/(monitoringEngine|scheduler|watchlist|opportunityLog|alerts|validationProvider)$/,
       /core\/position\/(positionEngine|portfolioEngine|tradeJournal|analytics|positionMonitor)$/,
+      /core\/autopilot\/(paperAutoPilot|killSwitch|auditLog)$/,
       /core\/backtest\/engine$/,
       /core\/strategies$/,
       /core\/portfolio\/paperPortfolio$/,
@@ -106,22 +107,47 @@ describe('core layering', () => {
     }
   });
 
-  it('the execution layer is design-only: types, no implementation, no I/O', () => {
+  it('the execution contracts stay implementation-free with no I/O', () => {
     const execution = readFileSync(join(root, 'src/core/execution/types.ts'), 'utf8');
     // No network access, no broker code, no implementations — contracts only.
     expect(execution).not.toMatch(/\bfetch\s*\(|XMLHttpRequest|WebSocket/);
     expect(execution).not.toMatch(/\bclass\s+\w/);
     expect(execution).not.toMatch(/function\s+\w+\s*\(/); // no function bodies
     expect(execution).not.toMatch(/from\s+['"][^'"]*data\//); // no data-layer imports
-    // And nothing in src imports it yet — it is inert until Stage 6.
+    // Only the paper autopilot may implement the contracts today.
     const srcFiles = collectFiles(join(root, 'src')).filter(
-      (f) => f.endsWith('.ts') && !f.includes('core/execution'),
+      (f) => f.endsWith('.ts') && !f.includes('core/execution') && !f.includes('core/autopilot'),
     );
     for (const file of srcFiles) {
-      expect(readFileSync(file, 'utf8'), `${file} must not import the execution layer yet`).not.toMatch(
-        /from\s+['"][^'"]*core\/execution/,
+      expect(
+        readFileSync(file, 'utf8'),
+        `${file} must not import the execution layer`,
+      ).not.toMatch(/from\s+['"][^'"]*core\/execution/);
+    }
+  });
+
+  it('automation is paper-only: no live broker path exists anywhere', () => {
+    const autopilotFiles = collectFiles(join(root, 'src/core/autopilot'));
+    for (const file of autopilotFiles) {
+      const text = readFileSync(file, 'utf8');
+      // Paper mode is declared as a literal; the string 'live' never appears
+      // as an execution mode value in the autopilot layer.
+      expect(text, `${file} must never reference live mode`).not.toMatch(/['"]live['"]/);
+      expect(text, `${file} must not talk to brokers or the network`).not.toMatch(
+        /\bfetch\s*\(|BrokerAdapter|placeOrder|submitOrder/,
       );
     }
+    // No BrokerAdapter implementation exists anywhere in src.
+    for (const file of collectFiles(join(root, 'src')).filter((f) => f.endsWith('.ts'))) {
+      expect(
+        readFileSync(file, 'utf8'),
+        `${file} must not implement a broker adapter before Stage 6`,
+      ).not.toMatch(/implements\s+BrokerAdapter/);
+    }
+    // The autopilot opens positions only through risk-approved proposals.
+    const pilot = readFileSync(join(root, 'src/core/autopilot/paperAutoPilot.ts'), 'utf8');
+    expect(pilot).toContain('openFromAssessment');
+    expect(pilot).toMatch(/killSwitch\.isEngaged\(\)/);
   });
 
   it('the validation harness reuses the backtest engine rather than re-simulating', () => {
