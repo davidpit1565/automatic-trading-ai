@@ -10,7 +10,16 @@
 import { PersistedAuditLog } from '../../core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../../core/autopilot/killSwitch';
 import { PaperAutoPilot } from '../../core/autopilot/paperAutoPilot';
+import { exportState, importState, type BackupPayload } from '../../core/data/backup';
 import { LocalStorageStore } from '../../core/data/storage';
+import {
+  benchmarkComparison,
+  confidenceCalibration,
+  efficiencyReport,
+  exitReasonBreakdown,
+  strategyBreakdown,
+  type SymbolPriceSpan,
+} from '../../core/feedback/performanceFeedback';
 import { IntervalScheduler, type MonitorInterval } from '../../core/monitor/scheduler';
 import {
   buildEquityCurve,
@@ -110,6 +119,16 @@ export function renderPositionsView(container: HTMLElement, data: ActiveDataSour
     <div id="pf-journal"></div>
     <h3>Analytics</h3>
     <div id="pf-analytics"></div>
+    <h3>Performance feedback</h3>
+    <div id="pf-feedback"></div>
+    <h3>Backup</h3>
+    <div class="controls">
+      <button class="secondary" id="pf-export">Download backup</button>
+      <label class="control">Restore from file
+        <input id="pf-import" type="file" accept="application/json" />
+      </label>
+    </div>
+    <div class="status-line" id="pf-backup-status"></div>
     <p class="disclaimer">
       Simulated positions only — no real orders exist anywhere in this platform. Metrics
       describe the past; they never promise future results.
@@ -142,6 +161,7 @@ export function renderPositionsView(container: HTMLElement, data: ActiveDataSour
     renderPositions(container.querySelector('#pf-positions')!, portfolio, prices, scans, () => void refresh(), status);
     renderJournal(container.querySelector('#pf-journal')!, journal);
     renderAnalytics(container.querySelector('#pf-analytics')!, journal);
+    await renderFeedback(container.querySelector('#pf-feedback')!, journal, data);
   }
 
   container.querySelector('#pf-open')!.addEventListener('click', async () => {
@@ -246,8 +266,139 @@ export function renderPositionsView(container: HTMLElement, data: ActiveDataSour
     refreshAutopilot();
   });
 
+  // ---- Backup / restore ---------------------------------------------------
+  const backupStatus = container.querySelector<HTMLElement>('#pf-backup-status')!;
+  container.querySelector('#pf-export')!.addEventListener('click', () => {
+    const payload = exportState(store, Date.now());
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `trading-assistant-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    backupStatus.textContent = `Backup downloaded (${Object.keys(payload.data).length} data sets).`;
+  });
+  container.querySelector<HTMLInputElement>('#pf-import')!.addEventListener('change', async (event) => {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    try {
+      const payload = JSON.parse(await file.text()) as BackupPayload;
+      const result = importState(store, payload);
+      backupStatus.innerHTML = result.ok
+        ? `Restored ${result.value.restoredKeys} data sets — reload the page to see them.`
+        : `<span class="error-line">${escapeHtml(result.error)}</span>`;
+    } catch (cause) {
+      backupStatus.innerHTML = `<span class="error-line">Could not read backup: ${escapeHtml(String(cause))}</span>`;
+    }
+  });
+
   refreshAutopilot();
   void refresh();
+}
+
+/** Performance feedback: what the verified history says about the system. */
+async function renderFeedback(
+  element: Element,
+  journal: TradeJournal,
+  data: ActiveDataSource,
+): Promise<void> {
+  const entries = journal.entries();
+  if (entries.length === 0) {
+    element.innerHTML =
+      '<p class="status-line">Feedback appears once closed trades accumulate — let the autopilot run.</p>';
+    return;
+  }
+
+  const calibration = confidenceCalibration(entries);
+  const exits = exitReasonBreakdown(entries);
+  const efficiency = efficiencyReport(entries);
+  const strategies = strategyBreakdown(entries);
+
+  // Benchmark: equal-weight buy & hold of the traded symbols over the
+  // journal's span, priced from the live/demo data source.
+  const spans: Record<string, SymbolPriceSpan> = {};
+  for (const symbol of new Set(entries.map((t) => t.symbol))) {
+    const candles = await data.source.getCandles(symbol, TIMEFRAME, 150);
+    if (candles.ok && candles.value.length > 1) {
+      spans[symbol] = {
+        startPrice: candles.value[0]!.close,
+        endPrice: candles.value[candles.value.length - 1]!.close,
+      };
+    }
+  }
+  const benchmark = benchmarkComparison(entries, INITIAL_CASH, spans);
+
+  element.innerHTML = `
+    ${
+      benchmark
+        ? `<div class="result-cards">
+            <div class="stat-card"><div class="stat-label">System (realized)</div>
+              <div class="stat-value ${signClass(benchmark.strategyReturnPct)}">${formatPct(benchmark.strategyReturnPct)}</div></div>
+            <div class="stat-card"><div class="stat-label">Buy &amp; hold same markets</div>
+              <div class="stat-value ${signClass(benchmark.holdReturnPct)}">${formatPct(benchmark.holdReturnPct)}</div></div>
+            <div class="stat-card"><div class="stat-label">Verdict</div>
+              <div class="stat-value">${benchmark.beatBenchmark ? 'Beat holding' : 'Holding won'}</div></div>
+          </div>`
+        : ''
+    }
+    <h4>Confidence calibration — do higher-confidence signals actually win more?</h4>
+    <table class="data-table">
+      <thead><tr><th>Confidence</th><th>Trades</th><th>Win rate</th><th>Expectancy</th><th>Total P&amp;L</th></tr></thead>
+      <tbody>
+        ${calibration
+          .map(
+            (b) => `<tr>
+              <td>${b.label}</td>
+              <td>${b.tradeCount}</td>
+              <td>${b.winRatePct === null ? '—' : formatPct(b.winRatePct, 0)}</td>
+              <td>${b.expectancy === null ? '—' : formatPrice(b.expectancy)}</td>
+              <td class="${signClass(b.totalPnl)}">${formatPrice(b.totalPnl)}</td>
+            </tr>`,
+          )
+          .join('')}
+      </tbody>
+    </table>
+    <h4>Exit quality</h4>
+    <table class="data-table">
+      <thead><tr><th>Exit reason</th><th>Trades</th><th>Win rate</th><th>Avg P&amp;L</th><th>Total</th></tr></thead>
+      <tbody>
+        ${exits
+          .map(
+            (r) => `<tr>
+              <td>${escapeHtml(r.reason)}</td>
+              <td>${r.tradeCount}</td>
+              <td>${r.winRatePct === null ? '—' : formatPct(r.winRatePct, 0)}</td>
+              <td class="${signClass(r.avgPnl)}">${r.avgPnl === null ? '—' : formatPrice(r.avgPnl)}</td>
+              <td class="${signClass(r.totalPnl)}">${formatPrice(r.totalPnl)}</td>
+            </tr>`,
+          )
+          .join('')}
+      </tbody>
+    </table>
+    <p class="status-line">
+      Trade management: average best move ${efficiency.avgMfePct === null ? '—' : formatPct(efficiency.avgMfePct)} ·
+      average worst move ${efficiency.avgMaePct === null ? '—' : formatPct(-(efficiency.avgMaePct ?? 0))} ·
+      captured ${efficiency.avgCapturePct === null ? '—' : formatPct(efficiency.avgCapturePct, 0)} of the best available move ·
+      ${efficiency.losersThatWereProfitable} loser(s) were once profitable.
+    </p>
+    <h4>By strategy</h4>
+    <table class="data-table">
+      <thead><tr><th>Strategy</th><th>Trades</th><th>Win rate</th><th>Profit factor</th><th>Total P&amp;L</th></tr></thead>
+      <tbody>
+        ${strategies
+          .map(
+            (s) => `<tr>
+              <td>${escapeHtml(s.strategyVersion)}</td>
+              <td>${s.stats.tradeCount}</td>
+              <td>${s.stats.winRatePct === null ? '—' : formatPct(s.stats.winRatePct, 0)}</td>
+              <td>${s.stats.profitFactor === null ? '—' : s.stats.profitFactor.toFixed(2)}</td>
+              <td class="${signClass(s.stats.totalPnl)}">${formatPrice(s.stats.totalPnl)}</td>
+            </tr>`,
+          )
+          .join('')}
+      </tbody>
+    </table>
+  `;
 }
 
 function renderAudit(element: Element, audit: PersistedAuditLog): void {

@@ -96,6 +96,15 @@ describe('Portfolio view (DOM integration)', () => {
     expect(analytics).toContain('Max drawdown');
     expect(container.querySelectorAll('#pf-analytics svg').length).toBe(2); // equity + drawdown
     expect(analytics).toContain('Monthly performance');
+
+    // Performance feedback renders from the same journal.
+    await waitFor(() => container.querySelectorAll('#pf-feedback table').length >= 3);
+    const feedback = container.querySelector('#pf-feedback')!.textContent!;
+    expect(feedback).toContain('Confidence calibration');
+    expect(feedback).toContain('Exit quality');
+    expect(feedback).toContain('By strategy');
+    expect(feedback).toContain('pipeline-v1');
+    expect(feedback).toContain('Buy & hold same markets');
   });
 
   it('autopilot cycle acts autonomously on paper and audits everything', async () => {

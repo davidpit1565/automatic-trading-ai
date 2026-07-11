@@ -59,6 +59,8 @@ describe('UI layer architecture', () => {
       /core\/monitor\/(monitoringEngine|scheduler|watchlist|opportunityLog|alerts|validationProvider)$/,
       /core\/position\/(positionEngine|portfolioEngine|tradeJournal|analytics|positionMonitor)$/,
       /core\/autopilot\/(paperAutoPilot|killSwitch|auditLog)$/,
+      /core\/feedback\/performanceFeedback$/,
+      /core\/data\/backup$/,
       /core\/backtest\/engine$/,
       /core\/strategies$/,
       /core\/portfolio\/paperPortfolio$/,
@@ -206,6 +208,14 @@ describe('core layering', () => {
     // Positions open only from Risk Engine assessments.
     const engine = readFileSync(join(root, 'src/core/position/positionEngine.ts'), 'utf8');
     expect(engine).toContain('openFromAssessment');
+  });
+
+  it('the feedback layer reads the journal only — no market data, no indicators', () => {
+    const feedback = readFileSync(join(root, 'src/core/feedback/performanceFeedback.ts'), 'utf8');
+    expect(feedback).not.toMatch(/from\s+['"][^'"]*(indicators|revolutClient|synthetic|scan\/)/);
+    expect(feedback).not.toMatch(/\bfetch\s*\(/);
+    // Reuses verified analytics instead of duplicating trade math.
+    expect(feedback).toMatch(/from\s+['"]\.\.\/position\/analytics['"]/);
   });
 
   it('position sizing lives in the Risk Engine, not the Signal Engine', () => {

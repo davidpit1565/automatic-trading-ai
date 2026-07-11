@@ -22,6 +22,10 @@ Stage 6), every live order will require explicit human confirmation.
   confidence score (hard-capped below 100) whose components are itemised. Rejections
   list every failed check; opportunities explain themselves in plain language.
   Long-only: bearish evidence yields an explained pass, never a short.
+- **Stage 7 core — complete**: Performance Feedback — confidence calibration, exit
+  quality, MFE-capture efficiency, per-strategy breakdown, and a buy-&-hold benchmark
+  comparison, all computed from the append-only journal; plus versioned backup/restore
+  of the entire stored state.
 - **Paper Autopilot — complete**: fully autonomous *simulated* trading — automatic
   pipeline-qualified entries, automatic stop/target exits, kill switch, append-only
   audit log, and reload survival (a running autopilot resumes after refresh unless the

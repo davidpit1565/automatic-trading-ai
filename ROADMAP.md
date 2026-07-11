@@ -157,9 +157,27 @@ above it. This is a product principle, not a technical gap.
 Prepare complete orders and full trade summaries. **Every live order requires
 explicit human confirmation — no exceptions.** Never executes automatically.
 
-### Stage 7 — Performance Feedback
-Strategy evaluation, backtest comparison, win rate, drawdown, Sharpe ratio,
-expectancy, continuous improvement from verified historical performance.
+### Stage 7 (core) — Performance Feedback ✅
+Learning from verified historical performance (pure functions over the
+append-only journal, reusing the verified analytics):
+
+- Confidence calibration: win rate / expectancy / P&L per confidence bucket —
+  do higher-confidence signals actually win more?
+- Exit quality: performance grouped by exit reason (stop-loss, take-profit,
+  manual) to judge stop/target placement.
+- Trade-management efficiency: average MFE/MAE, share of the best available
+  move actually captured, losers that were once profitable.
+- Strategy breakdown: full analytics per strategy version
+  (autopilot vs manual pipeline).
+- Benchmark honesty check: realized system return vs equal-weight buy & hold
+  of the traded symbols over the same span.
+- Backup / restore: the entire stored state (journal, positions, audit log,
+  watchlists…) exports to versioned JSON and restores after validation —
+  the track record survives browser-storage loss.
+- All surfaced in the Portfolio tab ("Performance feedback" + "Backup").
+
+Remaining for Stage 7: automated parameter improvement loops driven by the
+feedback (only with walk-forward validation gating every change).
 
 ## Standing principles
 
