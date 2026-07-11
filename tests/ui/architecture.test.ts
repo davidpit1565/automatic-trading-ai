@@ -54,6 +54,8 @@ describe('UI layer architecture', () => {
       /core\/scan\/marketScanner$/,
       /core\/signal\/signalEngine$/,
       /core\/risk\/(riskEngine|dailyLoss)$/,
+      /core\/validation\/(walkForward|robustness|performance)$/,
+      /core\/backtest\/metrics$/,
       /core\/backtest\/engine$/,
       /core\/strategies$/,
       /core\/portfolio\/paperPortfolio$/,
@@ -98,6 +100,36 @@ describe('core layering', () => {
       const text = readFileSync(file, 'utf8');
       expect(text, `${file} must not reach below the Signal Engine`).not.toMatch(
         /from\s+['"][^'"]*(indicators|scan|strategies|backtest|revolutClient|synthetic)/,
+      );
+    }
+  });
+
+  it('the execution layer is design-only: types, no implementation, no I/O', () => {
+    const execution = readFileSync(join(root, 'src/core/execution/types.ts'), 'utf8');
+    // No network access, no broker code, no implementations — contracts only.
+    expect(execution).not.toMatch(/\bfetch\s*\(|XMLHttpRequest|WebSocket/);
+    expect(execution).not.toMatch(/\bclass\s+\w/);
+    expect(execution).not.toMatch(/function\s+\w+\s*\(/); // no function bodies
+    expect(execution).not.toMatch(/from\s+['"][^'"]*data\//); // no data-layer imports
+    // And nothing in src imports it yet — it is inert until Stage 6.
+    const srcFiles = collectFiles(join(root, 'src')).filter(
+      (f) => f.endsWith('.ts') && !f.includes('core/execution'),
+    );
+    for (const file of srcFiles) {
+      expect(readFileSync(file, 'utf8'), `${file} must not import the execution layer yet`).not.toMatch(
+        /from\s+['"][^'"]*core\/execution/,
+      );
+    }
+  });
+
+  it('the validation harness reuses the backtest engine rather than re-simulating', () => {
+    const walkForwardSource = readFileSync(join(root, 'src/core/validation/walkForward.ts'), 'utf8');
+    expect(walkForwardSource).toMatch(/from\s+['"]\.\.\/backtest\/engine['"]/);
+    // No indicator math in the validation layer either.
+    const validationFiles = collectFiles(join(root, 'src/core/validation'));
+    for (const file of validationFiles) {
+      expect(readFileSync(file, 'utf8'), `${file} must not import indicators`).not.toMatch(
+        /from\s+['"][^'"]*\/indicators/,
       );
     }
   });

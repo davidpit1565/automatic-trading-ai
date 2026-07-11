@@ -37,6 +37,19 @@ export interface BacktestConfig {
   readonly initialCash: number;
   /** Proportional fee per fill, e.g. 0.001 = 0.1%. */
   readonly feeRate?: number;
+  /**
+   * Full bid/ask spread as a fraction of price, e.g. 0.001 = 0.1%.
+   * Fills pay half the spread: buys above the close, sells below it.
+   */
+  readonly spreadPct?: number;
+  /** Adverse slippage per fill as a fraction of price. */
+  readonly slippagePct?: number;
+  /**
+   * Candles between signal and fill. Delayed fills execute at the later
+   * candle's close; fills that would land beyond the series clamp to the
+   * final candle so positions still close and results stay comparable.
+   */
+  readonly executionDelayCandles?: number;
 }
 
 export interface BacktestResult {
@@ -62,16 +75,32 @@ export function runBacktest(
   }
   const feeRate = config.feeRate ?? 0;
   if (feeRate < 0 || feeRate >= 1) throw new RangeError(`feeRate must be in [0, 1), got ${feeRate}`);
+  const spreadPct = config.spreadPct ?? 0;
+  if (spreadPct < 0 || spreadPct >= 1) {
+    throw new RangeError(`spreadPct must be in [0, 1), got ${spreadPct}`);
+  }
+  const slippagePct = config.slippagePct ?? 0;
+  if (slippagePct < 0 || slippagePct >= 0.5) {
+    throw new RangeError(`slippagePct must be in [0, 0.5), got ${slippagePct}`);
+  }
+  const delay = config.executionDelayCandles ?? 0;
+  if (!Number.isInteger(delay) || delay < 0) {
+    throw new RangeError(`executionDelayCandles must be a non-negative integer, got ${delay}`);
+  }
+  // Adverse price adjustment per fill: half the spread plus slippage.
+  const frictionPct = spreadPct / 2 + slippagePct;
 
-  // Orders grouped by candle index; invalid indices are a strategy bug.
+  // Orders grouped by fill index (signal index + delay, clamped to the end);
+  // invalid signal indices are a strategy bug.
   const ordersByIndex = new Map<number, StrategyOrder[]>();
   for (const order of strategy.generateOrders(candles)) {
     if (!Number.isInteger(order.index) || order.index < 0 || order.index >= candles.length) {
       throw new RangeError(`strategy '${strategy.name}' emitted invalid order index ${order.index}`);
     }
-    const bucket = ordersByIndex.get(order.index) ?? [];
+    const fillIndex = Math.min(order.index + delay, candles.length - 1);
+    const bucket = ordersByIndex.get(fillIndex) ?? [];
     bucket.push(order);
-    ordersByIndex.set(order.index, bucket);
+    ordersByIndex.set(fillIndex, bucket);
   }
 
   let cash = config.initialCash;
@@ -88,20 +117,24 @@ export function runBacktest(
 
     for (const order of ordersByIndex.get(i) ?? []) {
       if (order.side === 'buy') {
+        // Buyers cross the spread and slip against themselves: pay above the close.
+        const fillPrice = price * (1 + frictionPct);
         const spend = Math.min(order.amountQuote ?? cash, cash);
-        if (spend <= 0 || price <= 0) continue;
+        if (spend <= 0 || fillPrice <= 0) continue;
         const fee = spend * feeRate;
-        const bought = (spend - fee) / price;
+        const bought = (spend - fee) / fillPrice;
         if (quantity === 0) entryTimestamp = candle.timestamp;
-        avgCost = (avgCost * quantity + price * bought) / (quantity + bought);
+        avgCost = (avgCost * quantity + fillPrice * bought) / (quantity + bought);
         quantity += bought;
         cash -= spend;
         feesPaid += fee;
       } else {
         const fraction = order.fractionOfPosition ?? 1;
         if (fraction <= 0 || quantity === 0) continue;
+        // Sellers receive below the close for the same reasons.
+        const fillPrice = price * (1 - frictionPct);
         const sellQuantity = quantity * Math.min(fraction, 1);
-        const gross = sellQuantity * price;
+        const gross = sellQuantity * fillPrice;
         const fee = gross * feeRate;
         cash += gross - fee;
         feesPaid += fee;
@@ -109,9 +142,9 @@ export function runBacktest(
           entryTimestamp,
           exitTimestamp: candle.timestamp,
           entryPrice: avgCost,
-          exitPrice: price,
+          exitPrice: fillPrice,
           quantity: sellQuantity,
-          pnl: (price - avgCost) * sellQuantity - fee,
+          pnl: (fillPrice - avgCost) * sellQuantity - fee,
         });
         quantity -= sellQuantity;
         if (quantity < 1e-12) {

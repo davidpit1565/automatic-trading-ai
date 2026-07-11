@@ -66,6 +66,25 @@ try {
   await page.waitForSelector('#pp-positions table', { timeout: 20000 });
   check('paper portfolio position row', (await page.$$('#pp-positions tbody tr')).length === 1);
 
+  // VALIDATION — walk-forward with costs on demo data.
+  await page.click('[data-tab="validation"]');
+  await page.waitForSelector('#val-run', { timeout: 10000 });
+  await page.click('#val-run');
+  await page.waitForSelector('#val-results .verdict-panel', { timeout: 60000 });
+  const verdictClass = await page.$eval('#val-results .verdict-panel', (e) => e.className);
+  check(
+    'validation verdict rendered',
+    /verdict-(robust|caution|overfitted|insufficient-data)/.test(verdictClass),
+  );
+  check('oos equity curve rendered', (await page.$$('#val-results svg.equity-curve')).length === 1);
+  check(
+    'walk-forward fold table rendered',
+    (await page.$$('#val-results tbody tr')).length >= 3,
+  );
+  const valText = await page.$eval('#val-results', (e) => e.textContent);
+  check('validation shows train vs unseen comparison', valText.includes('unseen'));
+  check('no certainty language in validation', !/guaranteed|certain profit/i.test(valText));
+
   // MARKET SCAN — full interaction.
   await page.click('[data-tab="scan"]');
   await page.waitForSelector('#scan-run', { timeout: 10000 });

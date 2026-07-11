@@ -51,11 +51,34 @@ Answers "even if this is a good opportunity, is it safe for this portfolio?"
 
 All limits are configurable constants in `DEFAULT_RISK_LIMITS`.
 
-## Next
+### Live Revolut X market data ✅
+Official REST API via a local read-only Ed25519 signing proxy; credentials
+never reach the browser; only whitelisted market-data GETs are forwarded.
 
-### Stage 3.5 — Validation Harness
-Walk-forward testing, out-of-sample validation, fee/slippage modelling,
-overfitting detection. Gate before any live-facing functionality.
+### Stage 3.5 — Validation Harness ✅
+- Realistic execution costs in the backtest engine (backwards compatible):
+  fees, bid/ask spread, adverse slippage, execution delay. All reported
+  performance includes them.
+- Walk-forward analysis: rolling train/test windows with no lookahead;
+  parameters chosen on training data only (grid-optimising trend factory
+  with full diagnostics), evaluated once on unseen data; chained
+  out-of-sample equity curve.
+- Performance metrics: win rate, profit factor, expectancy, max drawdown,
+  annualised Sharpe (documented convention: per-candle equity returns,
+  population std, risk-free 0), average trade, average holding time.
+  Undefined ratios are null, never fake numbers.
+- Overfitting detection: degradation, curve fitting, parameter sensitivity,
+  unrealistic win rates, small samples — with a plain-language verdict
+  (robust / caution / overfitted / insufficient-data). Failing strategies
+  are flagged automatically; a harsh verdict is the harness working.
+- Dashboard Validation tab: verdict, out-of-sample equity curve, train-vs-
+  unseen comparison, per-fold metrics. UI consumes only the validation engine.
+- Execution Control Layer designed (interfaces + docs only, nothing enabled):
+  paper/live modes, blocking human confirmation, kill switch, audit log,
+  position synchronisation, broker abstraction. Architecture tests enforce
+  the module stays inert until Stage 6.
+
+## Next
 
 ### Stage 4 — Market Monitoring
 Continuous scheduled scans, opportunity detection, watchlists, alerts.

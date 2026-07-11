@@ -22,6 +22,12 @@ Stage 6), every live order will require explicit human confirmation.
   confidence score (hard-capped below 100) whose components are itemised. Rejections
   list every failed check; opportunities explain themselves in plain language.
   Long-only: bearish evidence yields an explained pass, never a short.
+- **Stage 3.5 — complete**: Validation Harness — walk-forward analysis with rolling
+  train/test windows, realistic costs (fees, spread, slippage, execution delay) in every
+  reported number, professional metrics (profit factor, expectancy, Sharpe, drawdown,
+  holding time), automatic overfitting detection with an explained verdict, and a
+  Validation dashboard tab. Execution Control Layer designed but deliberately inert
+  (see `docs/execution-architecture.md`).
 - **Stage 3 — complete**: Risk Management Engine between signals and proposals —
   risk-based position sizing with a hard 1% per-trade ceiling, 20% single-position and
   per-asset caps, 60% total-exposure limit, max open positions, daily loss protection
@@ -40,6 +46,10 @@ Indicator Engine (src/core/indicators)  pure functions, null-padded warm-up
 Strategy Engine (src/core/strategies)   Buy & Hold, DCA, SMA-cross trend, grid
 Backtesting (src/core/backtest)     fills, fees, equity curve, P&L, drawdown, stats
 Portfolio (src/core/portfolio)      paper trading with average-cost accounting
+Validation (src/core/validation)    walk-forward, cost-aware metrics, overfitting
+                                    detection — reuses the backtest engine
+Execution (src/core/execution)      DESIGN ONLY: contracts for Stage 6 (paper/live,
+                                    human confirmation, kill switch, audit)
 Monitoring (src/core/scan)          market scanner: scoring + hot/cold/neutral
 Signal Engine (src/core/signal)     quality gates, trade levels, confidence
 Risk Engine (src/core/risk)         position sizing, exposure limits, daily loss
@@ -95,11 +105,10 @@ Every feature follows TDD: tests first, then implementation, then regression run
 
 ## Roadmap
 
-Stage 3.5 Validation Harness (walk-forward, out-of-sample, fee/slippage modelling,
-overfitting detection) → Stage 4 Market Monitoring → Stage 5 Position Tracking →
-Stage 6 Execution Preparation (human confirmation mandatory) → Stage 7 Performance
-Feedback. Each stage proceeds only after the previous one is verified — details in
-`ROADMAP.md`.
+Stage 4 Market Monitoring → Stage 5 Position Tracking → Stage 6 Execution
+Preparation (human confirmation mandatory; architecture already designed in
+`docs/execution-architecture.md`) → Stage 7 Performance Feedback. Each stage
+proceeds only after the previous one is verified — details in `ROADMAP.md`.
 
 > Educational and analytical tool. Not financial advice. Past performance never
 > guarantees future results.
