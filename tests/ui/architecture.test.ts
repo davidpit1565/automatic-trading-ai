@@ -56,6 +56,7 @@ describe('UI layer architecture', () => {
       /core\/risk\/(riskEngine|dailyLoss)$/,
       /core\/validation\/(walkForward|robustness|performance)$/,
       /core\/backtest\/metrics$/,
+      /core\/monitor\/(monitoringEngine|scheduler|watchlist|opportunityLog|alerts|validationProvider)$/,
       /core\/backtest\/engine$/,
       /core\/strategies$/,
       /core\/portfolio\/paperPortfolio$/,
@@ -130,6 +131,29 @@ describe('core layering', () => {
     for (const file of validationFiles) {
       expect(readFileSync(file, 'utf8'), `${file} must not import indicators`).not.toMatch(
         /from\s+['"][^'"]*\/indicators/,
+      );
+    }
+  });
+
+  it('the monitoring engine reuses the verified pipeline and adds no analysis of its own', () => {
+    const engine = readFileSync(join(root, 'src/core/monitor/monitoringEngine.ts'), 'utf8');
+    // Must consume scanner, signal, and risk engines...
+    expect(engine).toMatch(/from\s+['"]\.\.\/scan\/marketScanner['"]/);
+    expect(engine).toMatch(/from\s+['"]\.\.\/signal\/signalEngine['"]/);
+    expect(engine).toMatch(/from\s+['"]\.\.\/risk\/riskEngine['"]/);
+    // ...and never the indicator engine directly (no duplicated calculations).
+    const monitorFiles = collectFiles(join(root, 'src/core/monitor'));
+    for (const file of monitorFiles) {
+      expect(readFileSync(file, 'utf8'), `${file} must not import indicators`).not.toMatch(
+        /from\s+['"][^'"]*\/indicators/,
+      );
+    }
+    // Timers stay behind the Scheduler abstraction — no setInterval in the engine.
+    expect(engine).not.toMatch(/setInterval|setTimeout/);
+    // Analysis only: no broker/order code anywhere in the monitor layer.
+    for (const file of monitorFiles) {
+      expect(readFileSync(file, 'utf8'), `${file} must have no execution capability`).not.toMatch(
+        /placeOrder|submitOrder|core\/execution/,
       );
     }
   });

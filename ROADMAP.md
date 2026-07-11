@@ -78,10 +78,29 @@ never reach the browser; only whitelisted market-data GETs are forwarded.
   position synchronisation, broker abstraction. Architecture tests enforce
   the module stays inert until Stage 6.
 
-## Next
+### Stage 4 — Market Monitoring ✅
+Analysis only — no execution capability of any kind (enforced by tests).
 
-### Stage 4 — Market Monitoring
-Continuous scheduled scans, opportunity detection, watchlists, alerts.
+- Monitoring Engine orchestrating the verified pipeline (scanner → signal →
+  risk → validation verdict) on every scheduled scan; no duplicated
+  calculations (architecture-tested).
+- Scheduler abstraction: 5m/15m/30m/1h/4h/1d intervals; timers never live in
+  business logic (IntervalScheduler for the app, ManualScheduler for tests).
+- Opportunity detection per symbol per scan: none / watch candidate /
+  qualified, where qualified = signal opportunity approved by the Risk
+  Engine, with asset, timestamp, price, confidence, entry/stop/target,
+  position size, risk %, plain-language explanation, validation verdict.
+- Persistent watchlists: manual + automatic entries, favourites, first
+  detection, latest scan, highest confidence, current status.
+- Append-only opportunity history with indicator snapshot and one-time
+  disappearance marking — records are never overwritten.
+- Alert engine: in-app + browser notification channels (pluggable for
+  email/Telegram later), alerts only for qualified opportunities, per
+  symbol+timeframe cooldown and duplicate suppression, persistent history.
+- Monitoring dashboard tab: scheduler status, last/next scan, current
+  opportunities, watchlist management, opportunity history, alert history.
+
+## Next
 
 ### Stage 5 — Position Tracking
 Open positions, P&L tracking, performance metrics, trade journal analytics.

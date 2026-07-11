@@ -66,6 +66,36 @@ try {
   await page.waitForSelector('#pp-positions table', { timeout: 20000 });
   check('paper portfolio position row', (await page.$$('#pp-positions tbody tr')).length === 1);
 
+  // MONITORING — manual scan through the full pipeline.
+  await page.click('[data-tab="monitoring"]');
+  await page.waitForSelector('#mon-scan-now', { timeout: 10000 });
+  check(
+    'monitoring starts stopped',
+    (await page.$eval('#mon-status', (e) => e.textContent)).includes('stopped'),
+  );
+  await page.click('#mon-start');
+  check(
+    'monitoring scheduler starts',
+    (await page.$eval('#mon-status', (e) => e.textContent)).includes('RUNNING'),
+  );
+  await page.click('#mon-scan-now');
+  await page.waitForFunction(
+    () => document.querySelector('#mon-status')?.textContent?.includes('Last scan'),
+    { timeout: 60000 },
+  );
+  const monStatus = await page.$eval('#mon-status', (e) => e.textContent);
+  check('monitoring scan reports outcome counts', /qualified/.test(monStatus));
+  check('monitoring shows next scan time', monStatus.includes('Next scan'));
+  check(
+    'watchlist populated by scan',
+    (await page.$$('#mon-watchlist tbody tr')).length > 0,
+  );
+  await page.click('#mon-stop');
+  check(
+    'monitoring stops cleanly',
+    (await page.$eval('#mon-status', (e) => e.textContent)).includes('stopped'),
+  );
+
   // VALIDATION — walk-forward with costs on demo data.
   await page.click('[data-tab="validation"]');
   await page.waitForSelector('#val-run', { timeout: 10000 });

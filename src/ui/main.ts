@@ -7,6 +7,7 @@ import { initDataSource, type ActiveDataSource } from './dataSource';
 import { renderBacktestView } from './views/backtestView';
 import { renderGridView } from './views/gridView';
 import { renderMarketScanView } from './views/marketScanView';
+import { renderMonitoringView } from './views/monitoringView';
 import { renderPortfolioView } from './views/portfolioView';
 import { renderValidationView } from './views/validationView';
 
@@ -17,6 +18,7 @@ const VIEWS: Record<string, ViewRenderer | null> = {
   grid: renderGridView,
   portfolio: renderPortfolioView,
   validation: renderValidationView,
+  monitoring: renderMonitoringView,
   scan: renderMarketScanView,
   learn: null, // static content in index.html
 };
