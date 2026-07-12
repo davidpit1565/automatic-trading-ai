@@ -41,6 +41,7 @@ export function renderMonitoringView(container: HTMLElement, data: ActiveDataSou
     source: data.source,
     symbols: data.instruments.slice(0, MONITOR_SYMBOL_LIMIT).map((i) => i.symbol),
     timeframe: '1h',
+    confirmationTimeframe: '4h', // never qualify a long against the 4h trend
     scheduler: new IntervalScheduler(),
     watchlist,
     log,

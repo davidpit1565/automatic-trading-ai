@@ -1,5 +1,7 @@
 # AI Trading Assistant
 
+**מדריך התקנה בעברית: [SETUP.he.md](SETUP.he.md)**
+
 A professional AI-powered trading **analysis** platform — a disciplined analyst, not a
 trading bot. It monitors markets, computes technical indicators, backtests strategies,
 scores opportunities objectively, and explains every reading. It never promises profits,
@@ -22,6 +24,9 @@ Stage 6), every live order will require explicit human confirmation.
   confidence score (hard-capped below 100) whose components are itemised. Rejections
   list every failed check; opportunities explain themselves in plain language.
   Long-only: bearish evidence yields an explained pass, never a short.
+- **Multi-timeframe confirmation — complete**: qualifying 1h signals are checked
+  against the 4h scan in the monitoring engine and the autopilot — a long is never
+  taken against a bearish larger trend; confirmation adds capped, itemised confidence.
 - **Stage 7 core — complete**: Performance Feedback — confidence calibration, exit
   quality, MFE-capture efficiency, per-strategy breakdown, and a buy-&-hold benchmark
   comparison, all computed from the append-only journal; plus versioned backup/restore
@@ -120,6 +125,7 @@ the app stays in clearly-labelled deterministic demo mode.
 
 ```bash
 npm install
+npm start         # proxy + dashboard together (one command)
 npm test          # unit + integration suite (vitest)
 npm run typecheck # strict TypeScript, no emit
 npm run dev       # dashboard dev server

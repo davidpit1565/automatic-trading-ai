@@ -168,6 +168,57 @@ describe('MonitoringEngine.runScanOnce', () => {
   });
 });
 
+describe('multi-timeframe confirmation', () => {
+  /** Entry TF bullish, higher TF controllable per test. */
+  function makeConfirmingEngine(higherDrift: number) {
+    const store = new MemoryStore();
+    const source: MarketDataSource = {
+      name: 'mtf-stub',
+      getInstruments: async () => ok([{ symbol: 'QUAL/USD', base: 'QUAL', quote: 'USD' }]),
+      getCandles: async (_symbol, timeframe) =>
+        ok(
+          generateSyntheticCandles({
+            seed: 1,
+            startPrice: 100,
+            count: 150,
+            timeframe,
+            startTimestamp: T - 150 * 3_600_000,
+            drift: timeframe === '4h' ? higherDrift : 0.001,
+            volatility: 0.004,
+          }),
+        ),
+    };
+    return new MonitoringEngine({
+      source,
+      symbols: ['QUAL/USD'],
+      timeframe: '1h',
+      confirmationTimeframe: '4h',
+      scheduler: new ManualScheduler(),
+      watchlist: new WatchlistStore(store),
+      log: new OpportunityLog(store),
+      alerts: new AlertEngine(store, [], { cooldownMs: 3_600_000 }),
+      getPortfolio: () => ({ equity: 10_000, openPositions: [] }),
+      getDailyLoss: () => 0,
+      validator: () => 'caution',
+    });
+  }
+
+  it('a bearish higher timeframe demotes a qualifying signal to watch', async () => {
+    const engine = makeConfirmingEngine(-0.004);
+    const result = await engine.runScanOnce(T);
+    const outcome = result.outcomes[0]!;
+    expect(outcome.outcome).toBe('watch');
+    expect(outcome.reasons.some((r) => r.includes('4h'))).toBe(true);
+    expect(engine.opportunityHistory()).toHaveLength(0);
+  });
+
+  it('a confirming higher timeframe still qualifies', async () => {
+    const engine = makeConfirmingEngine(0.001);
+    const result = await engine.runScanOnce(T);
+    expect(result.outcomes[0]!.outcome).toBe('qualified');
+  });
+});
+
 describe('MonitoringEngine scheduling', () => {
   it('start/stop drive the scheduler and status reports scan times', async () => {
     const scheduler = new ManualScheduler();

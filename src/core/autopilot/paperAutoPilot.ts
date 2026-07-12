@@ -25,7 +25,8 @@ import type { PortfolioEngine } from '../position/portfolioEngine';
 import type { PositionEngine } from '../position/positionEngine';
 import type { ExitReason } from '../position/tradeJournal';
 import { assessTrade } from '../risk/riskEngine';
-import { scanMarket } from '../scan/marketScanner';
+import { scanCandles, scanMarket, type ScanResult } from '../scan/marketScanner';
+import { applyHigherTimeframeGate } from '../signal/multiTimeframe';
 import { evaluateScan } from '../signal/signalEngine';
 import type { Timeframe } from '../types';
 import type { PersistedAuditLog } from './auditLog';
@@ -37,6 +38,8 @@ export interface AutoPilotOptions {
   readonly source: MarketDataSource;
   readonly symbols: readonly string[];
   readonly timeframe: Timeframe;
+  /** When set, entries must not fight this larger timeframe's trend. */
+  readonly confirmationTimeframe?: Timeframe;
   readonly scheduler: Scheduler;
   readonly portfolio: PortfolioEngine;
   readonly positions: PositionEngine;
@@ -133,6 +136,16 @@ export class PaperAutoPilot {
     };
   }
 
+  /** Scan the confirmation timeframe for one symbol; null when unavailable. */
+  private async higherTimeframeScan(symbol: string): Promise<ScanResult | null> {
+    const timeframe = this.options.confirmationTimeframe;
+    if (!timeframe) return null;
+    const candles = await this.options.source.getCandles(symbol, timeframe, SCAN_CANDLES);
+    if (!candles.ok) return null;
+    const scan = scanCandles(symbol, timeframe, candles.value);
+    return scan.ok ? scan.value : null;
+  }
+
   /** One full autonomous cycle: exits first, then qualified entries. */
   async runCycleOnce(timestamp: number): Promise<CycleResult> {
     const { killSwitch, audit } = this.options;
@@ -216,8 +229,27 @@ export class PaperAutoPilot {
         skipped.push({ symbol: scanResult.symbol, reason: 'already holding a position' });
         continue;
       }
-      const decision = evaluateScan(scanResult);
+      let decision = evaluateScan(scanResult);
       if (decision.kind === 'rejected') continue; // no signal — nothing to audit
+
+      // Multi-timeframe confirmation: never open against the larger trend.
+      if (this.options.confirmationTimeframe) {
+        decision = applyHigherTimeframeGate(
+          decision,
+          await this.higherTimeframeScan(scanResult.symbol),
+        );
+        if (decision.kind === 'rejected') {
+          skipped.push({ symbol: scanResult.symbol, reason: decision.reasons.join('; ') });
+          audit.append({
+            timestamp,
+            intentId: `${scanResult.symbol}:${timestamp}`,
+            event: 'rejected',
+            mode: this.mode,
+            detail: `higher-timeframe gate refused ${scanResult.symbol}: ${decision.reasons.join('; ')}`,
+          });
+          continue;
+        }
+      }
 
       const snapshot = this.options.portfolio.snapshot({}, timestamp);
       const assessment = assessTrade(

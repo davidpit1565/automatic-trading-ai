@@ -161,6 +161,61 @@ describe('autonomous paper exits', () => {
   });
 });
 
+describe('multi-timeframe confirmation', () => {
+  function makeConfirmingPilot(higherDrift: number) {
+    const store = new MemoryStore();
+    const journal = new TradeJournal(store);
+    const positions = new PositionEngine(store, journal);
+    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
+    const audit = new PersistedAuditLog(store);
+    const source: MarketDataSource = {
+      name: 'mtf-stub',
+      getInstruments: async () => ok([{ symbol: 'QUAL/USD', base: 'QUAL', quote: 'USD' }]),
+      getCandles: async (_symbol, timeframe) =>
+        ok(
+          generateSyntheticCandles({
+            seed: 1,
+            startPrice: 100,
+            count: 150,
+            timeframe,
+            startTimestamp: T - 150 * 3_600_000,
+            drift: timeframe === '4h' ? higherDrift : 0.001,
+            volatility: 0.004,
+          }),
+        ),
+    };
+    const pilot = new PaperAutoPilot({
+      source,
+      symbols: ['QUAL/USD'],
+      timeframe: '1h',
+      confirmationTimeframe: '4h',
+      scheduler: new ManualScheduler(),
+      portfolio,
+      positions,
+      killSwitch: new PersistedKillSwitch(store),
+      audit,
+      getDailyLoss: () => 0,
+      clock: () => T,
+    });
+    return { pilot, portfolio, audit };
+  }
+
+  it('refuses to open against a bearish higher timeframe and audits the reason', async () => {
+    const { pilot, portfolio, audit } = makeConfirmingPilot(-0.004);
+    const cycle = await pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(cycle.skipped.some((s) => s.reason.includes('4h'))).toBe(true);
+    expect(audit.entries().some((e) => e.event === 'rejected' && e.detail.includes('4h'))).toBe(true);
+  });
+
+  it('opens normally when the higher timeframe confirms', async () => {
+    const { pilot, portfolio } = makeConfirmingPilot(0.001);
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
+  });
+});
+
 describe('kill switch', () => {
   it('halts all autopilot activity instantly and audits the skip', async () => {
     const { pilot, portfolio, killSwitch, audit } = makePilot({ 'QUAL/USD': { drift: 0.001 } });

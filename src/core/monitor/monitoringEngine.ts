@@ -17,7 +17,8 @@
  */
 
 import type { MarketDataSource } from '../data/revolutClient';
-import { scanMarket } from '../scan/marketScanner';
+import { scanCandles, scanMarket, type ScanResult } from '../scan/marketScanner';
+import { applyHigherTimeframeGate } from '../signal/multiTimeframe';
 import { evaluateScan } from '../signal/signalEngine';
 import { assessTrade, type PortfolioRiskState } from '../risk/riskEngine';
 import type { RobustnessVerdict } from '../validation/robustness';
@@ -82,6 +83,8 @@ export interface MonitoringEngineOptions {
   readonly source: MarketDataSource;
   readonly symbols: readonly string[];
   readonly timeframe: Timeframe;
+  /** When set, qualifying signals must not fight this larger timeframe. */
+  readonly confirmationTimeframe?: Timeframe;
   readonly scheduler: Scheduler;
   readonly watchlist: WatchlistStore;
   readonly log: OpportunityLog;
@@ -144,6 +147,16 @@ export class MonitoringEngine {
     return this.options.alerts.history();
   }
 
+  /** Scan the confirmation timeframe for one symbol; null when unavailable. */
+  private async higherTimeframeScan(symbol: string): Promise<ScanResult | null> {
+    const timeframe = this.options.confirmationTimeframe;
+    if (!timeframe) return null;
+    const candles = await this.options.source.getCandles(symbol, timeframe, SCAN_CANDLES);
+    if (!candles.ok) return null;
+    const scan = scanCandles(symbol, timeframe, candles.value);
+    return scan.ok ? scan.value : null;
+  }
+
   /** One full monitoring pass. Called by the scheduler; callable manually. */
   async runScanOnce(timestamp: number): Promise<MonitorScanResult> {
     const { source, symbols, timeframe } = this.options;
@@ -155,7 +168,15 @@ export class MonitoringEngine {
     const nowQualified = new Set<string>();
 
     for (const scanResult of scan.results) {
-      const decision = evaluateScan(scanResult);
+      let decision = evaluateScan(scanResult);
+
+      // Multi-timeframe confirmation: never fight the larger trend.
+      if (decision.kind === 'opportunity' && this.options.confirmationTimeframe) {
+        decision = applyHigherTimeframeGate(
+          decision,
+          await this.higherTimeframeScan(scanResult.symbol),
+        );
+      }
 
       if (decision.kind === 'rejected') {
         // Hot markets that fail signal gates stay on the radar as 'watch'.

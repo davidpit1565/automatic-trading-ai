@@ -60,6 +60,7 @@ export function renderPositionsView(container: HTMLElement, data: ActiveDataSour
     source: data.source,
     symbols: data.instruments.slice(0, 12).map((i) => i.symbol),
     timeframe: TIMEFRAME,
+    confirmationTimeframe: '4h', // never open against the 4h trend
     scheduler: new IntervalScheduler(),
     portfolio,
     positions,
