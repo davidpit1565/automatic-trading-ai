@@ -27,6 +27,19 @@ export function exportState(store: KeyValueStore, timestamp: number): BackupPayl
   return { version: BACKUP_VERSION, exportedAt: timestamp, data };
 }
 
+/**
+ * Erase every stored key — an explicit, owner-initiated fresh start (e.g.
+ * clearing demo-data practice trades before a real tracking period begins).
+ * Returns the number of keys removed. Callers should offer a backup first.
+ */
+export function resetAllState(store: KeyValueStore): number {
+  const keys = store.keys();
+  for (const key of keys) {
+    store.remove(key);
+  }
+  return keys.length;
+}
+
 export function importState(
   store: KeyValueStore,
   payload: BackupPayload,

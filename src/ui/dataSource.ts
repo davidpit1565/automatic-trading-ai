@@ -13,6 +13,7 @@
 
 import type { MarketDataSource } from '../core/data/revolutClient';
 import { RevolutXClient } from '../core/data/revolutClient';
+import { CoinbasePublicSource } from '../core/data/coinbasePublic';
 import { KrakenPublicSource } from '../core/data/krakenPublic';
 import { SyntheticDataSource } from '../core/data/synthetic';
 import type { Instrument } from '../core/types';
@@ -24,6 +25,8 @@ export interface ActiveDataSource {
   readonly instruments: Instrument[];
   readonly isLive: boolean;
   readonly kind: DataSourceKind;
+  /** Why earlier sources in the chain were skipped — shown when in demo. */
+  readonly diagnostics: string[];
 }
 
 function demoForced(): boolean {
@@ -35,6 +38,8 @@ function demoForced(): boolean {
 }
 
 export async function initDataSource(): Promise<ActiveDataSource> {
+  const diagnostics: string[] = [];
+
   if (!demoForced()) {
     // 1. Revolut X through the local proxy (desktop setups).
     const revolut = new RevolutXClient({ timeoutMs: 6000 });
@@ -45,21 +50,37 @@ export async function initDataSource(): Promise<ActiveDataSource> {
         instruments: [...revolutInstruments.value].sort((a, b) => a.symbol.localeCompare(b.symbol)),
         isLive: true,
         kind: 'revolut',
+        diagnostics,
       };
     }
+    diagnostics.push('Revolut proxy: not running');
 
-    // 2. Kraken public — verify reachability with one real candle request.
-    const kraken = new KrakenPublicSource();
-    const probe = await kraken.getCandles('XBTEUR', '1h', 2);
-    if (probe.ok) {
-      const instruments = await kraken.getInstruments();
-      if (instruments.ok) {
-        return { source: kraken, instruments: instruments.value, isLive: true, kind: 'public' };
+    // 2/3. Public browser-direct sources — probe with one real candle
+    // request each; regional blocks on one provider fall through to the next.
+    const publicSources: MarketDataSource[] = [
+      new KrakenPublicSource(),
+      new CoinbasePublicSource(),
+    ];
+    for (const candidate of publicSources) {
+      const instruments = await candidate.getInstruments();
+      if (!instruments.ok) continue;
+      const probe = await candidate.getCandles(instruments.value[0]!.symbol, '1h', 2);
+      if (probe.ok) {
+        return {
+          source: candidate,
+          instruments: instruments.value,
+          isLive: true,
+          kind: 'public',
+          diagnostics,
+        };
       }
+      diagnostics.push(`${candidate.name}: ${probe.error}`);
     }
+  } else {
+    diagnostics.push('demo mode forced via ?demo=1');
   }
 
-  // 3. Demo fallback — never presented as live data.
+  // 4. Demo fallback — never presented as live data.
   const demo = new SyntheticDataSource(Date.now());
   const demoInstruments = await demo.getInstruments();
   return {
@@ -67,5 +88,6 @@ export async function initDataSource(): Promise<ActiveDataSource> {
     instruments: demoInstruments.ok ? demoInstruments.value : [],
     isLive: false,
     kind: 'demo',
+    diagnostics,
   };
 }

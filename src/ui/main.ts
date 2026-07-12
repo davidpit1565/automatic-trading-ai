@@ -37,13 +37,13 @@ async function bootstrap(): Promise<void> {
     } else if (data.kind === 'public') {
       banner.classList.add('live');
       banner.textContent =
-        'LIVE public market data (Kraken) — read-only, no keys needed. ' +
-        'Prices may differ slightly from Revolut X.';
+        `LIVE public market data (${data.source.name.replace(' (read-only)', '')}) — ` +
+        'read-only, no keys needed. Prices may differ slightly from Revolut X.';
     } else {
+      const reasons = data.diagnostics.length > 0 ? ` [${data.diagnostics.join(' · ')}]` : '';
       banner.textContent =
         'Live market data unavailable — showing deterministic DEMO data; nothing here ' +
-        'reflects real market prices. On a computer, the local proxy (npm run proxy) ' +
-        'adds Revolut X data — see README.';
+        `reflects real market prices.${reasons}`;
     }
   }
 

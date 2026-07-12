@@ -6,7 +6,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { exportState, importState, type BackupPayload } from '../../src/core/data/backup';
+import {
+  exportState,
+  importState,
+  resetAllState,
+  type BackupPayload,
+} from '../../src/core/data/backup';
 import { MemoryStore } from '../../src/core/data/storage';
 
 describe('exportState', () => {
@@ -46,6 +51,16 @@ describe('importState', () => {
     const result = importState(target, JSON.parse(json) as BackupPayload);
     expect(result.ok).toBe(true);
     expect(target.get('watchlist')).toEqual([{ symbol: 'BTC-USD', favorite: true }]);
+  });
+
+  it('resetAllState wipes every key — an explicit owner fresh-start', () => {
+    const store = new MemoryStore();
+    store.set('trade-journal', [{ id: 't1' }]);
+    store.set('portfolio-engine', { cash: 9000 });
+    store.set('audit-log', [{ event: 'filled' }]);
+    const removed = resetAllState(store);
+    expect(removed).toBe(3);
+    expect(store.keys()).toEqual([]);
   });
 
   it('rejects malformed payloads without touching the store', () => {

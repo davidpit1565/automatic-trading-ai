@@ -10,7 +10,12 @@
 import { PersistedAuditLog } from '../../core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../../core/autopilot/killSwitch';
 import { PaperAutoPilot } from '../../core/autopilot/paperAutoPilot';
-import { exportState, importState, type BackupPayload } from '../../core/data/backup';
+import {
+  exportState,
+  importState,
+  resetAllState,
+  type BackupPayload,
+} from '../../core/data/backup';
 import { LocalStorageStore } from '../../core/data/storage';
 import {
   benchmarkComparison,
@@ -136,6 +141,7 @@ export function renderPositionsView(container: HTMLElement, data: ActiveDataSour
       <label class="control">Restore from file
         <input id="pf-import" type="file" accept="application/json" />
       </label>
+      <button class="secondary" id="pf-reset">Start fresh (erase simulated history)</button>
     </div>
     <div class="status-line" id="pf-backup-status"></div>
     <p class="disclaimer">
@@ -299,6 +305,17 @@ export function renderPositionsView(container: HTMLElement, data: ActiveDataSour
     } catch (cause) {
       backupStatus.innerHTML = `<span class="error-line">Could not read backup: ${escapeHtml(String(cause))}</span>`;
     }
+  });
+
+  container.querySelector('#pf-reset')!.addEventListener('click', () => {
+    const confirmed = window.confirm(
+      'Erase ALL simulated data (positions, journal, audit, watchlists)? ' +
+        'This cannot be undone — download a backup first if you want to keep it.',
+    );
+    if (!confirmed) return;
+    const removed = resetAllState(store);
+    backupStatus.textContent = `Fresh start: ${removed} data sets erased. Reloading…`;
+    window.location.reload();
   });
 
   refreshAutopilot();

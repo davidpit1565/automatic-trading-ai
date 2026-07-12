@@ -22,7 +22,7 @@ async function makeData(): Promise<ActiveDataSource> {
   const source = new SyntheticDataSource(ANCHOR);
   const instruments = await source.getInstruments();
   if (!instruments.ok) throw new Error('demo instruments unavailable');
-  return { source, instruments: instruments.value, isLive: false, kind: 'demo' as const };
+  return { source, instruments: instruments.value, isLive: false, kind: 'demo' as const, diagnostics: [] };
 }
 
 async function renderAndScan(): Promise<{ container: HTMLElement; data: ActiveDataSource }> {
