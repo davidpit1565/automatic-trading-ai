@@ -69,7 +69,7 @@ export class KrakenPublicSource implements MarketDataSource {
   private queue: Promise<unknown> = Promise.resolve();
 
   constructor(options: KrakenPublicSourceOptions = {}) {
-    this.fetchFn = options.fetchFn ?? fetch;
+    this.fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init));
     this.now = options.now ?? (() => Date.now());
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.staggerMs = options.staggerMs ?? DEFAULT_STAGGER_MS;

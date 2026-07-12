@@ -63,7 +63,7 @@ export class RevolutXClient implements MarketDataSource {
 
   constructor(options: RevolutXClientOptions = {}) {
     this.baseUrl = (options.baseUrl ?? PROXY_BASE_URL).replace(/\/$/, '');
-    this.fetchFn = options.fetchFn ?? fetch;
+    this.fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init));
     this.now = options.now ?? (() => Date.now());
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }

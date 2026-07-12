@@ -59,7 +59,7 @@ export class CoinbasePublicSource implements MarketDataSource {
   private readonly timeoutMs: number;
 
   constructor(options: CoinbasePublicSourceOptions = {}) {
-    this.fetchFn = options.fetchFn ?? fetch;
+    this.fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init));
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 

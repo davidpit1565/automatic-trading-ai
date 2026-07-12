@@ -218,6 +218,17 @@ describe('core layering', () => {
     expect(feedback).toMatch(/from\s+['"]\.\.\/position\/analytics['"]/);
   });
 
+  it('fetch is never used unbound — WebKit throws "Can only call Window.fetch"', () => {
+    // `options.fetchFn ?? fetch` stores an unbound reference; calling it as
+    // this.fetchFn(...) sets `this` to the client instance, which iOS Safari
+    // rejects. Defaults must wrap: `?? ((input, init) => fetch(input, init))`.
+    for (const file of collectFiles(join(root, 'src')).filter((f) => f.endsWith('.ts'))) {
+      expect(readFileSync(file, 'utf8'), `${file} assigns unbound fetch`).not.toMatch(
+        /\?\?\s*fetch\s*[;,)]/,
+      );
+    }
+  });
+
   it('position sizing lives in the Risk Engine, not the Signal Engine', () => {
     const signal = readFileSync(join(root, 'src/core/signal/signalEngine.ts'), 'utf8');
     expect(signal).not.toMatch(/function\s+positionSize|export.*positionSize/);
