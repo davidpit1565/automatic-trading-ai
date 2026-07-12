@@ -16,7 +16,7 @@ async function makeData(): Promise<ActiveDataSource> {
   const source = new SyntheticDataSource(ANCHOR);
   const instruments = await source.getInstruments();
   if (!instruments.ok) throw new Error('demo instruments unavailable');
-  return { source, instruments: instruments.value, isLive: false };
+  return { source, instruments: instruments.value, isLive: false, kind: 'demo' as const };
 }
 
 async function renderView(): Promise<HTMLElement> {
@@ -120,6 +120,23 @@ describe('Portfolio view (DOM integration)', () => {
     // The demo universe has bullish markets: the audit shows fills or refusals.
     await waitFor(() => container.querySelectorAll('#ap-audit tbody tr').length > 0);
     expect(container.querySelectorAll('#ap-audit tbody tr').length).toBeGreaterThan(0);
+  });
+
+  it('a running autopilot resumes after re-render and runs a catch-up cycle', async () => {
+    const first = await renderView();
+    first.querySelector<HTMLSelectElement>('#ap-interval')!.value = '1h';
+    first.querySelector<HTMLButtonElement>('#ap-start')!.click();
+    expect(first.querySelector('#ap-status')!.textContent).toContain('RUNNING');
+
+    // "Reload": fresh DOM, same localStorage.
+    document.body.innerHTML = '';
+    const second = await renderView();
+    await waitFor(() =>
+      (second.querySelector('#ap-status')!.textContent ?? '').includes('Last cycle'),
+    );
+    const status = second.querySelector('#ap-status')!.textContent!;
+    expect(status).toContain('RUNNING'); // schedule restored
+    expect(status).toContain('Last cycle'); // catch-up cycle ran on load
   });
 
   it('the kill switch halts automation and is reflected in the status', async () => {

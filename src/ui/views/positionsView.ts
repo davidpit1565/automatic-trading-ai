@@ -69,8 +69,16 @@ export function renderPositionsView(container: HTMLElement, data: ActiveDataSour
     getDailyLoss: () => new DailyLossTracker(store).lossToday(Date.now()),
     store,
   });
-  // Reload survival: pick the schedule back up if it was running.
-  autopilot.resume();
+  // Reload survival: pick the schedule back up if it was running, and run a
+  // catch-up cycle immediately — phones suspend background tabs, so every
+  // visit should scan and manage positions right away.
+  const resumed = autopilot.resume();
+  if (resumed) {
+    void autopilot.runCycleOnce(Date.now()).then(() => {
+      refreshAutopilot();
+      void refresh();
+    });
+  }
 
   container.innerHTML = `
     <h2>Portfolio</h2>

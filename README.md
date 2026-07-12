@@ -24,6 +24,11 @@ Stage 6), every live order will require explicit human confirmation.
   confidence score (hard-capped below 100) whose components are itemised. Rejections
   list every failed check; opportunities explain themselves in plain language.
   Long-only: bearish evidence yields an explained pass, never a short.
+- **Phone-first live data — complete**: browser-direct public market data from
+  Kraken (CORS-open, keyless, read-only) as an automatic fallback when the local
+  Revolut X proxy isn't running, plus GitHub Pages deployment
+  (`.github/workflows/deploy-pages.yml`) — the full platform, with real prices,
+  on any phone. `?demo=1` forces deterministic demo mode.
 - **Multi-timeframe confirmation — complete**: qualifying 1h signals are checked
   against the 4h scan in the monitoring engine and the autopilot — a long is never
   taken against a bearish larger trend; confirmation adds capped, itemised confidence.

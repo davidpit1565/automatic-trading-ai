@@ -14,7 +14,9 @@
 
 import { chromium } from 'playwright-core';
 
-const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:4173';
+// ?demo=1 forces the deterministic synthetic data source so e2e runs are
+// reproducible and never depend on (or hammer) live market APIs.
+const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:4173/?demo=1';
 const executablePath =
   process.env.CHROMIUM_PATH ??
   (process.env.PLAYWRIGHT_BROWSERS_PATH

@@ -10,6 +10,8 @@ const REVX_PROXY = {
 
 export default defineConfig({
   root: '.',
+  // GitHub Pages serves from /<repo>/ — the deploy workflow sets BASE_PATH.
+  base: process.env['BASE_PATH'] ?? '/',
   build: {
     outDir: 'dist',
     sourcemap: true,

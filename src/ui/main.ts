@@ -31,14 +31,19 @@ async function bootstrap(): Promise<void> {
   const banner = document.getElementById('data-source-banner');
   if (banner) {
     banner.hidden = false;
-    if (data.isLive) {
+    if (data.kind === 'revolut') {
       banner.classList.add('live');
       banner.textContent = `Connected to ${data.source.name} — live market data, read-only.`;
+    } else if (data.kind === 'public') {
+      banner.classList.add('live');
+      banner.textContent =
+        'LIVE public market data (Kraken) — read-only, no keys needed. ' +
+        'Prices may differ slightly from Revolut X.';
     } else {
       banner.textContent =
         'Live market data unavailable — showing deterministic DEMO data; nothing here ' +
-        'reflects real market prices. To go live, run the local proxy (npm run proxy) ' +
-        'with a read-only Revolut X API key — see README "Connecting live Revolut X data".';
+        'reflects real market prices. On a computer, the local proxy (npm run proxy) ' +
+        'adds Revolut X data — see README.';
     }
   }
 
