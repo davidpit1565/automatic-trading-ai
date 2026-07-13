@@ -8,6 +8,7 @@ echo "== signal engine ==";          node tests/signals-tests.js
 echo "== risk engine ==";            node tests/risk-tests.js
 echo "== validation harness ==";     node tests/validation-tests.js
 echo "== execution layer ==";        node tests/execution-tests.js
+echo "== revolut transport ==";      node tests/transport-tests.js
 echo "== integration ==";            node tests/integration-tests.js
 echo "== dashboard build gate ==";   node tools/build-dashboard.js
 if [ "${SKIP_E2E:-}" != "1" ]; then
