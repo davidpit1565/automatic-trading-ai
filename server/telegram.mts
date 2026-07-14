@@ -51,19 +51,22 @@ export interface DailySummaryInput {
  * it is doing, without a message every cycle. Sent at most once per day.
  */
 export function buildDailySummary(input: DailySummaryInput): string {
+  const ret = `${input.totalReturnPct >= 0 ? '+' : ''}${input.totalReturnPct.toFixed(2)}%`;
   const lines: string[] = [
-    '📊 סיכום יומי — Paper Autopilot (כסף מדומה)',
-    `💰 שווי תיק: ${euro(input.equity)}  (${input.totalReturnPct >= 0 ? '+' : ''}${input.totalReturnPct.toFixed(2)}% מההתחלה)`,
-    `💵 מזומן פנוי: ${euro(input.cash)}`,
-    `📈 רווח/הפסד: ${signedEuro(input.realizedPnl)} ממומש · ${signedEuro(input.unrealizedPnl)} על הנייר`,
-    `🔄 24 שעות אחרונות: ${input.openedLast24h} קניות, ${input.closedLast24h} מכירות`,
+    '📊 סיכום יומי / Daily Summary — Paper Autopilot (כסף מדומה / simulated money)',
+    `💰 שווי תיק / Portfolio value: ${euro(input.equity)} (${ret} מההתחלה / since start)`,
+    `💵 מזומן פנוי / Free cash: ${euro(input.cash)}`,
+    `📈 רווח/הפסד / P&L: ${signedEuro(input.realizedPnl)} ממומש/realized · ${signedEuro(input.unrealizedPnl)} על הנייר/unrealized`,
+    `🔄 24 שעות / last 24h: ${input.openedLast24h} קניות/buys, ${input.closedLast24h} מכירות/sells`,
   ];
   if (input.positions.length === 0) {
-    lines.push('📌 אין פוזיציות פתוחות כרגע.');
+    lines.push('📌 אין פוזיציות פתוחות / No open positions.');
   } else {
-    lines.push(`📌 פוזיציות פתוחות (${input.positions.length}):`);
+    lines.push(`📌 פוזיציות פתוחות / Open positions (${input.positions.length}):`);
     for (const p of input.positions) {
-      lines.push(`   • ${p.symbol}: ${euro(p.marketValue)} (${p.pctOfEquity.toFixed(1)}% מהתיק)`);
+      lines.push(
+        `   • ${p.symbol}: ${euro(p.marketValue)} (${p.pctOfEquity.toFixed(1)}% מהתיק / of portfolio)`,
+      );
     }
   }
   return lines.join('\n');
@@ -85,12 +88,12 @@ export function buildCycleMessage(
   cycle: Pick<CycleResult, 'opened' | 'closed' | 'timestamp'>,
 ): string | null {
   if (cycle.opened.length === 0 && cycle.closed.length === 0) return null;
-  const lines: string[] = ['🤖 Paper Autopilot (simulated money)'];
+  const lines: string[] = ['🤖 Paper Autopilot (כסף מדומה / simulated money)'];
   for (const o of cycle.opened) {
-    lines.push(`🟢 Bought ${o.symbol}: ${o.quantity} @ ${euro(o.entry)}`);
+    lines.push(`🟢 קנייה / Bought ${o.symbol}: ${o.quantity} @ ${euro(o.entry)}`);
   }
   for (const c of cycle.closed) {
-    lines.push(`🔴 Sold ${c.symbol} @ ${euro(c.price)} (${c.reason})`);
+    lines.push(`🔴 מכירה / Sold ${c.symbol} @ ${euro(c.price)} (${c.reason})`);
   }
   return lines.join('\n');
 }
