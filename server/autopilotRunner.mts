@@ -34,8 +34,11 @@ const INITIAL_CASH = 10_000;
 const CONFIRMATION_TF = '4h' as const;
 const ENTRY_TF = '1h' as const;
 const DAY_MS = 24 * 60 * 60 * 1000;
-/** First cycle at/after this UTC hour sends the daily digest (~08:00 Israel). */
-const DAILY_SUMMARY_HOUR_UTC = 5;
+/**
+ * First cycle at/after this UTC hour sends the evening digest.
+ * 19:00 UTC ≈ 22:00 Israel in summer (IDT) / ≈ 21:00 in winter (IST).
+ */
+const DAILY_SUMMARY_HOUR_UTC = 19;
 const DAILY_SUMMARY_KEY = 'daily-summary-last-day';
 
 /** Pick a live public source, preferring Kraken then Coinbase. */
