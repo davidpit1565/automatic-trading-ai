@@ -1,0 +1,52 @@
+# Cloud Paper Autopilot — runs the SIMULATED autopilot on a schedule in the
+# cloud (no phone or computer needed) and notifies via Telegram on trades.
+#
+# State lives in state/autopilot-state.json, committed back each run so the
+# next run resumes. SIMULATED money only — the core has no live-order path.
+#
+# Telegram is optional: set repo secrets TELEGRAM_BOT_TOKEN and
+# TELEGRAM_CHAT_ID to receive notifications. Without them the autopilot still
+# runs and accumulates state; it just doesn't notify.
+
+name: Cloud Paper Autopilot
+
+on:
+  schedule:
+    # Every 30 minutes (GitHub cron is best-effort; may be delayed).
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+# Prevent overlapping runs from racing on the committed state file.
+concurrency:
+  group: autopilot
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run one autopilot cycle
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: npx tsx server/autopilotRunner.mts
+      - name: Commit updated state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state/autopilot-state.json
+          if git diff --staged --quiet; then
+            echo "No state change."
+          else
+            git commit -m "Autopilot state ${GITHUB_RUN_ID}"
+            git push
+          fi

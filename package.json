@@ -1,0 +1,29 @@
+{
+  "name": "automatic-trading-ai",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Professional AI-powered trading assistant: market analysis, indicator engine, backtesting, and paper trading. Read-only market data; never executes trades without explicit human confirmation.",
+  "scripts": {
+    "start": "node scripts/start.mjs",
+    "dev": "vite",
+    "proxy": "node server/revxProxy.mjs",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "node scripts/e2e.mjs",
+    "typecheck": "tsc --noEmit",
+    "build:single": "vite build --config vite.artifact.config.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "happy-dom": "^20.10.6",
+    "playwright-core": "^1.61.1",
+    "tsx": "^4.23.1",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.8",
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^2.1.9"
+  }
+}

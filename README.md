@@ -1,31 +1,151 @@
-# automatic-trading-ai — Crypto Strategy Lab
+# AI Trading Assistant
 
-An educational, risk-first crypto analysis platform: backtesting,
-indicator-based market scanning, and paper trading on real historical
-EUR prices. **Read-only — it cannot place orders and never promises
-profits.** Roadmap and honest constraints: [docs/ROADMAP.md](docs/ROADMAP.md).
+**מדריך התקנה בעברית: [SETUP.he.md](SETUP.he.md)**
 
-## Layout
+A professional AI-powered trading **analysis** platform — a disciplined analyst, not a
+trading bot. It monitors markets, computes technical indicators, backtests strategies,
+scores opportunities objectively, and explains every reading. It never promises profits,
+never claims certainty, and never executes trades: if execution is ever added (roadmap
+Stage 6), every live order will require explicit human confirmation.
 
-| Path | Purpose |
-|---|---|
-| `src/indicators.js` | Technical indicator engine (pure functions) |
-| `src/strategy.js` | Backtest engine: buy & hold, DCA, trend, grid |
-| `tests/run-tests.js` | Test suite (hand-computed expected values) |
-| `tools/fetch-data.sh` | Fetch 365d daily EUR data from CoinGecko |
-| `tools/validate-data.js` | Validate + compile `data/dataset.json` |
-| `tools/build-dashboard.js` | Bake engines + data into `dashboard/index.html` |
-| `dashboard/template.html` | Dashboard source (Market Scan, Backtest Lab, Grid, Paper Portfolio, Learn) |
+## Current state
 
-## Workflow
+- **Stage 0 — complete**: read-only Revolut X market connection, candle parsing,
+  historical retrieval, Buy & Hold / DCA / trend backtesting, grid simulation,
+  paper trading portfolio, persistent storage.
+- **Stage 1 — complete**: reusable indicator engine (SMA, EMA, RSI, MACD, Bollinger
+  Bands, ATR, ADX, Stochastic, volume statistics) with a full reference-value test suite.
+- **Stage 1 integration — complete**: Market Scan tab in the dashboard, powered by the
+  indicator engine — hot / cold / neutral classification with clickable rows that expand
+  into a transparent, component-by-component score breakdown.
+- **Stage 2 — complete**: explainable Signal Engine on top of the verified scanner —
+  quality gates (evidence score, ADX trend strength, RSI overextension, volatility
+  ceiling), ATR-derived entry / stop loss / take profit with risk/reward, and a
+  confidence score (hard-capped below 100) whose components are itemised. Rejections
+  list every failed check; opportunities explain themselves in plain language.
+  Long-only: bearish evidence yields an explained pass, never a short.
+- **Phone-first live data — complete**: browser-direct public market data from
+  Kraken (CORS-open, keyless, read-only) as an automatic fallback when the local
+  Revolut X proxy isn't running, plus GitHub Pages deployment
+  (`.github/workflows/deploy-pages.yml`) — the full platform, with real prices,
+  on any phone. `?demo=1` forces deterministic demo mode.
+- **Multi-timeframe confirmation — complete**: qualifying 1h signals are checked
+  against the 4h scan in the monitoring engine and the autopilot — a long is never
+  taken against a bearish larger trend; confirmation adds capped, itemised confidence.
+- **Stage 7 core — complete**: Performance Feedback — confidence calibration, exit
+  quality, MFE-capture efficiency, per-strategy breakdown, and a buy-&-hold benchmark
+  comparison, all computed from the append-only journal; plus versioned backup/restore
+  of the entire stored state.
+- **Paper Autopilot — complete**: fully autonomous *simulated* trading — automatic
+  pipeline-qualified entries, automatic stop/target exits, kill switch, append-only
+  audit log, and reload survival (a running autopilot resumes after refresh unless the
+  kill switch is engaged). Paper-only by construction (architecture-tested); live orders
+  would always require explicit human confirmation per trade. See
+  `docs/paper-autopilot.md`.
+- **Stage 5 — complete**: Position Tracking & Portfolio Analytics — position lifecycle
+  with partial exits and MFE/MAE, portfolio engine (cash, equity, exposure, allocation,
+  daily return), append-only trade journal, informational position monitoring (never
+  auto-closes), analytics reusing the verified math, and a Portfolio dashboard tab with
+  equity/drawdown charts and monthly performance.
+- **Stage 4 — complete**: Market Monitoring — continuous scheduled scans through the
+  verified pipeline on a replaceable scheduler (5m–1d), opportunity detection
+  (none / watch / qualified), persistent watchlists with favourites, an append-only
+  opportunity history, and a deduplicated alert engine (in-app + browser
+  notifications). Analysis only: the monitor has no execution capability, enforced by
+  architecture tests.
+- **Stage 3.5 — complete**: Validation Harness — walk-forward analysis with rolling
+  train/test windows, realistic costs (fees, spread, slippage, execution delay) in every
+  reported number, professional metrics (profit factor, expectancy, Sharpe, drawdown,
+  holding time), automatic overfitting detection with an explained verdict, and a
+  Validation dashboard tab. Execution Control Layer designed but deliberately inert
+  (see `docs/execution-architecture.md`).
+- **Stage 3 — complete**: Risk Management Engine between signals and proposals —
+  risk-based position sizing with a hard 1% per-trade ceiling, 20% single-position and
+  per-asset caps, 60% total-exposure limit, max open positions, daily loss protection
+  with automatic next-day reset, risk/reward and stop-distance validation, and a fully
+  explainable `TradeRiskAssessment`. Refusing a trade is a success condition. See
+  `ROADMAP.md` for stage-by-stage status.
 
-```bash
-node tests/run-tests.js        # must pass before anything ships
-bash tools/fetch-data.sh       # refresh market data
-node tools/validate-data.js    # gate: shape, freshness, sanity
-node tools/build-dashboard.js  # gate: embedded code byte-identical to tested source
+## Architecture
+
+Strict one-way layering; no business logic in UI components, no duplicated math:
+
+```
+Data Layer (src/core/data)          candle parsing, Revolut X read-only client,
+                                    persistent storage, deterministic demo data
+Indicator Engine (src/core/indicators)  pure functions, null-padded warm-up
+Strategy Engine (src/core/strategies)   Buy & Hold, DCA, SMA-cross trend, grid
+Backtesting (src/core/backtest)     fills, fees, equity curve, P&L, drawdown, stats
+Portfolio (src/core/portfolio)      paper trading with average-cost accounting
+Validation (src/core/validation)    walk-forward, cost-aware metrics, overfitting
+                                    detection — reuses the backtest engine
+Execution (src/core/execution)      DESIGN ONLY: contracts for Stage 6 (paper/live,
+                                    human confirmation, kill switch, audit)
+Monitoring (src/core/scan)          market scanner: scoring + hot/cold/neutral
+Monitor (src/core/monitor)          scheduled scans, watchlists, opportunity log,
+                                    alerts — orchestrates the verified pipeline
+Position (src/core/position)        position lifecycle, portfolio accounting,
+                                    append-only trade journal, analytics
+Autopilot (src/core/autopilot)      autonomous PAPER trading: kill switch,
+                                    audit log, no live path by construction
+Signal Engine (src/core/signal)     quality gates, trade levels, confidence
+Risk Engine (src/core/risk)         position sizing, exposure limits, daily loss
+                                    protection, trade approval/refusal with reasons
+UI (src/ui + index.html)            Backtesting Lab · Grid Simulation ·
+                                    Paper Portfolio · Market Scan · Learn
 ```
 
-The built `dashboard/index.html` is published as a Claude artifact.
-Every stage of development is test-gated and committed — the execution
-environment is ephemeral, so git is the only durable store.
+If the live API is unreachable, the dashboard falls back to clearly-labelled
+deterministic demo data — synthetic data is never presented as live prices.
+
+## Connecting live Revolut X data
+
+Live market data comes from the official
+[Revolut X REST API](https://developer.revolut.com/docs/x-api) through a **local
+read-only proxy** (`server/revxProxy.mjs`). The proxy holds your credentials, signs
+requests (Ed25519), and only forwards whitelisted market-data GETs — it refuses
+orders, balances, and every account-mutating endpoint by construction, so it cannot
+trade. No Claude connectors or company integrations are involved; the app talks to
+Revolut X directly from your machine.
+
+1. Generate an Ed25519 keypair locally:
+   ```bash
+   openssl genpkey -algorithm ed25519 -out revx-private.pem
+   openssl pkey -in revx-private.pem -pubout -out revx-public.pem
+   ```
+2. In the **Revolut X web app**, create an API key, paste the contents of
+   `revx-public.pem`, and grant it **read-only** permissions (no trading).
+3. `cp .env.example .env` and fill in `REVX_API_KEY` and `REVX_PRIVATE_KEY_PATH`.
+   `.env` and `*.pem` are gitignored — never commit credentials.
+4. Run the proxy and the dashboard:
+   ```bash
+   npm run proxy   # terminal 1 — read-only signing proxy on :8788
+   npm run dev     # terminal 2 — dashboard (proxies /api/revx automatically)
+   ```
+
+The banner turns green when live data is flowing. Without the proxy or credentials,
+the app stays in clearly-labelled deterministic demo mode.
+
+## Development
+
+```bash
+npm install
+npm start         # proxy + dashboard together (one command)
+npm test          # unit + integration suite (vitest)
+npm run typecheck # strict TypeScript, no emit
+npm run dev       # dashboard dev server
+npm run build     # typecheck + production build
+npm run preview   # serve the production build on :4173
+npm run test:e2e  # Chromium end-to-end test against the preview server
+```
+
+Every feature follows TDD: tests first, then implementation, then regression run.
+
+## Roadmap
+
+Stage 6 Execution Preparation (human confirmation mandatory; architecture already
+designed in `docs/execution-architecture.md`) → Stage 7 Performance Feedback. Each
+stage proceeds only after the previous one is verified — details in `ROADMAP.md`.
+
+> Educational and analytical tool. Not financial advice. Past performance never
+> guarantees future results.

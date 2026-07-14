@@ -1,0 +1,49 @@
+# Deploys the dashboard to GitHub Pages on every push to the working branch.
+# Method: build and force-push the output to the `gh-pages` branch — this
+# needs only `contents: write` (the default token) and auto-enables Pages on
+# public repos, unlike the actions/deploy-pages flow whose first-time
+# enablement requires admin permissions the workflow token doesn't have.
+# The published app uses browser-direct public market data (Kraken) — no
+# secrets exist in this repository or in the deployed page.
+
+name: Deploy dashboard to GitHub Pages
+
+on:
+  push:
+    branches: [claude/market-scan-integration-r9lck1, main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+        env:
+          BASE_PATH: /automatic-trading-ai/
+      - name: Publish dist to gh-pages
+        run: |
+          cd dist
+          git init -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Deploy ${GITHUB_SHA}"
+          git push --force \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            gh-pages:gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

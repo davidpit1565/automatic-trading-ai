@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Trading Assistant</title>
+    <meta name="theme-color" content="#0f1420" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Trading AI" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.svg" />
+    <link rel="stylesheet" href="/src/ui/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>AI Trading Assistant</h1>
+      <p class="app-tagline">
+        Analysis, not promises — every reading is evidence-based and uncertain.
+      </p>
+      <div id="data-source-banner" class="data-source-banner" hidden></div>
+    </header>
+
+    <nav class="tab-bar" role="tablist">
+      <button class="tab-button active" data-tab="backtest" role="tab">Backtesting Lab</button>
+      <button class="tab-button" data-tab="grid" role="tab">Grid Simulation</button>
+      <button class="tab-button" data-tab="portfolio" role="tab">Paper Trading</button>
+      <button class="tab-button" data-tab="positions" role="tab">Portfolio</button>
+      <button class="tab-button" data-tab="validation" role="tab">Validation</button>
+      <button class="tab-button" data-tab="monitoring" role="tab">Monitoring</button>
+      <button class="tab-button" data-tab="scan" role="tab">Market Scan</button>
+      <button class="tab-button" data-tab="learn" role="tab">Learn</button>
+    </nav>
+
+    <main>
+      <section id="tab-backtest" class="tab-panel active" role="tabpanel"></section>
+      <section id="tab-grid" class="tab-panel" role="tabpanel"></section>
+      <section id="tab-portfolio" class="tab-panel" role="tabpanel"></section>
+      <section id="tab-positions" class="tab-panel" role="tabpanel"></section>
+      <section id="tab-validation" class="tab-panel" role="tabpanel"></section>
+      <section id="tab-monitoring" class="tab-panel" role="tabpanel"></section>
+
+      <!-- Market Scan sits immediately before Learn, per the approved layout. -->
+      <section id="tab-scan" class="tab-panel" role="tabpanel"></section>
+
+      <section id="tab-learn" class="tab-panel" role="tabpanel">
+        <h2>Learn</h2>
+        <article class="learn-card">
+          <h3>What this platform is</h3>
+          <p>
+            A professional analysis assistant. It reads market data, computes technical
+            indicators, backtests strategies on history, and scores current conditions.
+            It does <strong>not</strong> place real orders and it never guarantees outcomes.
+          </p>
+        </article>
+        <article class="learn-card">
+          <h3>How to read a Market Scan</h3>
+          <p>
+            Each market gets a score from −100 to +100 built from transparent components:
+            trend (EMA 20/50 confirmed by ADX), momentum (RSI), MACD histogram, stochastic
+            position, and volume. <span class="badge badge-hot">HOT</span> means strong
+            bullish evidence, <span class="badge badge-cold">COLD</span> strong bearish
+            evidence, <span class="badge badge-neutral">NEUTRAL</span> no clear edge.
+            Click any row to see exactly which indicators drove the score and any warnings.
+          </p>
+        </article>
+        <article class="learn-card">
+          <h3>Backtesting honestly</h3>
+          <p>
+            Past performance never guarantees future results. Backtests here include fees,
+            report maximum drawdown alongside returns, and liquidate at the end so
+            strategies are compared on equal terms. Beware overfitting: a strategy tuned
+            to look great on one history often fails on the next.
+          </p>
+        </article>
+        <article class="learn-card">
+          <h3>Risk first</h3>
+          <p>
+            Position sizing, stop losses, and exposure limits matter more than entries.
+            The roadmap adds a dedicated risk engine before any execution support, and
+            any future live order will always require your explicit confirmation.
+          </p>
+        </article>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      Educational and analytical tool. Not financial advice. No profit is promised or implied.
+    </footer>
+
+    <script type="module" src="/src/ui/main.ts"></script>
+  </body>
+</html>
