@@ -25,6 +25,7 @@ import { FileStore } from './fileStore.mts';
 import {
   buildCycleMessage,
   buildDailySummary,
+  buildMoveAlert,
   buildTestMessage,
   sendTelegramMessage,
 } from './telegram.mts';
@@ -34,9 +35,14 @@ const INITIAL_CASH = 10_000;
 const CONFIRMATION_TF = '4h' as const;
 const ENTRY_TF = '1h' as const;
 const DAY_MS = 24 * 60 * 60 * 1000;
-/** The daily digest is sent on the first cycle at/after this local hour. */
-const DAILY_SUMMARY_HOUR_LOCAL = 22;
-const DAILY_SUMMARY_KEY = 'daily-summary-last-day';
+/** Scheduled digests: each fires once per local day at/after its hour. */
+const SUMMARY_SLOTS = [
+  { hour: 8, key: 'daily-summary-morning', heading: '☀️ סיכום בוקר — רובוט מסחר (כסף מדומה)' },
+  { hour: 22, key: 'daily-summary-evening', heading: '🌙 סיכום ערב — רובוט מסחר (כסף מדומה)' },
+];
+/** Alert when an open position moves by at least this % (each new step). */
+const MOVE_ALERT_PCT = Number(process.env['MOVE_ALERT_PCT']) || 5;
+const MOVE_BUCKETS_KEY = 'move-alert-buckets';
 /**
  * Timezone the evening digest is scheduled in. Follows the user when they
  * travel by setting the SUMMARY_TIMEZONE repo variable (e.g. Europe/Brussels);
@@ -156,15 +162,56 @@ async function main(): Promise<void> {
     console.log(test.sent ? 'Telegram test message sent.' : `Test message not sent: ${test.reason}`);
   }
 
-  await maybeSendDailySummary(store, source, portfolio, journal, telegram, now);
+  await maybeSendMoveAlerts(store, source, portfolio, telegram);
+  await maybeSendSummaries(store, source, portfolio, journal, telegram, now);
 }
 
 /**
- * Send a portfolio digest at most once per day (first cycle at/after
- * DAILY_SUMMARY_HOUR_UTC), so the user sees the robot is alive and how it's
- * doing without a message every cycle. No-op when Telegram is unconfigured.
+ * Notify when an open position crosses a new ±MOVE_ALERT_PCT step since
+ * entry (e.g. +5%, +10%, -5%), so big swings surface without spamming on
+ * every tick. The last-alerted step per position is remembered in state.
  */
-async function maybeSendDailySummary(
+async function maybeSendMoveAlerts(
+  store: FileStore,
+  source: MarketDataSource,
+  portfolio: PortfolioEngine,
+  telegram: { token: string; chatId: string },
+): Promise<void> {
+  if (!telegram.token || !telegram.chatId) return;
+  const open = portfolio.openPositions();
+  if (open.length === 0) {
+    store.remove(MOVE_BUCKETS_KEY);
+    return;
+  }
+  const prices = await latestPrices(
+    source,
+    open.map((p) => p.symbol),
+  );
+  const previous = store.get<Record<string, number>>(MOVE_BUCKETS_KEY) ?? {};
+  const current: Record<string, number> = {};
+  for (const p of open) {
+    const price = prices[p.symbol];
+    if (price === undefined || !(p.entryPrice > 0)) {
+      if (previous[p.id] !== undefined) current[p.id] = previous[p.id]!;
+      continue;
+    }
+    const movePct = ((price - p.entryPrice) / p.entryPrice) * 100;
+    const bucket = Math.trunc(movePct / MOVE_ALERT_PCT); // signed step index
+    current[p.id] = bucket;
+    if (bucket !== 0 && previous[p.id] !== bucket) {
+      const result = await sendTelegramMessage(buildMoveAlert(p.symbol, movePct), telegram);
+      console.log(result.sent ? `Move alert sent for ${p.symbol}.` : `Move alert failed: ${result.reason}`);
+    }
+  }
+  store.set(MOVE_BUCKETS_KEY, current); // also drops closed positions
+}
+
+/**
+ * Send the morning (08:00) and evening (22:00) digests, each at most once
+ * per local day. So the user sees where things stand at the start and end
+ * of the day without a message every cycle. No-op without Telegram.
+ */
+async function maybeSendSummaries(
   store: FileStore,
   source: MarketDataSource,
   portfolio: PortfolioEngine,
@@ -175,10 +222,10 @@ async function maybeSendDailySummary(
   if (!telegram.token || !telegram.chatId) return;
 
   const { day: today, hour } = localDayAndHour(now, SUMMARY_TIMEZONE);
-  const lastDay = store.get<string>(DAILY_SUMMARY_KEY);
-  const dueToday =
-    lastDay !== today && (lastDay === undefined || hour >= DAILY_SUMMARY_HOUR_LOCAL);
-  if (!dueToday) return;
+  const dueSlots = SUMMARY_SLOTS.filter(
+    (slot) => hour >= slot.hour && store.get<string>(slot.key) !== today,
+  );
+  if (dueSlots.length === 0) return;
 
   const open = portfolio.openPositions();
   const prices = await latestPrices(
@@ -188,7 +235,7 @@ async function maybeSendDailySummary(
   const snap = portfolio.snapshot(prices, now);
   const since = now - DAY_MS;
   const benchmark = await computeBenchmark(store, source, snap.equity, now);
-  const summary = buildDailySummary({
+  const baseSummary = {
     equity: snap.equity,
     cash: snap.cash,
     totalReturnPct: snap.totalReturnPct,
@@ -202,14 +249,19 @@ async function maybeSendDailySummary(
     openedLast24h: open.filter((p) => p.openedAt >= since).length,
     closedLast24h: journal.entries().filter((e) => e.exitTimestamp >= since).length,
     benchmark,
-  });
+  };
 
-  const result = await sendTelegramMessage(summary, telegram);
-  if (result.sent) {
-    store.set(DAILY_SUMMARY_KEY, today);
-    console.log('Daily summary sent.');
-  } else {
-    console.log(`Daily summary not sent: ${result.reason}`);
+  for (const slot of dueSlots) {
+    const result = await sendTelegramMessage(
+      buildDailySummary({ ...baseSummary, heading: slot.heading }),
+      telegram,
+    );
+    if (result.sent) {
+      store.set(slot.key, today);
+      console.log(`Summary sent (${slot.key}).`);
+    } else {
+      console.log(`Summary not sent (${slot.key}): ${result.reason}`);
+    }
   }
 }
 

@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 // prettier-ignore
 // @ts-expect-error plain-TS server module run via tsx; imported directly in tests
-import { buildCycleMessage, buildDailySummary, buildTestMessage, sendTelegramMessage } from '../../server/telegram.mts';
+import { buildCycleMessage, buildDailySummary, buildMoveAlert, buildTestMessage, sendTelegramMessage } from '../../server/telegram.mts';
 
 describe('buildTestMessage', () => {
   it('returns a non-empty confirmation the user can recognise', () => {
@@ -14,6 +14,21 @@ describe('buildTestMessage', () => {
     expect(typeof msg).toBe('string');
     expect(msg.length).toBeGreaterThan(0);
     expect(msg).toContain('הבוט מחובר');
+  });
+});
+
+describe('buildMoveAlert', () => {
+  it('reports an up-move with a + sign and up arrow', () => {
+    const msg = buildMoveAlert('ADAEUR', 5.24);
+    expect(msg).toContain('ADAEUR');
+    expect(msg).toContain('+5.2%');
+    expect(msg).toContain('עלה');
+  });
+
+  it('reports a down-move with a - sign', () => {
+    const msg = buildMoveAlert('XRPEUR', -6.1);
+    expect(msg).toContain('-6.1%');
+    expect(msg).toContain('ירד');
   });
 });
 

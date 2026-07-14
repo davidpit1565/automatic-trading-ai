@@ -55,6 +55,8 @@ export interface DailySummaryInput {
   readonly openedLast24h: number;
   readonly closedLast24h: number;
   readonly benchmark?: DailySummaryBenchmark | null;
+  /** Optional first line, e.g. a morning/evening greeting. */
+  readonly heading?: string;
 }
 
 /**
@@ -64,7 +66,7 @@ export interface DailySummaryInput {
 export function buildDailySummary(input: DailySummaryInput): string {
   const ret = `${input.totalReturnPct >= 0 ? '+' : ''}${input.totalReturnPct.toFixed(2)}%`;
   const lines: string[] = [
-    '📊 סיכום יומי — רובוט מסחר (כסף מדומה)',
+    input.heading ?? '📊 סיכום יומי — רובוט מסחר (כסף מדומה)',
     `💰 שווי תיק: ${euro(input.equity)} (${ret} מההתחלה)`,
     `💵 מזומן פנוי: ${euro(input.cash)}`,
     `📈 רווח/הפסד: ${signedEuro(input.realizedPnl)} ממומש · ${signedEuro(input.unrealizedPnl)} על הנייר`,
@@ -98,6 +100,13 @@ export function buildDailySummary(input: DailySummaryInput): string {
  */
 export function buildTestMessage(): string {
   return '✅ הבוט מחובר! מעכשיו תקבל כאן התראה על כל קנייה/מכירה. כסף מדומה בלבד.';
+}
+
+/** Alert for a significant price move on an open position. */
+export function buildMoveAlert(symbol: string, movePct: number): string {
+  const up = movePct >= 0;
+  const pct = `${up ? '+' : ''}${movePct.toFixed(1)}%`;
+  return `${up ? '📈' : '📉'} ${symbol} ${up ? 'עלה' : 'ירד'} ${pct} מאז הקנייה (כסף מדומה)`;
 }
 
 /** Signal-driver labels (from the signal engine) in plain Hebrew. */
