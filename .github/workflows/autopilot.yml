@@ -12,8 +12,9 @@ name: Cloud Paper Autopilot
 
 on:
   schedule:
-    # Every 15 minutes (GitHub cron is best-effort; may be delayed).
-    - cron: '*/15 * * * *'
+    # Every 5 minutes — GitHub's minimum. Cron is best-effort: under load
+    # runs are often delayed and occasionally coalesced.
+    - cron: '*/5 * * * *'
   workflow_dispatch:
     inputs:
       test_message:
@@ -44,6 +45,10 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           SEND_TEST_MESSAGE: ${{ inputs.test_message }}
+          # Timezone for the 22:00 daily digest. Set this repo Variable to
+          # follow you when you travel (e.g. Europe/Brussels). Defaults to
+          # Asia/Jerusalem when unset.
+          SUMMARY_TIMEZONE: ${{ vars.SUMMARY_TIMEZONE }}
         run: npx tsx server/autopilotRunner.mts
       - name: Commit updated state
         run: |

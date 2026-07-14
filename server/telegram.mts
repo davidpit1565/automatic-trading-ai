@@ -53,20 +53,18 @@ export interface DailySummaryInput {
 export function buildDailySummary(input: DailySummaryInput): string {
   const ret = `${input.totalReturnPct >= 0 ? '+' : ''}${input.totalReturnPct.toFixed(2)}%`;
   const lines: string[] = [
-    '📊 סיכום יומי / Daily Summary — Paper Autopilot (כסף מדומה / simulated money)',
-    `💰 שווי תיק / Portfolio value: ${euro(input.equity)} (${ret} מההתחלה / since start)`,
-    `💵 מזומן פנוי / Free cash: ${euro(input.cash)}`,
-    `📈 רווח/הפסד / P&L: ${signedEuro(input.realizedPnl)} ממומש/realized · ${signedEuro(input.unrealizedPnl)} על הנייר/unrealized`,
-    `🔄 24 שעות / last 24h: ${input.openedLast24h} קניות/buys, ${input.closedLast24h} מכירות/sells`,
+    '📊 סיכום יומי — רובוט מסחר (כסף מדומה)',
+    `💰 שווי תיק: ${euro(input.equity)} (${ret} מההתחלה)`,
+    `💵 מזומן פנוי: ${euro(input.cash)}`,
+    `📈 רווח/הפסד: ${signedEuro(input.realizedPnl)} ממומש · ${signedEuro(input.unrealizedPnl)} על הנייר`,
+    `🔄 24 שעות אחרונות: ${input.openedLast24h} קניות, ${input.closedLast24h} מכירות`,
   ];
   if (input.positions.length === 0) {
-    lines.push('📌 אין פוזיציות פתוחות / No open positions.');
+    lines.push('📌 אין פוזיציות פתוחות כרגע.');
   } else {
-    lines.push(`📌 פוזיציות פתוחות / Open positions (${input.positions.length}):`);
+    lines.push(`📌 פוזיציות פתוחות (${input.positions.length}):`);
     for (const p of input.positions) {
-      lines.push(
-        `   • ${p.symbol}: ${euro(p.marketValue)} (${p.pctOfEquity.toFixed(1)}% מהתיק / of portfolio)`,
-      );
+      lines.push(`   • ${p.symbol}: ${euro(p.marketValue)} (${p.pctOfEquity.toFixed(1)}% מהתיק)`);
     }
   }
   return lines.join('\n');
@@ -77,23 +75,36 @@ export function buildDailySummary(input: DailySummaryInput): string {
  * without waiting for a real trade. Sent only when explicitly requested.
  */
 export function buildTestMessage(): string {
-  return (
-    '✅ הבוט מחובר! מעכשיו תקבל כאן התראה על כל קנייה/מכירה (כסף מדומה).\n' +
-    '🤖 Paper Autopilot connected — you will get a message here on every simulated buy/sell.'
-  );
+  return '✅ הבוט מחובר! מעכשיו תקבל כאן התראה על כל קנייה/מכירה. כסף מדומה בלבד.';
 }
 
-/** Human-readable message for a cycle's trades, or null if nothing happened. */
+/** Exit reason in plain Hebrew. */
+function reasonHe(reason: string): string {
+  switch (reason) {
+    case 'take-profit':
+      return 'הגיע ליעד הרווח';
+    case 'stop-loss':
+      return 'הופעל סטופ-לוס';
+    case 'signal-exit':
+      return 'יציאה לפי סיגנל';
+    case 'manual':
+      return 'ידני';
+    default:
+      return 'אחר';
+  }
+}
+
+/** Human-readable message (Hebrew) for a cycle's trades, or null if none. */
 export function buildCycleMessage(
   cycle: Pick<CycleResult, 'opened' | 'closed' | 'timestamp'>,
 ): string | null {
   if (cycle.opened.length === 0 && cycle.closed.length === 0) return null;
-  const lines: string[] = ['🤖 Paper Autopilot (כסף מדומה / simulated money)'];
+  const lines: string[] = ['🤖 רובוט מסחר (כסף מדומה)'];
   for (const o of cycle.opened) {
-    lines.push(`🟢 קנייה / Bought ${o.symbol}: ${o.quantity} @ ${euro(o.entry)}`);
+    lines.push(`🟢 קנייה ${o.symbol}: ${o.quantity} יח׳ במחיר ${euro(o.entry)}`);
   }
   for (const c of cycle.closed) {
-    lines.push(`🔴 מכירה / Sold ${c.symbol} @ ${euro(c.price)} (${c.reason})`);
+    lines.push(`🔴 מכירה ${c.symbol} במחיר ${euro(c.price)} (${reasonHe(c.reason)})`);
   }
   return lines.join('\n');
 }
