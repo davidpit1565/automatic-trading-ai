@@ -187,6 +187,7 @@ async function maybeSendDailySummary(
   );
   const snap = portfolio.snapshot(prices, now);
   const since = now - DAY_MS;
+  const benchmark = await computeBenchmark(store, source, snap.equity, now);
   const summary = buildDailySummary({
     equity: snap.equity,
     cash: snap.cash,
@@ -200,6 +201,7 @@ async function maybeSendDailySummary(
     })),
     openedLast24h: open.filter((p) => p.openedAt >= since).length,
     closedLast24h: journal.entries().filter((e) => e.exitTimestamp >= since).length,
+    benchmark,
   });
 
   const result = await sendTelegramMessage(summary, telegram);
@@ -209,6 +211,47 @@ async function maybeSendDailySummary(
   } else {
     console.log(`Daily summary not sent: ${result.reason}`);
   }
+}
+
+const BENCHMARK_ANCHOR_KEY = 'benchmark-anchor';
+interface BenchmarkAnchor {
+  btc: number;
+  equity: number;
+  at: number;
+}
+
+/**
+ * Compare the portfolio against simply holding Bitcoin over the same window.
+ * The anchor (BTC price + portfolio equity) is captured the first time this
+ * runs, so both returns are measured from the same moment — a fair test of
+ * whether the robot beats buy-and-hold.
+ */
+async function computeBenchmark(
+  store: FileStore,
+  source: MarketDataSource,
+  equityNow: number,
+  now: number,
+): Promise<{ label: string; portfolioPct: number; assetPct: number } | null> {
+  const instruments = await source.getInstruments();
+  if (!instruments.ok) return null;
+  const btc = instruments.value.find(
+    (i) => /XBT|BTC/i.test(i.symbol) && /EUR/i.test(i.symbol),
+  );
+  if (!btc) return null;
+  const prices = await latestPrices(source, [btc.symbol]);
+  const btcNow = prices[btc.symbol];
+  if (btcNow === undefined || !(btcNow > 0) || !(equityNow > 0)) return null;
+
+  let anchor = store.get<BenchmarkAnchor>(BENCHMARK_ANCHOR_KEY);
+  if (!anchor || !(anchor.btc > 0) || !(anchor.equity > 0)) {
+    anchor = { btc: btcNow, equity: equityNow, at: now };
+    store.set(BENCHMARK_ANCHOR_KEY, anchor);
+  }
+  return {
+    label: 'ביטקוין',
+    portfolioPct: ((equityNow - anchor.equity) / anchor.equity) * 100,
+    assetPct: ((btcNow - anchor.btc) / anchor.btc) * 100,
+  };
 }
 
 await main();

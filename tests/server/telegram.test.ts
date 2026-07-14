@@ -52,6 +52,29 @@ describe('buildDailySummary', () => {
     const msg = buildDailySummary({ ...base, positions: [] });
     expect(msg).toContain('אין פוזיציות פתוחות');
   });
+
+  it('adds a reassurance line when there were no trades in 24h', () => {
+    const msg = buildDailySummary({ ...base, openedLast24h: 0, closedLast24h: 0, positions: [] });
+    expect(msg).toContain('ממתין להזדמנות');
+  });
+
+  it('shows the Bitcoin benchmark comparison and who is leading', () => {
+    const ahead = buildDailySummary({
+      ...base,
+      positions: [],
+      benchmark: { label: 'ביטקוין', portfolioPct: 3.2, assetPct: 1.1 },
+    });
+    expect(ahead).toContain('ביטקוין');
+    expect(ahead).toContain('+3.20%');
+    expect(ahead).toContain('מוביל');
+
+    const behind = buildDailySummary({
+      ...base,
+      positions: [],
+      benchmark: { label: 'ביטקוין', portfolioPct: -1, assetPct: 2 },
+    });
+    expect(behind).toContain('החזקה פשוטה מובילה');
+  });
 });
 
 describe('buildCycleMessage', () => {
@@ -80,6 +103,25 @@ describe('buildCycleMessage', () => {
     expect(msg).toContain('ETH-EUR');
     expect(msg).toContain('הגיע ליעד'); // translated take-profit
     expect(msg).toContain('מכירה');
+  });
+
+  it('shows confidence and translated reasons on a buy when provided', () => {
+    const msg = buildCycleMessage({
+      timestamp: 0,
+      opened: [
+        {
+          symbol: 'ADAEUR',
+          quantity: 100,
+          entry: 0.5,
+          confidence: 42,
+          reasons: ['Scanner evidence', 'Trend strength'],
+        },
+      ],
+      closed: [],
+    });
+    expect(msg).toContain('ביטחון 42%');
+    expect(msg).toContain('ראיות טכניות');
+    expect(msg).toContain('מגמה חזקה');
   });
 
   it('combines opens and closes in one message', () => {
