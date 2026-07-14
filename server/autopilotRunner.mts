@@ -22,12 +22,21 @@ import { PortfolioEngine } from '../src/core/position/portfolioEngine';
 import { TradeJournal } from '../src/core/position/tradeJournal';
 import { DailyLossTracker } from '../src/core/risk/dailyLoss';
 import { FileStore } from './fileStore.mts';
-import { buildCycleMessage, sendTelegramMessage } from './telegram.mts';
+import {
+  buildCycleMessage,
+  buildDailySummary,
+  buildTestMessage,
+  sendTelegramMessage,
+} from './telegram.mts';
 
 const STATE_PATH = process.env['AUTOPILOT_STATE_PATH'] ?? 'state/autopilot-state.json';
 const INITIAL_CASH = 10_000;
 const CONFIRMATION_TF = '4h' as const;
 const ENTRY_TF = '1h' as const;
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** First cycle at/after this UTC hour sends the daily digest (~08:00 Israel). */
+const DAILY_SUMMARY_HOUR_UTC = 5;
+const DAILY_SUMMARY_KEY = 'daily-summary-last-day';
 
 /** Pick a live public source, preferring Kraken then Coinbase. */
 async function pickSource(): Promise<MarketDataSource | null> {
@@ -38,6 +47,21 @@ async function pickSource(): Promise<MarketDataSource | null> {
     if (probe.ok) return candidate;
   }
   return null;
+}
+
+/** Latest close per symbol, for an accurate portfolio snapshot. */
+async function latestPrices(
+  source: MarketDataSource,
+  symbols: readonly string[],
+): Promise<Record<string, number>> {
+  const prices: Record<string, number> = {};
+  for (const symbol of symbols) {
+    const candles = await source.getCandles(symbol, ENTRY_TF, 2);
+    if (candles.ok && candles.value.length > 0) {
+      prices[symbol] = candles.value[candles.value.length - 1]!.close;
+    }
+  }
+  return prices;
 }
 
 async function main(): Promise<void> {
@@ -75,7 +99,8 @@ async function main(): Promise<void> {
     getDailyLoss: () => new DailyLossTracker(store).lossToday(Date.now()),
   });
 
-  const cycle = await autopilot.runCycleOnce(Date.now());
+  const now = Date.now();
+  const cycle = await autopilot.runCycleOnce(now);
   console.log(
     `Cycle done via ${source.name}: opened ${cycle.opened.length}, ` +
       `closed ${cycle.closed.length}, skipped ${cycle.skipped.length}` +
@@ -85,20 +110,84 @@ async function main(): Promise<void> {
   // Heartbeat: guarantees the state file exists so the workflow always has
   // something to persist, and records when the cloud robot last ran.
   store.set('autopilot-last-run', {
-    at: Date.now(),
+    at: now,
     source: source.name,
     opened: cycle.opened.length,
     closed: cycle.closed.length,
     halted: cycle.halted,
   });
 
+  const telegram = {
+    token: process.env['TELEGRAM_BOT_TOKEN'] ?? '',
+    chatId: process.env['TELEGRAM_CHAT_ID'] ?? '',
+  };
+
   const message = buildCycleMessage(cycle);
   if (message !== null) {
-    const result = await sendTelegramMessage(message, {
-      token: process.env['TELEGRAM_BOT_TOKEN'] ?? '',
-      chatId: process.env['TELEGRAM_CHAT_ID'] ?? '',
-    });
+    const result = await sendTelegramMessage(message, telegram);
     console.log(result.sent ? 'Telegram notification sent.' : `No notification: ${result.reason}`);
+  }
+
+  // One-off delivery check: verifies notifications reach the phone without
+  // waiting for a real trade. Enabled only when explicitly requested.
+  if (process.env['SEND_TEST_MESSAGE'] === 'true') {
+    const test = await sendTelegramMessage(buildTestMessage(), telegram);
+    console.log(test.sent ? 'Telegram test message sent.' : `Test message not sent: ${test.reason}`);
+  }
+
+  await maybeSendDailySummary(store, source, portfolio, journal, telegram, now);
+}
+
+/**
+ * Send a portfolio digest at most once per day (first cycle at/after
+ * DAILY_SUMMARY_HOUR_UTC), so the user sees the robot is alive and how it's
+ * doing without a message every cycle. No-op when Telegram is unconfigured.
+ */
+async function maybeSendDailySummary(
+  store: FileStore,
+  source: MarketDataSource,
+  portfolio: PortfolioEngine,
+  journal: TradeJournal,
+  telegram: { token: string; chatId: string },
+  now: number,
+): Promise<void> {
+  if (!telegram.token || !telegram.chatId) return;
+
+  const today = new Date(now).toISOString().slice(0, 10);
+  const lastDay = store.get<string>(DAILY_SUMMARY_KEY);
+  const dueToday =
+    lastDay !== today &&
+    (lastDay === undefined || new Date(now).getUTCHours() >= DAILY_SUMMARY_HOUR_UTC);
+  if (!dueToday) return;
+
+  const open = portfolio.openPositions();
+  const prices = await latestPrices(
+    source,
+    open.map((p) => p.symbol),
+  );
+  const snap = portfolio.snapshot(prices, now);
+  const since = now - DAY_MS;
+  const summary = buildDailySummary({
+    equity: snap.equity,
+    cash: snap.cash,
+    totalReturnPct: snap.totalReturnPct,
+    realizedPnl: snap.realizedPnl,
+    unrealizedPnl: snap.unrealizedPnl,
+    positions: snap.allocation.map((a) => ({
+      symbol: a.symbol,
+      marketValue: a.marketValue,
+      pctOfEquity: a.pctOfEquity,
+    })),
+    openedLast24h: open.filter((p) => p.openedAt >= since).length,
+    closedLast24h: journal.entries().filter((e) => e.exitTimestamp >= since).length,
+  });
+
+  const result = await sendTelegramMessage(summary, telegram);
+  if (result.sent) {
+    store.set(DAILY_SUMMARY_KEY, today);
+    console.log('Daily summary sent.');
+  } else {
+    console.log(`Daily summary not sent: ${result.reason}`);
   }
 }
 
