@@ -24,6 +24,62 @@ function euro(value: number): string {
   return `€${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 }
 
+/** Money with an explicit +/- sign, e.g. "+€12.34" / "-€5.00". */
+function signedEuro(value: number): string {
+  return `${value >= 0 ? '+' : '-'}€${Math.abs(value).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+}
+
+export interface DailySummaryPosition {
+  readonly symbol: string;
+  readonly marketValue: number;
+  readonly pctOfEquity: number;
+}
+
+export interface DailySummaryInput {
+  readonly equity: number;
+  readonly cash: number;
+  readonly totalReturnPct: number;
+  readonly realizedPnl: number;
+  readonly unrealizedPnl: number;
+  readonly positions: readonly DailySummaryPosition[];
+  readonly openedLast24h: number;
+  readonly closedLast24h: number;
+}
+
+/**
+ * Once-a-day portfolio digest so the user knows the robot is alive and how
+ * it is doing, without a message every cycle. Sent at most once per day.
+ */
+export function buildDailySummary(input: DailySummaryInput): string {
+  const lines: string[] = [
+    '📊 סיכום יומי — Paper Autopilot (כסף מדומה)',
+    `💰 שווי תיק: ${euro(input.equity)}  (${input.totalReturnPct >= 0 ? '+' : ''}${input.totalReturnPct.toFixed(2)}% מההתחלה)`,
+    `💵 מזומן פנוי: ${euro(input.cash)}`,
+    `📈 רווח/הפסד: ${signedEuro(input.realizedPnl)} ממומש · ${signedEuro(input.unrealizedPnl)} על הנייר`,
+    `🔄 24 שעות אחרונות: ${input.openedLast24h} קניות, ${input.closedLast24h} מכירות`,
+  ];
+  if (input.positions.length === 0) {
+    lines.push('📌 אין פוזיציות פתוחות כרגע.');
+  } else {
+    lines.push(`📌 פוזיציות פתוחות (${input.positions.length}):`);
+    for (const p of input.positions) {
+      lines.push(`   • ${p.symbol}: ${euro(p.marketValue)} (${p.pctOfEquity.toFixed(1)}% מהתיק)`);
+    }
+  }
+  return lines.join('\n');
+}
+
+/**
+ * Fixed confirmation message used to verify end-to-end Telegram delivery
+ * without waiting for a real trade. Sent only when explicitly requested.
+ */
+export function buildTestMessage(): string {
+  return (
+    '✅ הבוט מחובר! מעכשיו תקבל כאן התראה על כל קנייה/מכירה (כסף מדומה).\n' +
+    '🤖 Paper Autopilot connected — you will get a message here on every simulated buy/sell.'
+  );
+}
+
 /** Human-readable message for a cycle's trades, or null if nothing happened. */
 export function buildCycleMessage(
   cycle: Pick<CycleResult, 'opened' | 'closed' | 'timestamp'>,

@@ -15,6 +15,11 @@ on:
     # Every 30 minutes (GitHub cron is best-effort; may be delayed).
     - cron: '*/30 * * * *'
   workflow_dispatch:
+    inputs:
+      test_message:
+        description: 'Send a Telegram test message this run (verify notifications)'
+        type: boolean
+        default: false
 
 # Prevent overlapping runs from racing on the committed state file.
 concurrency:
@@ -38,6 +43,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SEND_TEST_MESSAGE: ${{ inputs.test_message }}
         run: npx tsx server/autopilotRunner.mts
       - name: Commit updated state
         run: |

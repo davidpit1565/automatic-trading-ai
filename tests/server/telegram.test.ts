@@ -4,8 +4,55 @@
  */
 
 import { describe, expect, it } from 'vitest';
+// prettier-ignore
 // @ts-expect-error plain-TS server module run via tsx; imported directly in tests
-import { buildCycleMessage, sendTelegramMessage } from '../../server/telegram.mts';
+import { buildCycleMessage, buildDailySummary, buildTestMessage, sendTelegramMessage } from '../../server/telegram.mts';
+
+describe('buildTestMessage', () => {
+  it('returns a non-empty confirmation the user can recognise', () => {
+    const msg = buildTestMessage();
+    expect(typeof msg).toBe('string');
+    expect(msg.length).toBeGreaterThan(0);
+    expect(msg.toLowerCase()).toContain('autopilot');
+  });
+});
+
+describe('buildDailySummary', () => {
+  const base = {
+    equity: 10_250,
+    cash: 4_000,
+    totalReturnPct: 2.5,
+    realizedPnl: 100,
+    unrealizedPnl: 150,
+    openedLast24h: 2,
+    closedLast24h: 1,
+  };
+
+  it('reports equity, trade counts and each open position', () => {
+    const msg = buildDailySummary({
+      ...base,
+      positions: [
+        { symbol: 'LINKEUR', marketValue: 2_000, pctOfEquity: 19.5 },
+        { symbol: 'ADAEUR', marketValue: 4_250, pctOfEquity: 41.5 },
+      ],
+    });
+    expect(msg).toContain('10,250');
+    expect(msg).toContain('LINKEUR');
+    expect(msg).toContain('ADAEUR');
+    expect(msg).toContain('2'); // opened count
+  });
+
+  it('signs profit and loss explicitly', () => {
+    const msg = buildDailySummary({ ...base, unrealizedPnl: -75, positions: [] });
+    expect(msg).toContain('+€100');
+    expect(msg).toContain('-€75');
+  });
+
+  it('states plainly when there are no open positions', () => {
+    const msg = buildDailySummary({ ...base, positions: [] });
+    expect(msg).toContain('אין פוזיציות פתוחות');
+  });
+});
 
 describe('buildCycleMessage', () => {
   it('returns null when the cycle opened and closed nothing', () => {
