@@ -35,6 +35,16 @@ export interface DailySummaryPosition {
   readonly pctOfEquity: number;
 }
 
+/** Same-window comparison of the portfolio against a buy-and-hold asset. */
+export interface DailySummaryBenchmark {
+  /** Display name of the asset, e.g. "ביטקוין". */
+  readonly label: string;
+  /** Portfolio return since the benchmark anchor, %. */
+  readonly portfolioPct: number;
+  /** Asset buy-and-hold return over the same window, %. */
+  readonly assetPct: number;
+}
+
 export interface DailySummaryInput {
   readonly equity: number;
   readonly cash: number;
@@ -44,6 +54,7 @@ export interface DailySummaryInput {
   readonly positions: readonly DailySummaryPosition[];
   readonly openedLast24h: number;
   readonly closedLast24h: number;
+  readonly benchmark?: DailySummaryBenchmark | null;
 }
 
 /**
@@ -59,6 +70,14 @@ export function buildDailySummary(input: DailySummaryInput): string {
     `📈 רווח/הפסד: ${signedEuro(input.realizedPnl)} ממומש · ${signedEuro(input.unrealizedPnl)} על הנייר`,
     `🔄 24 שעות אחרונות: ${input.openedLast24h} קניות, ${input.closedLast24h} מכירות`,
   ];
+  if (input.benchmark) {
+    const b = input.benchmark;
+    const fmt = (v: number): string => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
+    const verdict = b.portfolioPct >= b.assetPct ? 'הרובוט מוביל 🎉' : 'החזקה פשוטה מובילה';
+    lines.push(
+      `🏁 מול ${b.label} (מאז תחילת המעקב): הרובוט ${fmt(b.portfolioPct)} · ${b.label} ${fmt(b.assetPct)} → ${verdict}`,
+    );
+  }
   if (input.positions.length === 0) {
     lines.push('📌 אין פוזיציות פתוחות כרגע.');
   } else {
@@ -66,6 +85,9 @@ export function buildDailySummary(input: DailySummaryInput): string {
     for (const p of input.positions) {
       lines.push(`   • ${p.symbol}: ${euro(p.marketValue)} (${p.pctOfEquity.toFixed(1)}% מהתיק)`);
     }
+  }
+  if (input.openedLast24h === 0 && input.closedLast24h === 0) {
+    lines.push('🛡️ אין עסקאות כרגע — ממתין להזדמנות טובה ומגן על הכסף. הכול תקין.');
   }
   return lines.join('\n');
 }
@@ -76,6 +98,20 @@ export function buildDailySummary(input: DailySummaryInput): string {
  */
 export function buildTestMessage(): string {
   return '✅ הבוט מחובר! מעכשיו תקבל כאן התראה על כל קנייה/מכירה. כסף מדומה בלבד.';
+}
+
+/** Signal-driver labels (from the signal engine) in plain Hebrew. */
+function driverHe(label: string): string {
+  switch (label) {
+    case 'Scanner evidence':
+      return 'ראיות טכניות';
+    case 'Trend strength':
+      return 'מגמה חזקה';
+    case 'Volume participation':
+      return 'מחזור מסחר גבוה';
+    default:
+      return label;
+  }
 }
 
 /** Exit reason in plain Hebrew. */
@@ -101,7 +137,12 @@ export function buildCycleMessage(
   if (cycle.opened.length === 0 && cycle.closed.length === 0) return null;
   const lines: string[] = ['🤖 רובוט מסחר (כסף מדומה)'];
   for (const o of cycle.opened) {
-    lines.push(`🟢 קנייה ${o.symbol}: ${o.quantity} יח׳ במחיר ${euro(o.entry)}`);
+    let line = `🟢 קנייה ${o.symbol}: ${o.quantity} יח׳ במחיר ${euro(o.entry)}`;
+    if (typeof o.confidence === 'number') line += ` · ביטחון ${o.confidence.toFixed(0)}%`;
+    if (o.reasons && o.reasons.length > 0) {
+      line += ` · ${o.reasons.map(driverHe).join(', ')}`;
+    }
+    lines.push(line);
   }
   for (const c of cycle.closed) {
     lines.push(`🔴 מכירה ${c.symbol} במחיר ${euro(c.price)} (${reasonHe(c.reason)})`);

@@ -61,7 +61,15 @@ const STATE_KEY = 'autopilot-state';
 export interface CycleResult {
   readonly timestamp: number;
   readonly halted: boolean;
-  readonly opened: { symbol: string; quantity: number; entry: number }[];
+  readonly opened: {
+    symbol: string;
+    quantity: number;
+    entry: number;
+    /** Signal confidence (0..MAX_CONFIDENCE) that drove the entry. */
+    confidence?: number;
+    /** Short labels of the strongest reasons the entry was taken. */
+    reasons?: string[];
+  }[];
   readonly closed: { symbol: string; reason: ExitReason; price: number }[];
   readonly skipped: { symbol: string; reason: string }[];
 }
@@ -281,10 +289,17 @@ export class PaperAutoPilot {
         notes: 'opened autonomously by the paper autopilot',
       });
       if (openedPosition.ok) {
+        const topReasons = decision.opportunity.confidenceComponents
+          .filter((c) => c.effect > 0)
+          .sort((a, b) => b.effect - a.effect)
+          .slice(0, 2)
+          .map((c) => c.label);
         opened.push({
           symbol: scanResult.symbol,
           quantity: openedPosition.value.quantity,
           entry: openedPosition.value.entryPrice,
+          confidence: decision.opportunity.confidence,
+          reasons: topReasons,
         });
         held.add(scanResult.symbol);
         audit.append({
