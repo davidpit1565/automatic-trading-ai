@@ -46,6 +46,12 @@ export interface AutoPilotOptions {
   readonly killSwitch: PersistedKillSwitch;
   readonly audit: PersistedAuditLog;
   readonly getDailyLoss: () => number;
+  /**
+   * Per-side trading cost as a fraction of notional (fee + typical
+   * slippage), charged on both entry and exit. Makes the simulation match
+   * a real exchange so paper results predict live results. Default 0.
+   */
+  readonly costRate?: number;
   readonly clock?: () => number;
   /** Persists the desired running state so the autopilot survives reloads. */
   readonly store?: KeyValueStore;
@@ -174,6 +180,7 @@ export class PaperAutoPilot {
     const opened: CycleResult['opened'] = [];
     const closed: CycleResult['closed'] = [];
     const skipped: CycleResult['skipped'] = [];
+    const costRate = this.options.costRate ?? 0;
 
     // --- Exits first: protect what is already open. ------------------------
     for (const position of this.options.positions.openPositions()) {
@@ -199,6 +206,7 @@ export class PaperAutoPilot {
         price,
         timestamp,
         reason,
+        fee: position.quantity * price * costRate,
       });
       if (exit.ok) {
         closed.push({ symbol: position.symbol, reason, price });
@@ -284,6 +292,7 @@ export class PaperAutoPilot {
 
       const openedPosition = this.options.portfolio.openFromAssessment(assessment, {
         timestamp,
+        fee: assessment.positionSize * assessment.entry * costRate,
         confidence: decision.opportunity.confidence,
         strategyVersion: 'autopilot-paper-v1',
         notes: 'opened autonomously by the paper autopilot',

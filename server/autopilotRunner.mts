@@ -34,6 +34,12 @@ const STATE_PATH = process.env['AUTOPILOT_STATE_PATH'] ?? 'state/autopilot-state
 const INITIAL_CASH = 10_000;
 const CONFIRMATION_TF = '4h' as const;
 const ENTRY_TF = '1h' as const;
+/**
+ * Per-side trading cost (fraction of notional): Kraken taker fee ~0.25%
+ * plus ~0.05% typical slippage. Charged on entry and exit so paper results
+ * reflect real costs (~0.6% round trip) and predict live performance.
+ */
+const COST_RATE = Number(process.env['COST_RATE']) || 0.003;
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Scheduled digests: each fires once per local day at/after its hour. */
 const SUMMARY_SLOTS = [
@@ -124,6 +130,7 @@ async function main(): Promise<void> {
     killSwitch: new PersistedKillSwitch(store),
     audit: new PersistedAuditLog(store),
     getDailyLoss: () => new DailyLossTracker(store).lossToday(Date.now()),
+    costRate: COST_RATE,
   });
 
   const now = Date.now();
