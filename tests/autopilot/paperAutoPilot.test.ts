@@ -53,7 +53,10 @@ function makeSource(config: Record<string, { drift: number; lastPrice?: number }
   };
 }
 
-function makePilot(config: Record<string, { drift: number; lastPrice?: number }>) {
+function makePilot(
+  config: Record<string, { drift: number; lastPrice?: number }>,
+  opts: { costRate?: number } = {},
+) {
   const store = new MemoryStore();
   const journal = new TradeJournal(store);
   const positions = new PositionEngine(store, journal);
@@ -71,6 +74,7 @@ function makePilot(config: Record<string, { drift: number; lastPrice?: number }>
     audit,
     getDailyLoss: () => 0,
     clock: () => T,
+    costRate: opts.costRate,
   });
   return { pilot, portfolio, positions, journal, killSwitch, audit };
 }
@@ -86,6 +90,21 @@ describe('autonomous paper entries', () => {
     expect(position.strategyVersion).toContain('autopilot');
     // Audited as a paper fill.
     expect(audit.entries().some((e) => e.event === 'filled' && e.mode === 'paper')).toBe(true);
+  });
+
+  it('charges a realistic trading fee on entry when a cost rate is set', async () => {
+    const withCost = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { costRate: 0.003 });
+    await withCost.pilot.runCycleOnce(T);
+    const position = withCost.portfolio.openPositions()[0]!;
+    // Entry fee ≈ notional × costRate, recorded on the position.
+    const expectedFee = position.initialQuantity * position.entryPrice * 0.003;
+    expect(position.feesPaid).toBeGreaterThan(0);
+    expect(position.feesPaid).toBeCloseTo(expectedFee, 6);
+
+    // With zero cost, no fee is charged — proving the cost is what adds it.
+    const free = makePilot({ 'QUAL/USD': { drift: 0.001 } });
+    await free.pilot.runCycleOnce(T);
+    expect(free.portfolio.openPositions()[0]!.feesPaid).toBe(0);
   });
 
   it('does not open anything for bearish or neutral markets, and audits nothing', async () => {
