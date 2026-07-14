@@ -13,7 +13,7 @@ describe('buildTestMessage', () => {
     const msg = buildTestMessage();
     expect(typeof msg).toBe('string');
     expect(msg.length).toBeGreaterThan(0);
-    expect(msg.toLowerCase()).toContain('autopilot');
+    expect(msg).toContain('הבוט מחובר');
   });
 });
 
@@ -68,7 +68,7 @@ describe('buildCycleMessage', () => {
     expect(msg).not.toBeNull();
     expect(msg).toContain('BTC-EUR');
     expect(msg).toContain('54');
-    expect(msg!.toLowerCase()).toContain('bought');
+    expect(msg).toContain('קנייה');
   });
 
   it('describes a sell with the exit reason', () => {
@@ -78,8 +78,8 @@ describe('buildCycleMessage', () => {
       closed: [{ symbol: 'ETH-EUR', reason: 'take-profit', price: 1600 }],
     });
     expect(msg).toContain('ETH-EUR');
-    expect(msg).toContain('take-profit');
-    expect(msg!.toLowerCase()).toContain('sold');
+    expect(msg).toContain('הגיע ליעד'); // translated take-profit
+    expect(msg).toContain('מכירה');
   });
 
   it('combines opens and closes in one message', () => {

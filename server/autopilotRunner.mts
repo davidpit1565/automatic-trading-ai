@@ -34,12 +34,30 @@ const INITIAL_CASH = 10_000;
 const CONFIRMATION_TF = '4h' as const;
 const ENTRY_TF = '1h' as const;
 const DAY_MS = 24 * 60 * 60 * 1000;
-/**
- * First cycle at/after this UTC hour sends the evening digest.
- * 19:00 UTC ≈ 22:00 Israel in summer (IDT) / ≈ 21:00 in winter (IST).
- */
-const DAILY_SUMMARY_HOUR_UTC = 19;
+/** The daily digest is sent on the first cycle at/after this local hour. */
+const DAILY_SUMMARY_HOUR_LOCAL = 22;
 const DAILY_SUMMARY_KEY = 'daily-summary-last-day';
+/**
+ * Timezone the evening digest is scheduled in. Follows the user when they
+ * travel by setting the SUMMARY_TIMEZONE repo variable (e.g. Europe/Brussels);
+ * defaults to Israel. DST is handled automatically by Intl.
+ */
+const SUMMARY_TIMEZONE = process.env['SUMMARY_TIMEZONE'] || 'Asia/Jerusalem';
+
+/** Local calendar day (YYYY-MM-DD) and hour (0–23) in the given timezone. */
+function localDayAndHour(now: number, timeZone: string): { day: string; hour: number } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date(now));
+  const value = (type: string): string => parts.find((p) => p.type === type)?.value ?? '';
+  const hour = Number(value('hour')) % 24; // some engines emit '24' at midnight
+  return { day: `${value('year')}-${value('month')}-${value('day')}`, hour };
+}
 
 /** Pick a live public source, preferring Kraken then Coinbase. */
 async function pickSource(): Promise<MarketDataSource | null> {
@@ -156,11 +174,10 @@ async function maybeSendDailySummary(
 ): Promise<void> {
   if (!telegram.token || !telegram.chatId) return;
 
-  const today = new Date(now).toISOString().slice(0, 10);
+  const { day: today, hour } = localDayAndHour(now, SUMMARY_TIMEZONE);
   const lastDay = store.get<string>(DAILY_SUMMARY_KEY);
   const dueToday =
-    lastDay !== today &&
-    (lastDay === undefined || new Date(now).getUTCHours() >= DAILY_SUMMARY_HOUR_UTC);
+    lastDay !== today && (lastDay === undefined || hour >= DAILY_SUMMARY_HOUR_LOCAL);
   if (!dueToday) return;
 
   const open = portfolio.openPositions();
