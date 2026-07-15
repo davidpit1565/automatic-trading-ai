@@ -84,7 +84,8 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     }
     for (const m of markets) {
       const up = m.changePct >= 0;
-      const card = el('div', 'market-card');
+      const card = el('div', 'market-card tappable');
+      card.dataset['nav'] = 'markets';
       card.innerHTML = `
         <div class="market-top"><span class="market-name">${m.label}</span>
           <span class="chg ${up ? 'up' : 'down'}">${formatPct(m.changePct)}</span></div>

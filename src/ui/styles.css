@@ -1,15 +1,15 @@
 :root {
-  --bg: #0f1420;
-  --surface: #1a2130;
-  --surface-raised: #222b3e;
-  --border: #2e3950;
-  --text: #e8ecf4;
-  --text-dim: #98a3b8;
-  --accent: #4f8ef7;
-  --hot: #2fbf71;
-  --cold: #e4574f;
+  --bg: #0a0d12;
+  --surface: #141a22;
+  --surface-raised: #1c232d;
+  --border: #262e3a;
+  --text: #eaeef6;
+  --text-dim: #8a94a6;
+  --accent: #4c82f7;
+  --hot: #16c784;
+  --cold: #ea3943;
   --neutral: #8b93a5;
-  --warn: #e0a83a;
+  --warn: #f0b90b;
 }
 
 * {
@@ -687,3 +687,16 @@ button.secondary {
 }
 
 .disclaimer { color: var(--text-dim); font-size: 0.72rem; text-align: center; margin: 1.5rem 0 0; }
+
+/* Market detail view (tap a coin) */
+.tappable { text-align: inherit; font: inherit; color: inherit; width: 100%; cursor: pointer; }
+.detail-head { display: flex; justify-content: space-between; align-items: flex-start; margin: 0.5rem 0 1rem; }
+.detail-name { font-size: 1.3rem; font-weight: 700; }
+.detail-price { text-align: right; }
+.row-title.big { font-size: 1.5rem; }
+.detail-chart { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 0.75rem; }
+.detail-chart svg { width: 100%; height: 210px; display: block; }
+.detail-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; }
+.pager { background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  border-radius: 10px; padding: 0.5rem 1rem; cursor: pointer; font-weight: 600; }
+.pager:disabled { opacity: 0.4; cursor: default; }

@@ -58,9 +58,9 @@ describe('Markets view (DOM integration)', () => {
     document.body.appendChild(container);
     renderMarketsView(container, await makeData());
 
-    expect(container.querySelector('#markets-list')).not.toBeNull();
-    await waitFor(() => container.querySelector('.market-row, #markets-list .empty') !== null);
-    expect(container.querySelector('#markets-list')!.children.length).toBeGreaterThan(0);
+    expect(container.querySelector('#mk-list')).not.toBeNull();
+    await waitFor(() => container.querySelector('.market-row, #mk-list .empty') !== null);
+    expect(container.querySelector('#mk-list')!.children.length).toBeGreaterThan(0);
   });
 });
 
