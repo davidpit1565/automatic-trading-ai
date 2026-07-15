@@ -26,6 +26,7 @@ import {
   buildCycleMessage,
   buildDailySummary,
   buildMoveAlert,
+  buildRiskHaltAlert,
   buildTestMessage,
   sendTelegramMessage,
 } from './telegram.mts';
@@ -195,6 +196,18 @@ async function runCycle(
   if (message !== null) {
     const result = await sendTelegramMessage(message, telegram);
     console.log(result.sent ? 'Telegram notification sent.' : `No notification: ${result.reason}`);
+  }
+
+  // Tell the user (once per day) when a safety limit pauses new buying.
+  if (telegram.token && telegram.chatId && cycle.skipped.some((s) => /daily loss limit/i.test(s.reason))) {
+    const { day } = localDayAndHour(now, SUMMARY_TIMEZONE);
+    if (store.get<string>('risk-halt-alert-day') !== day) {
+      const halt = await sendTelegramMessage(buildRiskHaltAlert(), telegram);
+      if (halt.sent) {
+        store.set('risk-halt-alert-day', day);
+        console.log('Risk-halt alert sent.');
+      }
+    }
   }
 
   await maybeSendMoveAlerts(store, source, portfolio, telegram);
