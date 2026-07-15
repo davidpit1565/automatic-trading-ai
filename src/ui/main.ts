@@ -4,6 +4,7 @@
  */
 
 import { initDataSource, type ActiveDataSource } from './dataSource';
+import { renderHomeView } from './views/homeView';
 import { renderBacktestView } from './views/backtestView';
 import { renderGridView } from './views/gridView';
 import { renderMarketScanView } from './views/marketScanView';
@@ -15,6 +16,7 @@ import { renderValidationView } from './views/validationView';
 type ViewRenderer = (container: HTMLElement, data: ActiveDataSource) => void;
 
 const VIEWS: Record<string, ViewRenderer | null> = {
+  home: renderHomeView,
   backtest: renderBacktestView,
   grid: renderGridView,
   portfolio: renderPortfolioView,
@@ -73,7 +75,7 @@ async function bootstrap(): Promise<void> {
     });
   });
 
-  activate('backtest');
+  activate('home');
 }
 
 void bootstrap();
