@@ -102,6 +102,14 @@ export function buildTestMessage(): string {
   return '✅ הבוט מחובר! מעכשיו תקבל כאן התראה על כל קנייה/מכירה. כסף מדומה בלבד.';
 }
 
+/** Alert sent once when a safety limit pauses new buying for the day. */
+export function buildRiskHaltAlert(): string {
+  return (
+    '🛑 עצרתי לקנות היום — הגעתי לגבול ההפסד היומי (הגנה אוטומטית על הכסף).\n' +
+    'הפוזיציות הפתוחות ממשיכות להיות מנוהלות עם סטופ/יעד. אתחדש מחר. (כסף מדומה)'
+  );
+}
+
 /** Alert for a significant price move on an open position. */
 export function buildMoveAlert(symbol: string, movePct: number): string {
   const up = movePct >= 0;
