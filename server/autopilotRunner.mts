@@ -243,9 +243,34 @@ async function runCycle(
   }
 
   await maybeSendMoveAlerts(store, source, portfolio, telegram);
+  await recordEquity(store, source, portfolio, now);
   await maybeSendSummaries(store, source, portfolio, journal, telegram, now);
   await maybeSendPeriodicReports(store, source, portfolio, journal, telegram, now);
   await maybeSendAllClear(store, telegram, now);
+}
+
+const EQUITY_HISTORY_KEY = 'equity-history';
+const EQUITY_HISTORY_CAP = 5000;
+
+/** Append a portfolio-value point each cycle so the app can chart it over time. */
+async function recordEquity(
+  store: FileStore,
+  source: MarketDataSource,
+  portfolio: PortfolioEngine,
+  now: number,
+): Promise<void> {
+  const open = portfolio.openPositions();
+  const prices = await latestPrices(
+    source,
+    open.map((p) => p.symbol),
+  );
+  const equity = portfolio.snapshot(prices, now).equity;
+  const history = store.get<Array<{ at: number; equity: number }>>(EQUITY_HISTORY_KEY) ?? [];
+  history.push({ at: now, equity: Math.round(equity * 100) / 100 });
+  store.set(
+    EQUITY_HISTORY_KEY,
+    history.length > EQUITY_HISTORY_CAP ? history.slice(-EQUITY_HISTORY_CAP) : history,
+  );
 }
 
 /**

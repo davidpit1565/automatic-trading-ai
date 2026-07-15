@@ -37,9 +37,10 @@ async function livePrices(data: ActiveDataSource, symbols: string[]): Promise<Re
 
 export function renderHomeView(container: HTMLElement, data: ActiveDataSource): void {
   container.innerHTML = '';
-  const hero = el('section', 'hero');
+  const hero = el('section', 'hero tappable');
+  hero.dataset['nav'] = 'value';
   hero.innerHTML = `
-    <div class="hero-label">Portfolio value <span class="tag-sim">SIMULATED</span></div>
+    <div class="hero-label">Portfolio value <span class="tag-sim">SIMULATED</span><span class="hero-more">history ›</span></div>
     <div class="hero-value" id="hv-equity">—</div>
     <div class="hero-change" id="hv-change"></div>
     <div class="hero-split"><span id="hv-cash"></span><span id="hv-invested"></span></div>
