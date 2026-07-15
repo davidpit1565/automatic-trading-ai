@@ -12,9 +12,11 @@ name: Cloud Paper Autopilot
 
 on:
   schedule:
-    # Every 5 minutes — GitHub's minimum. Cron is best-effort: under load
-    # runs are often delayed and occasionally coalesced.
-    - cron: '*/5 * * * *'
+    # GitHub's scheduler is unreliable at high frequency (it skipped our
+    # every-5-min runs for hours). Instead we trigger ~every 30 min and each
+    # run loops internally (LOOP_CYCLES) doing a cycle every 5 min, so one
+    # trigger covers ~25 min. Runs stay under the 30-min gap (no backlog).
+    - cron: '*/30 * * * *'
   workflow_dispatch:
     inputs:
       test_message:
@@ -40,15 +42,17 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Run one autopilot cycle
+      - name: Run autopilot cycles (internal 5-min loop)
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           SEND_TEST_MESSAGE: ${{ inputs.test_message }}
-          # Timezone for the 22:00 daily digest. Set this repo Variable to
-          # follow you when you travel (e.g. Europe/Brussels). Defaults to
-          # Asia/Jerusalem when unset.
+          # Timezone for the 08:00 & 22:00 daily digests. Set this repo
+          # Variable to follow you when you travel (e.g. Europe/Brussels).
+          # Defaults to Asia/Jerusalem when unset.
           SUMMARY_TIMEZONE: ${{ vars.SUMMARY_TIMEZONE }}
+          # 6 cycles × 5 min ≈ 25 min of coverage per triggered run.
+          LOOP_CYCLES: '6'
         run: npx tsx server/autopilotRunner.mts
       - name: Commit updated state
         run: |
