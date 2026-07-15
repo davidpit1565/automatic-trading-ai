@@ -43,17 +43,26 @@ try {
   check('data source banner visible', banner.length > 0);
   console.log('  banner:', banner.slice(0, 80));
 
-  // Tab order: Market Scan immediately before Learn.
-  const tabs = await page.$$eval('.tab-button', (els) => els.map((e) => e.dataset.tab));
+  // Bottom navigation exposes the primary sections.
+  const navs = await page.$$eval('.nav-btn', (els) => els.map((e) => e.dataset.nav));
   check(
-    'tab order scan immediately before learn',
-    tabs.indexOf('scan') !== -1 && tabs[tabs.indexOf('scan') + 1] === 'learn',
+    'bottom nav has home/markets/history/tools',
+    ['home', 'markets', 'history', 'tools'].every((n) => navs.includes(n)),
   );
 
-  // Home dashboard (default tab) renders its real-time value card.
-  check('home dashboard equity card', (await page.$('#home-equity')) !== null);
+  // Home dashboard (default view) renders its real-time value card.
+  check('home dashboard equity card', (await page.$('#hv-equity')) !== null);
 
-  // Backtesting Lab runs and renders a comparison.
+  // Markets and History views mount.
+  await page.click('[data-nav="markets"]');
+  await page.waitForSelector('#markets-list', { timeout: 10000 });
+  check('markets view rendered', (await page.$('#markets-list')) !== null);
+  await page.click('[data-nav="history"]');
+  await page.waitForSelector('#history-list', { timeout: 10000 });
+  check('history view rendered', (await page.$('#history-list')) !== null);
+
+  // Backtesting Lab runs and renders a comparison (via Tools).
+  await page.click('[data-nav="tools"]');
   await page.click('[data-tab="backtest"]');
   await page.waitForSelector('#bt-run', { timeout: 10000 });
   await page.click('#bt-run');
@@ -61,12 +70,14 @@ try {
   check('backtest comparison rows', (await page.$$('#bt-results tbody tr')).length >= 3);
 
   // Grid Simulation.
+  await page.click('[data-nav="tools"]');
   await page.click('[data-tab="grid"]');
   await page.click('#grid-run');
   await page.waitForSelector('#grid-results .stat-card', { timeout: 20000 });
   check('grid result cards', (await page.$$('#grid-results .stat-card')).length >= 4);
 
   // Paper Portfolio: buy, then a position row must appear.
+  await page.click('[data-nav="tools"]');
   await page.click('[data-tab="portfolio"]');
   await page.waitForSelector('#pp-buy', { timeout: 10000 });
   await page.click('#pp-buy');
@@ -74,6 +85,7 @@ try {
   check('paper portfolio position row', (await page.$$('#pp-positions tbody tr')).length === 1);
 
   // PORTFOLIO — full position lifecycle through the verified pipeline.
+  await page.click('[data-nav="tools"]');
   await page.click('[data-tab="positions"]');
   await page.waitForSelector('#pf-open', { timeout: 10000 });
   await page.waitForSelector('#pf-overview .stat-card', { timeout: 20000 });
@@ -140,6 +152,7 @@ try {
   );
 
   // MONITORING — manual scan through the full pipeline.
+  await page.click('[data-nav="tools"]');
   await page.click('[data-tab="monitoring"]');
   await page.waitForSelector('#mon-scan-now', { timeout: 10000 });
   check(
@@ -170,6 +183,7 @@ try {
   );
 
   // VALIDATION — walk-forward with costs on demo data.
+  await page.click('[data-nav="tools"]');
   await page.click('[data-tab="validation"]');
   await page.waitForSelector('#val-run', { timeout: 10000 });
   await page.click('#val-run');
@@ -189,6 +203,7 @@ try {
   check('no certainty language in validation', !/guaranteed|certain profit/i.test(valText));
 
   // MARKET SCAN — full interaction.
+  await page.click('[data-nav="tools"]');
   await page.click('[data-tab="scan"]');
   await page.waitForSelector('#scan-run', { timeout: 10000 });
   await page.click('#scan-run');
