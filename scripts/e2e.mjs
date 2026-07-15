@@ -50,7 +50,12 @@ try {
     tabs.indexOf('scan') !== -1 && tabs[tabs.indexOf('scan') + 1] === 'learn',
   );
 
-  // Backtesting Lab (default tab) runs and renders a comparison.
+  // Home dashboard (default tab) renders its real-time value card.
+  check('home dashboard equity card', (await page.$('#home-equity')) !== null);
+
+  // Backtesting Lab runs and renders a comparison.
+  await page.click('[data-tab="backtest"]');
+  await page.waitForSelector('#bt-run', { timeout: 10000 });
   await page.click('#bt-run');
   await page.waitForSelector('#bt-results table', { timeout: 20000 });
   check('backtest comparison rows', (await page.$$('#bt-results tbody tr')).length >= 3);
