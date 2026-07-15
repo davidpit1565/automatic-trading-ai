@@ -44,6 +44,55 @@ export function sparklineSvg(
     ${area}<polyline fill="none" stroke="${opts.stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="${line}" /></svg>`;
 }
 
+/**
+ * A real price chart with a value axis (right) and a time axis (bottom),
+ * gridlines and a gradient area — the shape users expect from a trading app.
+ * Scales responsively via a fixed viewBox.
+ */
+export function priceChartSvg(
+  points: readonly ChartPoint[],
+  opts: { stroke: string; formatX: (ts: number) => string; formatY: (v: number) => string },
+): string {
+  if (points.length < 2) return '<div class="empty">Not enough history for this range yet.</div>';
+  const W = 380, H = 240, padL = 8, padR = 58, padT = 12, padB = 26;
+  const xAt = (i: number): number => padL + (i / (points.length - 1)) * (W - padL - padR);
+  const values = points.map((p) => p.value);
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+  const margin = (max - min) * 0.08 || Math.abs(max) * 0.02 || 1;
+  min -= margin;
+  max += margin;
+  const span = max - min || 1;
+  const yAt = (v: number): number => padT + (1 - (v - min) / span) * (H - padT - padB);
+  const line = points.map((p, i) => `${xAt(i).toFixed(1)},${yAt(p.value).toFixed(1)}`).join(' ');
+  const area = `${padL.toFixed(1)},${(H - padB).toFixed(1)} ${line} ${xAt(points.length - 1).toFixed(1)},${(H - padB).toFixed(1)}`;
+
+  let grid = '';
+  const yTicks = 4;
+  for (let k = 0; k <= yTicks; k++) {
+    const v = min + (span * k) / yTicks;
+    const y = yAt(v);
+    grid += `<line class="pgrid" x1="${padL}" y1="${y.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${y.toFixed(1)}"/>`;
+    grid += `<text class="paxis" x="${(W - padR + 5).toFixed(1)}" y="${(y + 3).toFixed(1)}">${opts.formatY(v)}</text>`;
+  }
+  let xlab = '';
+  const xTicks = Math.min(5, points.length);
+  for (let k = 0; k < xTicks; k++) {
+    const idx = Math.round((k * (points.length - 1)) / (xTicks - 1));
+    xlab += `<text class="paxis pxlab" x="${xAt(idx).toFixed(1)}" y="${H - 8}">${opts.formatX(points[idx]!.timestamp)}</text>`;
+  }
+  const uid = `pg${Math.round(points[0]!.value)}`;
+  return `<svg class="pchart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="price chart">
+    <defs><linearGradient id="${uid}" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="${opts.stroke}" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="${opts.stroke}" stop-opacity="0"/></linearGradient></defs>
+    ${grid}
+    <polygon fill="url(#${uid})" points="${area}"/>
+    <polyline fill="none" stroke="${opts.stroke}" stroke-width="2" stroke-linejoin="round" points="${line}"/>
+    ${xlab}
+  </svg>`;
+}
+
 export function lineChartSvg(points: readonly ChartPoint[], options: LineChartOptions): string {
   if (points.length < 2) return '<p class="status-line">Not enough points for a chart.</p>';
   const width = options.width ?? 800;

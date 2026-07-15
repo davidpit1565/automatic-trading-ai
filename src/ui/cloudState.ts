@@ -37,6 +37,8 @@ export interface CloudState {
   readonly history: CloudTrade[];
   readonly lastRunAt: number | null;
   readonly benchmark: { btc: number; equity: number } | null;
+  /** Portfolio value over time (oldest→newest), for the value chart. */
+  readonly equityHistory: { at: number; equity: number }[];
 }
 
 interface RawState {
@@ -45,6 +47,7 @@ interface RawState {
   'audit-log'?: Array<{ timestamp: number; event: string; detail: string }>;
   'autopilot-last-run'?: { at?: number };
   'benchmark-anchor'?: { btc?: number; equity?: number };
+  'equity-history'?: Array<{ at: number; equity: number }>;
 }
 
 /** Parse "paper entry/exit SYMBOL: qty @ price (note)" into a trade. */
@@ -92,6 +95,7 @@ export async function fetchCloudState(
       lastRunAt: raw['autopilot-last-run']?.at ?? null,
       benchmark:
         anchor && anchor.btc && anchor.equity ? { btc: anchor.btc, equity: anchor.equity } : null,
+      equityHistory: Array.isArray(raw['equity-history']) ? raw['equity-history'] : [],
     };
   } catch {
     return null;

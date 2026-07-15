@@ -6,6 +6,28 @@
  */
 
 import type { ActiveDataSource } from './dataSource';
+import type { Timeframe } from '../core/types';
+
+export interface PriceSeries {
+  readonly points: { timestamp: number; value: number }[];
+  readonly price: number;
+  readonly changePct: number;
+}
+
+/** A time series of closes for a range, for the detail chart. */
+export async function fetchSeries(
+  data: ActiveDataSource,
+  symbol: string,
+  timeframe: Timeframe,
+  limit: number,
+): Promise<PriceSeries | null> {
+  const candles = await data.source.getCandles(symbol, timeframe, limit);
+  if (!candles.ok || candles.value.length < 2) return null;
+  const points = candles.value.map((c) => ({ timestamp: c.timestamp, value: c.close }));
+  const price = points[points.length - 1]!.value;
+  const first = points[0]!.value;
+  return { points, price, changePct: first > 0 ? ((price - first) / first) * 100 : 0 };
+}
 
 export interface MarketSnapshot {
   readonly symbol: string;

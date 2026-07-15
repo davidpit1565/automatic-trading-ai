@@ -11,6 +11,7 @@ import { formatPrice, formatPct } from './format';
 import { renderHomeView } from './views/homeView';
 import { renderMarketsView } from './views/marketsView';
 import { renderHistoryView } from './views/historyView';
+import { renderValueView } from './views/valueView';
 import { renderBacktestView } from './views/backtestView';
 import { renderGridView } from './views/gridView';
 import { renderMarketScanView } from './views/marketScanView';
@@ -23,6 +24,7 @@ type ViewRenderer = (container: HTMLElement, data: ActiveDataSource) => void;
 
 const PRIMARY_VIEWS: Record<string, ViewRenderer> = {
   home: renderHomeView,
+  value: renderValueView,
   markets: renderMarketsView,
   history: renderHistoryView,
 };

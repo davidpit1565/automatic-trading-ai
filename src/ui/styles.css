@@ -700,3 +700,16 @@ button.secondary {
 .pager { background: var(--surface); border: 1px solid var(--border); color: var(--text);
   border-radius: 10px; padding: 0.5rem 1rem; cursor: pointer; font-weight: 600; }
 .pager:disabled { opacity: 0.4; cursor: default; }
+
+/* Timeframe selector + real price chart */
+.range-bar { display: flex; gap: 0.35rem; margin: 0.75rem 0; overflow-x: auto; scrollbar-width: none; }
+.range-bar::-webkit-scrollbar { display: none; }
+.range-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+  border-radius: 9px; padding: 0.4rem 0.75rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; flex: 0 0 auto; }
+.range-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.detail-chart svg.pchart { width: 100%; height: auto; aspect-ratio: 380 / 240; }
+.pchart .pgrid { stroke: var(--border); stroke-width: 1; opacity: 0.55; }
+.pchart .paxis { fill: var(--text-dim); font-size: 9px; font-family: inherit; }
+.pchart .pxlab { text-anchor: middle; }
+
+.hero-more { float: left; color: var(--accent); font-size: 0.8rem; font-weight: 600; }
