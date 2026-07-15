@@ -6,7 +6,35 @@
 import { describe, expect, it } from 'vitest';
 // prettier-ignore
 // @ts-expect-error plain-TS server module run via tsx; imported directly in tests
-import { buildCycleMessage, buildDailySummary, buildMoveAlert, buildRiskHaltAlert, buildTestMessage, sendTelegramMessage } from '../../server/telegram.mts';
+import { buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildTestMessage, sendTelegramMessage } from '../../server/telegram.mts';
+
+describe('buildPeriodReport', () => {
+  const base = { title: 'שבועי', equity: 10_200, tradesCount: 0, wins: 0, losses: 0, bestPct: null, worstPct: null };
+  it('handles the first report (no prior anchor) and no trades', () => {
+    const msg = buildPeriodReport({ ...base, periodReturnPct: null });
+    expect(msg).toContain('דו"ח שבועי');
+    expect(msg).toContain('מתחילים למדוד');
+    expect(msg).toContain('0');
+  });
+  it('shows period return, trade breakdown and best/worst', () => {
+    const msg = buildPeriodReport({
+      ...base, title: 'חודשי', periodReturnPct: 4.2, tradesCount: 3, wins: 2, losses: 1, bestPct: 8.5, worstPct: -2.1,
+    });
+    expect(msg).toContain('דו"ח חודשי');
+    expect(msg).toContain('+4.20%');
+    expect(msg).toContain('2 ברווח, 1 בהפסד');
+    expect(msg).toContain('+8.5%');
+  });
+});
+
+describe('buildAllClearMessage / buildSafetyAlert', () => {
+  it('all-clear confirms protections are active', () => {
+    expect(buildAllClearMessage()).toContain('הכל מבוטח');
+  });
+  it('safety alert includes the problem', () => {
+    expect(buildSafetyAlert('מזומן שלילי')).toContain('מזומן שלילי');
+  });
+});
 
 describe('buildTestMessage', () => {
   it('returns a non-empty confirmation the user can recognise', () => {

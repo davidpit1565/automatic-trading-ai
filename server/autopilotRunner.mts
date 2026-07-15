@@ -21,12 +21,16 @@ import { PositionEngine } from '../src/core/position/positionEngine';
 import { PortfolioEngine } from '../src/core/position/portfolioEngine';
 import { TradeJournal } from '../src/core/position/tradeJournal';
 import { DailyLossTracker } from '../src/core/risk/dailyLoss';
+import { DEFAULT_RISK_LIMITS } from '../src/core/risk/riskEngine';
 import { FileStore } from './fileStore.mts';
 import {
+  buildAllClearMessage,
   buildCycleMessage,
   buildDailySummary,
   buildMoveAlert,
+  buildPeriodReport,
   buildRiskHaltAlert,
+  buildSafetyAlert,
   buildTestMessage,
   sendTelegramMessage,
 } from './telegram.mts';
@@ -58,6 +62,9 @@ const SUMMARY_SLOTS = [
 /** Alert when an open position moves by at least this % (each new step). */
 const MOVE_ALERT_PCT = Number(process.env['MOVE_ALERT_PCT']) || 5;
 const MOVE_BUCKETS_KEY = 'move-alert-buckets';
+const MAX_OPEN_POSITIONS = DEFAULT_RISK_LIMITS.maxOpenPositions;
+const ALLCLEAR_KEY = 'allclear-last-at';
+const ALLCLEAR_INTERVAL_MS = 14 * 24 * 60 * 60 * 1000;
 /**
  * Timezone the evening digest is scheduled in. Follows the user when they
  * travel by setting the SUMMARY_TIMEZONE repo variable (e.g. Europe/Brussels);
@@ -65,8 +72,11 @@ const MOVE_BUCKETS_KEY = 'move-alert-buckets';
  */
 const SUMMARY_TIMEZONE = process.env['SUMMARY_TIMEZONE'] || 'Asia/Jerusalem';
 
-/** Local calendar day (YYYY-MM-DD) and hour (0–23) in the given timezone. */
-function localDayAndHour(now: number, timeZone: string): { day: string; hour: number } {
+/** Local date parts (in the given timezone) used to schedule digests. */
+function localDayAndHour(
+  now: number,
+  timeZone: string,
+): { day: string; hour: number; weekday: string; dayOfMonth: number } {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone,
     year: 'numeric',
@@ -74,10 +84,16 @@ function localDayAndHour(now: number, timeZone: string): { day: string; hour: nu
     day: '2-digit',
     hour: '2-digit',
     hour12: false,
+    weekday: 'short',
   }).formatToParts(new Date(now));
   const value = (type: string): string => parts.find((p) => p.type === type)?.value ?? '';
   const hour = Number(value('hour')) % 24; // some engines emit '24' at midnight
-  return { day: `${value('year')}-${value('month')}-${value('day')}`, hour };
+  return {
+    day: `${value('year')}-${value('month')}-${value('day')}`,
+    hour,
+    weekday: value('weekday'), // e.g. 'Sun'
+    dayOfMonth: Number(value('day')),
+  };
 }
 
 /** Pick a live public source, preferring Kraken then Coinbase. */
@@ -210,8 +226,26 @@ async function runCycle(
     }
   }
 
+  // Safety net: cheap invariant checks every cycle; alert once/day on trouble.
+  if (telegram.token && telegram.chatId) {
+    const problems: string[] = [];
+    if (portfolio.cash() < -1e-6) problems.push('מזומן שלילי');
+    if (portfolio.openPositions().length > MAX_OPEN_POSITIONS) {
+      problems.push(`יותר מדי פוזיציות פתוחות (${portfolio.openPositions().length})`);
+    }
+    if (problems.length > 0) {
+      const { day } = localDayAndHour(now, SUMMARY_TIMEZONE);
+      if (store.get<string>('safety-alert-day') !== day) {
+        const a = await sendTelegramMessage(buildSafetyAlert(problems.join(', ')), telegram);
+        if (a.sent) store.set('safety-alert-day', day);
+      }
+    }
+  }
+
   await maybeSendMoveAlerts(store, source, portfolio, telegram);
   await maybeSendSummaries(store, source, portfolio, journal, telegram, now);
+  await maybeSendPeriodicReports(store, source, portfolio, journal, telegram, now);
+  await maybeSendAllClear(store, telegram, now);
 }
 
 /**
@@ -310,6 +344,107 @@ async function maybeSendSummaries(
     } else {
       console.log(`Summary not sent (${slot.key}): ${result.reason}`);
     }
+  }
+}
+
+/** Periodic all-clear: confirms safety systems are active every ~2 weeks. */
+async function maybeSendAllClear(
+  store: FileStore,
+  telegram: { token: string; chatId: string },
+  now: number,
+): Promise<void> {
+  if (!telegram.token || !telegram.chatId) return;
+  const last = store.get<number>(ALLCLEAR_KEY);
+  if (last !== undefined && now - last < ALLCLEAR_INTERVAL_MS) return;
+  const result = await sendTelegramMessage(buildAllClearMessage(), telegram);
+  if (result.sent) {
+    store.set(ALLCLEAR_KEY, now);
+    console.log('All-clear message sent.');
+  }
+}
+
+/** Weekly (Sunday) and monthly (1st) evening performance reports. */
+async function maybeSendPeriodicReports(
+  store: FileStore,
+  source: MarketDataSource,
+  portfolio: PortfolioEngine,
+  journal: TradeJournal,
+  telegram: { token: string; chatId: string },
+  now: number,
+): Promise<void> {
+  if (!telegram.token || !telegram.chatId) return;
+  const { day, hour, weekday, dayOfMonth } = localDayAndHour(now, SUMMARY_TIMEZONE);
+  if (hour < 22) return; // evening only
+  const weeklyDue = weekday === 'Sun' && store.get<string>('weekly-report-last') !== day;
+  const monthlyDue = dayOfMonth === 1 && store.get<string>('monthly-report-last') !== day;
+  if (!weeklyDue && !monthlyDue) return;
+
+  const open = portfolio.openPositions();
+  const prices = await latestPrices(
+    source,
+    open.map((p) => p.symbol),
+  );
+  const equity = portfolio.snapshot(prices, now).equity;
+  const benchmark = await computeBenchmark(store, source, equity, now);
+
+  if (weeklyDue) {
+    await sendPeriodReport(store, journal, telegram, equity, benchmark, now, {
+      title: 'שבועי',
+      anchorKey: 'weekly-anchor',
+      lastKey: 'weekly-report-last',
+      windowMs: 7 * DAY_MS,
+      day,
+    });
+  }
+  if (monthlyDue) {
+    await sendPeriodReport(store, journal, telegram, equity, benchmark, now, {
+      title: 'חודשי',
+      anchorKey: 'monthly-anchor',
+      lastKey: 'monthly-report-last',
+      windowMs: 30 * DAY_MS,
+      day,
+    });
+  }
+}
+
+interface PeriodConfig {
+  title: string;
+  anchorKey: string;
+  lastKey: string;
+  windowMs: number;
+  day: string;
+}
+
+async function sendPeriodReport(
+  store: FileStore,
+  journal: TradeJournal,
+  telegram: { token: string; chatId: string },
+  equity: number,
+  benchmark: { label: string; portfolioPct: number; assetPct: number } | null,
+  now: number,
+  cfg: PeriodConfig,
+): Promise<void> {
+  const anchor = store.get<{ equity: number }>(cfg.anchorKey);
+  const periodReturnPct =
+    anchor && anchor.equity > 0 ? ((equity - anchor.equity) / anchor.equity) * 100 : null;
+  const trades = journal.entries().filter((e) => e.exitTimestamp >= now - cfg.windowMs);
+  const pcts = trades.map((t) => t.returnPct);
+  const message = buildPeriodReport({
+    title: cfg.title,
+    equity,
+    periodReturnPct,
+    tradesCount: trades.length,
+    wins: trades.filter((t) => t.returnPct > 0).length,
+    losses: trades.filter((t) => t.returnPct <= 0).length,
+    bestPct: pcts.length > 0 ? Math.max(...pcts) : null,
+    worstPct: pcts.length > 0 ? Math.min(...pcts) : null,
+    benchmark,
+  });
+  const result = await sendTelegramMessage(message, telegram);
+  if (result.sent) {
+    store.set(cfg.anchorKey, { equity, at: now });
+    store.set(cfg.lastKey, cfg.day);
+    console.log(`${cfg.title} report sent.`);
   }
 }
 
