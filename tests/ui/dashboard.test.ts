@@ -22,20 +22,17 @@ describe('dashboard shell', () => {
     }
   });
 
-  it('labels the Market Scan tab button', () => {
-    expect(html).toMatch(/data-tab="scan"[^>]*>Market Scan</);
+  it('labels the Market Scan tool card', () => {
+    expect(html).toMatch(/data-tab="scan"[\s\S]{0,80}Market Scan/);
   });
 
-  it('places Market Scan immediately before Learn (buttons and panels)', () => {
-    const buttonOrder = [...html.matchAll(/data-tab="(\w+)"/g)].map((m) => m[1]);
-    const scanButton = buttonOrder.indexOf('scan');
-    expect(scanButton).toBeGreaterThan(-1);
-    expect(buttonOrder[scanButton + 1]).toBe('learn');
-
-    const panelOrder = [...html.matchAll(/id="tab-(\w+)"/g)].map((m) => m[1]);
-    const scanPanel = panelOrder.indexOf('scan');
-    expect(scanPanel).toBeGreaterThan(-1);
-    expect(panelOrder[scanPanel + 1]).toBe('learn');
+  it('exposes the primary bottom-nav sections', () => {
+    for (const nav of ['home', 'markets', 'history', 'tools']) {
+      expect(html).toContain(`data-nav="${nav}"`);
+    }
+    for (const view of ['view-home', 'view-markets', 'view-history', 'view-tools']) {
+      expect(html).toContain(`id="${view}"`);
+    }
   });
 
   it('loads the UI entry module and stylesheet', () => {

@@ -1,32 +1,22 @@
 /**
- * Home dashboard (Hebrew, RTL, phone-first).
- *
- * Shows the REAL cloud robot: portfolio value that refreshes with live
- * prices, open positions, and a clear history of every buy/sell. Read-only
- * and presentation-only — all analysis lives in the verified core; this view
- * just displays the committed cloud state plus live prices for the top card.
+ * Home — the primary dashboard. Presentation only: shows the REAL cloud
+ * robot (committed autopilot-state.json) plus live prices, so what you see
+ * here matches the Telegram alerts. Phone-first, English.
  */
 
 import type { ActiveDataSource } from '../dataSource';
 import { fetchCloudState, type CloudState } from '../cloudState';
+import { fetchTopMarkets, findBtcSymbol, type MarketSnapshot } from '../markets';
+import { sparklineSvg } from '../charts';
+import { formatPrice, formatPct } from '../format';
 
 const PRICE_REFRESH_MS = 15_000;
 const STATE_REFRESH_MS = 120_000;
 
-function euro(value: number): string {
-  return `€${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
-}
-function signedPct(value: number): string {
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-}
-function when(at: number): string {
-  return new Date(at).toLocaleString('he-IL', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+const euro = (v: number): string => `€${formatPrice(v)}`;
+const HOT = '#2fbf71';
+const COLD = '#e4574f';
+
 function el(tag: string, className?: string, text?: string): HTMLElement {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -34,161 +24,163 @@ function el(tag: string, className?: string, text?: string): HTMLElement {
   return node;
 }
 
-/** Latest close per symbol via the live data source (best-effort). */
 async function livePrices(data: ActiveDataSource, symbols: string[]): Promise<Record<string, number>> {
   const prices: Record<string, number> = {};
   await Promise.all(
     symbols.map(async (symbol) => {
       const candles = await data.source.getCandles(symbol, '1h', 2);
-      if (candles.ok && candles.value.length > 0) {
-        prices[symbol] = candles.value[candles.value.length - 1]!.close;
-      }
+      if (candles.ok && candles.value.length > 0) prices[symbol] = candles.value[candles.value.length - 1]!.close;
     }),
   );
   return prices;
 }
 
-function btcSymbol(data: ActiveDataSource): string | null {
-  const hit = data.instruments.find((i) => /XBT|BTC/i.test(i.symbol) && /EUR/i.test(i.symbol));
-  return hit?.symbol ?? null;
-}
-
 export function renderHomeView(container: HTMLElement, data: ActiveDataSource): void {
-  container.classList.add('home');
-  container.setAttribute('dir', 'rtl');
-  container.setAttribute('lang', 'he');
   container.innerHTML = '';
-
-  const card = el('section', 'home-card');
-  card.innerHTML = `
-    <div class="home-card-label">שווי התיק (כסף מדומה)</div>
-    <div class="home-value" id="home-equity">…</div>
-    <div class="home-return" id="home-return"></div>
-    <div class="home-sub">
-      <span id="home-cash"></span> · <span id="home-invested"></span>
-    </div>
-    <div class="home-bench" id="home-bench"></div>
+  const hero = el('section', 'hero');
+  hero.innerHTML = `
+    <div class="hero-label">Portfolio value <span class="tag-sim">SIMULATED</span></div>
+    <div class="hero-value" id="hv-equity">—</div>
+    <div class="hero-change" id="hv-change"></div>
+    <div class="hero-split"><span id="hv-cash"></span><span id="hv-invested"></span></div>
+    <div class="hero-bench" id="hv-bench" hidden></div>
   `;
 
-  const posWrap = el('section', 'home-section');
-  posWrap.appendChild(el('h2', 'home-h2', '📌 פוזיציות פתוחות'));
-  const posList = el('div', 'home-list');
+  const marketsWrap = el('section', 'block');
+  marketsWrap.innerHTML = `<div class="block-head"><h2>Markets</h2><button class="link-btn" data-nav="markets">See all</button></div>`;
+  const marketsStrip = el('div', 'markets-strip');
+  marketsStrip.id = 'home-markets';
+  marketsWrap.appendChild(marketsStrip);
+
+  const posWrap = el('section', 'block');
+  posWrap.innerHTML = `<div class="block-head"><h2>Open positions</h2></div>`;
+  const posList = el('div', 'stack');
   posList.id = 'home-positions';
   posWrap.appendChild(posList);
 
-  const histWrap = el('section', 'home-section');
-  histWrap.appendChild(el('h2', 'home-h2', '🧾 היסטוריית עסקאות'));
-  const histList = el('div', 'home-list');
-  histList.id = 'home-history';
-  histWrap.appendChild(histList);
+  const actWrap = el('section', 'block');
+  actWrap.innerHTML = `<div class="block-head"><h2>Recent activity</h2><button class="link-btn" data-nav="history">See all</button></div>`;
+  const actList = el('div', 'stack');
+  actList.id = 'home-activity';
+  actWrap.appendChild(actList);
 
-  const status = el('p', 'home-status', 'טוען נתונים מהרובוט בענן…');
+  const status = el('p', 'muted-line', 'Loading the cloud robot…');
   status.id = 'home-status';
 
-  container.append(card, posWrap, histWrap, status);
-
-  const positionsEl = posList;
-  const historyEl = histList;
-  const equityEl = card.querySelector<HTMLElement>('#home-equity')!;
-  const returnEl = card.querySelector<HTMLElement>('#home-return')!;
-  const cashEl = card.querySelector<HTMLElement>('#home-cash')!;
-  const investedEl = card.querySelector<HTMLElement>('#home-invested')!;
-  const benchEl = card.querySelector<HTMLElement>('#home-bench')!;
+  container.append(hero, marketsWrap, posWrap, actWrap, status);
 
   let state: CloudState | null = null;
 
-  function renderHistory(): void {
-    if (!state) return;
-    historyEl.innerHTML = '';
-    if (state.history.length === 0) {
-      historyEl.appendChild(el('div', 'home-empty', 'עוד לא בוצעו עסקאות — הרובוט ממתין להזדמנות טובה.'));
+  const setText = (id: string, text: string): void => {
+    const node = container.querySelector<HTMLElement>(`#${id}`);
+    if (node) node.textContent = text;
+  };
+
+  function renderMarkets(markets: MarketSnapshot[]): void {
+    marketsStrip.innerHTML = '';
+    if (markets.length === 0) {
+      marketsStrip.appendChild(el('div', 'empty', 'Live market data unavailable right now.'));
       return;
     }
-    for (const t of state.history.slice(0, 100)) {
-      const row = el('div', `home-trade ${t.kind}`);
-      const left = el('div', 'home-trade-main');
-      left.appendChild(el('span', 'home-badge', t.kind === 'buy' ? '🟢 קנייה' : '🔴 מכירה'));
-      left.appendChild(el('span', 'home-trade-sym', t.symbol));
-      const right = el('div', 'home-trade-meta');
-      right.appendChild(el('span', 'home-trade-price', `${t.quantity.toLocaleString('en-US', { maximumFractionDigits: 4 })} @ ${euro(t.price)}`));
-      right.appendChild(el('span', 'home-trade-date', when(t.at)));
-      row.append(left, right);
-      historyEl.appendChild(row);
+    for (const m of markets) {
+      const up = m.changePct >= 0;
+      const card = el('div', 'market-card');
+      card.innerHTML = `
+        <div class="market-top"><span class="market-name">${m.label}</span>
+          <span class="chg ${up ? 'up' : 'down'}">${formatPct(m.changePct)}</span></div>
+        <div class="market-price">${euro(m.price)}</div>
+        <div class="market-spark" style="color:${up ? HOT : COLD}">${sparklineSvg(m.closes, { stroke: up ? HOT : COLD, fill: true, width: 150, height: 44 })}</div>`;
+      marketsStrip.appendChild(card);
     }
   }
 
   function renderPositions(prices: Record<string, number>): void {
-    if (!state) return;
-    positionsEl.innerHTML = '';
-    if (state.positions.length === 0) {
-      positionsEl.appendChild(el('div', 'home-empty', 'אין פוזיציות פתוחות כרגע. 🛡️ מגן על הכסף.'));
+    posList.innerHTML = '';
+    if (!state || state.positions.length === 0) {
+      posList.appendChild(el('div', 'empty', 'No open positions — holding cash and waiting for a good setup.'));
       return;
     }
     for (const p of state.positions) {
       const price = prices[p.symbol] ?? p.entryPrice;
       const movePct = p.entryPrice > 0 ? ((price - p.entryPrice) / p.entryPrice) * 100 : 0;
-      const value = p.quantity * price;
-      const row = el('div', 'home-pos');
-      const main = el('div', 'home-pos-main');
-      main.appendChild(el('span', 'home-pos-sym', p.symbol));
-      main.appendChild(el('span', 'home-pos-val', euro(value)));
-      const meta = el('div', 'home-pos-meta');
-      meta.appendChild(el('span', `home-chip ${movePct >= 0 ? 'up' : 'down'}`, signedPct(movePct)));
-      meta.appendChild(el('span', 'home-pos-entry', `כניסה ${euro(p.entryPrice)}`));
-      row.append(main, meta);
-      positionsEl.appendChild(row);
+      const up = movePct >= 0;
+      const row = el('div', 'row');
+      row.innerHTML = `
+        <div class="row-main"><span class="row-title">${p.symbol}</span>
+          <span class="row-sub">entry ${euro(p.entryPrice)}</span></div>
+        <div class="row-side"><span class="row-title">${euro(p.quantity * price)}</span>
+          <span class="chg ${up ? 'up' : 'down'}">${formatPct(movePct)}</span></div>`;
+      posList.appendChild(row);
+    }
+  }
+
+  function renderActivity(): void {
+    actList.innerHTML = '';
+    if (!state || state.history.length === 0) {
+      actList.appendChild(el('div', 'empty', 'No trades yet — the robot is waiting for a qualified opportunity.'));
+      return;
+    }
+    for (const t of state.history.slice(0, 5)) {
+      const buy = t.kind === 'buy';
+      const row = el('div', `row trade ${t.kind}`);
+      row.innerHTML = `
+        <div class="row-main"><span class="pill ${buy ? 'buy' : 'sell'}">${buy ? 'BUY' : 'SELL'}</span>
+          <span class="row-title">${t.symbol}</span></div>
+        <div class="row-side"><span class="row-sub">${t.quantity.toLocaleString('en-US', { maximumFractionDigits: 4 })} @ ${euro(t.price)}</span>
+          <span class="row-sub">${new Date(t.at).toLocaleDateString('en-GB')}</span></div>`;
+      actList.appendChild(row);
     }
   }
 
   async function refreshPrices(): Promise<void> {
     if (!state) return;
     const symbols = state.positions.map((p) => p.symbol);
-    const btc = btcSymbol(data);
+    const btc = findBtcSymbol(data);
     if (btc) symbols.push(btc);
     const prices = await livePrices(data, symbols);
 
-    const invested = state.positions.reduce(
-      (sum, p) => sum + p.quantity * (prices[p.symbol] ?? p.entryPrice),
-      0,
-    );
+    const invested = state.positions.reduce((s, p) => s + p.quantity * (prices[p.symbol] ?? p.entryPrice), 0);
     const equity = state.cash + invested;
     const totalReturn = state.initialCash > 0 ? ((equity - state.initialCash) / state.initialCash) * 100 : 0;
 
-    equityEl.textContent = euro(equity);
-    returnEl.textContent = `${signedPct(totalReturn)} מההתחלה`;
-    returnEl.className = `home-return ${totalReturn >= 0 ? 'up' : 'down'}`;
-    cashEl.textContent = `מזומן פנוי ${euro(state.cash)}`;
-    investedEl.textContent = `מושקע ${euro(invested)}`;
+    setText('hv-equity', euro(equity));
+    const change = container.querySelector<HTMLElement>('#hv-change')!;
+    change.textContent = `${formatPct(totalReturn)} all time`;
+    change.className = `hero-change ${totalReturn >= 0 ? 'up' : 'down'}`;
+    setText('hv-cash', `Cash ${euro(state.cash)}`);
+    setText('hv-invested', `Invested ${euro(invested)}`);
 
+    const bench = container.querySelector<HTMLElement>('#hv-bench')!;
     if (btc && state.benchmark && prices[btc] && state.benchmark.btc > 0 && state.benchmark.equity > 0) {
-      const botPct = ((equity - state.benchmark.equity) / state.benchmark.equity) * 100;
+      const bot = ((equity - state.benchmark.equity) / state.benchmark.equity) * 100;
       const btcPct = ((prices[btc]! - state.benchmark.btc) / state.benchmark.btc) * 100;
-      const leading = botPct >= btcPct;
-      benchEl.textContent = `🏁 מול ביטקוין: הרובוט ${signedPct(botPct)} · ביטקוין ${signedPct(btcPct)} ${leading ? '· מוביל 🎉' : ''}`;
+      bench.hidden = false;
+      bench.textContent = `vs Bitcoin — robot ${formatPct(bot)} · BTC ${formatPct(btcPct)}${bot >= btcPct ? ' · leading' : ''}`;
     }
 
     renderPositions(prices);
-    const stamp = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const ran = state.lastRunAt ? ` · הרובוט רץ לאחרונה ${when(state.lastRunAt)}` : '';
-    const statusEl = document.getElementById('home-status');
-    if (statusEl) statusEl.textContent = `עודכן ${stamp}${ran}`;
+    const stamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    setText('home-status', `Live · updated ${stamp}`);
   }
 
   async function loadState(): Promise<void> {
     const fresh = await fetchCloudState();
-    if (fresh === null) {
-      if (!state) {
-        const statusEl = document.getElementById('home-status');
-        if (statusEl) statusEl.textContent = 'לא הצלחתי לטעון את נתוני הרובוט כרגע — אנסה שוב אוטומטית.';
-      }
-      return;
+    if (fresh) {
+      state = fresh;
+      renderActivity();
+      await refreshPrices();
+    } else if (!state) {
+      setText('home-status', "Couldn't reach the cloud robot — retrying automatically.");
     }
-    state = fresh;
-    renderHistory();
-    await refreshPrices();
+  }
+
+  async function loadMarkets(): Promise<void> {
+    renderMarkets(await fetchTopMarkets(data, 6));
   }
 
   void loadState();
+  void loadMarkets();
   window.setInterval(() => void refreshPrices(), PRICE_REFRESH_MS);
   window.setInterval(() => void loadState(), STATE_REFRESH_MS);
+  window.setInterval(() => void loadMarkets(), PRICE_REFRESH_MS * 4);
 }
