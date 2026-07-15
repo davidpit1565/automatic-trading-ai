@@ -1,7 +1,8 @@
 /**
- * Live market snapshots for the dashboard's Markets strip and top bar.
- * Presentation-only: pulls candles from the active data source and derives
- * a current price, a window change %, and the close series for a sparkline.
+ * Live market snapshots for the dashboard's Markets strip, top bar, and
+ * detail chart. Presentation-only: pulls candles from the active data
+ * source and derives a current price, a window change %, and the close
+ * series for charts.
  */
 
 import type { ActiveDataSource } from './dataSource';
@@ -10,41 +11,47 @@ export interface MarketSnapshot {
   readonly symbol: string;
   readonly label: string;
   readonly price: number;
-  /** Change across the fetched window (~48h). */
+  /** Change across the fetched window. */
   readonly changePct: number;
   readonly closes: number[];
 }
 
-/** Majors in display order; each maps to whatever the source calls its EUR pair. */
-const MAJORS: ReadonlyArray<{ bases: string[]; label: string }> = [
-  { bases: ['XBT', 'BTC'], label: 'Bitcoin' },
-  { bases: ['ETH'], label: 'Ethereum' },
-  { bases: ['SOL'], label: 'Solana' },
-  { bases: ['XRP'], label: 'XRP' },
-  { bases: ['ADA'], label: 'Cardano' },
-  { bases: ['DOGE'], label: 'Dogecoin' },
+/** Majors in display order, matched by the instrument's clean `base` code. */
+const MAJORS: ReadonlyArray<{ base: string; label: string }> = [
+  { base: 'BTC', label: 'Bitcoin' },
+  { base: 'ETH', label: 'Ethereum' },
+  { base: 'SOL', label: 'Solana' },
+  { base: 'XRP', label: 'XRP' },
+  { base: 'ADA', label: 'Cardano' },
+  { base: 'DOGE', label: 'Dogecoin' },
+  { base: 'LTC', label: 'Litecoin' },
+  { base: 'DOT', label: 'Polkadot' },
 ];
 
-function findSymbol(data: ActiveDataSource, bases: string[]): string | null {
-  for (const base of bases) {
-    const hit = data.instruments.find(
-      (i) => new RegExp(`(^|[^A-Z])${base}([^A-Z]|$)`, 'i').test(i.symbol) && /EUR/i.test(i.symbol),
-    );
-    if (hit) return hit.symbol;
-  }
-  return null;
+/** The instrument whose base matches (case-insensitive), or null. */
+function symbolForBase(data: ActiveDataSource, base: string): string | null {
+  const hit = data.instruments.find((i) => i.base.toUpperCase() === base.toUpperCase());
+  return hit?.symbol ?? null;
 }
 
 export function findBtcSymbol(data: ActiveDataSource): string | null {
-  return findSymbol(data, ['XBT', 'BTC']);
+  return symbolForBase(data, 'BTC');
+}
+
+/** Display label for a symbol, from the majors table or the base code. */
+export function labelFor(data: ActiveDataSource, symbol: string): string {
+  const inst = data.instruments.find((i) => i.symbol === symbol);
+  const base = inst?.base.toUpperCase();
+  return MAJORS.find((m) => m.base === base)?.label ?? base ?? symbol;
 }
 
 export async function fetchSnapshot(
   data: ActiveDataSource,
   symbol: string,
   label: string,
+  count = 48,
 ): Promise<MarketSnapshot | null> {
-  const candles = await data.source.getCandles(symbol, '1h', 48);
+  const candles = await data.source.getCandles(symbol, '1h', count);
   if (!candles.ok || candles.value.length < 2) return null;
   const closes = candles.value.map((c) => c.close);
   const price = closes[closes.length - 1]!;
@@ -54,11 +61,9 @@ export async function fetchSnapshot(
 
 export async function fetchTopMarkets(data: ActiveDataSource, max = 6): Promise<MarketSnapshot[]> {
   const results: MarketSnapshot[] = [];
-  const seen = new Set<string>();
   for (const major of MAJORS) {
-    const symbol = findSymbol(data, major.bases);
-    if (!symbol || seen.has(symbol)) continue;
-    seen.add(symbol);
+    const symbol = symbolForBase(data, major.base);
+    if (!symbol) continue;
     const snap = await fetchSnapshot(data, symbol, major.label);
     if (snap) results.push(snap);
     if (results.length >= max) break;

@@ -55,8 +55,8 @@ try {
 
   // Markets and History views mount.
   await page.click('[data-nav="markets"]');
-  await page.waitForSelector('#markets-list', { timeout: 10000 });
-  check('markets view rendered', (await page.$('#markets-list')) !== null);
+  await page.waitForSelector('#mk-list', { timeout: 10000 });
+  check('markets view rendered', (await page.$('#mk-list')) !== null);
   await page.click('[data-nav="history"]');
   await page.waitForSelector('#history-list', { timeout: 10000 });
   check('history view rendered', (await page.$('#history-list')) !== null);
