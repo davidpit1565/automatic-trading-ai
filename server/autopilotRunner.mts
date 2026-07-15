@@ -40,6 +40,14 @@ const ENTRY_TF = '1h' as const;
  * reflect real costs (~0.6% round trip) and predict live performance.
  */
 const COST_RATE = Number(process.env['COST_RATE']) || 0.003;
+/**
+ * GitHub's scheduled runs are unreliable at high frequency (often skipped
+ * for hours), so a single triggered run loops through several cycles
+ * internally — one trigger then covers a long stretch, not a single moment.
+ */
+const LOOP_CYCLES = Math.max(1, Number(process.env['LOOP_CYCLES']) || 1);
+const LOOP_INTERVAL_MS = Number(process.env['LOOP_INTERVAL_MS']) || 300_000;
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Scheduled digests: each fires once per local day at/after its hour. */
 const SUMMARY_SLOTS = [
@@ -133,6 +141,38 @@ async function main(): Promise<void> {
     costRate: COST_RATE,
   });
 
+  const telegram = {
+    token: process.env['TELEGRAM_BOT_TOKEN'] ?? '',
+    chatId: process.env['TELEGRAM_CHAT_ID'] ?? '',
+  };
+
+  // One-off delivery check: verifies notifications reach the phone without
+  // waiting for a real trade. Enabled only when explicitly requested.
+  if (process.env['SEND_TEST_MESSAGE'] === 'true') {
+    const test = await sendTelegramMessage(buildTestMessage(), telegram);
+    console.log(test.sent ? 'Telegram test message sent.' : `Test message not sent: ${test.reason}`);
+  }
+
+  for (let i = 0; i < LOOP_CYCLES; i++) {
+    if (i > 0) await sleep(LOOP_INTERVAL_MS);
+    try {
+      await runCycle(store, source, autopilot, portfolio, journal, telegram);
+    } catch (cause) {
+      // Never let one bad cycle kill the whole run — log and keep looping.
+      console.error('Cycle failed:', cause instanceof Error ? cause.message : cause);
+    }
+  }
+}
+
+/** One full cycle: trade, heartbeat, then trade/move/summary notifications. */
+async function runCycle(
+  store: FileStore,
+  source: MarketDataSource,
+  autopilot: PaperAutoPilot,
+  portfolio: PortfolioEngine,
+  journal: TradeJournal,
+  telegram: { token: string; chatId: string },
+): Promise<void> {
   const now = Date.now();
   const cycle = await autopilot.runCycleOnce(now);
   console.log(
@@ -151,22 +191,10 @@ async function main(): Promise<void> {
     halted: cycle.halted,
   });
 
-  const telegram = {
-    token: process.env['TELEGRAM_BOT_TOKEN'] ?? '',
-    chatId: process.env['TELEGRAM_CHAT_ID'] ?? '',
-  };
-
   const message = buildCycleMessage(cycle);
   if (message !== null) {
     const result = await sendTelegramMessage(message, telegram);
     console.log(result.sent ? 'Telegram notification sent.' : `No notification: ${result.reason}`);
-  }
-
-  // One-off delivery check: verifies notifications reach the phone without
-  // waiting for a real trade. Enabled only when explicitly requested.
-  if (process.env['SEND_TEST_MESSAGE'] === 'true') {
-    const test = await sendTelegramMessage(buildTestMessage(), telegram);
-    console.log(test.sent ? 'Telegram test message sent.' : `Test message not sent: ${test.reason}`);
   }
 
   await maybeSendMoveAlerts(store, source, portfolio, telegram);
