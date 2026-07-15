@@ -110,6 +110,65 @@ export function buildRiskHaltAlert(): string {
   );
 }
 
+/** Periodic (weekly / monthly) performance report. */
+export interface PeriodReportInput {
+  /** e.g. "שבועי" or "חודשי". */
+  readonly title: string;
+  readonly equity: number;
+  /** Return since the last report of this kind; null on the first one. */
+  readonly periodReturnPct: number | null;
+  readonly tradesCount: number;
+  readonly wins: number;
+  readonly losses: number;
+  readonly bestPct: number | null;
+  readonly worstPct: number | null;
+  readonly benchmark?: DailySummaryBenchmark | null;
+}
+
+export function buildPeriodReport(i: PeriodReportInput): string {
+  const lines: string[] = [
+    `🗓️ דו"ח ${i.title} — רובוט מסחר (כסף מדומה)`,
+    `💰 שווי תיק: ${euro(i.equity)}`,
+  ];
+  lines.push(
+    i.periodReturnPct === null
+      ? '📈 תשואת התקופה: מתחילים למדוד מעכשיו'
+      : `📈 תשואת התקופה: ${i.periodReturnPct >= 0 ? '+' : ''}${i.periodReturnPct.toFixed(2)}%`,
+  );
+  lines.push(
+    `🔄 עסקאות שנסגרו: ${i.tradesCount}` +
+      (i.tradesCount > 0 ? ` (${i.wins} ברווח, ${i.losses} בהפסד)` : ''),
+  );
+  if (i.tradesCount > 0 && i.bestPct !== null && i.worstPct !== null) {
+    lines.push(
+      `🏆 הכי טובה: ${i.bestPct >= 0 ? '+' : ''}${i.bestPct.toFixed(1)}% · ` +
+        `הכי גרועה: ${i.worstPct >= 0 ? '+' : ''}${i.worstPct.toFixed(1)}%`,
+    );
+  }
+  if (i.benchmark) {
+    const f = (v: number): string => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
+    const verdict = i.benchmark.portfolioPct >= i.benchmark.assetPct ? 'הרובוט מוביל 🎉' : 'ביטקוין מוביל';
+    lines.push(
+      `🏁 מול ${i.benchmark.label}: הרובוט ${f(i.benchmark.portfolioPct)} · ${i.benchmark.label} ${f(i.benchmark.assetPct)} → ${verdict}`,
+    );
+  }
+  return lines.join('\n');
+}
+
+/** Periodic all-clear: confirms the safety protections are active. */
+export function buildAllClearMessage(): string {
+  return (
+    '🛡️ בדיקת ביטחון תקופתית — הכל מבוטח ✅\n' +
+    'כל ההגנות פעילות: תקרת סיכון לעסקה, תקרת חשיפה, בלם הפסד יומי, ומגבלת פוזיציות. ' +
+    'כסף מדומה בלבד — הרובוט לא יכול לגעת בכסף אמיתי.'
+  );
+}
+
+/** Immediate alert when a safety invariant looks wrong (should never happen). */
+export function buildSafetyAlert(problem: string): string {
+  return `🚨 בדיקת בטיחות מצאה בעיה: ${problem}. עצרתי להיזהר — כדאי לבדוק. (כסף מדומה)`;
+}
+
 /** Alert for a significant price move on an open position. */
 export function buildMoveAlert(symbol: string, movePct: number): string {
   const up = movePct >= 0;
