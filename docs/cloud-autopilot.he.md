@@ -40,6 +40,23 @@ Autopilot** → **Run workflow**.
 `SUMMARY_TIMEZONE` → ערך: שם אזור הזמן, למשל `Europe/Brussels` (בלגיה) או
 `Asia/Jerusalem` (ישראל). מעבר קיץ/חורף מטופל אוטומטית.
 
+## שעון אמין (מומלץ — כדי שההתראות תמיד יגיעו בזמן)
+התזמון של GitHub לא אמין (לפעמים רץ רק כל כמה שעות), אז סיכומים בשעה קבועה
+עלולים להתאחר. פתרון חינמי: שירות שעון חיצוני אמין ש"דופק" לרובוט כל 10 דקות.
+
+1. פתח **cron-job.org**, צור חשבון חינמי.
+2. ב-GitHub צור מפתח: `github.com/settings/personal-access-tokens` →
+   **Fine-grained token** → גישה למאגר `automatic-trading-ai` בלבד →
+   הרשאת **Actions: Read and write** → צור והעתק.
+3. ב-cron-job.org → **Create cronjob**:
+   - **URL:** `https://api.github.com/repos/davidpit1565/automatic-trading-ai/actions/workflows/autopilot.yml/dispatches`
+   - **שיטה:** POST · **כל 10 דקות**
+   - **Headers:** `Authorization: Bearer <המפתח>` וגם `Accept: application/vnd.github+json`
+   - **Body:** `{"ref":"main"}`
+4. שמור. מהרגע הזה הרובוט רץ ברצף ואמין, וההתראות של 08:00/22:00 מדויקות.
+
+*המפתח נשמר רק ב-cron-job.org — לא נכתב בקוד ולא במאגר.*
+
 ## בדיקת התראות ידנית
 ב-`.../actions` → **Cloud Paper Autopilot** → **Run workflow**, סמן את
 **"Send a Telegram test message"** → הרובוט ישלח לך הודעת בדיקה מיד.

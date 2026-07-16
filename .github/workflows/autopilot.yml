@@ -35,6 +35,8 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
+    # Each run loops for ~4h50m (see LOOP_CYCLES); allow headroom under the 6h cap.
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -51,8 +53,11 @@ jobs:
           # Variable to follow you when you travel (e.g. Europe/Brussels).
           # Defaults to Asia/Jerusalem when unset.
           SUMMARY_TIMEZONE: ${{ vars.SUMMARY_TIMEZONE }}
-          # 6 cycles × 5 min ≈ 25 min of coverage per triggered run.
-          LOOP_CYCLES: '6'
+          # 58 cycles × 5 min ≈ 4h50m of coverage per triggered run, so a
+          # single trigger bridges GitHub's multi-hour scheduler gaps. An
+          # external clock (cron-job.org) dispatches this every ~10 min for
+          # continuous, reliable timing — see docs/cloud-autopilot.he.md.
+          LOOP_CYCLES: '58'
         run: npx tsx server/autopilotRunner.mts
       - name: Commit updated state
         run: |
