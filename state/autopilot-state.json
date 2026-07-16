@@ -1,9 +1,9 @@
 {
   "portfolio-engine": {
-    "cash": 4000,
+    "cash": 5954.4258256670055,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 0,
+    "closedRealizedPnl": -45.57417433299457,
     "dayAnchor": {
       "day": "2026-07-16",
       "equity": 10072.041684236254
@@ -30,25 +30,6 @@
       "exits": []
     },
     {
-      "id": "ADAEUR:1784042069348:1",
-      "symbol": "ADAEUR",
-      "openedAt": 1784042069348,
-      "entryPrice": 0.143702,
-      "quantity": 13917.690776746322,
-      "initialQuantity": 13917.690776746322,
-      "stopLoss": 0.14130472242333597,
-      "takeProfit": 0.14849655515332805,
-      "feesPaid": 0,
-      "realizedPnl": 0,
-      "highestPrice": 0.146073,
-      "lowestPrice": 0.142764,
-      "confidence": 25.958584930396654,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
       "id": "XRPEUR:1784042069348:2",
       "symbol": "XRPEUR",
       "openedAt": 1784042069348,
@@ -60,7 +41,7 @@
       "feesPaid": 0,
       "realizedPnl": 0,
       "highestPrice": 0.97353,
-      "lowestPrice": 0.96258,
+      "lowestPrice": 0.96052,
       "confidence": 4.557371688643531,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -264,19 +245,25 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ETHEUR: no exposure headroom: 6000.00 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1784189677449,
+      "intentId": "ADAEUR:1784042069348:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ADAEUR: 13917.690776746322 @ 0.14085 (stop-loss)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1784162313665,
+    "at": 1784189677449,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "daily-summary-last-day": "2026-07-14",
   "move-alert-buckets": {
     "LINKEUR:1784042069348:0": 0,
-    "ADAEUR:1784042069348:1": 0,
     "XRPEUR:1784042069348:2": 0
   },
   "benchmark-anchor": {
@@ -284,7 +271,7 @@
     "equity": 10005.010466339494,
     "at": 1784060512593
   },
-  "daily-summary-morning": "2026-07-15",
+  "daily-summary-morning": "2026-07-16",
   "daily-summary-evening": "2026-07-15",
   "allclear-last-at": 1784134540419,
   "equity-history": [
@@ -335,6 +322,55 @@
     {
       "at": 1784162313665,
       "equity": 10050.99
+    },
+    {
+      "at": 1784188148247,
+      "equity": 10008.6
+    },
+    {
+      "at": 1784188455991,
+      "equity": 10003.17
+    },
+    {
+      "at": 1784188761202,
+      "equity": 10011.4
+    },
+    {
+      "at": 1784189066728,
+      "equity": 10010.69
+    },
+    {
+      "at": 1784189372201,
+      "equity": 10008.89
+    },
+    {
+      "at": 1784189677449,
+      "equity": 9970.84
+    }
+  ],
+  "trade-journal": [
+    {
+      "id": "ADAEUR:1784042069348:1",
+      "symbol": "ADAEUR",
+      "entryTimestamp": 1784042069348,
+      "exitTimestamp": 1784189677449,
+      "entryPrice": 0.143702,
+      "exitPrice": 0.14085,
+      "positionSize": 13917.690776746322,
+      "stopLoss": 0.14130472242333597,
+      "takeProfit": 0.14849655515332805,
+      "exitReason": "stop-loss",
+      "fees": 5.880920237714158,
+      "slippage": 0,
+      "holdingDurationMs": 147608101,
+      "mfePct": 1.649942241583285,
+      "maePct": 1.984662704764021,
+      "realizedPnl": -45.57417433299457,
+      "returnPct": -2.278708716649729,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 25.958584930396654,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ]
 }
