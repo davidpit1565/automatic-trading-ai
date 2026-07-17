@@ -55,7 +55,7 @@ function makeSource(config: Record<string, { drift: number; lastPrice?: number }
 
 function makePilot(
   config: Record<string, { drift: number; lastPrice?: number }>,
-  opts: { costRate?: number } = {},
+  opts: { costRate?: number; minConfidence?: number } = {},
 ) {
   const store = new MemoryStore();
   const journal = new TradeJournal(store);
@@ -75,6 +75,7 @@ function makePilot(
     getDailyLoss: () => 0,
     clock: () => T,
     costRate: opts.costRate,
+    minConfidence: opts.minConfidence,
   });
   return { pilot, portfolio, positions, journal, killSwitch, audit };
 }
@@ -105,6 +106,18 @@ describe('autonomous paper entries', () => {
     const free = makePilot({ 'QUAL/USD': { drift: 0.001 } });
     await free.pilot.runCycleOnce(T);
     expect(free.portfolio.openPositions()[0]!.feesPaid).toBe(0);
+  });
+
+  it('refuses low-conviction setups when a confidence floor is set (capital protection)', async () => {
+    // Same qualifying market that opens with no floor...
+    const open = makePilot({ 'QUAL/USD': { drift: 0.001 } });
+    expect((await open.pilot.runCycleOnce(T)).opened).toHaveLength(1);
+
+    // ...is refused once a floor above any achievable confidence is applied.
+    const gated = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { minConfidence: 95 });
+    const cycle = await gated.pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(gated.portfolio.openPositions()).toHaveLength(0);
   });
 
   it('does not open anything for bearish or neutral markets, and audits nothing', async () => {

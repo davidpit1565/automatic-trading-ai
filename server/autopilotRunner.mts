@@ -16,7 +16,7 @@ import { CoinbasePublicSource } from '../src/core/data/coinbasePublic';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import { PersistedAuditLog } from '../src/core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../src/core/autopilot/killSwitch';
-import { PaperAutoPilot } from '../src/core/autopilot/paperAutoPilot';
+import { AUTOPILOT_MIN_CONFIDENCE, PaperAutoPilot } from '../src/core/autopilot/paperAutoPilot';
 import { PositionEngine } from '../src/core/position/positionEngine';
 import { PortfolioEngine } from '../src/core/position/portfolioEngine';
 import { TradeJournal } from '../src/core/position/tradeJournal';
@@ -156,6 +156,9 @@ async function main(): Promise<void> {
     audit: new PersistedAuditLog(store),
     getDailyLoss: () => new DailyLossTracker(store).lossToday(Date.now()),
     costRate: COST_RATE,
+    // Only commit capital to setups with real conviction — refuses the weak
+    // ~4–12% signals that were producing churn and losses.
+    minConfidence: AUTOPILOT_MIN_CONFIDENCE,
   });
 
   const telegram = {
@@ -208,10 +211,38 @@ async function runCycle(
     halted: cycle.halted,
   });
 
-  const message = buildCycleMessage(cycle);
+  // De-duplicate trade alerts by stable position id: if a position is
+  // re-processed (e.g. a prior run's state failed to persist), it must never
+  // be re-announced. Only trades not yet alerted go into the message.
+  const alerted = new Set(store.get<string[]>(ALERTED_TRADES_KEY) ?? []);
+  const idKey = (kind: 'o' | 'c', id?: string): string | null => (id ? `${kind}:${id}` : null);
+  const freshOpened = cycle.opened.filter((o) => {
+    const k = idKey('o', o.id);
+    return k === null || !alerted.has(k);
+  });
+  const freshClosed = cycle.closed.filter((c) => {
+    const k = idKey('c', c.id);
+    return k === null || !alerted.has(k);
+  });
+  const message = buildCycleMessage({
+    timestamp: cycle.timestamp,
+    opened: freshOpened,
+    closed: freshClosed,
+  });
   if (message !== null) {
     const result = await sendTelegramMessage(message, telegram);
     console.log(result.sent ? 'Telegram notification sent.' : `No notification: ${result.reason}`);
+    if (result.sent) {
+      for (const o of freshOpened) {
+        const k = idKey('o', o.id);
+        if (k) alerted.add(k);
+      }
+      for (const c of freshClosed) {
+        const k = idKey('c', c.id);
+        if (k) alerted.add(k);
+      }
+      store.set(ALERTED_TRADES_KEY, [...alerted].slice(-ALERTED_TRADES_CAP));
+    }
   }
 
   // Tell the user (once per day) when a safety limit pauses new buying.
@@ -251,6 +282,9 @@ async function runCycle(
 
 const EQUITY_HISTORY_KEY = 'equity-history';
 const EQUITY_HISTORY_CAP = 5000;
+/** Position ids already announced via Telegram, so alerts never repeat. */
+const ALERTED_TRADES_KEY = 'alerted-trade-ids';
+const ALERTED_TRADES_CAP = 500;
 
 /** Append a portfolio-value point each cycle so the app can chart it over time. */
 async function recordEquity(

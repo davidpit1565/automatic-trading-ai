@@ -32,6 +32,13 @@ export interface SignalCriteria {
   readonly minRiskReward: number;
   /** Maximum ATR as % of price: beyond this, volatility is unmanageable. */
   readonly maxAtrPct: number;
+  /**
+   * Minimum confidence (0..MAX_CONFIDENCE) required to open. A setup can
+   * clear the score/ADX/ATR gates yet still be a near-coin-flip once its
+   * scanner warnings and weak trend are priced in — this floor refuses those
+   * low-conviction trades so capital is only risked on strong evidence.
+   */
+  readonly minConfidence: number;
 }
 
 export const DEFAULT_SIGNAL_CRITERIA: SignalCriteria = {
@@ -42,6 +49,10 @@ export const DEFAULT_SIGNAL_CRITERIA: SignalCriteria = {
   atrTargetMultiple: 4,
   minRiskReward: 1.5,
   maxAtrPct: 8,
+  // The analysis layer reports every qualifying setup (floor off by default);
+  // the capital-risking layer (the autopilot) applies its own conviction
+  // floor — see AUTOPILOT_MIN_CONFIDENCE in the paper autopilot.
+  minConfidence: 0,
 };
 
 /**
@@ -180,6 +191,20 @@ export function evaluateScan(
     MAX_CONFIDENCE,
   );
 
+  // Conviction floor: refuse near-coin-flip setups even when the hard gates
+  // pass, so the robot only commits capital to strong evidence.
+  if (confidence < criteria.minConfidence) {
+    return {
+      kind: 'rejected',
+      symbol: scan.symbol,
+      timeframe: scan.timeframe,
+      reasons: [
+        `confidence ${confidence.toFixed(0)} is below the required ${criteria.minConfidence} ` +
+          `(too little conviction — protecting capital)`,
+      ],
+    };
+  }
+
   const opportunity: TradeOpportunity = {
     symbol: scan.symbol,
     timeframe: scan.timeframe,
@@ -276,6 +301,7 @@ function validateCriteria(criteria: SignalCriteria): void {
     throw new RangeError('ATR multiples must be positive');
   }
   if (!(criteria.minScore >= 0)) throw new RangeError('minScore must be >= 0');
+  if (!(criteria.minConfidence >= 0)) throw new RangeError('minConfidence must be >= 0');
 }
 
 // ---------------------------------------------------------------------------

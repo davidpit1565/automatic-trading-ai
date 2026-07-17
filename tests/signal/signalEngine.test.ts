@@ -18,6 +18,13 @@ import {
 
 const ANCHOR = 1_700_000_000_000;
 
+/**
+ * Criteria with the conviction floor disabled, for the tests that exercise
+ * confidence mechanics / level derivation / ranking rather than the floor
+ * itself (the floor has its own dedicated tests below).
+ */
+const NO_FLOOR = { ...DEFAULT_SIGNAL_CRITERIA, minConfidence: 0 };
+
 function scannedSeries(drift: number, seed = 1): ScanResult {
   const candles = generateSyntheticCandles({
     seed,
@@ -65,7 +72,7 @@ function makeScan(overrides: {
 describe('evaluateScan — accepted setups', () => {
   it('turns a hot scan into a structured long opportunity', () => {
     const scan = makeScan({ score: 55, rsi: 62, adx: 32, atrPct: 2, relativeVolume: 1.3 });
-    const decision = evaluateScan(scan);
+    const decision = evaluateScan(scan, NO_FLOOR);
     expect(decision.kind).toBe('opportunity');
     if (decision.kind !== 'opportunity') return;
 
@@ -80,7 +87,7 @@ describe('evaluateScan — accepted setups', () => {
 
   it('derives stop and target from the scanner ATR, with the configured risk/reward', () => {
     const scan = makeScan({ score: 55, rsi: 60, adx: 30, atrPct: 2 });
-    const decision = evaluateScan(scan);
+    const decision = evaluateScan(scan, NO_FLOOR);
     expect(decision.kind).toBe('opportunity');
     if (decision.kind !== 'opportunity') return;
 
@@ -111,9 +118,10 @@ describe('evaluateScan — accepted setups', () => {
   });
 
   it('warnings reduce confidence relative to the same scan without warnings', () => {
-    const clean = evaluateScan(makeScan({ score: 60, rsi: 60, adx: 30, atrPct: 2, warnings: [] }));
+    const clean = evaluateScan(makeScan({ score: 60, rsi: 60, adx: 30, atrPct: 2, warnings: [] }), NO_FLOOR);
     const warned = evaluateScan(
       makeScan({ score: 60, rsi: 60, adx: 30, atrPct: 2, warnings: ['x', 'y'] }),
+      NO_FLOOR,
     );
     expect(clean.kind).toBe('opportunity');
     expect(warned.kind).toBe('opportunity');
@@ -123,7 +131,7 @@ describe('evaluateScan — accepted setups', () => {
   });
 
   it('explains itself in plain language without promising anything', () => {
-    const decision = evaluateScan(makeScan({ score: 55, rsi: 60, adx: 30, atrPct: 2 }));
+    const decision = evaluateScan(makeScan({ score: 55, rsi: 60, adx: 30, atrPct: 2 }), NO_FLOOR);
     expect(decision.kind).toBe('opportunity');
     if (decision.kind !== 'opportunity') return;
     const text = decision.opportunity.explanation.toLowerCase();
@@ -189,6 +197,34 @@ describe('evaluateScan — rejections', () => {
     const decision = evaluateScan(scannedSeries(-0.004));
     expect(decision.kind).toBe('rejected');
   });
+
+  it('refuses low-conviction setups that clear the hard gates (confidence floor)', () => {
+    // Passes score/ADX/RSI/ATR gates, but warnings + weak trend drag its
+    // confidence well below the default floor — exactly the near-coin-flip
+    // trades that were being opened (e.g. XRP at ~5%, DOT at ~12%).
+    const marginal = makeScan({
+      score: 32,
+      rsi: 60,
+      adx: 21,
+      atrPct: 2,
+      relativeVolume: 1,
+      warnings: ['weak trend', 'thin volume'],
+    });
+
+    const gated = evaluateScan(marginal, { ...DEFAULT_SIGNAL_CRITERIA, minConfidence: 40 });
+    expect(gated.kind).toBe('rejected');
+    if (gated.kind === 'rejected') {
+      expect(gated.reasons.some((r) => r.toLowerCase().includes('confidence'))).toBe(true);
+    }
+
+    // Same setup is an opportunity when the floor is off (engine default) —
+    // proving it was the floor, not the hard gates, that refused it.
+    const ungated = evaluateScan(marginal);
+    expect(ungated.kind).toBe('opportunity');
+    if (ungated.kind === 'opportunity') {
+      expect(ungated.opportunity.confidence).toBeLessThan(40);
+    }
+  });
 });
 
 // Position sizing moved to the Risk Engine in Stage 3 — see tests/risk.
@@ -204,7 +240,7 @@ describe('generateSignals', () => {
       failures: [{ symbol: 'DEAD/USD', reason: 'HTTP 503' }],
     };
 
-    const signals = generateSignals(marketScan);
+    const signals = generateSignals(marketScan, NO_FLOOR);
     expect(signals.opportunities.map((o) => o.symbol)).toEqual(['STRONG/USD', 'MILD/USD']);
     expect(signals.opportunities[0]!.confidence).toBeGreaterThanOrEqual(
       signals.opportunities[1]!.confidence,
