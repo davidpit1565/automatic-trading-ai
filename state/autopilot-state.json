@@ -230,7 +230,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1784271253922,
+    "at": 1784290279471,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -413,6 +413,30 @@
     {
       "at": 1784271253922,
       "equity": 9880.69
+    },
+    {
+      "at": 1784288764812,
+      "equity": 9880.69
+    },
+    {
+      "at": 1784289068084,
+      "equity": 9880.69
+    },
+    {
+      "at": 1784289370885,
+      "equity": 9880.69
+    },
+    {
+      "at": 1784289673711,
+      "equity": 9880.69
+    },
+    {
+      "at": 1784289976644,
+      "equity": 9880.69
+    },
+    {
+      "at": 1784290279471,
+      "equity": 9880.69
     }
   ],
   "trade-journal": [
@@ -489,5 +513,47 @@
   "alerted-trade-ids": [
     "c:XRPEUR:1784042069348:2",
     "c:LINKEUR:1784042069348:0"
-  ]
+  ],
+  "real-money-readiness": {
+    "ready": false,
+    "criteria": [
+      {
+        "key": "trades",
+        "ok": false,
+        "detail": "3 / 20 closed trades"
+      },
+      {
+        "key": "days",
+        "ok": false,
+        "detail": "1 / 14 days of history"
+      },
+      {
+        "key": "profitable",
+        "ok": false,
+        "detail": "after-fee return -1.19%"
+      },
+      {
+        "key": "benchmark",
+        "ok": true,
+        "detail": "vs buy-and-hold BTC +0.78%"
+      },
+      {
+        "key": "drawdown",
+        "ok": true,
+        "detail": "max drawdown 1.2% (limit 10%)"
+      },
+      {
+        "key": "consistency",
+        "ok": false,
+        "detail": "profit factor 0.00 (needs ≥ 1.2)"
+      }
+    ],
+    "summary": "NOT READY — 3 / 20 closed trades; 1 / 14 days of history; after-fee return -1.19%; profit factor 0.00 (needs ≥ 1.2).",
+    "unmet": [
+      "trades",
+      "days",
+      "profitable",
+      "consistency"
+    ]
+  }
 }
