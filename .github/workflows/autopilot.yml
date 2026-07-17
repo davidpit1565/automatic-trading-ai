@@ -35,10 +35,14 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
-    # Each run loops for ~4h50m (see LOOP_CYCLES); allow headroom under the 6h cap.
-    timeout-minutes: 355
+    # Short runs (see LOOP_CYCLES ≈ 30 min) so state is committed frequently:
+    # a run can never sit for hours holding un-persisted trades.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so the state commit can rebase onto an advanced main.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -53,11 +57,13 @@ jobs:
           # Variable to follow you when you travel (e.g. Europe/Brussels).
           # Defaults to Asia/Jerusalem when unset.
           SUMMARY_TIMEZONE: ${{ vars.SUMMARY_TIMEZONE }}
-          # 58 cycles × 5 min ≈ 4h50m of coverage per triggered run, so a
-          # single trigger bridges GitHub's multi-hour scheduler gaps. An
-          # external clock (cron-job.org) dispatches this every ~10 min for
-          # continuous, reliable timing — see docs/cloud-autopilot.he.md.
-          LOOP_CYCLES: '58'
+          # 6 cycles × 5 min ≈ 30 min of coverage per triggered run. Kept
+          # short on purpose: state is committed at the end of each run, so a
+          # short run means trades persist within ~30 min and can never be
+          # lost/re-alerted the way a multi-hour run could. The external clock
+          # (cron-job.org, ~every 10 min) plus the 30-min cron keep coverage
+          # continuous — see docs/cloud-autopilot.he.md.
+          LOOP_CYCLES: '6'
         run: npx tsx server/autopilotRunner.mts
       - name: Commit updated state
         run: |
@@ -66,7 +72,29 @@ jobs:
           git add state/autopilot-state.json
           if git diff --staged --quiet; then
             echo "No state change."
-          else
-            git commit -m "Autopilot state ${GITHUB_RUN_ID}"
-            git push
+            exit 0
           fi
+          git commit -m "Autopilot state ${GITHUB_RUN_ID}"
+          # main often advances mid-run (code merges, the Pages deploy, or a
+          # previous autopilot run). A plain push would then be REJECTED and
+          # the state would never land — so the next run re-loads stale state
+          # and re-processes/re-alerts the same trades. Rebase our single
+          # state-file commit onto the latest main (ours wins on the state
+          # file, which only this job writes) and retry with backoff so the
+          # state ALWAYS persists.
+          pushed=""
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              pushed="yes"
+              break
+            fi
+            echo "Push rejected — rebasing onto latest main (attempt $attempt)."
+            git fetch origin main || true
+            git rebase -X theirs origin/main || git rebase --abort || true
+            sleep $((attempt * 3))
+          done
+          if [ -z "$pushed" ]; then
+            echo "::error::Could not persist autopilot state after retries." >&2
+            exit 1
+          fi
+          echo "State persisted."

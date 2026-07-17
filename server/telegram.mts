@@ -29,6 +29,13 @@ function signedEuro(value: number): string {
   return `${value >= 0 ? '+' : '-'}€${Math.abs(value).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 }
 
+/** Human-readable trade quantity — never the raw 15-decimal float. */
+function formatQty(qty: number): string {
+  const abs = Math.abs(qty);
+  const maximumFractionDigits = abs >= 1000 ? 0 : abs >= 1 ? 2 : abs >= 0.01 ? 4 : 8;
+  return qty.toLocaleString('en-US', { maximumFractionDigits });
+}
+
 export interface DailySummaryPosition {
   readonly symbol: string;
   readonly marketValue: number;
@@ -213,7 +220,7 @@ export function buildCycleMessage(
   if (cycle.opened.length === 0 && cycle.closed.length === 0) return null;
   const lines: string[] = ['🤖 רובוט מסחר (כסף מדומה)'];
   for (const o of cycle.opened) {
-    let line = `🟢 קנייה ${o.symbol}: ${o.quantity} יח׳ במחיר ${euro(o.entry)}`;
+    let line = `🟢 קנייה ${o.symbol}: ${formatQty(o.quantity)} יח׳ במחיר ${euro(o.entry)}`;
     if (typeof o.confidence === 'number') line += ` · ביטחון ${o.confidence.toFixed(0)}%`;
     if (o.reasons && o.reasons.length > 0) {
       line += ` · ${o.reasons.map(driverHe).join(', ')}`;

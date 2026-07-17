@@ -27,12 +27,21 @@ import type { ExitReason } from '../position/tradeJournal';
 import { assessTrade } from '../risk/riskEngine';
 import { scanCandles, scanMarket, type ScanResult } from '../scan/marketScanner';
 import { applyHigherTimeframeGate } from '../signal/multiTimeframe';
-import { evaluateScan } from '../signal/signalEngine';
+import { DEFAULT_SIGNAL_CRITERIA, evaluateScan } from '../signal/signalEngine';
 import type { Timeframe } from '../types';
 import type { PersistedAuditLog } from './auditLog';
 import type { PersistedKillSwitch } from './killSwitch';
 
 const SCAN_CANDLES = 150;
+
+/**
+ * Conviction floor for autonomous entries (0..MAX_CONFIDENCE). A setup can
+ * clear the hard gates yet still be a near-coin-flip once its warnings/weak
+ * trend are priced in; below this the autopilot refuses to commit capital.
+ * Calibrated to keep decent setups (~20%+) while cutting the weak ones
+ * (~4–12%) that were producing churn and losses. Capital protection first.
+ */
+export const AUTOPILOT_MIN_CONFIDENCE = 20;
 
 export interface AutoPilotOptions {
   readonly source: MarketDataSource;
@@ -52,6 +61,11 @@ export interface AutoPilotOptions {
    * a real exchange so paper results predict live results. Default 0.
    */
   readonly costRate?: number;
+  /**
+   * Minimum signal confidence required to open (0..MAX_CONFIDENCE). Defaults
+   * to 0 (open any qualifying signal). Production sets AUTOPILOT_MIN_CONFIDENCE.
+   */
+  readonly minConfidence?: number;
   readonly clock?: () => number;
   /** Persists the desired running state so the autopilot survives reloads. */
   readonly store?: KeyValueStore;
@@ -68,6 +82,8 @@ export interface CycleResult {
   readonly timestamp: number;
   readonly halted: boolean;
   readonly opened: {
+    /** Stable position id — lets consumers de-duplicate repeated alerts. */
+    id?: string;
     symbol: string;
     quantity: number;
     entry: number;
@@ -76,7 +92,7 @@ export interface CycleResult {
     /** Short labels of the strongest reasons the entry was taken. */
     reasons?: string[];
   }[];
-  readonly closed: { symbol: string; reason: ExitReason; price: number }[];
+  readonly closed: { id?: string; symbol: string; reason: ExitReason; price: number }[];
   readonly skipped: { symbol: string; reason: string }[];
 }
 
@@ -209,7 +225,7 @@ export class PaperAutoPilot {
         fee: position.quantity * price * costRate,
       });
       if (exit.ok) {
-        closed.push({ symbol: position.symbol, reason, price });
+        closed.push({ id: position.id, symbol: position.symbol, reason, price });
         audit.append({
           timestamp,
           intentId: position.id,
@@ -245,8 +261,11 @@ export class PaperAutoPilot {
         skipped.push({ symbol: scanResult.symbol, reason: 'already holding a position' });
         continue;
       }
-      let decision = evaluateScan(scanResult);
-      if (decision.kind === 'rejected') continue; // no signal — nothing to audit
+      let decision = evaluateScan(scanResult, {
+        ...DEFAULT_SIGNAL_CRITERIA,
+        minConfidence: this.options.minConfidence ?? 0,
+      });
+      if (decision.kind === 'rejected') continue; // no signal / below floor — nothing to audit
 
       // Multi-timeframe confirmation: never open against the larger trend.
       if (this.options.confirmationTimeframe) {
@@ -304,6 +323,7 @@ export class PaperAutoPilot {
           .slice(0, 2)
           .map((c) => c.label);
         opened.push({
+          id: openedPosition.value.id,
           symbol: scanResult.symbol,
           quantity: openedPosition.value.quantity,
           entry: openedPosition.value.entryPrice,
