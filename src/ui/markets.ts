@@ -6,12 +6,51 @@
  */
 
 import type { ActiveDataSource } from './dataSource';
-import type { Timeframe } from '../core/types';
+import type { Candle, Result, Timeframe } from '../core/types';
 
 export interface PriceSeries {
   readonly points: { timestamp: number; value: number }[];
   readonly price: number;
   readonly changePct: number;
+}
+
+/** Reject a pending promise after `ms` so one slow request can't hang the UI. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timeout')), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      },
+    );
+  });
+}
+
+/**
+ * Fetch candles with a per-call timeout and one automatic retry. A transient
+ * slow/failed response no longer collapses the whole view to "unavailable" —
+ * this is the fix for the connection glitches on flaky mobile networks.
+ */
+async function resilientCandles(
+  data: ActiveDataSource,
+  symbol: string,
+  timeframe: Timeframe,
+  limit: number,
+): Promise<Result<Candle[]>> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await withTimeout(data.source.getCandles(symbol, timeframe, limit), 7000);
+      if (res.ok) return res;
+    } catch {
+      /* timeout or transient error — the next attempt retries */
+    }
+  }
+  return { ok: false, error: 'Market data temporarily unavailable' };
 }
 
 /** A time series of closes for a range, for the detail chart. */
@@ -21,7 +60,7 @@ export async function fetchSeries(
   timeframe: Timeframe,
   limit: number,
 ): Promise<PriceSeries | null> {
-  const candles = await data.source.getCandles(symbol, timeframe, limit);
+  const candles = await resilientCandles(data, symbol, timeframe, limit);
   if (!candles.ok || candles.value.length < 2) return null;
   const points = candles.value.map((c) => ({ timestamp: c.timestamp, value: c.close }));
   const price = points[points.length - 1]!.value;
@@ -73,7 +112,7 @@ export async function fetchSnapshot(
   label: string,
   count = 48,
 ): Promise<MarketSnapshot | null> {
-  const candles = await data.source.getCandles(symbol, '1h', count);
+  const candles = await resilientCandles(data, symbol, '1h', count);
   if (!candles.ok || candles.value.length < 2) return null;
   const closes = candles.value.map((c) => c.close);
   const price = closes[closes.length - 1]!;
@@ -82,13 +121,14 @@ export async function fetchSnapshot(
 }
 
 export async function fetchTopMarkets(data: ActiveDataSource, max = 6): Promise<MarketSnapshot[]> {
-  const results: MarketSnapshot[] = [];
-  for (const major of MAJORS) {
-    const symbol = symbolForBase(data, major.base);
-    if (!symbol) continue;
-    const snap = await fetchSnapshot(data, symbol, major.label);
-    if (snap) results.push(snap);
-    if (results.length >= max) break;
-  }
-  return results;
+  // Resolve the majors we actually have instruments for, then fetch them all
+  // concurrently — one slow coin no longer blocks the rest, and the list
+  // appears far faster on a phone. Order is preserved; failures are dropped.
+  const targets = MAJORS.map((major) => ({ major, symbol: symbolForBase(data, major.base) }))
+    .filter((t): t is { major: (typeof MAJORS)[number]; symbol: string } => t.symbol !== null)
+    .slice(0, max);
+  const snaps = await Promise.all(
+    targets.map((t) => fetchSnapshot(data, t.symbol, t.major.label)),
+  );
+  return snaps.filter((s): s is MarketSnapshot => s !== null);
 }

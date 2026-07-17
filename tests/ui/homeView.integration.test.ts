@@ -75,6 +75,36 @@ describe('Markets view (DOM integration)', () => {
     await waitFor(() => container.querySelector('.pchart, .detail-chart .empty') !== null);
     expect(container.querySelector('.detail-chart')).not.toBeNull();
   });
+
+  it('renders the live marker and a working crosshair tooltip on the detail chart', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderMarketsView(container, await makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+    (container.querySelector('.market-row') as HTMLButtonElement).click();
+    await waitFor(() => container.querySelector('svg.pchart') !== null);
+
+    // Current-price marker and crosshair scaffold exist.
+    expect(container.querySelector('.pchart-now')).not.toBeNull();
+    expect(container.querySelector('.pchart-cross')).not.toBeNull();
+    const tip = container.querySelector<HTMLElement>('.pchart-tip')!;
+    expect(tip.hidden).toBe(true);
+
+    // A pointer move over the chart reveals the tooltip with a price + time.
+    const svg = container.querySelector<SVGSVGElement>('svg.pchart')!;
+    svg.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, right: 380, bottom: 240, width: 380, height: 240, x: 0, y: 0, toJSON() {} }) as DOMRect;
+    svg.dispatchEvent(new MouseEvent('pointermove', { clientX: 190, bubbles: true }));
+
+    expect(tip.hidden).toBe(false);
+    expect(tip.querySelector('.pchart-tip-price')!.textContent).toContain('€');
+    expect(tip.querySelector('.pchart-tip-time')!.textContent!.length).toBeGreaterThan(0);
+    expect(container.querySelector('.pchart-cross')!.classList.contains('show')).toBe(true);
+
+    // Pointer leaving hides it again (crosshair is not left dangling).
+    svg.dispatchEvent(new MouseEvent('pointerleave', { bubbles: true }));
+    expect(tip.hidden).toBe(true);
+  });
 });
 
 describe('Value view (DOM integration)', () => {

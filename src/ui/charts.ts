@@ -45,17 +45,56 @@ export function sparklineSvg(
 }
 
 /**
- * A real price chart with a value axis (right) and a time axis (bottom),
- * gridlines and a gradient area — the shape users expect from a trading app.
- * Scales responsively via a fixed viewBox.
+ * Chart layout in viewBox units. The CSS `aspect-ratio` on `svg.pchart`
+ * matches `viewWidth / viewHeight`, so `preserveAspectRatio="xMidYMid meet"`
+ * never letterboxes — a view can map a pointer's CSS position to viewBox
+ * coordinates with a simple linear scale.
  */
-export function priceChartSvg(
+export const PRICE_CHART_PAD = {
+  left: 8,
+  right: 58,
+  top: 12,
+  bottom: 26,
+  viewWidth: 380,
+  viewHeight: 240,
+} as const;
+
+/**
+ * Pure geometry for the price chart, shared by the renderer and by any view
+ * that needs to place an interactive crosshair on top (single source of truth
+ * for the coordinate mapping, so the overlay always lines up with the line).
+ */
+export interface ChartGeometry {
+  readonly W: number;
+  readonly H: number;
+  readonly padL: number;
+  readonly padR: number;
+  readonly padT: number;
+  readonly padB: number;
+  readonly n: number;
+  /** Padded value range shown on the axis. */
+  readonly min: number;
+  readonly max: number;
+  /** X in viewBox units for data index `i`. */
+  readonly x: (i: number) => number;
+  /** Y in viewBox units for value `v`. */
+  readonly y: (v: number) => number;
+  /** Nearest data index for a horizontal fraction (0 = left edge, 1 = right). */
+  readonly indexAtFraction: (frac: number) => number;
+}
+
+export function chartGeometry(
   points: readonly ChartPoint[],
-  opts: { stroke: string; formatX: (ts: number) => string; formatY: (v: number) => string },
-): string {
-  if (points.length < 2) return '<div class="empty">Not enough history for this range yet.</div>';
-  const W = 380, H = 240, padL = 8, padR = 58, padT = 12, padB = 26;
-  const xAt = (i: number): number => padL + (i / (points.length - 1)) * (W - padL - padR);
+  width?: number,
+  height?: number,
+): ChartGeometry {
+  const W = width ?? PRICE_CHART_PAD.viewWidth;
+  const H = height ?? PRICE_CHART_PAD.viewHeight;
+  const padL = PRICE_CHART_PAD.left;
+  const padR = PRICE_CHART_PAD.right;
+  const padT = PRICE_CHART_PAD.top;
+  const padB = PRICE_CHART_PAD.bottom;
+  const n = points.length;
   const values = points.map((p) => p.value);
   let min = Math.min(...values);
   let max = Math.max(...values);
@@ -63,15 +102,44 @@ export function priceChartSvg(
   min -= margin;
   max += margin;
   const span = max - min || 1;
-  const yAt = (v: number): number => padT + (1 - (v - min) / span) * (H - padT - padB);
-  const line = points.map((p, i) => `${xAt(i).toFixed(1)},${yAt(p.value).toFixed(1)}`).join(' ');
-  const area = `${padL.toFixed(1)},${(H - padB).toFixed(1)} ${line} ${xAt(points.length - 1).toFixed(1)},${(H - padB).toFixed(1)}`;
+  const x = (i: number): number => padL + (n > 1 ? (i / (n - 1)) * (W - padL - padR) : 0);
+  const y = (v: number): number => padT + (1 - (v - min) / span) * (H - padT - padB);
+  const indexAtFraction = (frac: number): number => {
+    const clamped = Math.min(1, Math.max(0, frac));
+    const inner = (clamped * W - padL) / (W - padL - padR);
+    return Math.min(n - 1, Math.max(0, Math.round(inner * (n - 1))));
+  };
+  return { W, H, padL, padR, padT, padB, n, min, max, x, y, indexAtFraction };
+}
+
+/**
+ * A real price chart with a value axis (right) and a time axis (bottom),
+ * gridlines, a gradient area and a live current-price marker — the shape
+ * users expect from a trading app. Scales responsively via a fixed viewBox.
+ * Includes a hidden crosshair group (`.pchart-cross`) a view can reveal and
+ * move for interactive hover/touch inspection.
+ */
+export function priceChartSvg(
+  points: readonly ChartPoint[],
+  opts: {
+    stroke: string;
+    formatX: (ts: number) => string;
+    formatY: (v: number) => string;
+    width?: number;
+    height?: number;
+  },
+): string {
+  if (points.length < 2) return '<div class="empty">Not enough history for this range yet.</div>';
+  const geo = chartGeometry(points, opts.width, opts.height);
+  const { W, H, padL, padR, padB } = geo;
+  const line = points.map((p, i) => `${geo.x(i).toFixed(1)},${geo.y(p.value).toFixed(1)}`).join(' ');
+  const area = `${padL.toFixed(1)},${(H - padB).toFixed(1)} ${line} ${geo.x(points.length - 1).toFixed(1)},${(H - padB).toFixed(1)}`;
 
   let grid = '';
   const yTicks = 4;
   for (let k = 0; k <= yTicks; k++) {
-    const v = min + (span * k) / yTicks;
-    const y = yAt(v);
+    const v = geo.min + ((geo.max - geo.min) * k) / yTicks;
+    const y = geo.y(v);
     grid += `<line class="pgrid" x1="${padL}" y1="${y.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${y.toFixed(1)}"/>`;
     grid += `<text class="paxis" x="${(W - padR + 5).toFixed(1)}" y="${(y + 3).toFixed(1)}">${opts.formatY(v)}</text>`;
   }
@@ -79,17 +147,36 @@ export function priceChartSvg(
   const xTicks = Math.min(5, points.length);
   for (let k = 0; k < xTicks; k++) {
     const idx = Math.round((k * (points.length - 1)) / (xTicks - 1));
-    xlab += `<text class="paxis pxlab" x="${xAt(idx).toFixed(1)}" y="${H - 8}">${opts.formatX(points[idx]!.timestamp)}</text>`;
+    xlab += `<text class="paxis pxlab" x="${geo.x(idx).toFixed(1)}" y="${H - 8}">${opts.formatX(points[idx]!.timestamp)}</text>`;
   }
-  const uid = `pg${Math.round(points[0]!.value)}`;
+
+  const lastX = geo.x(points.length - 1);
+  const lastY = geo.y(points[points.length - 1]!.value);
+  const nowLabel = opts.formatY(points[points.length - 1]!.value);
+  const uid = `pg${Math.round(points[0]!.value)}${points.length}`;
+  const marker = `
+    <line class="pchart-now-line" x1="${padL}" y1="${lastY.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${lastY.toFixed(1)}"/>
+    <g class="pchart-now-tag" transform="translate(${(W - padR + 1).toFixed(1)}, ${lastY.toFixed(1)})">
+      <rect x="0" y="-7.5" width="${(padR - 2).toFixed(1)}" height="15" rx="3" fill="${opts.stroke}"/>
+      <text x="${((padR - 2) / 2).toFixed(1)}" y="3.5" text-anchor="middle" class="pchart-now-text">${nowLabel}</text>
+    </g>
+    <circle class="pchart-now" cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="3.5" fill="${opts.stroke}"/>`;
+  const crosshair = `
+    <g class="pchart-cross" hidden>
+      <line class="pchart-cross-line" x1="${lastX.toFixed(1)}" y1="${geo.padT}" x2="${lastX.toFixed(1)}" y2="${(H - padB).toFixed(1)}"/>
+      <circle class="pchart-cross-dot" cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="4" fill="${opts.stroke}"/>
+    </g>`;
+
   return `<svg class="pchart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="price chart">
     <defs><linearGradient id="${uid}" x1="0" x2="0" y1="0" y2="1">
       <stop offset="0%" stop-color="${opts.stroke}" stop-opacity="0.28"/>
       <stop offset="100%" stop-color="${opts.stroke}" stop-opacity="0"/></linearGradient></defs>
     ${grid}
     <polygon fill="url(#${uid})" points="${area}"/>
-    <polyline fill="none" stroke="${opts.stroke}" stroke-width="2" stroke-linejoin="round" points="${line}"/>
+    <polyline fill="none" stroke="${opts.stroke}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${line}"/>
     ${xlab}
+    ${marker}
+    ${crosshair}
   </svg>`;
 }
 
