@@ -8,6 +8,7 @@
  */
 
 import type { CycleResult } from '../src/core/autopilot/paperAutoPilot';
+import type { ReadinessKey, RealMoneyReadiness } from '../src/core/feedback/realMoneyReadiness';
 
 export interface TelegramConfig {
   token: string;
@@ -62,8 +63,39 @@ export interface DailySummaryInput {
   readonly openedLast24h: number;
   readonly closedLast24h: number;
   readonly benchmark?: DailySummaryBenchmark | null;
+  /** Honest real-money readiness verdict, shown as one line. */
+  readonly readiness?: RealMoneyReadiness | null;
   /** Optional first line, e.g. a morning/evening greeting. */
   readonly heading?: string;
+}
+
+/** Short Hebrew phrase for an unmet readiness criterion. */
+function readinessReasonHe(key: ReadinessKey): string {
+  switch (key) {
+    case 'trades':
+      return 'צריך עוד עסקאות';
+    case 'days':
+      return 'צריך עוד זמן מעקב';
+    case 'profitable':
+      return 'עדיין לא רווחי אחרי עמלות';
+    case 'benchmark':
+      return 'עדיין לא מנצח החזקת ביטקוין';
+    case 'drawdown':
+      return 'ירידה זמנית גדולה מדי';
+    case 'consistency':
+      return 'עקביות עדיין לא מספקת';
+    default:
+      return 'עוד בבדיקה';
+  }
+}
+
+/** One honest Hebrew line: is the paper record ready for real money yet? */
+export function readinessLineHe(readiness: RealMoneyReadiness): string {
+  if (readiness.ready) {
+    return '💶 מוכנות לכסף אמיתי: ✅ מוכן — עבר את כל בדיקות הבטיחות (לא הבטחה לרווח).';
+  }
+  const reasons = readiness.unmet.map(readinessReasonHe).join(', ');
+  return `💶 מוכנות לכסף אמיתי: ❌ עדיין לא — ${reasons}. (עדיין כסף מדומה — מגן על הכסף)`;
 }
 
 /**
@@ -97,6 +129,9 @@ export function buildDailySummary(input: DailySummaryInput): string {
   }
   if (input.openedLast24h === 0 && input.closedLast24h === 0) {
     lines.push('🛡️ אין עסקאות כרגע — ממתין להזדמנות טובה ומגן על הכסף. הכול תקין.');
+  }
+  if (input.readiness) {
+    lines.push(readinessLineHe(input.readiness));
   }
   return lines.join('\n');
 }

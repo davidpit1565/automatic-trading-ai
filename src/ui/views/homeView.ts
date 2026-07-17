@@ -47,6 +47,9 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     <div class="hero-bench" id="hv-bench" hidden></div>
   `;
 
+  const readyWrap = el('section', 'block readiness');
+  readyWrap.id = 'home-readiness';
+
   const marketsWrap = el('section', 'block');
   marketsWrap.innerHTML = `<div class="block-head"><h2>Markets</h2><button class="link-btn" data-nav="markets">See all</button></div>`;
   const marketsStrip = el('div', 'markets-strip');
@@ -68,7 +71,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   const status = el('p', 'muted-line', 'Loading the cloud robot…');
   status.id = 'home-status';
 
-  container.append(hero, marketsWrap, posWrap, actWrap, status);
+  container.append(hero, readyWrap, marketsWrap, posWrap, actWrap, status);
 
   let state: CloudState | null = null;
 
@@ -114,6 +117,26 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
           <span class="chg ${up ? 'up' : 'down'}">${formatPct(movePct)}</span></div>`;
       posList.appendChild(row);
     }
+  }
+
+  function renderReadiness(): void {
+    const r = state?.readiness ?? null;
+    if (!r) {
+      readyWrap.innerHTML =
+        `<div class="block-head"><h2>Real-money readiness</h2></div>` +
+        `<div class="empty">Assessing the paper track record…</div>`;
+      return;
+    }
+    const badge = r.ready
+      ? `<span class="ready-badge go">READY</span>`
+      : `<span class="ready-badge no">NOT READY</span>`;
+    const items = r.criteria
+      .map((c) => `<li class="${c.ok ? 'ok' : 'no'}">${c.ok ? '✓' : '✗'} ${c.detail}</li>`)
+      .join('');
+    readyWrap.innerHTML =
+      `<div class="block-head"><h2>Real-money readiness</h2>${badge}</div>` +
+      `<p class="readiness-note">Is the SIMULATED record strong enough to risk real money yet? A checklist, not a profit promise.</p>` +
+      `<ul class="readiness-list">${items}</ul>`;
   }
 
   function renderActivity(): void {
@@ -169,6 +192,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     const fresh = await fetchCloudState();
     if (fresh) {
       state = fresh;
+      renderReadiness();
       renderActivity();
       await refreshPrices();
     } else if (!state) {
@@ -180,6 +204,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     renderMarkets(await fetchTopMarkets(data, 6));
   }
 
+  renderReadiness();
   void loadState();
   void loadMarkets();
   window.setInterval(() => void refreshPrices(), PRICE_REFRESH_MS);
