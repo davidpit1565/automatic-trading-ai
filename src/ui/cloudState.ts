@@ -67,6 +67,16 @@ function parseTrade(timestamp: number, detail: string): CloudTrade | null {
 export async function fetchCloudState(
   fetchFn: typeof fetch = (input, init) => fetch(input, init),
 ): Promise<CloudState | null> {
+  // One automatic retry: a single transient failure no longer flashes
+  // "couldn't reach the cloud robot" on the value/history pages.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const state = await fetchCloudStateOnce(fetchFn);
+    if (state) return state;
+  }
+  return null;
+}
+
+async function fetchCloudStateOnce(fetchFn: typeof fetch): Promise<CloudState | null> {
   try {
     const response = await fetchFn(`${STATE_URL}?t=${Date.now()}`, { cache: 'no-store' });
     if (!response.ok) return null;

@@ -707,9 +707,35 @@ button.secondary {
 .range-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
   border-radius: 9px; padding: 0.4rem 0.75rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; flex: 0 0 auto; }
 .range-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-.detail-chart svg.pchart { width: 100%; height: auto; aspect-ratio: 380 / 240; }
-.pchart .pgrid { stroke: var(--border); stroke-width: 1; opacity: 0.55; }
+.detail-chart svg.pchart { width: 100%; height: auto; aspect-ratio: 380 / 240; touch-action: none; }
+.pchart .pgrid { stroke: var(--border); stroke-width: 1; opacity: 0.5; }
 .pchart .paxis { fill: var(--text-dim); font-size: 9px; font-family: inherit; }
 .pchart .pxlab { text-anchor: middle; }
+
+/* Live current-price marker */
+.pchart .pchart-now-line { stroke: currentColor; stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.4; }
+.pchart .pchart-now-text { fill: #fff; font-size: 9px; font-weight: 700; font-family: inherit; }
+.pchart .pchart-now { animation: pchart-pulse 1.8s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes pchart-pulse { 0% { opacity: 1; } 50% { opacity: 0.35; } 100% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pchart .pchart-now { animation: none; } }
+
+/* Interactive crosshair (revealed on hover/touch) */
+.pchart .pchart-cross { display: none; pointer-events: none; }
+.pchart .pchart-cross.show { display: inline; }
+.pchart .pchart-cross-line { stroke: var(--text-dim); stroke-width: 1; stroke-dasharray: 2 3; }
+.pchart .pchart-cross-dot { stroke: #fff; stroke-width: 1.5; }
+
+/* Chart wrapper + floating tooltip */
+.pchart-wrap { position: relative; }
+.pchart-tip {
+  position: absolute; transform: translate(-50%, calc(-100% - 10px));
+  background: var(--surface-raised); border: 1px solid var(--border);
+  border-radius: 8px; padding: 0.3rem 0.5rem; pointer-events: none;
+  display: flex; flex-direction: column; gap: 0.05rem; white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); z-index: 2;
+}
+.pchart-tip[hidden] { display: none; }
+.pchart-tip-price { font-weight: 700; font-size: 0.85rem; }
+.pchart-tip-time { color: var(--text-dim); font-size: 0.7rem; }
 
 .hero-more { float: left; color: var(--accent); font-size: 0.8rem; font-weight: 600; }
