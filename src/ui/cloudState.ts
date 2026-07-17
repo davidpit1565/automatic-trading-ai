@@ -28,6 +28,18 @@ export interface CloudTrade {
   readonly note: string | null;
 }
 
+/** One real-money-readiness check, e.g. "3 / 20 closed trades". */
+export interface CloudReadinessCriterion {
+  readonly key: string;
+  readonly ok: boolean;
+  readonly detail: string;
+}
+export interface CloudReadiness {
+  readonly ready: boolean;
+  readonly summary: string;
+  readonly criteria: CloudReadinessCriterion[];
+}
+
 export interface CloudState {
   readonly cash: number;
   readonly initialCash: number;
@@ -39,6 +51,8 @@ export interface CloudState {
   readonly benchmark: { btc: number; equity: number } | null;
   /** Portfolio value over time (oldest→newest), for the value chart. */
   readonly equityHistory: { at: number; equity: number }[];
+  /** Honest real-money readiness verdict, or null if not computed yet. */
+  readonly readiness: CloudReadiness | null;
 }
 
 interface RawState {
@@ -48,6 +62,11 @@ interface RawState {
   'autopilot-last-run'?: { at?: number };
   'benchmark-anchor'?: { btc?: number; equity?: number };
   'equity-history'?: Array<{ at: number; equity: number }>;
+  'real-money-readiness'?: {
+    ready?: boolean;
+    summary?: string;
+    criteria?: Array<{ key?: string; ok?: boolean; detail?: string }>;
+  };
 }
 
 /** Parse "paper entry/exit SYMBOL: qty @ price (note)" into a trade. */
@@ -96,6 +115,19 @@ async function fetchCloudStateOnce(fetchFn: typeof fetch): Promise<CloudState | 
       .sort((a, b) => b.at - a.at);
 
     const anchor = raw['benchmark-anchor'];
+    const rawReadiness = raw['real-money-readiness'];
+    const readiness: CloudReadiness | null =
+      rawReadiness && typeof rawReadiness.ready === 'boolean'
+        ? {
+            ready: rawReadiness.ready,
+            summary: rawReadiness.summary ?? '',
+            criteria: (rawReadiness.criteria ?? []).map((c) => ({
+              key: c.key ?? '',
+              ok: c.ok === true,
+              detail: c.detail ?? '',
+            })),
+          }
+        : null;
     return {
       cash: pe.cash ?? 0,
       initialCash: pe.initialCash ?? 10_000,
@@ -106,6 +138,7 @@ async function fetchCloudStateOnce(fetchFn: typeof fetch): Promise<CloudState | 
       benchmark:
         anchor && anchor.btc && anchor.equity ? { btc: anchor.btc, equity: anchor.equity } : null,
       equityHistory: Array.isArray(raw['equity-history']) ? raw['equity-history'] : [],
+      readiness,
     };
   } catch {
     return null;

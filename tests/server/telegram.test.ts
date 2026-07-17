@@ -6,7 +6,8 @@
 import { describe, expect, it } from 'vitest';
 // prettier-ignore
 // @ts-expect-error plain-TS server module run via tsx; imported directly in tests
-import { buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildTestMessage, sendTelegramMessage } from '../../server/telegram.mts';
+import { buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildTestMessage, readinessLineHe, sendTelegramMessage } from '../../server/telegram.mts';
+import { assessRealMoneyReadiness, READINESS_THRESHOLDS } from '../../src/core/feedback/realMoneyReadiness';
 
 describe('buildPeriodReport', () => {
   const base = { title: 'שבועי', equity: 10_200, tradesCount: 0, wins: 0, losses: 0, bestPct: null, worstPct: null };
@@ -183,6 +184,48 @@ describe('buildCycleMessage', () => {
     });
     expect(msg).toContain('BTC-EUR');
     expect(msg).toContain('ETH-EUR');
+  });
+});
+
+describe('real-money readiness line', () => {
+  it('says NOT READY with reasons when the record is thin/negative', () => {
+    const readiness = assessRealMoneyReadiness({
+      closedTrades: 1,
+      profitFactor: null,
+      realizedReturnPct: -0.5,
+      maxDrawdownPct: 2,
+      vsBenchmarkPct: 0.1,
+      daysRunning: 3,
+    });
+    const line = readinessLineHe(readiness);
+    expect(line).toContain('❌');
+    expect(line).toContain('כסף אמיתי');
+    // A real reason is surfaced (still simulated, protecting the money).
+    expect(line).toContain('כסף מדומה');
+  });
+
+  it('says READY once every threshold passes', () => {
+    const readiness = assessRealMoneyReadiness({
+      closedTrades: READINESS_THRESHOLDS.minClosedTrades,
+      profitFactor: 2,
+      realizedReturnPct: 6,
+      maxDrawdownPct: 3,
+      vsBenchmarkPct: 3,
+      daysRunning: 40,
+    });
+    expect(readinessLineHe(readiness)).toContain('✅');
+  });
+
+  it('appears in the daily summary when provided', () => {
+    const readiness = assessRealMoneyReadiness({
+      closedTrades: 1, profitFactor: null, realizedReturnPct: -0.5,
+      maxDrawdownPct: 2, vsBenchmarkPct: 0.1, daysRunning: 3,
+    });
+    const msg = buildDailySummary({
+      equity: 9_954, cash: 5_954, totalReturnPct: -0.46, realizedPnl: -45.57,
+      unrealizedPnl: 0, positions: [], openedLast24h: 0, closedLast24h: 0, readiness,
+    });
+    expect(msg).toContain('מוכנות לכסף אמיתי');
   });
 });
 

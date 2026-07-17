@@ -22,6 +22,11 @@ import { PortfolioEngine } from '../src/core/position/portfolioEngine';
 import { TradeJournal } from '../src/core/position/tradeJournal';
 import { DailyLossTracker } from '../src/core/risk/dailyLoss';
 import { DEFAULT_RISK_LIMITS } from '../src/core/risk/riskEngine';
+import { tradeAnalytics } from '../src/core/position/analytics';
+import {
+  assessRealMoneyReadiness,
+  type RealMoneyReadiness,
+} from '../src/core/feedback/realMoneyReadiness';
 import { FileStore } from './fileStore.mts';
 import {
   buildAllClearMessage,
@@ -274,7 +279,7 @@ async function runCycle(
   }
 
   await maybeSendMoveAlerts(store, source, portfolio, telegram);
-  await recordEquity(store, source, portfolio, now);
+  await recordEquity(store, source, portfolio, journal, now);
   await maybeSendSummaries(store, source, portfolio, journal, telegram, now);
   await maybeSendPeriodicReports(store, source, portfolio, journal, telegram, now);
   await maybeSendAllClear(store, telegram, now);
@@ -285,12 +290,18 @@ const EQUITY_HISTORY_CAP = 5000;
 /** Position ids already announced via Telegram, so alerts never repeat. */
 const ALERTED_TRADES_KEY = 'alerted-trade-ids';
 const ALERTED_TRADES_CAP = 500;
+/** Stored real-money readiness verdict, so the app + digest can show it. */
+const READINESS_KEY = 'real-money-readiness';
 
-/** Append a portfolio-value point each cycle so the app can chart it over time. */
+/**
+ * Append a portfolio-value point each cycle (for the app's value chart) and
+ * refresh the honest real-money readiness verdict from the trade journal.
+ */
 async function recordEquity(
   store: FileStore,
   source: MarketDataSource,
   portfolio: PortfolioEngine,
+  journal: TradeJournal,
   now: number,
 ): Promise<void> {
   const open = portfolio.openPositions();
@@ -300,11 +311,25 @@ async function recordEquity(
   );
   const equity = portfolio.snapshot(prices, now).equity;
   const history = store.get<Array<{ at: number; equity: number }>>(EQUITY_HISTORY_KEY) ?? [];
+  const firstAt = history[0]?.at ?? now;
   history.push({ at: now, equity: Math.round(equity * 100) / 100 });
   store.set(
     EQUITY_HISTORY_KEY,
     history.length > EQUITY_HISTORY_CAP ? history.slice(-EQUITY_HISTORY_CAP) : history,
   );
+
+  // Honest real-money readiness: purely from the (after-fee) journal record.
+  const analytics = tradeAnalytics(journal.entries(), { initialCash: INITIAL_CASH });
+  const benchmark = await computeBenchmark(store, source, equity, now);
+  const readiness = assessRealMoneyReadiness({
+    closedTrades: analytics.tradeCount,
+    profitFactor: analytics.profitFactor,
+    realizedReturnPct: (analytics.totalPnl / INITIAL_CASH) * 100,
+    maxDrawdownPct: analytics.maxDrawdownPct,
+    vsBenchmarkPct: benchmark ? benchmark.portfolioPct - benchmark.assetPct : null,
+    daysRunning: (now - firstAt) / DAY_MS,
+  });
+  store.set(READINESS_KEY, readiness);
 }
 
 /**
@@ -390,6 +415,7 @@ async function maybeSendSummaries(
     openedLast24h: open.filter((p) => p.openedAt >= since).length,
     closedLast24h: journal.entries().filter((e) => e.exitTimestamp >= since).length,
     benchmark,
+    readiness: store.get<RealMoneyReadiness>(READINESS_KEY) ?? null,
   };
 
   for (const slot of dueSlots) {

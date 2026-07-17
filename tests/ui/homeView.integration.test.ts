@@ -51,6 +51,37 @@ describe('Home view (DOM integration)', () => {
     await waitFor(() => container.querySelector('.market-card, #home-markets .empty') !== null);
     expect(container.querySelector('#home-markets')!.children.length).toBeGreaterThan(0);
   });
+
+  it('renders the real-money readiness card from cloud state', async () => {
+    const raw = {
+      'portfolio-engine': { cash: 5954, initialCash: 10000, baseCurrency: 'EUR' },
+      'open-positions': [],
+      'audit-log': [],
+      'equity-history': [],
+      'real-money-readiness': {
+        ready: false,
+        summary: 'NOT READY — 1 / 20 closed trades; after-fee return -0.46%.',
+        criteria: [
+          { key: 'trades', ok: false, detail: '1 / 20 closed trades' },
+          { key: 'profitable', ok: false, detail: 'after-fee return -0.46%' },
+          { key: 'drawdown', ok: true, detail: 'max drawdown 2.0% (limit 10%)' },
+        ],
+      },
+    };
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: true, json: () => Promise.resolve(raw) }));
+
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderHomeView(container, await makeData());
+
+    await waitFor(() => container.querySelector('#home-readiness .readiness-list') !== null);
+    const card = container.querySelector('#home-readiness')!;
+    expect(card.textContent).toContain('Real-money readiness');
+    expect(card.querySelector('.ready-badge.no')).not.toBeNull();
+    expect(card.querySelectorAll('.readiness-list li').length).toBe(3);
+    expect(card.querySelector('.readiness-list li.ok')).not.toBeNull();
+    expect(card.querySelector('.readiness-list li.no')).not.toBeNull();
+  });
 });
 
 describe('Markets view (DOM integration)', () => {
