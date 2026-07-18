@@ -17,7 +17,11 @@ import { CoinbasePublicSource } from '../src/core/data/coinbasePublic';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import { PersistedAuditLog } from '../src/core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../src/core/autopilot/killSwitch';
-import { AUTOPILOT_MIN_CONFIDENCE, PaperAutoPilot } from '../src/core/autopilot/paperAutoPilot';
+import {
+  AUTOPILOT_MAX_RSI_FOR_LONG,
+  AUTOPILOT_MIN_CONFIDENCE,
+  PaperAutoPilot,
+} from '../src/core/autopilot/paperAutoPilot';
 import { PositionEngine } from '../src/core/position/positionEngine';
 import { PortfolioEngine } from '../src/core/position/portfolioEngine';
 import { TradeJournal } from '../src/core/position/tradeJournal';
@@ -214,6 +218,8 @@ async function main(): Promise<void> {
     // Only commit capital to setups with real conviction — refuses the weak
     // ~4–12% signals that were producing churn and losses.
     minConfidence: AUTOPILOT_MIN_CONFIDENCE,
+    // Don't chase overbought coins (measured to roughly double profit factor).
+    maxRsiForLong: AUTOPILOT_MAX_RSI_FOR_LONG,
   });
 
   const telegram = {
