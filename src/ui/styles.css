@@ -712,6 +712,24 @@ button.secondary {
 .pchart .paxis { fill: var(--text-dim); font-size: 9px; font-family: inherit; }
 .pchart .pxlab { text-anchor: middle; }
 
+/* Line / Candles chart-type toggle */
+.chart-controls { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+.chart-controls .range-bar { flex: 1 1 auto; }
+.chart-toggle { display: inline-flex; gap: 0.25rem; flex: 0 0 auto; }
+.ctoggle-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+  border-radius: 9px; padding: 0.4rem 0.7rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+.ctoggle-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* Candlestick chart: green up / red down bodies + wicks */
+.pcandle .pcandle-wick { stroke-width: 1; }
+.pcandle .pcandle-body { stroke-width: 0; }
+.pcandle.up .pcandle-wick, .pcandle.up .pcandle-body { stroke: var(--hot); fill: var(--hot); }
+.pcandle.down .pcandle-wick, .pcandle.down .pcandle-body { stroke: var(--cold); fill: var(--cold); }
+/* Neutral-accent live marker + crosshair dot in candle mode (bodies carry colour). */
+.pcandle-chart .pchart-now, .pcandle-chart .pchart-cross-dot { fill: var(--accent); }
+.pcandle-chart .pchart-now-tag rect { fill: var(--accent); }
+.pchart-tip-ohlc { color: var(--text-dim); font-size: 0.65rem; }
+
 /* Live current-price marker */
 .pchart .pchart-now-line { stroke: currentColor; stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.4; }
 .pchart .pchart-now-text { fill: #fff; font-size: 9px; font-weight: 700; font-family: inherit; }

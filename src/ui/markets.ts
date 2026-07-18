@@ -68,6 +68,26 @@ export async function fetchSeries(
   return { points, price, changePct: first > 0 ? ((price - first) / first) * 100 : 0 };
 }
 
+export interface CandleSeries {
+  readonly candles: Candle[];
+  readonly price: number;
+  readonly changePct: number;
+}
+
+/** Raw OHLC candles for a range, for the professional candlestick detail chart. */
+export async function fetchCandleSeries(
+  data: ActiveDataSource,
+  symbol: string,
+  timeframe: Timeframe,
+  limit: number,
+): Promise<CandleSeries | null> {
+  const candles = await resilientCandles(data, symbol, timeframe, limit);
+  if (!candles.ok || candles.value.length < 2) return null;
+  const price = candles.value[candles.value.length - 1]!.close;
+  const first = candles.value[0]!.close;
+  return { candles: candles.value, price, changePct: first > 0 ? ((price - first) / first) * 100 : 0 };
+}
+
 export interface MarketSnapshot {
   readonly symbol: string;
   readonly label: string;

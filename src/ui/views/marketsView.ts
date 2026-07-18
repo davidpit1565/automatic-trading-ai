@@ -8,8 +8,15 @@
 
 import type { ActiveDataSource } from '../dataSource';
 import type { Timeframe } from '../../core/types';
-import { fetchTopMarkets, fetchSeries, type MarketSnapshot } from '../markets';
-import { sparklineSvg, priceChartSvg, chartGeometry } from '../charts';
+import { fetchTopMarkets, fetchSeries, fetchCandleSeries, type MarketSnapshot } from '../markets';
+import {
+  sparklineSvg,
+  priceChartSvg,
+  candleChartSvg,
+  chartGeometry,
+  candleGeometry,
+  type ChartGeometry,
+} from '../charts';
 import { startLivePrice } from '../liveTicker';
 import { formatPrice, formatPct } from '../format';
 
@@ -104,22 +111,81 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     detailView.hidden = false;
     let coin = index;
     let rangeKey = '1D';
+    // Candles by default; the choice persists across range/coin changes while
+    // this detail stays open.
+    let chartMode: 'candle' | 'line' = 'candle';
 
     const paint = async (): Promise<void> => {
       stopLivePrice();
       const m = markets[coin]!;
       const range = RANGES.find((r) => r.key === rangeKey)!;
-      const series = await fetchSeries(data, m.symbol, range.tf, range.limit);
-      const price = series?.price ?? m.price;
-      const changePct = series?.changePct ?? 0;
+
+      let chart: string;
+      let price: number;
+      let changePct: number;
+      let wire: (() => void) | null = null;
+
+      if (chartMode === 'candle') {
+        const series = await fetchCandleSeries(data, m.symbol, range.tf, range.limit);
+        price = series?.price ?? m.price;
+        changePct = series?.changePct ?? 0;
+        chart = series
+          ? candleChartSvg(series.candles, { formatX: range.fx, formatY: (v) => `€${formatPrice(v)}` })
+          : '<div class="empty">No history for this range yet.</div>';
+        if (series) {
+          const candles = series.candles;
+          const geo = candleGeometry(candles);
+          wire = (): void =>
+            wireChart({
+              geo,
+              symbol: m.symbol,
+              range,
+              firstValue: candles[0]!.close,
+              valueAt: (idx) => candles[idx]!.close,
+              tipHtml: (idx) => {
+                const c = candles[idx]!;
+                return (
+                  `<span class="pchart-tip-price">€${formatPrice(c.close)}</span>` +
+                  `<span class="pchart-tip-ohlc">O €${formatPrice(c.open)} · H €${formatPrice(c.high)} · L €${formatPrice(c.low)} · C €${formatPrice(c.close)}</span>` +
+                  `<span class="pchart-tip-time">${tipStamp(c.timestamp, range.tf)}</span>`
+                );
+              },
+            });
+        }
+      } else {
+        const series = await fetchSeries(data, m.symbol, range.tf, range.limit);
+        price = series?.price ?? m.price;
+        changePct = series?.changePct ?? 0;
+        const up = changePct >= 0;
+        chart = series
+          ? priceChartSvg(series.points, {
+              stroke: up ? HOT : COLD,
+              formatX: range.fx,
+              formatY: (v) => `€${formatPrice(v)}`,
+            })
+          : '<div class="empty">No history for this range yet.</div>';
+        if (series) {
+          const points = series.points;
+          const geo = chartGeometry(points);
+          wire = (): void =>
+            wireChart({
+              geo,
+              symbol: m.symbol,
+              range,
+              firstValue: points[0]!.value,
+              valueAt: (idx) => points[idx]!.value,
+              tipHtml: (idx) => {
+                const pt = points[idx]!;
+                return (
+                  `<span class="pchart-tip-price">€${formatPrice(pt.value)}</span>` +
+                  `<span class="pchart-tip-time">${tipStamp(pt.timestamp, range.tf)}</span>`
+                );
+              },
+            });
+        }
+      }
+
       const up = changePct >= 0;
-      const chart = series
-        ? priceChartSvg(series.points, {
-            stroke: up ? HOT : COLD,
-            formatX: range.fx,
-            formatY: (v) => `€${formatPrice(v)}`,
-          })
-        : '<div class="empty">No history for this range yet.</div>';
       const rangeBar = RANGES.map(
         (r) => `<button class="range-btn ${r.key === rangeKey ? 'active' : ''}" data-range="${r.key}">${r.key}</button>`,
       ).join('');
@@ -131,7 +197,13 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
           <div class="detail-price"><div class="row-title big" id="mk-price">€${formatPrice(price)}</div>
             <div class="chg ${up ? 'up' : 'down'}" id="mk-change">${formatPct(changePct)} · ${rangeKey}</div></div>
         </div>
-        <div class="range-bar">${rangeBar}</div>
+        <div class="chart-controls">
+          <div class="range-bar">${rangeBar}</div>
+          <div class="chart-toggle">
+            <button class="ctoggle-btn ${chartMode === 'candle' ? 'active' : ''}" data-mode="candle">Candles</button>
+            <button class="ctoggle-btn ${chartMode === 'line' ? 'active' : ''}" data-mode="line">Line</button>
+          </div>
+        </div>
         <div class="detail-chart"><div class="pchart-wrap">${chart}<div class="pchart-tip" hidden></div></div></div>
         <div class="detail-nav">
           <button class="pager" id="mk-prev" ${coin === 0 ? 'disabled' : ''}>‹ Prev</button>
@@ -145,20 +217,38 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       detailView.querySelectorAll<HTMLButtonElement>('.range-btn').forEach((b) => {
         b.addEventListener('click', () => { rangeKey = b.dataset['range']!; void paint(); });
       });
+      detailView.querySelectorAll<HTMLButtonElement>('.ctoggle-btn').forEach((b) => {
+        b.addEventListener('click', () => {
+          const mode = b.dataset['mode'];
+          if (mode === 'candle' || mode === 'line') { chartMode = mode; void paint(); }
+        });
+      });
 
-      if (series) wireChart(series.points, range, m.symbol);
+      if (wire) wire();
     };
 
-    /** Crosshair + tooltip interaction and the live current-price marker. */
-    const wireChart = (
-      points: { timestamp: number; value: number }[],
-      range: Range,
-      symbol: string,
-    ): void => {
+    /**
+     * Crosshair + tooltip interaction and the live current-price marker, shared
+     * by line and candle modes. The caller supplies a `geo` (from
+     * `chartGeometry` for closes, or `candleGeometry` for candles — both use the
+     * same viewBox/padding), a value accessor for the crosshair dot, and the
+     * tooltip markup for the hovered index. This is why the crosshair and the
+     * live marker keep working unchanged with candles: the pointer→viewBox
+     * mapping and `geo.y(price)` marker math are identical, only the data the
+     * geometry is built from (and the tooltip contents) differ.
+     */
+    const wireChart = (cfg: {
+      geo: ChartGeometry;
+      symbol: string;
+      range: Range;
+      firstValue: number;
+      valueAt: (idx: number) => number;
+      tipHtml: (idx: number) => string;
+    }): void => {
       const svg = detailView.querySelector<SVGSVGElement>('svg.pchart');
       const tip = detailView.querySelector<HTMLElement>('.pchart-tip');
       if (!svg || !tip) return;
-      const geo = chartGeometry(points);
+      const geo = cfg.geo;
       const cross = svg.querySelector<SVGElement>('.pchart-cross');
       const crossLine = svg.querySelector<SVGLineElement>('.pchart-cross-line');
       const crossDot = svg.querySelector<SVGCircleElement>('.pchart-cross-dot');
@@ -167,9 +257,8 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         const rect = svg.getBoundingClientRect();
         if (rect.width <= 0) return;
         const idx = geo.indexAtFraction((clientX - rect.left) / rect.width);
-        const pt = points[idx]!;
         const px = geo.x(idx);
-        const py = geo.y(pt.value);
+        const py = geo.y(cfg.valueAt(idx));
         if (crossLine) {
           crossLine.setAttribute('x1', px.toFixed(1));
           crossLine.setAttribute('x2', px.toFixed(1));
@@ -180,9 +269,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         }
         cross?.classList.add('show');
         tip.hidden = false;
-        tip.innerHTML =
-          `<span class="pchart-tip-price">€${formatPrice(pt.value)}</span>` +
-          `<span class="pchart-tip-time">${tipStamp(pt.timestamp, range.tf)}</span>`;
+        tip.innerHTML = cfg.tipHtml(idx);
         // The CSS aspect-ratio matches the viewBox, so viewBox→% is linear.
         tip.style.left = `${(px / geo.W) * 100}%`;
         tip.style.top = `${(py / geo.H) * 100}%`;
@@ -198,8 +285,8 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
 
       // Live current-price marker: move the right-edge dot/line/pill and the
       // headline as fresh prices arrive — no full re-render, so no flicker.
-      const first = points[0]!.value;
-      stopLive = startLivePrice(data, symbol, (tick) => {
+      const first = cfg.firstValue;
+      stopLive = startLivePrice(data, cfg.symbol, (tick) => {
         const price = tick.price;
         const priceEl = detailView.querySelector<HTMLElement>('#mk-price');
         if (priceEl) priceEl.textContent = `€${formatPrice(price)}`;
@@ -207,7 +294,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         const chgEl = detailView.querySelector<HTMLElement>('#mk-change');
         if (chgEl) {
           chgEl.className = `chg ${chg >= 0 ? 'up' : 'down'}`;
-          chgEl.textContent = `${formatPct(chg)} · ${range.key}`;
+          chgEl.textContent = `${formatPct(chg)} · ${cfg.range.key}`;
         }
         const y = Math.max(geo.padT, Math.min(geo.H - geo.padB, geo.y(price)));
         const dot = svg.querySelector<SVGCircleElement>('.pchart-now');
