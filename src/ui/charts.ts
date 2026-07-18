@@ -180,6 +180,119 @@ export function priceChartSvg(
   </svg>`;
 }
 
+/**
+ * Geometry for a candlestick chart: X positions and index math come from the
+ * candle *count* (one slot per candle, so it matches a close-series crosshair),
+ * while the value scale (min/max + `y`) is fitted to every high **and** low so
+ * wicks never clip. A view that overlays a crosshair must build its geometry
+ * with this same function so the overlay lines up with the candles exactly.
+ */
+export function candleGeometry(
+  candles: readonly { timestamp: number; high: number; low: number; close: number }[],
+  width?: number,
+  height?: number,
+): ChartGeometry {
+  const closePoints = candles.map((c) => ({ timestamp: c.timestamp, value: c.close }));
+  const extremes: ChartPoint[] = [];
+  for (const c of candles) {
+    extremes.push({ timestamp: c.timestamp, value: c.high });
+    extremes.push({ timestamp: c.timestamp, value: c.low });
+  }
+  const base = chartGeometry(closePoints, width, height);
+  const scale = chartGeometry(extremes.length >= 2 ? extremes : closePoints, width, height);
+  // Keep X/index math from the candle count; take the wick-fitted value scale.
+  return { ...base, min: scale.min, max: scale.max, y: scale.y };
+}
+
+/**
+ * A professional candlestick chart (investing.com / Revolut X style): a thin
+ * high→low wick and an open→close body per candle, green up / red down via
+ * CSS (`--hot` / `--cold`). Shares the exact viewBox, padding, axes, live
+ * current-price marker and hidden crosshair scaffold of `priceChartSvg`, so
+ * the existing crosshair + live-marker wiring keeps working unchanged.
+ */
+export function candleChartSvg(
+  candles: readonly {
+    timestamp: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  }[],
+  opts: {
+    formatX: (ts: number) => string;
+    formatY: (v: number) => string;
+    width?: number;
+    height?: number;
+  },
+): string {
+  if (candles.length < 2) return '<div class="empty">Not enough history for this range yet.</div>';
+  const geo = candleGeometry(candles, opts.width, opts.height);
+  const { W, H, padL, padR, padB } = geo;
+  const n = candles.length;
+  const bodyW = Math.max(1, ((W - padL - padR) / n) * 0.7);
+
+  let grid = '';
+  const yTicks = 4;
+  for (let k = 0; k <= yTicks; k++) {
+    const v = geo.min + ((geo.max - geo.min) * k) / yTicks;
+    const y = geo.y(v);
+    grid += `<line class="pgrid" x1="${padL}" y1="${y.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${y.toFixed(1)}"/>`;
+    grid += `<text class="paxis" x="${(W - padR + 5).toFixed(1)}" y="${(y + 3).toFixed(1)}">${opts.formatY(v)}</text>`;
+  }
+  let xlab = '';
+  const xTicks = Math.min(5, n);
+  for (let k = 0; k < xTicks; k++) {
+    const idx = Math.round((k * (n - 1)) / (xTicks - 1));
+    xlab += `<text class="paxis pxlab" x="${geo.x(idx).toFixed(1)}" y="${H - 8}">${opts.formatX(candles[idx]!.timestamp)}</text>`;
+  }
+
+  let bodies = '';
+  for (let i = 0; i < n; i++) {
+    const c = candles[i]!;
+    const cx = geo.x(i);
+    const up = c.close >= c.open;
+    const yHigh = geo.y(c.high);
+    const yLow = geo.y(c.low);
+    const yOpen = geo.y(c.open);
+    const yClose = geo.y(c.close);
+    const top = Math.min(yOpen, yClose);
+    const bh = Math.max(1, Math.abs(yClose - yOpen));
+    bodies +=
+      `<g class="pcandle ${up ? 'up' : 'down'}">` +
+      `<line class="pcandle-wick" x1="${cx.toFixed(1)}" y1="${yHigh.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${yLow.toFixed(1)}"/>` +
+      `<rect class="pcandle-body" x="${(cx - bodyW / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bodyW.toFixed(1)}" height="${bh.toFixed(1)}"/>` +
+      `</g>`;
+  }
+
+  const last = candles[n - 1]!;
+  const lastX = geo.x(n - 1);
+  const lastY = geo.y(last.close);
+  const up = last.close >= candles[0]!.close;
+  const nowLabel = opts.formatY(last.close);
+  const marker = `
+    <line class="pchart-now-line" x1="${padL}" y1="${lastY.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${lastY.toFixed(1)}"/>
+    <g class="pchart-now-tag" transform="translate(${(W - padR + 1).toFixed(1)}, ${lastY.toFixed(1)})">
+      <rect x="0" y="-7.5" width="${(padR - 2).toFixed(1)}" height="15" rx="3"/>
+      <text x="${((padR - 2) / 2).toFixed(1)}" y="3.5" text-anchor="middle" class="pchart-now-text">${nowLabel}</text>
+    </g>
+    <circle class="pchart-now" cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="3.5"/>`;
+  const crosshair = `
+    <g class="pchart-cross" hidden>
+      <line class="pchart-cross-line" x1="${lastX.toFixed(1)}" y1="${geo.padT}" x2="${lastX.toFixed(1)}" y2="${(H - padB).toFixed(1)}"/>
+      <circle class="pchart-cross-dot" cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="4"/>
+    </g>`;
+
+  return `<svg class="pchart pcandle-chart ${up ? 'up' : 'down'}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="candlestick chart">
+    ${grid}
+    ${bodies}
+    ${xlab}
+    ${marker}
+    ${crosshair}
+  </svg>`;
+}
+
 export function lineChartSvg(points: readonly ChartPoint[], options: LineChartOptions): string {
   if (points.length < 2) return '<p class="status-line">Not enough points for a chart.</p>';
   const width = options.width ?? 800;

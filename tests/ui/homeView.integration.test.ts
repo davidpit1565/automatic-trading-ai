@@ -136,6 +136,43 @@ describe('Markets view (DOM integration)', () => {
     svg.dispatchEvent(new MouseEvent('pointerleave', { bubbles: true }));
     expect(tip.hidden).toBe(true);
   });
+
+  it('defaults to candlesticks and toggles to a line chart, keeping the crosshair', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderMarketsView(container, await makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+    (container.querySelector('.market-row') as HTMLButtonElement).click();
+    await waitFor(() => container.querySelector('svg.pchart') !== null);
+
+    // Candles are the default: candle elements + the live/crosshair scaffold.
+    await waitFor(() => container.querySelector('.pcandle') !== null);
+    expect(container.querySelector('.pcandle')).not.toBeNull();
+    expect(container.querySelector('.pchart-now')).not.toBeNull();
+    expect(container.querySelector('.pchart-cross')).not.toBeNull();
+    // The Line / Candles toggle exists.
+    expect(container.querySelectorAll('.ctoggle-btn').length).toBe(2);
+
+    // Crosshair tooltip (with OHLC) still updates on pointermove in candle mode.
+    const candleSvg = container.querySelector<SVGSVGElement>('svg.pchart')!;
+    candleSvg.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, right: 380, bottom: 240, width: 380, height: 240, x: 0, y: 0, toJSON() {} }) as DOMRect;
+    candleSvg.dispatchEvent(new MouseEvent('pointermove', { clientX: 200, bubbles: true }));
+    const candleTip = container.querySelector<HTMLElement>('.pchart-tip')!;
+    expect(candleTip.hidden).toBe(false);
+    expect(candleTip.querySelector('.pchart-tip-price')!.textContent).toContain('€');
+    expect(candleTip.querySelector('.pchart-tip-ohlc')!.textContent).toContain('O ');
+
+    // Switching to Line re-renders a polyline line chart (no candles).
+    const lineBtn = Array.from(container.querySelectorAll<HTMLButtonElement>('.ctoggle-btn')).find(
+      (b) => b.dataset['mode'] === 'line',
+    )!;
+    lineBtn.click();
+    await waitFor(() => container.querySelector('svg.pchart polyline') !== null);
+    expect(container.querySelector('svg.pchart polyline')).not.toBeNull();
+    expect(container.querySelector('.pcandle')).toBeNull();
+    expect(container.querySelector('.pchart-now')).not.toBeNull();
+  });
 });
 
 describe('Value view (DOM integration)', () => {
