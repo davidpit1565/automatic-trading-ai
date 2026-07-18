@@ -113,7 +113,15 @@ function persistStateToGit(label: string): void {
   }
 }
 const DAY_MS = 24 * 60 * 60 * 1000;
-/** Scheduled digests: each fires once per local day at/after its hour. */
+/**
+ * How many hours after a digest's target hour it may still fire. With the
+ * continuous coverage from the long run + mid-run persistence, a digest lands
+ * within minutes of 08:00/22:00; this window just prevents a very-late digest
+ * (e.g. an 08:00 summary arriving in the afternoon) if coverage ever gaps —
+ * it is skipped for the day instead. Keeps message times tidy.
+ */
+const SUMMARY_WINDOW_HOURS = Number(process.env['SUMMARY_WINDOW_HOURS']) || 3;
+/** Scheduled digests: each fires once per local day within its hour window. */
 const SUMMARY_SLOTS = [
   { hour: 8, key: 'daily-summary-morning', heading: '☀️ סיכום בוקר — רובוט מסחר (כסף מדומה)' },
   { hour: 22, key: 'daily-summary-evening', heading: '🌙 סיכום ערב — רובוט מסחר (כסף מדומה)' },
@@ -459,7 +467,10 @@ async function maybeSendSummaries(
 
   const { day: today, hour } = localDayAndHour(now, SUMMARY_TIMEZONE);
   const dueSlots = SUMMARY_SLOTS.filter(
-    (slot) => hour >= slot.hour && store.get<string>(slot.key) !== today,
+    (slot) =>
+      hour >= slot.hour &&
+      hour < slot.hour + SUMMARY_WINDOW_HOURS &&
+      store.get<string>(slot.key) !== today,
   );
   if (dueSlots.length === 0) return;
 
