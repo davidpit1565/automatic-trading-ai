@@ -43,6 +43,14 @@ const SCAN_CANDLES = 150;
  */
 export const AUTOPILOT_MIN_CONFIDENCE = 20;
 
+/**
+ * Overbought ceiling for autonomous entries. Measured on ~30 days of real
+ * Kraken history (BTC/ETH/SOL/XRP/ADA): lowering the RSI-for-long ceiling from
+ * 75 to 65 lifted profit factor ~1.0→2.3 and win rate 45%→65% with lower
+ * drawdown — the biggest single quality win. Don't chase already-hot coins.
+ */
+export const AUTOPILOT_MAX_RSI_FOR_LONG = 65;
+
 export interface AutoPilotOptions {
   readonly source: MarketDataSource;
   readonly symbols: readonly string[];
@@ -66,6 +74,11 @@ export interface AutoPilotOptions {
    * to 0 (open any qualifying signal). Production sets AUTOPILOT_MIN_CONFIDENCE.
    */
   readonly minConfidence?: number;
+  /**
+   * Overbought RSI ceiling for entries. Defaults to the signal engine's
+   * permissive value; production sets AUTOPILOT_MAX_RSI_FOR_LONG.
+   */
+  readonly maxRsiForLong?: number;
   readonly clock?: () => number;
   /** Persists the desired running state so the autopilot survives reloads. */
   readonly store?: KeyValueStore;
@@ -263,6 +276,7 @@ export class PaperAutoPilot {
       }
       let decision = evaluateScan(scanResult, {
         ...DEFAULT_SIGNAL_CRITERIA,
+        maxRsiForLong: this.options.maxRsiForLong ?? DEFAULT_SIGNAL_CRITERIA.maxRsiForLong,
         minConfidence: this.options.minConfidence ?? 0,
       });
       if (decision.kind === 'rejected') continue; // no signal / below floor — nothing to audit

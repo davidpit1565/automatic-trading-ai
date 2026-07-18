@@ -44,6 +44,9 @@ export interface SignalCriteria {
 export const DEFAULT_SIGNAL_CRITERIA: SignalCriteria = {
   minScore: 30,
   minAdx: 20,
+  // The analysis layer stays permissive; the capital-risking autopilot applies
+  // a stricter overbought ceiling (AUTOPILOT_MAX_RSI_FOR_LONG) — measured to
+  // roughly double profit factor. See scripts/sweepStrategy.mts.
   maxRsiForLong: 75,
   atrStopMultiple: 2,
   atrTargetMultiple: 4,

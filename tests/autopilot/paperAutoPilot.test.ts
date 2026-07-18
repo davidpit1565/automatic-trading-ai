@@ -55,7 +55,7 @@ function makeSource(config: Record<string, { drift: number; lastPrice?: number }
 
 function makePilot(
   config: Record<string, { drift: number; lastPrice?: number }>,
-  opts: { costRate?: number; minConfidence?: number } = {},
+  opts: { costRate?: number; minConfidence?: number; maxRsiForLong?: number } = {},
 ) {
   const store = new MemoryStore();
   const journal = new TradeJournal(store);
@@ -76,6 +76,7 @@ function makePilot(
     clock: () => T,
     costRate: opts.costRate,
     minConfidence: opts.minConfidence,
+    maxRsiForLong: opts.maxRsiForLong,
   });
   return { pilot, portfolio, positions, journal, killSwitch, audit };
 }
@@ -115,6 +116,18 @@ describe('autonomous paper entries', () => {
 
     // ...is refused once a floor above any achievable confidence is applied.
     const gated = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { minConfidence: 95 });
+    const cycle = await gated.pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(gated.portfolio.openPositions()).toHaveLength(0);
+  });
+
+  it('refuses to chase overbought coins when an RSI ceiling is set', async () => {
+    // A strong uptrend that qualifies with the default ceiling...
+    const open = makePilot({ 'QUAL/USD': { drift: 0.001 } });
+    expect((await open.pilot.runCycleOnce(T)).opened).toHaveLength(1);
+
+    // ...is refused once the overbought ceiling is strict (don't buy hot coins).
+    const gated = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { maxRsiForLong: 40 });
     const cycle = await gated.pilot.runCycleOnce(T);
     expect(cycle.opened).toHaveLength(0);
     expect(gated.portfolio.openPositions()).toHaveLength(0);
