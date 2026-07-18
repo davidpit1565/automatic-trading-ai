@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 7898.621826433015,
+    "cash": 5917.745093559068,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -119.31220110956374,
@@ -24,6 +24,25 @@
       "highestPrice": 0.145706,
       "lowestPrice": 0.143934,
       "confidence": 27.16553496968362,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "LTCEUR:1784402388510:1",
+      "symbol": "LTCEUR",
+      "openedAt": 1784402388510,
+      "entryPrice": 41.14,
+      "quantity": 48.00563629660235,
+      "initialQuantity": 48.00563629660235,
+      "stopLoss": 40.45905238198382,
+      "takeProfit": 42.50189523603236,
+      "feesPaid": 5.924855631726662,
+      "realizedPnl": 0,
+      "highestPrice": 41.14,
+      "lowestPrice": 41.14,
+      "confidence": 35.626055138041565,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -254,12 +273,19 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ADAEUR: 13563.895915177241 @ 0.145691 (stop 0.14299600097847961, target 0.1510809980430407, confidence 27)"
+    },
+    {
+      "timestamp": 1784402388510,
+      "intentId": "LTCEUR:1784402388510:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry LTCEUR: 48.00563629660235 @ 41.14 (stop 40.45905238198382, target 42.50189523603236, confidence 36)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1784401476101,
+    "at": 1784402388510,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -656,6 +682,18 @@
     {
       "at": 1784401476101,
       "equity": 9857.18
+    },
+    {
+      "at": 1784401781422,
+      "equity": 9859.42
+    },
+    {
+      "at": 1784402085033,
+      "equity": 9859.17
+    },
+    {
+      "at": 1784402388510,
+      "equity": 9859.73
     }
   ],
   "trade-journal": [
@@ -732,7 +770,8 @@
   "alerted-trade-ids": [
     "c:XRPEUR:1784042069348:2",
     "c:LINKEUR:1784042069348:0",
-    "o:ADAEUR:1784331774105:0"
+    "o:ADAEUR:1784331774105:0",
+    "o:LTCEUR:1784402388510:1"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -755,7 +794,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -1.42%"
+        "detail": "vs buy-and-hold BTC -1.43%"
       },
       {
         "key": "drawdown",
@@ -768,7 +807,7 @@
         "detail": "profit factor 0.00 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — 3 / 20 closed trades; 2 / 14 days of history; after-fee return -1.19%; vs buy-and-hold BTC -1.42%; profit factor 0.00 (needs ≥ 1.2).",
+    "summary": "NOT READY — 3 / 20 closed trades; 2 / 14 days of history; after-fee return -1.19%; vs buy-and-hold BTC -1.43%; profit factor 0.00 (needs ≥ 1.2).",
     "unmet": [
       "trades",
       "days",
@@ -778,6 +817,7 @@
     ]
   },
   "move-alert-buckets": {
-    "ADAEUR:1784331774105:0": 0
+    "ADAEUR:1784331774105:0": 0,
+    "LTCEUR:1784402388510:1": 0
   }
 }
