@@ -11,6 +11,7 @@
  * SIMULATED money only: there is no live-order path anywhere in the core.
  */
 
+import { execSync } from 'node:child_process';
 import { KrakenPublicSource } from '../src/core/data/krakenPublic';
 import { CoinbasePublicSource } from '../src/core/data/coinbasePublic';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
@@ -57,7 +58,56 @@ const COST_RATE = Number(process.env['COST_RATE']) || 0.003;
  */
 const LOOP_CYCLES = Math.max(1, Number(process.env['LOOP_CYCLES']) || 1);
 const LOOP_INTERVAL_MS = Number(process.env['LOOP_INTERVAL_MS']) || 300_000;
+/** Persist state to git every N cycles during the run (0 = only at run end). */
+const STATE_COMMIT_EVERY = Math.max(0, Number(process.env['STATE_COMMIT_EVERY']) || 0);
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Commit + push the state file mid-run so trades persist promptly and survive
+ * a cancelled/timed-out run — the workflow's long run would otherwise only
+ * save at the very end. Mirrors the workflow's resilient push (rebase onto the
+ * latest main, retry) so it lands even when main advanced. Best-effort: any
+ * failure is logged and the loop continues (the end-of-run commit is a
+ * backstop). Only runs inside GitHub Actions.
+ */
+function persistStateToGit(label: string): void {
+  if (process.env['GITHUB_ACTIONS'] !== 'true') return;
+  const run = (cmd: string): string => execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  try {
+    run('git config user.name "github-actions[bot]"');
+    run('git config user.email "github-actions[bot]@users.noreply.github.com"');
+    run(`git add ${STATE_PATH}`);
+    // Nothing staged → nothing to do.
+    try {
+      run('git diff --staged --quiet');
+      return; // exits 0 = no changes
+    } catch {
+      /* non-zero = there are staged changes; proceed to commit */
+    }
+    run(`git commit -m "Autopilot state (mid-run ${label})"`);
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        run('git push origin HEAD:main');
+        console.log(`State persisted mid-run (${label}).`);
+        return;
+      } catch {
+        try {
+          run('git fetch origin main');
+          run('git rebase -X theirs origin/main');
+        } catch {
+          try {
+            run('git rebase --abort');
+          } catch {
+            /* nothing to abort */
+          }
+        }
+      }
+    }
+    console.error('Mid-run state push failed after retries (end-of-run commit will retry).');
+  } catch (cause) {
+    console.error('Mid-run persist skipped:', cause instanceof Error ? cause.message : cause);
+  }
+}
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Scheduled digests: each fires once per local day at/after its hour. */
 const SUMMARY_SLOTS = [
@@ -180,16 +230,28 @@ async function main(): Promise<void> {
 
   for (let i = 0; i < LOOP_CYCLES; i++) {
     if (i > 0) await sleep(LOOP_INTERVAL_MS);
+    let traded = false;
     try {
-      await runCycle(store, source, autopilot, portfolio, journal, telegram);
+      traded = await runCycle(store, source, autopilot, portfolio, journal, telegram);
     } catch (cause) {
       // Never let one bad cycle kill the whole run — log and keep looping.
       console.error('Cycle failed:', cause instanceof Error ? cause.message : cause);
     }
+    // Persist mid-run: immediately after any trade, and every N cycles. The
+    // final cycle is left to the workflow's end-of-run commit step.
+    const isLast = i === LOOP_CYCLES - 1;
+    const periodic = STATE_COMMIT_EVERY > 0 && (i + 1) % STATE_COMMIT_EVERY === 0;
+    if (!isLast && (traded || periodic)) {
+      persistStateToGit(`cycle ${i + 1}/${LOOP_CYCLES}`);
+    }
   }
 }
 
-/** One full cycle: trade, heartbeat, then trade/move/summary notifications. */
+/**
+ * One full cycle: trade, heartbeat, then trade/move/summary notifications.
+ * Returns true if a trade opened or closed this cycle (so the caller can
+ * persist state immediately).
+ */
 async function runCycle(
   store: FileStore,
   source: MarketDataSource,
@@ -197,7 +259,7 @@ async function runCycle(
   portfolio: PortfolioEngine,
   journal: TradeJournal,
   telegram: { token: string; chatId: string },
-): Promise<void> {
+): Promise<boolean> {
   const now = Date.now();
   const cycle = await autopilot.runCycleOnce(now);
   console.log(
@@ -283,6 +345,8 @@ async function runCycle(
   await maybeSendSummaries(store, source, portfolio, journal, telegram, now);
   await maybeSendPeriodicReports(store, source, portfolio, journal, telegram, now);
   await maybeSendAllClear(store, telegram, now);
+
+  return cycle.opened.length > 0 || cycle.closed.length > 0;
 }
 
 const EQUITY_HISTORY_KEY = 'equity-history';

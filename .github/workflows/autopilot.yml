@@ -35,9 +35,11 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
-    # Short runs (see LOOP_CYCLES ≈ 30 min) so state is committed frequently:
-    # a run can never sit for hours holding un-persisted trades.
-    timeout-minutes: 40
+    # Long runs bridge GitHub's sparse scheduler (it can fire only every
+    # 5–7h). The runner ALSO persists state mid-run (~every 30 min), so trades
+    # show up promptly and survive a cancelled run — reliable even without the
+    # external clock. Headroom under the 6h cap.
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,13 +59,16 @@ jobs:
           # Variable to follow you when you travel (e.g. Europe/Brussels).
           # Defaults to Asia/Jerusalem when unset.
           SUMMARY_TIMEZONE: ${{ vars.SUMMARY_TIMEZONE }}
-          # 6 cycles × 5 min ≈ 30 min of coverage per triggered run. Kept
-          # short on purpose: state is committed at the end of each run, so a
-          # short run means trades persist within ~30 min and can never be
-          # lost/re-alerted the way a multi-hour run could. The external clock
-          # (cron-job.org, ~every 10 min) plus the 30-min cron keep coverage
-          # continuous — see docs/cloud-autopilot.he.md.
-          LOOP_CYCLES: '6'
+          # ~70 cycles × 5 min ≈ 5h50m of coverage per triggered run, so one
+          # sparse GitHub trigger bridges the gap to the next (the free
+          # scheduler often fires only every 5–7h). The runner ALSO persists
+          # state every ~30 min mid-run (STATE_COMMIT_EVERY), so trades show up
+          # promptly and survive a cancelled run — reliable even without the
+          # external clock. See docs/cloud-autopilot.he.md.
+          LOOP_CYCLES: '70'
+          # Persist state to git mid-run every N cycles (≈30 min at 5-min
+          # cycles), not just at the end of the ~6h run.
+          STATE_COMMIT_EVERY: '6'
         run: npx tsx server/autopilotRunner.mts
       - name: Commit updated state
         run: |
