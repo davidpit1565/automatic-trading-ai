@@ -147,6 +147,38 @@ describe('Value view (DOM integration)', () => {
     await waitFor(() => (container.querySelector('#pv-body')!.textContent ?? '').length > 0);
     expect(container.querySelector('#pv-body')!.textContent!.length).toBeGreaterThan(0);
   });
+
+  it('renders an interactive chart with a range selector from equity history', async () => {
+    const at0 = ANCHOR;
+    const equityHistory = Array.from({ length: 30 }, (_, i) => ({
+      at: at0 + i * 3_600_000,
+      equity: 10_000 + i * 12 - (i % 5) * 8,
+    }));
+    const raw = {
+      'portfolio-engine': { cash: 6000, initialCash: 10000, baseCurrency: 'EUR' },
+      'open-positions': [],
+      'audit-log': [],
+      'equity-history': equityHistory,
+    };
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: true, json: () => Promise.resolve(raw) }));
+
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderValueView(container, await makeData());
+
+    await waitFor(() => container.querySelector('.range-bar') !== null);
+    expect(container.querySelectorAll('.range-btn').length).toBe(5);
+    await waitFor(() => container.querySelector('svg.pchart') !== null);
+
+    // Crosshair tooltip updates on a pointer move.
+    const svg = container.querySelector<SVGSVGElement>('svg.pchart')!;
+    svg.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, right: 380, bottom: 240, width: 380, height: 240, x: 0, y: 0, toJSON() {} }) as DOMRect;
+    svg.dispatchEvent(new MouseEvent('pointermove', { clientX: 200, bubbles: true }));
+    const tip = container.querySelector<HTMLElement>('.pchart-tip')!;
+    expect(tip.hidden).toBe(false);
+    expect(tip.textContent).toContain('€');
+  });
 });
 
 describe('History view (DOM integration)', () => {
