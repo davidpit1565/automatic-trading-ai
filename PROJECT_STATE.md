@@ -23,6 +23,10 @@
 - Trailing stop `AUTOPILOT_TRAILING={activateR:1,trailR:2}` (PF ~2.4→3.0,
   drawdown ~1.1%→0.8%). Conviction floor `AUTOPILOT_MIN_CONFIDENCE=20`.
 - Shared pure helpers so live autopilot and harness stay identical.
+- Portfolio drawdown circuit-breaker (`src/core/risk/drawdownBreaker.ts`,
+  DD_BREAKER_PCT=8): pauses NEW entries when equity >8% below its peak; exits
+  and stops keep running. Peak tracked in state (`equity-peak`); Hebrew
+  Telegram alert once/day (`buildDrawdownHaltAlert`).
 
 ## Pending Work (autonomous queue)
 - NEXT: regime filter (long only with larger trend — EMA200/ADX), then
@@ -31,7 +35,10 @@
 - Later: Telegram approve/reject flow (prerequisite for real money).
 
 ## Last Successful Tests
-tsc clean · 443 vitest tests green · vite build OK (main).
+tsc clean · 447 vitest tests green · vite build OK (main).
+Chart smoothness root-fixed: list sweep 60s + in-flight guard (serialized
+Kraken queue no longer stacks), failures never cached (keep last good series),
+no repaint while the crosshair is open.
 
 ## Architecture Notes
 Strict layering (data→…→UI); UI presentation-only (architecture tests enforce

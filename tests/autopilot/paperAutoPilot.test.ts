@@ -55,7 +55,12 @@ function makeSource(config: Record<string, { drift: number; lastPrice?: number }
 
 function makePilot(
   config: Record<string, { drift: number; lastPrice?: number }>,
-  opts: { costRate?: number; minConfidence?: number; maxRsiForLong?: number } = {},
+  opts: {
+    costRate?: number;
+    minConfidence?: number;
+    maxRsiForLong?: number;
+    haltNewEntries?: () => boolean;
+  } = {},
 ) {
   const store = new MemoryStore();
   const journal = new TradeJournal(store);
@@ -77,6 +82,7 @@ function makePilot(
     costRate: opts.costRate,
     minConfidence: opts.minConfidence,
     maxRsiForLong: opts.maxRsiForLong,
+    haltNewEntries: opts.haltNewEntries,
   });
   return { pilot, portfolio, positions, journal, killSwitch, audit };
 }
@@ -119,6 +125,25 @@ describe('autonomous paper entries', () => {
     const cycle = await gated.pilot.runCycleOnce(T);
     expect(cycle.opened).toHaveLength(0);
     expect(gated.portfolio.openPositions()).toHaveLength(0);
+  });
+
+  it('circuit-breaker halts NEW entries while never engaging the kill switch', async () => {
+    // Breaker off: the qualifying market opens a position.
+    let halted = false;
+    const off = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { haltNewEntries: () => halted });
+    expect((await off.pilot.runCycleOnce(T)).opened).toHaveLength(1);
+
+    // Breaker on from the start: a fresh pilot on the same qualifying market
+    // opens NOTHING — no new risk — and the cycle is not "halted" (exits would
+    // still run; only entries are paused, unlike the kill switch).
+    halted = true;
+    const on = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { haltNewEntries: () => halted });
+    const cycle = await on.pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(cycle.halted).toBe(false);
+    expect(on.portfolio.openPositions()).toHaveLength(0);
+    // The pause is audited so the decision trail stays complete.
+    expect(on.audit.entries().some((e) => /circuit-breaker/.test(e.detail))).toBe(true);
   });
 
   it('refuses to chase overbought coins when an RSI ceiling is set', async () => {

@@ -27,6 +27,7 @@ import { PositionEngine } from '../src/core/position/positionEngine';
 import { PortfolioEngine } from '../src/core/position/portfolioEngine';
 import { TradeJournal } from '../src/core/position/tradeJournal';
 import { DailyLossTracker } from '../src/core/risk/dailyLoss';
+import { drawdownBreached } from '../src/core/risk/drawdownBreaker';
 import { DEFAULT_RISK_LIMITS } from '../src/core/risk/riskEngine';
 import { tradeAnalytics } from '../src/core/position/analytics';
 import {
@@ -38,6 +39,7 @@ import {
   buildAllClearMessage,
   buildCycleMessage,
   buildDailySummary,
+  buildDrawdownHaltAlert,
   buildMoveAlert,
   buildPeriodReport,
   buildRiskHaltAlert,
@@ -130,6 +132,18 @@ const SUMMARY_SLOTS = [
 /** Alert when an open position moves by at least this % (each new step). */
 const MOVE_ALERT_PCT = Number(process.env['MOVE_ALERT_PCT']) || 5;
 const MOVE_BUCKETS_KEY = 'move-alert-buckets';
+/** Pause NEW buying when equity is this % below its all-time peak. */
+const DD_BREAKER_PCT = Number(process.env['DD_BREAKER_PCT']) || 8;
+const EQUITY_PEAK_KEY = 'equity-peak';
+
+/** Portfolio circuit-breaker state, derived live from the stored peak + last equity. */
+function breakerEngaged(store: FileStore): boolean {
+  const peak = store.get<number>(EQUITY_PEAK_KEY);
+  const history = store.get<Array<{ at: number; equity: number }>>(EQUITY_HISTORY_KEY);
+  const current = history?.[history.length - 1]?.equity;
+  if (peak === undefined || current === undefined) return false;
+  return drawdownBreached({ peakEquity: peak, currentEquity: current, maxDrawdownPct: DD_BREAKER_PCT });
+}
 const MAX_OPEN_POSITIONS = DEFAULT_RISK_LIMITS.maxOpenPositions;
 const ALLCLEAR_KEY = 'allclear-last-at';
 const ALLCLEAR_INTERVAL_MS = 14 * 24 * 60 * 60 * 1000;
@@ -235,6 +249,9 @@ async function main(): Promise<void> {
     maxRsiForLong: AUTOPILOT_MAX_RSI_FOR_LONG,
     // Ratchet the stop up as trades run in profit (higher PF, lower drawdown).
     trailing: AUTOPILOT_TRAILING,
+    // Portfolio circuit-breaker: pause new buying while equity is more than
+    // DD_BREAKER_PCT below its peak. Exits/stops keep protecting open trades.
+    haltNewEntries: () => breakerEngaged(store),
   });
 
   const telegram = {
@@ -333,6 +350,16 @@ async function runCycle(
     }
   }
 
+  // Circuit-breaker alert: tell the user (once per day) that new buying is
+  // paused while the portfolio recovers toward its peak.
+  if (telegram.token && telegram.chatId && breakerEngaged(store)) {
+    const { day } = localDayAndHour(now, SUMMARY_TIMEZONE);
+    if (store.get<string>('dd-halt-alert-day') !== day) {
+      const a = await sendTelegramMessage(buildDrawdownHaltAlert(DD_BREAKER_PCT), telegram);
+      if (a.sent) store.set('dd-halt-alert-day', day);
+    }
+  }
+
   // Tell the user (once per day) when a safety limit pauses new buying.
   if (telegram.token && telegram.chatId && cycle.skipped.some((s) => /daily loss limit/i.test(s.reason))) {
     const { day } = localDayAndHour(now, SUMMARY_TIMEZONE);
@@ -395,6 +422,9 @@ async function recordEquity(
     open.map((p) => p.symbol),
   );
   const equity = portfolio.snapshot(prices, now).equity;
+  // Track the all-time equity peak for the drawdown circuit-breaker.
+  const peak = store.get<number>(EQUITY_PEAK_KEY) ?? equity;
+  store.set(EQUITY_PEAK_KEY, Math.max(peak, equity));
   const history = store.get<Array<{ at: number; equity: number }>>(EQUITY_HISTORY_KEY) ?? [];
   const firstAt = history[0]?.at ?? now;
   history.push({ at: now, equity: Math.round(equity * 100) / 100 });

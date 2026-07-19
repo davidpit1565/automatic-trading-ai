@@ -28,6 +28,12 @@ import { startLivePrice } from '../liveTicker';
 import { formatPrice, formatPct } from '../format';
 
 const REFRESH_MS = 20_000;
+/**
+ * The Markets LIST refreshes ~26 coins through KrakenPublicSource's serialized
+ * queue (150ms stagger) — at 20s the requests stacked faster than they drained
+ * and the detail chart (same queue) went sluggish. 60s lets each sweep finish.
+ */
+const LIST_REFRESH_MS = 60_000;
 const HOT = '#16c784';
 const COLD = '#ea3943';
 
@@ -110,9 +116,17 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     status.textContent = `Live · updated ${hm(Date.now())} · ~48h change`;
   }
 
+  let listLoading = false;
   async function loadList(): Promise<void> {
-    markets = await fetchTopMarkets(data);
-    if (detailView.hidden) renderList();
+    if (listLoading) return; // never overlap sweeps — overlaps stack the queue
+    listLoading = true;
+    try {
+      const fresh = await fetchTopMarkets(data);
+      if (fresh.length > 0) markets = fresh; // keep last good list on a bad sweep
+      if (detailView.hidden) renderList();
+    } finally {
+      listLoading = false;
+    }
   }
 
   function openDetail(index: number): void {
@@ -148,10 +162,13 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       let wire: (() => void) | null = null;
 
       if (mode === 'candle') {
-        const series = (!opts.force && seriesCache.has(cacheKey)
+        let series = (!opts.force && seriesCache.has(cacheKey)
           ? seriesCache.get(cacheKey)
           : await fetchCandleSeries(data, m.symbol, range.tf, range.limit)) as CandleSeries | null;
-        seriesCache.set(cacheKey, series);
+        // Never cache a failure (it would stick as "No history"); on a failed
+        // refresh keep showing the last good series.
+        if (series) seriesCache.set(cacheKey, series);
+        else if (seriesCache.has(cacheKey)) series = seriesCache.get(cacheKey) as CandleSeries;
         price = series?.price ?? m.price;
         changePct = series?.changePct ?? 0;
         chart = series
@@ -178,10 +195,12 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
             });
         }
       } else {
-        const series = (!opts.force && seriesCache.has(cacheKey)
+        let series = (!opts.force && seriesCache.has(cacheKey)
           ? seriesCache.get(cacheKey)
           : await fetchSeries(data, m.symbol, range.tf, range.limit)) as PriceSeries | null;
-        seriesCache.set(cacheKey, series);
+        // Same failure policy as candles: never cache null, keep last good.
+        if (series) seriesCache.set(cacheKey, series);
+        else if (seriesCache.has(cacheKey)) series = seriesCache.get(cacheKey) as PriceSeries;
         price = series?.price ?? m.price;
         changePct = series?.changePct ?? 0;
         const up = changePct >= 0;
@@ -350,7 +369,14 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
 
     void paint();
     window.clearInterval(detailTimer);
-    detailTimer = window.setInterval(() => void paint({ force: true }), REFRESH_MS);
+    detailTimer = window.setInterval(() => {
+      // Don't wipe the chart mid-touch: while the crosshair tooltip is open the
+      // user is inspecting — skip this tick; the next one repaints after they
+      // let go. The live price marker keeps updating independently meanwhile.
+      const tip = detailView.querySelector<HTMLElement>('.pchart-tip');
+      if (tip && !tip.hidden) return;
+      void paint({ force: true });
+    }, REFRESH_MS);
   }
 
   function backToList(): void {
@@ -359,9 +385,9 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     detailView.hidden = true;
     listView.hidden = false;
     renderList();
-    listTimer = window.setInterval(() => void loadList(), REFRESH_MS);
+    listTimer = window.setInterval(() => void loadList(), LIST_REFRESH_MS);
   }
 
   void loadList();
-  listTimer = window.setInterval(() => void loadList(), REFRESH_MS);
+  listTimer = window.setInterval(() => void loadList(), LIST_REFRESH_MS);
 }
