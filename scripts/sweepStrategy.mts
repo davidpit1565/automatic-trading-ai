@@ -59,8 +59,27 @@ async function main(): Promise<void> {
 
   const bhMean = data.reduce((s, d) => s + d.bh, 0) / data.length;
 
-  interface Row { name: string; retMean: number; ddMean: number; trades: number; winPct: number; pf: number; }
+  interface Row { name: string; retMean: number; ddMean: number; trades: number; winPct: number; pf: number; oosPf: number; }
   const rows: Row[] = [];
+  const pooledPf = (h1slice: (c: Candle[]) => Candle[]): ((cfg: Config) => { pf: number }) =>
+    (cfg) => {
+      let gp = 0, gl = 0;
+      for (const d of data) {
+        const res = runLivePipelineBacktest(h1slice(d.h1), {
+          symbol: d.symbol, timeframe: '1h', costRate: 0.003,
+          minConfidence: cfg.minConfidence, criteria: cfg.criteria,
+          higherCandles: cfg.confirmation ? d.h4 : undefined,
+          confirmationTimeframe: '4h', trailing: cfg.trailing,
+        });
+        for (const t of res.closedTrades as LivePipelineTrade[]) {
+          if (t.pnl > 0) gp += t.pnl; else gl += -t.pnl;
+        }
+      }
+      return { pf: gl > 0 ? gp / gl : gp > 0 ? Infinity : 0 };
+    };
+  // Out-of-sample = the second half of each series (not the window configs were
+  // eyeballed on) — a fake "improvement" that only fits the past dies here.
+  const oos = pooledPf((c) => c.slice(Math.floor(c.length / 2)));
 
   for (const cfg of CONFIGS) {
     let retSum = 0, ddSum = 0, trades = 0, wins = 0, grossProfit = 0, grossLoss = 0;
@@ -89,6 +108,7 @@ async function main(): Promise<void> {
       trades,
       winPct: trades > 0 ? (wins / trades) * 100 : 0,
       pf: grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0,
+      oosPf: oos(cfg).pf,
     });
   }
 
@@ -99,12 +119,13 @@ async function main(): Promise<void> {
   const num = (v: number, n: number) => v.toFixed(n).padStart(8);
   console.log(`\nSweep over ${data.length} symbols, ${LIMIT} 1h candles each. Buy&hold mean: ${bhMean.toFixed(2)}%`);
   console.log(`(after fees 0.3%/side; sorted by profit factor)\n`);
-  console.log(pad('Config', 34) + num2('Ret%') + num2('MaxDD%') + '  Trades' + '   Win%' + '     PF');
-  console.log('-'.repeat(78));
+  console.log(pad('Config', 34) + num2('Ret%') + num2('MaxDD%') + '  Trades' + '   Win%' + '     PF' + '  OOS-PF');
+  console.log('-'.repeat(86));
   for (const r of rows) {
     console.log(
       pad(r.name, 34) + num(r.retMean, 2) + num(r.ddMean, 2) +
-      String(r.trades).padStart(8) + num(r.winPct, 1) + num(r.pf === Infinity ? 999 : r.pf, 2),
+      String(r.trades).padStart(8) + num(r.winPct, 1) + num(r.pf === Infinity ? 999 : r.pf, 2) +
+      num(r.oosPf === Infinity ? 999 : r.oosPf, 2),
     );
   }
   console.log('-'.repeat(78));
