@@ -94,6 +94,13 @@ export interface AutoPilotOptions {
    * Omit for a fixed stop.
    */
   readonly trailing?: TrailingConfig;
+  /**
+   * When it returns true, the cycle SKIPS new entries (exits/stops still run).
+   * Used by the portfolio drawdown circuit-breaker: stop adding risk while the
+   * portfolio is well below its peak. Unlike the kill switch, this never
+   * blocks protective exits.
+   */
+  readonly haltNewEntries?: () => boolean;
   readonly clock?: () => number;
   /** Persists the desired running state so the autopilot survives reloads. */
   readonly store?: KeyValueStore;
@@ -282,6 +289,22 @@ export class PaperAutoPilot {
           detail: `paper exit failed for ${position.symbol}: ${exit.error}`,
         });
       }
+    }
+
+    // --- Circuit-breaker: while breached, protect what's open but add no new
+    // risk. Exits above already ran; entries are skipped entirely. ------------
+    if (this.options.haltNewEntries?.()) {
+      audit.append({
+        timestamp,
+        intentId: 'cycle',
+        event: 'rejected',
+        mode: this.mode,
+        detail: 'new entries paused: portfolio drawdown circuit-breaker engaged',
+      });
+      const result: CycleResult = { timestamp, halted: false, opened, closed, skipped };
+      this.lastCycleAt = timestamp;
+      this.lastCycle = result;
+      return result;
     }
 
     // --- Entries: scan the universe and act on qualified opportunities. ----

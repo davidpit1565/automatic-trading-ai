@@ -197,6 +197,14 @@ export function buildPeriodReport(i: PeriodReportInput): string {
   return lines.join('\n');
 }
 
+/** Alert when the portfolio drawdown circuit-breaker pauses new buying. */
+export function buildDrawdownHaltAlert(limitPct: number): string {
+  return (
+    `🛑 בלם ביטחון: התיק ירד יותר מ-${limitPct}% מהשיא, אז עצרתי קניות חדשות — הגנה על ההון.\n` +
+    'הפוזיציות הפתוחות ממשיכות להיות מנוהלות עם סטופ/יעד. הקניות יתחדשו אוטומטית כשהתיק יתאושש. (כסף מדומה)'
+  );
+}
+
 /** Periodic all-clear: confirms the safety protections are active. */
 export function buildAllClearMessage(): string {
   return (
