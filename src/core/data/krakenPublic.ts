@@ -49,6 +49,26 @@ const INSTRUMENTS: Instrument[] = [
   { symbol: 'DOTEUR', base: 'DOT', quote: 'EUR' },
   { symbol: 'LINKEUR', base: 'LINK', quote: 'EUR' },
   { symbol: 'AVAXEUR', base: 'AVAX', quote: 'EUR' },
+  // Appended DISPLAY-only universe (each verified live on Kraken). These are
+  // browsable/charts only and are NOT traded by the robot: the autopilot trades
+  // strictly the first 10 validated majors above. Do NOT reorder the entries
+  // above this line. PAXG is a gold-backed token (tracks gold, not physical).
+  { symbol: 'POLEUR', base: 'POL', quote: 'EUR' },
+  { symbol: 'TRXEUR', base: 'TRX', quote: 'EUR' },
+  { symbol: 'ATOMEUR', base: 'ATOM', quote: 'EUR' },
+  { symbol: 'XLMEUR', base: 'XLM', quote: 'EUR' },
+  { symbol: 'BCHEUR', base: 'BCH', quote: 'EUR' },
+  { symbol: 'UNIEUR', base: 'UNI', quote: 'EUR' },
+  { symbol: 'AAVEEUR', base: 'AAVE', quote: 'EUR' },
+  { symbol: 'ETCEUR', base: 'ETC', quote: 'EUR' },
+  { symbol: 'FILEUR', base: 'FIL', quote: 'EUR' },
+  { symbol: 'NEAREUR', base: 'NEAR', quote: 'EUR' },
+  { symbol: 'ALGOEUR', base: 'ALGO', quote: 'EUR' },
+  { symbol: 'INJEUR', base: 'INJ', quote: 'EUR' },
+  { symbol: 'ARBEUR', base: 'ARB', quote: 'EUR' },
+  { symbol: 'OPEUR', base: 'OP', quote: 'EUR' },
+  { symbol: 'APTEUR', base: 'APT', quote: 'EUR' },
+  { symbol: 'PAXGEUR', base: 'PAXG', quote: 'EUR' },
 ];
 
 export interface KrakenPublicSourceOptions {
