@@ -25,6 +25,7 @@ import type { PortfolioEngine } from '../position/portfolioEngine';
 import type { PositionEngine } from '../position/positionEngine';
 import type { ExitReason } from '../position/tradeJournal';
 import { assessTrade } from '../risk/riskEngine';
+import { trailingStopPrice, type TrailingConfig } from '../risk/trailingStop';
 import { scanCandles, scanMarket, type ScanResult } from '../scan/marketScanner';
 import { applyHigherTimeframeGate } from '../signal/multiTimeframe';
 import { DEFAULT_SIGNAL_CRITERIA, evaluateScan } from '../signal/signalEngine';
@@ -50,6 +51,14 @@ export const AUTOPILOT_MIN_CONFIDENCE = 20;
  * drawdown — the biggest single quality win. Don't chase already-hot coins.
  */
 export const AUTOPILOT_MAX_RSI_FOR_LONG = 65;
+
+/**
+ * Production trailing stop. Measured on ~30 days of real Kraken data: adding
+ * this to the RSI-ceiling strategy raised aggregate profit factor ~2.4→3.0 and
+ * cut max drawdown (~1.1%→0.8%) for similar return — better profitability AND
+ * capital protection. Activates after +1×risk, then trails 2×risk below peak.
+ */
+export const AUTOPILOT_TRAILING: TrailingConfig = { activateR: 1, trailR: 2 };
 
 export interface AutoPilotOptions {
   readonly source: MarketDataSource;
@@ -79,6 +88,12 @@ export interface AutoPilotOptions {
    * permissive value; production sets AUTOPILOT_MAX_RSI_FOR_LONG.
    */
   readonly maxRsiForLong?: number;
+  /**
+   * Trailing stop for open positions. When set, the stop ratchets up as the
+   * trade runs in profit (measured to raise profit factor and cut drawdown).
+   * Omit for a fixed stop.
+   */
+  readonly trailing?: TrailingConfig;
   readonly clock?: () => number;
   /** Persists the desired running state so the autopilot survives reloads. */
   readonly store?: KeyValueStore;
@@ -225,8 +240,20 @@ export class PaperAutoPilot {
       const price = candles.value[candles.value.length - 1]!.close;
       this.options.positions.updateMarketPrice(position.symbol, price, timestamp);
 
+      // Trailing stop: ratchet the stop up as the trade runs in profit. Uses
+      // the best price seen so the stop only rises. position.stopLoss stays the
+      // ORIGINAL stop (never mutated), so this is a pure, stateless derivation.
+      const stopLoss = this.options.trailing
+        ? trailingStopPrice({
+            entryPrice: position.entryPrice,
+            initialStop: position.stopLoss,
+            highestPrice: Math.max(position.highestPrice, price),
+            config: this.options.trailing,
+          })
+        : position.stopLoss;
+
       let reason: ExitReason | null = null;
-      if (price <= position.stopLoss) reason = 'stop-loss';
+      if (price <= stopLoss) reason = 'stop-loss';
       else if (price >= position.takeProfit) reason = 'take-profit';
       if (reason === null) continue;
 

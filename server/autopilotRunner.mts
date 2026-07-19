@@ -20,6 +20,7 @@ import { PersistedKillSwitch } from '../src/core/autopilot/killSwitch';
 import {
   AUTOPILOT_MAX_RSI_FOR_LONG,
   AUTOPILOT_MIN_CONFIDENCE,
+  AUTOPILOT_TRAILING,
   PaperAutoPilot,
 } from '../src/core/autopilot/paperAutoPilot';
 import { PositionEngine } from '../src/core/position/positionEngine';
@@ -228,6 +229,8 @@ async function main(): Promise<void> {
     minConfidence: AUTOPILOT_MIN_CONFIDENCE,
     // Don't chase overbought coins (measured to roughly double profit factor).
     maxRsiForLong: AUTOPILOT_MAX_RSI_FOR_LONG,
+    // Ratchet the stop up as trades run in profit (higher PF, lower drawdown).
+    trailing: AUTOPILOT_TRAILING,
   });
 
   const telegram = {

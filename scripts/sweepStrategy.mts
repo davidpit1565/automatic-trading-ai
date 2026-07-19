@@ -19,21 +19,20 @@ interface Config {
   readonly criteria?: Partial<SignalCriteria>;
   readonly minConfidence?: number;
   readonly confirmation?: boolean; // apply 4h higher-timeframe gate
+  readonly trailing?: { activateR: number; trailR: number };
 }
 
 // Baseline first, then candidates informed by the 3/3 stop-outs: stronger
 // trend/evidence, higher conviction, wider stops, don't-chase-RSI, combos.
+// Production baseline (rsi65) vs adding a trailing stop with various settings.
+const PROD = { maxRsiForLong: 65 };
 const CONFIGS: Config[] = [
-  { name: 'BASELINE (conf20, 4h on)', minConfidence: 20, confirmation: true },
-  { name: 'rsi<=65', criteria: { maxRsiForLong: 65 }, minConfidence: 20, confirmation: true },
-  { name: 'rsi<=60', criteria: { maxRsiForLong: 60 }, minConfidence: 20, confirmation: true },
-  { name: 'rsi65+adx25', criteria: { maxRsiForLong: 65, minAdx: 25 }, minConfidence: 20, confirmation: true },
-  { name: 'rsi65+score40', criteria: { maxRsiForLong: 65, minScore: 40 }, minConfidence: 20, confirmation: true },
-  { name: 'rsi65+adx25+score40', criteria: { maxRsiForLong: 65, minAdx: 25, minScore: 40 }, minConfidence: 20, confirmation: true },
-  { name: 'rsi65+wide 3/6', criteria: { maxRsiForLong: 65, atrStopMultiple: 3, atrTargetMultiple: 6 }, minConfidence: 20, confirmation: true },
-  { name: 'rsi65+conf30', criteria: { maxRsiForLong: 65 }, minConfidence: 30, confirmation: true },
-  { name: 'rsi65+adx25+conf30', criteria: { maxRsiForLong: 65, minAdx: 25 }, minConfidence: 30, confirmation: true },
-  { name: 'rsi62+adx25+score35', criteria: { maxRsiForLong: 62, minAdx: 25, minScore: 35 }, minConfidence: 25, confirmation: true },
+  { name: 'PROD (rsi65, fixed stop)', criteria: PROD, minConfidence: 20, confirmation: true },
+  { name: 'PROD + trail 1.0/1.0', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 1, trailR: 1 } },
+  { name: 'PROD + trail 1.0/1.5', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 1, trailR: 1.5 } },
+  { name: 'PROD + trail 1.0/2.0', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 1, trailR: 2 } },
+  { name: 'PROD + trail 0.5/1.0', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 0.5, trailR: 1 } },
+  { name: 'PROD + trail 1.5/1.5', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 1.5, trailR: 1.5 } },
 ];
 
 async function main(): Promise<void> {
@@ -74,6 +73,7 @@ async function main(): Promise<void> {
         criteria: cfg.criteria,
         higherCandles: cfg.confirmation ? d.h4 : undefined,
         confirmationTimeframe: '4h',
+        trailing: cfg.trailing,
       });
       retSum += res.totalReturnPct;
       ddSum += res.maxDrawdownPct;
