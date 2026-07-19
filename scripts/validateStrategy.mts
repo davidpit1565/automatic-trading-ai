@@ -15,7 +15,7 @@
  */
 
 import { runLivePipelineBacktest } from '../src/core/backtest/livePipeline';
-import { AUTOPILOT_MAX_RSI_FOR_LONG } from '../src/core/autopilot/paperAutoPilot';
+import { AUTOPILOT_MAX_RSI_FOR_LONG, AUTOPILOT_TRAILING } from '../src/core/autopilot/paperAutoPilot';
 import { profitStats } from '../src/core/validation/performance';
 import { KrakenPublicSource } from '../src/core/data/krakenPublic';
 import { SyntheticDataSource } from '../src/core/data/synthetic';
@@ -146,8 +146,9 @@ async function main(): Promise<void> {
       initialCash: INITIAL_CASH,
       costRate: COST_RATE,
       minConfidence: MIN_CONFIDENCE,
-      // Mirror production: don't chase overbought coins.
+      // Mirror production: don't chase overbought coins + trailing stop.
       criteria: { maxRsiForLong: AUTOPILOT_MAX_RSI_FOR_LONG },
+      trailing: AUTOPILOT_TRAILING,
       higherCandles,
       confirmationTimeframe: '4h',
     });

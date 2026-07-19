@@ -26,6 +26,7 @@
  */
 
 import { assessTrade, DEFAULT_RISK_LIMITS, type RiskLimits } from '../risk/riskEngine';
+import { trailingStopPrice } from '../risk/trailingStop';
 import { DEFAULT_SCANNER_CONFIG, scanCandles, type ScanResult } from '../scan/marketScanner';
 import { applyHigherTimeframeGate } from '../signal/multiTimeframe';
 import {
@@ -64,6 +65,13 @@ export interface LivePipelineOptions {
   readonly higherCandles?: readonly Candle[];
   /** Timeframe of `higherCandles` (for the scan). Default '4h' when supplied. */
   readonly confirmationTimeframe?: Timeframe;
+  /**
+   * Trailing stop. Once price runs `activateR` × initial-risk in favour, the
+   * stop moves up to at least breakeven, then trails `trailR` × initial-risk
+   * below the best price — locking gains and cutting noise stop-outs. Omit to
+   * keep a fixed stop.
+   */
+  readonly trailing?: { readonly activateR: number; readonly trailR: number };
 }
 
 /** A closed trade enriched with the exit reason (superset of ClosedTrade). */
@@ -88,11 +96,16 @@ export interface LivePipelineResult {
 interface OpenPosition {
   readonly entryPrice: number;
   readonly quantity: number;
-  readonly stopLoss: number;
+  /** Mutable: a trailing stop raises this over the life of the trade. */
+  stopLoss: number;
   readonly takeProfit: number;
   readonly entryTimestamp: number;
   /** Entry fee already paid, carried so trade P&L is net of both sides. */
   readonly entryFee: number;
+  /** The stop the trade opened with (defines initial risk for trailing). */
+  readonly initialStop: number;
+  /** Highest price seen since entry, for the trailing stop. */
+  highestPrice: number;
 }
 
 /**
@@ -167,7 +180,18 @@ export function runLivePipelineBacktest(
     const bar = candles[i]!;
 
     if (position !== null) {
-      // --- Exit check first: protect the open position (intrabar). ----------
+      // --- Trailing stop: raise the stop as the trade runs in our favour. ----
+      position.highestPrice = Math.max(position.highestPrice, bar.high);
+      if (options.trailing) {
+        position.stopLoss = trailingStopPrice({
+          entryPrice: position.entryPrice,
+          initialStop: position.initialStop,
+          highestPrice: position.highestPrice,
+          config: options.trailing,
+        });
+      }
+
+      // --- Exit check: protect the open position (intrabar). -----------------
       let exitPrice: number | null = null;
       let reason: 'stop-loss' | 'take-profit' | null = null;
       if (bar.low <= position.stopLoss) {
@@ -231,6 +255,8 @@ export function runLivePipelineBacktest(
               takeProfit: assessment.takeProfit,
               entryTimestamp: bar.timestamp,
               entryFee,
+              initialStop: assessment.stopLoss,
+              highestPrice: entryPrice,
             };
           }
         }
