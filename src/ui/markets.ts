@@ -109,6 +109,28 @@ const MAJORS: ReadonlyArray<{ base: string; label: string }> = [
   { base: 'DOT', label: 'Polkadot' },
 ];
 
+/** Display names for the broadened, browse-only universe (majors are above). */
+const NAMES: Readonly<Record<string, string>> = {
+  LINK: 'Chainlink',
+  AVAX: 'Avalanche',
+  POL: 'Polygon',
+  TRX: 'TRON',
+  ATOM: 'Cosmos',
+  XLM: 'Stellar',
+  BCH: 'Bitcoin Cash',
+  UNI: 'Uniswap',
+  AAVE: 'Aave',
+  ETC: 'Ethereum Classic',
+  FIL: 'Filecoin',
+  NEAR: 'NEAR Protocol',
+  ALGO: 'Algorand',
+  INJ: 'Injective',
+  ARB: 'Arbitrum',
+  OP: 'Optimism',
+  APT: 'Aptos',
+  PAXG: 'PAX Gold',
+};
+
 /** The instrument whose base matches (case-insensitive), or null. */
 function symbolForBase(data: ActiveDataSource, base: string): string | null {
   const hit = data.instruments.find((i) => i.base.toUpperCase() === base.toUpperCase());
@@ -123,7 +145,7 @@ export function findBtcSymbol(data: ActiveDataSource): string | null {
 export function labelFor(data: ActiveDataSource, symbol: string): string {
   const inst = data.instruments.find((i) => i.symbol === symbol);
   const base = inst?.base.toUpperCase();
-  return MAJORS.find((m) => m.base === base)?.label ?? base ?? symbol;
+  return MAJORS.find((m) => m.base === base)?.label ?? (base ? NAMES[base] : undefined) ?? base ?? symbol;
 }
 
 export async function fetchSnapshot(
@@ -140,15 +162,25 @@ export async function fetchSnapshot(
   return { symbol, label, price, changePct: first > 0 ? ((price - first) / first) * 100 : 0, closes };
 }
 
-export async function fetchTopMarkets(data: ActiveDataSource, max = 6): Promise<MarketSnapshot[]> {
-  // Resolve the majors we actually have instruments for, then fetch them all
-  // concurrently — one slow coin no longer blocks the rest, and the list
-  // appears far faster on a phone. Order is preserved; failures are dropped.
-  const targets = MAJORS.map((major) => ({ major, symbol: symbolForBase(data, major.base) }))
-    .filter((t): t is { major: (typeof MAJORS)[number]; symbol: string } => t.symbol !== null)
-    .slice(0, max);
-  const snaps = await Promise.all(
-    targets.map((t) => fetchSnapshot(data, t.symbol, t.major.label)),
-  );
+export async function fetchTopMarkets(data: ActiveDataSource, max = Infinity): Promise<MarketSnapshot[]> {
+  // Build the browsable universe: curated majors first (in table order), then
+  // every remaining instrument (broadened, display-only). Fetch concurrently —
+  // one slow coin no longer blocks the rest. Order preserved; failures dropped.
+  const seen = new Set<string>();
+  const targets: { symbol: string; label: string }[] = [];
+  for (const major of MAJORS) {
+    const symbol = symbolForBase(data, major.base);
+    if (symbol !== null && !seen.has(symbol)) {
+      seen.add(symbol);
+      targets.push({ symbol, label: major.label });
+    }
+  }
+  for (const inst of data.instruments) {
+    if (seen.has(inst.symbol)) continue;
+    seen.add(inst.symbol);
+    targets.push({ symbol: inst.symbol, label: labelFor(data, inst.symbol) });
+  }
+  const chosen = targets.slice(0, max);
+  const snaps = await Promise.all(chosen.map((t) => fetchSnapshot(data, t.symbol, t.label)));
   return snaps.filter((s): s is MarketSnapshot => s !== null);
 }

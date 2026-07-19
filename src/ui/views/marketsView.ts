@@ -8,7 +8,14 @@
 
 import type { ActiveDataSource } from '../dataSource';
 import type { Timeframe } from '../../core/types';
-import { fetchTopMarkets, fetchSeries, fetchCandleSeries, type MarketSnapshot } from '../markets';
+import {
+  fetchTopMarkets,
+  fetchSeries,
+  fetchCandleSeries,
+  type MarketSnapshot,
+  type CandleSeries,
+  type PriceSeries,
+} from '../markets';
 import {
   sparklineSvg,
   priceChartSvg,
@@ -29,15 +36,18 @@ interface Range {
   readonly tf: Timeframe;
   readonly limit: number;
   readonly fx: (ts: number) => string;
+  /** Long ranges render a smooth line/area (candles at 300+ bars are unreadable
+   * on a phone). Short ranges keep the Candles/Line toggle. */
+  readonly long?: boolean;
 }
 const RANGES: Range[] = [
   { key: '1D', tf: '15m', limit: 96, fx: (t) => hm(t) },
   { key: '1W', tf: '1h', limit: 168, fx: (t) => dm(t) },
   { key: '1M', tf: '4h', limit: 180, fx: (t) => dm(t) },
-  { key: '1Y', tf: '1d', limit: 365, fx: (t) => mon(t) },
-  { key: '5Y', tf: '1w', limit: 260, fx: (t) => yr(t) },
-  { key: '10Y', tf: '1w', limit: 520, fx: (t) => yr(t) },
-  { key: 'All', tf: '1w', limit: 720, fx: (t) => yr(t) },
+  { key: '1Y', tf: '1d', limit: 365, fx: (t) => mon(t), long: true },
+  { key: '5Y', tf: '1w', limit: 260, fx: (t) => yr(t), long: true },
+  { key: '10Y', tf: '1w', limit: 520, fx: (t) => yr(t), long: true },
+  { key: 'All', tf: '1w', limit: 720, fx: (t) => yr(t), long: true },
 ];
 const INTRADAY: ReadonlySet<Timeframe> = new Set<Timeframe>(['1m', '5m', '15m', '30m', '1h', '4h']);
 const hm = (t: number): string => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -101,7 +111,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   }
 
   async function loadList(): Promise<void> {
-    markets = await fetchTopMarkets(data, 8);
+    markets = await fetchTopMarkets(data);
     if (detailView.hidden) renderList();
   }
 
@@ -117,21 +127,31 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     // Monotonic paint id: only the newest paint renders. Prevents an overlap
     // between the 20s auto-refresh and a slow fetch from freezing the chart.
     let paintSeq = 0;
+    // Per-open-detail series cache keyed by coin:range:mode. Switching ranges or
+    // coins (and back) is INSTANT — no refetch. The 20s timer force-refreshes
+    // only the currently open range, updating its cache entry.
+    const seriesCache = new Map<string, CandleSeries | PriceSeries | null>();
 
-    const paint = async (): Promise<void> => {
+    const paint = async (opts: { force?: boolean } = {}): Promise<void> => {
       const seq = ++paintSeq;
       stopLivePrice();
       try {
       const m = markets[coin]!;
       const range = RANGES.find((r) => r.key === rangeKey)!;
+      // Long ranges force a smooth line; short ranges honour the toggle.
+      const mode: 'candle' | 'line' = range.long ? 'line' : chartMode;
+      const cacheKey = `${coin}:${rangeKey}:${mode}`;
 
       let chart: string;
       let price: number;
       let changePct: number;
       let wire: (() => void) | null = null;
 
-      if (chartMode === 'candle') {
-        const series = await fetchCandleSeries(data, m.symbol, range.tf, range.limit);
+      if (mode === 'candle') {
+        const series = (!opts.force && seriesCache.has(cacheKey)
+          ? seriesCache.get(cacheKey)
+          : await fetchCandleSeries(data, m.symbol, range.tf, range.limit)) as CandleSeries | null;
+        seriesCache.set(cacheKey, series);
         price = series?.price ?? m.price;
         changePct = series?.changePct ?? 0;
         chart = series
@@ -158,7 +178,10 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
             });
         }
       } else {
-        const series = await fetchSeries(data, m.symbol, range.tf, range.limit);
+        const series = (!opts.force && seriesCache.has(cacheKey)
+          ? seriesCache.get(cacheKey)
+          : await fetchSeries(data, m.symbol, range.tf, range.limit)) as PriceSeries | null;
+        seriesCache.set(cacheKey, series);
         price = series?.price ?? m.price;
         changePct = series?.changePct ?? 0;
         const up = changePct >= 0;
@@ -206,8 +229,8 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         <div class="chart-controls">
           <div class="range-bar">${rangeBar}</div>
           <div class="chart-toggle">
-            <button class="ctoggle-btn ${chartMode === 'candle' ? 'active' : ''}" data-mode="candle">Candles</button>
-            <button class="ctoggle-btn ${chartMode === 'line' ? 'active' : ''}" data-mode="line">Line</button>
+            <button class="ctoggle-btn ${mode === 'candle' ? 'active' : ''}" data-mode="candle" ${range.long ? 'disabled' : ''}>Candles</button>
+            <button class="ctoggle-btn ${mode === 'line' ? 'active' : ''}" data-mode="line" ${range.long ? 'disabled' : ''}>Line</button>
           </div>
         </div>
         <div class="detail-chart"><div class="pchart-wrap">${chart}<div class="pchart-tip" hidden></div></div></div>
@@ -327,7 +350,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
 
     void paint();
     window.clearInterval(detailTimer);
-    detailTimer = window.setInterval(() => void paint(), REFRESH_MS);
+    detailTimer = window.setInterval(() => void paint({ force: true }), REFRESH_MS);
   }
 
   function backToList(): void {
