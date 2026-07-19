@@ -114,9 +114,14 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     // Candles by default; the choice persists across range/coin changes while
     // this detail stays open.
     let chartMode: 'candle' | 'line' = 'candle';
+    // Monotonic paint id: only the newest paint renders. Prevents an overlap
+    // between the 20s auto-refresh and a slow fetch from freezing the chart.
+    let paintSeq = 0;
 
     const paint = async (): Promise<void> => {
+      const seq = ++paintSeq;
       stopLivePrice();
+      try {
       const m = markets[coin]!;
       const range = RANGES.find((r) => r.key === rangeKey)!;
 
@@ -185,6 +190,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         }
       }
 
+      if (seq !== paintSeq) return; // a newer paint superseded this one — don't render stale
       const up = changePct >= 0;
       const rangeBar = RANGES.map(
         (r) => `<button class="range-btn ${r.key === rangeKey ? 'active' : ''}" data-range="${r.key}">${r.key}</button>`,
@@ -225,6 +231,16 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       });
 
       if (wire) wire();
+      } catch {
+        // Never leave a frozen/broken chart. Keep the last good render; the
+        // periodic refresh retries. If nothing has rendered yet, show a note.
+        if (seq === paintSeq && !detailView.querySelector('svg.pchart')) {
+          detailView.innerHTML =
+            '<button class="tool-back" id="mk-eb">← All markets</button>' +
+            '<div class="empty">Chart unavailable — retrying…</div>';
+          detailView.querySelector('#mk-eb')?.addEventListener('click', backToList);
+        }
+      }
     };
 
     /**
