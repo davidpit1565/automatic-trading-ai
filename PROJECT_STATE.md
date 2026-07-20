@@ -8,9 +8,10 @@
   committed each run + mid-run (~30 min) with resilient rebase+retry push.
   Long runs (LOOP_CYCLES 70) so it runs continuously without an external clock.
 - Telegram (Hebrew): per-trade buy/sell (deduped by position id), 08:00/22:00
-  digests (fires once/day, NO upper-bound window — a coverage gap delays it,
-  never skips it), move/risk/drawdown-halt/all-clear alerts, real-money
-  readiness line. Secrets only in Actions.
+  digests + weekly/monthly reports — all gated by elapsed-time-since-last-send
+  (never an exact calendar/hour match), so a coverage gap only DELAYS a
+  message, never silently loses it. Move/risk/drawdown-halt/all-clear alerts,
+  real-money readiness line. Secrets only in Actions.
 - App (English, phone-first): Home (hero, readiness card, markets, positions,
   activity), interactive Markets detail chart (candles default + line toggle,
   crosshair/OHLC tooltip, live marker, 1D→All), interactive Portfolio value
