@@ -9,6 +9,7 @@ import { fetchCloudState, type CloudState } from '../cloudState';
 import { fetchTopMarkets, findBtcSymbol, type MarketSnapshot } from '../markets';
 import { sparklineSvg } from '../charts';
 import { formatPrice, formatPct } from '../format';
+import type { ViewHandle } from '../viewLifecycle';
 
 const PRICE_REFRESH_MS = 15_000;
 const STATE_REFRESH_MS = 120_000;
@@ -35,7 +36,7 @@ async function livePrices(data: ActiveDataSource, symbols: string[]): Promise<Re
   return prices;
 }
 
-export function renderHomeView(container: HTMLElement, data: ActiveDataSource): void {
+export function renderHomeView(container: HTMLElement, data: ActiveDataSource): ViewHandle {
   container.innerHTML = '';
   const hero = el('section', 'hero tappable');
   hero.dataset['nav'] = 'value';
@@ -204,10 +205,31 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     renderMarkets(await fetchTopMarkets(data, 6));
   }
 
+  let priceTimer = 0;
+  let stateTimer = 0;
+  let marketsTimer = 0;
+
+  const start = (): void => {
+    priceTimer = window.setInterval(() => void refreshPrices(), PRICE_REFRESH_MS);
+    stateTimer = window.setInterval(() => void loadState(), STATE_REFRESH_MS);
+    marketsTimer = window.setInterval(() => void loadMarkets(), PRICE_REFRESH_MS * 4);
+  };
+
   renderReadiness();
   void loadState();
   void loadMarkets();
-  window.setInterval(() => void refreshPrices(), PRICE_REFRESH_MS);
-  window.setInterval(() => void loadState(), STATE_REFRESH_MS);
-  window.setInterval(() => void loadMarkets(), PRICE_REFRESH_MS * 4);
+  start();
+
+  return {
+    pause: () => {
+      window.clearInterval(priceTimer);
+      window.clearInterval(stateTimer);
+      window.clearInterval(marketsTimer);
+    },
+    resume: () => {
+      void loadState();
+      void loadMarkets();
+      start();
+    },
+  };
 }

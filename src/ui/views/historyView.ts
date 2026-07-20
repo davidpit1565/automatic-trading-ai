@@ -6,10 +6,11 @@
 import type { ActiveDataSource } from '../dataSource';
 import { fetchCloudState } from '../cloudState';
 import { formatPrice } from '../format';
+import type { ViewHandle } from '../viewLifecycle';
 
 const euro = (v: number): string => `€${formatPrice(v)}`;
 
-export function renderHistoryView(container: HTMLElement, _data: ActiveDataSource): void {
+export function renderHistoryView(container: HTMLElement, _data: ActiveDataSource): ViewHandle {
   container.innerHTML = `
     <h2 class="view-title">History</h2>
     <p class="view-sub">Every simulated buy and sell, newest first.</p>
@@ -41,6 +42,15 @@ export function renderHistoryView(container: HTMLElement, _data: ActiveDataSourc
       list.appendChild(row);
     }
   }
+  let timer = 0;
   void load();
-  window.setInterval(() => void load(), 60_000);
+  timer = window.setInterval(() => void load(), 60_000);
+
+  return {
+    pause: () => window.clearInterval(timer),
+    resume: () => {
+      void load();
+      timer = window.setInterval(() => void load(), 60_000);
+    },
+  };
 }

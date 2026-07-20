@@ -19,8 +19,9 @@ import { renderMonitoringView } from './views/monitoringView';
 import { renderPortfolioView } from './views/portfolioView';
 import { renderPositionsView } from './views/positionsView';
 import { renderValidationView } from './views/validationView';
+import type { ViewHandle } from './viewLifecycle';
 
-type ViewRenderer = (container: HTMLElement, data: ActiveDataSource) => void;
+type ViewRenderer = (container: HTMLElement, data: ActiveDataSource) => ViewHandle | void;
 
 const PRIMARY_VIEWS: Record<string, ViewRenderer> = {
   home: renderHomeView,
@@ -62,6 +63,8 @@ async function bootstrap(): Promise<void> {
 
   const primaryMounted = new Set<string>();
   const toolsMounted = new Set<string>();
+  const primaryHandles = new Map<string, ViewHandle>();
+  let activeName: string | null = null;
 
   function activateView(name: string): void {
     document.querySelectorAll<HTMLElement>('.view').forEach((v) => {
@@ -70,14 +73,21 @@ async function bootstrap(): Promise<void> {
     document.querySelectorAll<HTMLButtonElement>('.nav-btn').forEach((b) => {
       b.classList.toggle('active', b.dataset['nav'] === name);
     });
+    if (activeName && activeName !== name) primaryHandles.get(activeName)?.pause();
     const renderer = PRIMARY_VIEWS[name];
-    if (renderer && !primaryMounted.has(name)) {
+    if (renderer) {
       const panel = document.getElementById(`view-${name}`);
       if (panel) {
-        renderer(panel, data);
-        primaryMounted.add(name);
+        if (!primaryMounted.has(name)) {
+          const handle = renderer(panel, data);
+          if (handle) primaryHandles.set(name, handle);
+          primaryMounted.add(name);
+        } else {
+          primaryHandles.get(name)?.resume();
+        }
       }
     }
+    activeName = name;
     if (name === 'tools') resetTools();
     window.scrollTo({ top: 0 });
   }

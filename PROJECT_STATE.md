@@ -63,11 +63,22 @@
 - Later: Telegram approve/reject flow (prerequisite for real money).
 
 ## Last Successful Tests
-tsc clean · 448 vitest tests green · vite build OK (main).
-Chart freeze root-fixed: KrakenPublicSource queue now supports `priority` so
-an opened chart jumps ahead of the background list sweep (measured 8092ms →
-1746ms for the exact repro) while keeping the "never parallel" rate-limit
-guarantee intact (existing test unchanged, new priority test added).
+tsc clean · 458 vitest tests green · vite build OK (main).
+Chart freeze root-fixed (two causes, both shipped):
+1. KrakenPublicSource queue now supports `priority` so an opened chart jumps
+   ahead of the background list sweep (measured 8092ms → 1746ms for the exact
+   repro) while keeping the "never parallel" rate-limit guarantee intact.
+2. Leaked view intervals (2026-07-20): `main.ts` mounted each primary view
+   (Home/Value/Markets/History) exactly once and never paused its background
+   polling when the user navigated away — all 7 `setInterval` loops across
+   those views kept running forever, competing for the same Kraken queue even
+   off-screen, undermining fix #1. Added a `ViewHandle` (`pause()`/`resume()`)
+   pattern: each view returns one from its render function; `main.ts` calls
+   `.pause()` on the outgoing primary view and `.resume()` on the incoming one
+   (first visit still does a fresh mount). Markets view additionally tracks
+   which coin's detail is open so resume reopens the detail (not the list).
+   5 new DOM-integration tests assert pause clears every interval and resume
+   restarts them (`tests/ui/viewLifecycle.integration.test.ts`).
 
 ## Architecture Notes
 Strict layering (data→…→UI); UI presentation-only (architecture tests enforce
