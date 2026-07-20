@@ -56,7 +56,9 @@ export function startLivePrice(
   const poll = async (): Promise<void> => {
     if (stopped) return;
     try {
-      const candles = await data.source.getCandles(symbol, '1m', 2);
+      // Priority: this feeds the price marker on the chart the user has open
+      // right now — it must not wait behind a background list sweep.
+      const candles = await data.source.getCandles(symbol, '1m', 2, { priority: true });
       if (candles.ok && candles.value.length > 0) {
         const last = candles.value[candles.value.length - 1]!;
         emit(last.close, last.timestamp);

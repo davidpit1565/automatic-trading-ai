@@ -41,10 +41,14 @@ async function resilientCandles(
   symbol: string,
   timeframe: Timeframe,
   limit: number,
+  priority = false,
 ): Promise<Result<Candle[]>> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const res = await withTimeout(data.source.getCandles(symbol, timeframe, limit), 7000);
+      const res = await withTimeout(
+        data.source.getCandles(symbol, timeframe, limit, { priority }),
+        7000,
+      );
       if (res.ok) return res;
     } catch {
       /* timeout or transient error — the next attempt retries */
@@ -53,14 +57,19 @@ async function resilientCandles(
   return { ok: false, error: 'Market data temporarily unavailable' };
 }
 
-/** A time series of closes for a range, for the detail chart. */
+/**
+ * A time series of closes for a range, for the detail chart. `priority`
+ * (default on — this feeds the chart the user is actively looking at) makes
+ * this jump ahead of background sweeps in the shared Kraken request queue.
+ */
 export async function fetchSeries(
   data: ActiveDataSource,
   symbol: string,
   timeframe: Timeframe,
   limit: number,
+  priority = true,
 ): Promise<PriceSeries | null> {
-  const candles = await resilientCandles(data, symbol, timeframe, limit);
+  const candles = await resilientCandles(data, symbol, timeframe, limit, priority);
   if (!candles.ok || candles.value.length < 2) return null;
   const points = candles.value.map((c) => ({ timestamp: c.timestamp, value: c.close }));
   const price = points[points.length - 1]!.value;
@@ -74,14 +83,19 @@ export interface CandleSeries {
   readonly changePct: number;
 }
 
-/** Raw OHLC candles for a range, for the professional candlestick detail chart. */
+/**
+ * Raw OHLC candles for a range, for the professional candlestick detail
+ * chart. `priority` (default on) jumps ahead of background sweeps in the
+ * shared Kraken request queue — this is the chart the user is looking at now.
+ */
 export async function fetchCandleSeries(
   data: ActiveDataSource,
   symbol: string,
   timeframe: Timeframe,
   limit: number,
+  priority = true,
 ): Promise<CandleSeries | null> {
-  const candles = await resilientCandles(data, symbol, timeframe, limit);
+  const candles = await resilientCandles(data, symbol, timeframe, limit, priority);
   if (!candles.ok || candles.value.length < 2) return null;
   const price = candles.value[candles.value.length - 1]!.close;
   const first = candles.value[0]!.close;

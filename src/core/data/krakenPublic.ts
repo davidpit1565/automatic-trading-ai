@@ -79,14 +79,30 @@ export interface KrakenPublicSourceOptions {
   staggerMs?: number;
 }
 
+/** One pending request waiting for its turn in the serial queue. */
+interface QueuedTask {
+  readonly run: () => Promise<unknown>;
+  readonly resolve: (value: unknown) => void;
+  readonly reject: (reason: unknown) => void;
+}
+
 export class KrakenPublicSource implements MarketDataSource {
   readonly name = 'Kraken public market data (read-only)';
   private readonly fetchFn: typeof fetch;
   private readonly now: () => number;
   private readonly timeoutMs: number;
   private readonly staggerMs: number;
-  /** Serialises all requests: Kraken rate-limits aggressively per IP. */
-  private queue: Promise<unknown> = Promise.resolve();
+  /**
+   * Serialises all requests one-at-a-time (Kraken rate-limits per IP) via a
+   * real task queue rather than a promise chain, so a `priority` request
+   * (the chart a user just opened) can jump ahead of already-queued
+   * background work (e.g. the Markets list's ~26-coin sweep) instead of
+   * waiting behind all of it — that queue-starvation was why an interactive
+   * chart could take 8+ seconds and time out even though Kraken itself
+   * answers a full concurrent burst in about a second (measured).
+   */
+  private readonly pending: QueuedTask[] = [];
+  private draining = false;
 
   constructor(options: KrakenPublicSourceOptions = {}) {
     this.fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init));
@@ -103,6 +119,7 @@ export class KrakenPublicSource implements MarketDataSource {
     symbol: string,
     timeframe: Timeframe,
     limit: number,
+    opts?: { readonly priority?: boolean },
   ): Promise<Result<Candle[]>> {
     if (limit <= 0) return err(`limit must be positive, got ${limit}`);
     const interval = INTERVAL_MINUTES[timeframe];
@@ -112,7 +129,7 @@ export class KrakenPublicSource implements MarketDataSource {
       `${BASE_URL}/OHLC?pair=${encodeURIComponent(symbol)}` +
       `&interval=${interval}&since=${sinceSec}`;
 
-    const payload = await this.enqueue(() => this.getJson(url));
+    const payload = await this.enqueue(() => this.getJson(url), opts?.priority ?? false);
     if (!payload.ok) return payload;
 
     const raw = payload.value as {
@@ -145,13 +162,40 @@ export class KrakenPublicSource implements MarketDataSource {
     return ok(candles.slice(-limit));
   }
 
-  /** Run a request through the serial queue with a stagger between calls. */
-  private enqueue<T>(task: () => Promise<T>): Promise<T> {
-    const run = this.queue.then(task);
-    this.queue = run
-      .catch(() => undefined)
-      .then(() => new Promise((resolve) => setTimeout(resolve, this.staggerMs)));
-    return run;
+  /**
+   * Run a request through the serial queue with a stagger between calls.
+   * `priority` jumps ahead of already-queued non-priority work (but never
+   * ahead of whatever request is already in flight) — still exactly one
+   * request at a time, just reordered so an interactive need is served next.
+   */
+  private enqueue<T>(task: () => Promise<T>, priority = false): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const item: QueuedTask = { run: task, resolve: resolve as (v: unknown) => void, reject };
+      if (priority) this.pending.unshift(item);
+      else this.pending.push(item);
+      void this.drain();
+    });
+  }
+
+  /** Processes queued tasks one at a time, staggered, until the queue is empty. */
+  private async drain(): Promise<void> {
+    if (this.draining) return;
+    this.draining = true;
+    try {
+      while (this.pending.length > 0) {
+        const item = this.pending.shift()!;
+        try {
+          item.resolve(await item.run());
+        } catch (cause) {
+          item.reject(cause);
+        }
+        if (this.pending.length > 0) {
+          await new Promise((resolve) => setTimeout(resolve, this.staggerMs));
+        }
+      }
+    } finally {
+      this.draining = false;
+    }
   }
 
   private async getJson(url: string): Promise<Result<unknown>> {

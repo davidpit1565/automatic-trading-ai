@@ -162,4 +162,46 @@ describe('getCandles', () => {
     expect(order).toHaveLength(3);
     expect(maxInFlight).toBe(1); // never parallel — Kraken rate limits respected
   });
+
+  it('a priority request jumps ahead of already-queued background work', async () => {
+    // This is the fix for the chart freezing behind the Markets list sweep:
+    // a coin the user just opened must not wait behind a whole background
+    // scan, only behind whatever single request is already in flight.
+    const order: string[] = [];
+    let maxInFlight = 0;
+    let inFlight = 0;
+    const source = new KrakenPublicSource({
+      now: () => NOW,
+      staggerMs: 1,
+      fetchFn: (async (url: RequestInfo | URL) => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        inFlight--;
+        const pair = new URL(String(url)).searchParams.get('pair')!;
+        order.push(pair);
+        return new Response(
+          JSON.stringify({ error: [], result: { K: [krakenRow(1_700_000_000, 1, 1)], last: 1 } }),
+          { status: 200 },
+        );
+      }) as typeof fetch,
+    });
+
+    // Fire a background "list sweep" of several coins (no priority)...
+    const background = ['AAAEUR', 'BBBEUR', 'CCCEUR', 'DDDEUR'].map((p) =>
+      source.getCandles(p, '1h', 5),
+    );
+    // ...then, right after, the user opens BTC — a priority request.
+    const priority = source.getCandles('XBTEUR', '1h', 5, { priority: true });
+
+    await Promise.all([...background, priority]);
+
+    // Still never parallel — same safety invariant as always.
+    expect(maxInFlight).toBe(1);
+    // The very first background request was already in flight and finishes
+    // first, but the priority request jumps ahead of the REST of the
+    // background queue rather than running last.
+    expect(order[0]).toBe('AAAEUR');
+    expect(order[1]).toBe('XBTEUR');
+  });
 });
