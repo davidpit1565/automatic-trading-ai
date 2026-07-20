@@ -568,10 +568,20 @@ async function maybeSendPeriodicReports(
   now: number,
 ): Promise<void> {
   if (!telegram.token || !telegram.chatId) return;
-  const { day, hour, weekday, dayOfMonth } = localDayAndHour(now, SUMMARY_TIMEZONE);
+  const { day, hour } = localDayAndHour(now, SUMMARY_TIMEZONE);
   if (hour < 22) return; // evening only
-  const weeklyDue = weekday === 'Sun' && store.get<string>('weekly-report-last') !== day;
-  const monthlyDue = dayOfMonth === 1 && store.get<string>('monthly-report-last') !== day;
+  // Elapsed-time-since-last-send (reusing the anchor already stored by
+  // sendPeriodReport), not an exact weekday/day-of-month match: a coverage
+  // gap spanning that exact moment must only DELAY the report, never lose it
+  // for the whole week/month (the same bug class fixed in the daily digest).
+  const weeklyAnchor = store.get<{ at: number }>('weekly-anchor');
+  const weeklyDue =
+    (!weeklyAnchor || now - weeklyAnchor.at >= 7 * DAY_MS) &&
+    store.get<string>('weekly-report-last') !== day;
+  const monthlyAnchor = store.get<{ at: number }>('monthly-anchor');
+  const monthlyDue =
+    (!monthlyAnchor || now - monthlyAnchor.at >= 30 * DAY_MS) &&
+    store.get<string>('monthly-report-last') !== day;
   if (!weeklyDue && !monthlyDue) return;
 
   const open = portfolio.openPositions();
