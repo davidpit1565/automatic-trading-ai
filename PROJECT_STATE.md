@@ -31,8 +31,17 @@
   Telegram alert once/day (`buildDrawdownHaltAlert`).
 
 ## Pending Work (autonomous queue)
-- NEXT: regime filter (long only with larger trend — EMA200/ADX), then
-  confidence/volatility-based sizing. Measure before shipping.
+- NEXT (upgraded priority — see finding below): regime filter (long only with
+  larger trend — EMA200/ADX), then confidence/volatility-based sizing. Needs
+  MORE than 30 days of history to get a trustworthy OOS trade count before
+  shipping (a quick adx30+conf35 tweak looked great in-sample but had only 2
+  OOS trades — inconclusive, correctly NOT shipped).
+- FINDING (2026-07-20): live track record hit 8/8 losing trades. Root cause
+  confirmed with real data: BTC ~flat (-0.26%) over the window but choppy
+  (~3% range) — classic whipsaw conditions that stop out longs regardless of
+  entry quality. Not a code bug (wiring verified intact: minConfidence/
+  maxRsiForLong/trailing/haltNewEntries all correctly applied). Drawdown
+  breaker correctly has NOT engaged yet (~2.7% dd vs 8% threshold).
 - Correlation-risk limit: 2026-07-20 saw ADA+LINK+LTC (all alts) stop out in
   the same cycle after a coverage gap — risk engine caps per-asset exposure
   but not co-movement. Worth a measured cross-asset exposure limit.
@@ -40,10 +49,11 @@
 - Later: Telegram approve/reject flow (prerequisite for real money).
 
 ## Last Successful Tests
-tsc clean · 447 vitest tests green · vite build OK (main).
-Chart smoothness root-fixed: list sweep 60s + in-flight guard (serialized
-Kraken queue no longer stacks), failures never cached (keep last good series),
-no repaint while the crosshair is open.
+tsc clean · 448 vitest tests green · vite build OK (main).
+Chart freeze root-fixed: KrakenPublicSource queue now supports `priority` so
+an opened chart jumps ahead of the background list sweep (measured 8092ms →
+1746ms for the exact repro) while keeping the "never parallel" rate-limit
+guarantee intact (existing test unchanged, new priority test added).
 
 ## Architecture Notes
 Strict layering (data→…→UI); UI presentation-only (architecture tests enforce
