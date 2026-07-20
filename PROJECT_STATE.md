@@ -8,8 +8,9 @@
   committed each run + mid-run (~30 min) with resilient rebase+retry push.
   Long runs (LOOP_CYCLES 70) so it runs continuously without an external clock.
 - Telegram (Hebrew): per-trade buy/sell (deduped by position id), 08:00/22:00
-  digests (windowed timing), move/risk/all-clear alerts, real-money readiness
-  line. Secrets only in Actions.
+  digests (fires once/day, NO upper-bound window — a coverage gap delays it,
+  never skips it), move/risk/drawdown-halt/all-clear alerts, real-money
+  readiness line. Secrets only in Actions.
 - App (English, phone-first): Home (hero, readiness card, markets, positions,
   activity), interactive Markets detail chart (candles default + line toggle,
   crosshair/OHLC tooltip, live marker, 1D→All), interactive Portfolio value
@@ -31,6 +32,9 @@
 ## Pending Work (autonomous queue)
 - NEXT: regime filter (long only with larger trend — EMA200/ADX), then
   confidence/volatility-based sizing. Measure before shipping.
+- Correlation-risk limit: 2026-07-20 saw ADA+LINK+LTC (all alts) stop out in
+  the same cycle after a coverage gap — risk engine caps per-asset exposure
+  but not co-movement. Worth a measured cross-asset exposure limit.
 - Then: broaden universe carefully; re-tune with walkForward/robustness.
 - Later: Telegram approve/reject flow (prerequisite for real money).
 
