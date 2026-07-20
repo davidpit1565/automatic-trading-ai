@@ -24,7 +24,7 @@ import { MONITOR_INTERVALS, type MonitorInterval, type Scheduler } from '../moni
 import type { PortfolioEngine } from '../position/portfolioEngine';
 import type { PositionEngine } from '../position/positionEngine';
 import type { ExitReason } from '../position/tradeJournal';
-import { assessTrade } from '../risk/riskEngine';
+import { assessTrade, DEFAULT_RISK_LIMITS, type RiskLimits } from '../risk/riskEngine';
 import { trailingStopPrice, type TrailingConfig } from '../risk/trailingStop';
 import { scanCandles, scanMarket, type ScanResult } from '../scan/marketScanner';
 import { applyHigherTimeframeGate } from '../signal/multiTimeframe';
@@ -101,6 +101,17 @@ export interface AutoPilotOptions {
    * blocks protective exits.
    */
   readonly haltNewEntries?: () => boolean;
+  /** Risk limits for the risk engine. Default DEFAULT_RISK_LIMITS. */
+  readonly riskLimits?: RiskLimits;
+  /**
+   * Return-correlation (-1..1) between two symbols, e.g. from recent price
+   * history. Paired with `riskLimits.correlationThreshold` /
+   * `maxCorrelatedExposurePct` to cap combined exposure across a correlated
+   * cluster (several co-moving alts stopping out together) — see
+   * `assessTrade`. Omit to leave that check off (the per-asset cap still
+   * applies as always).
+   */
+  readonly correlationBetween?: (a: string, b: string) => number;
   readonly clock?: () => number;
   /** Persists the desired running state so the autopilot survives reloads. */
   readonly store?: KeyValueStore;
@@ -351,6 +362,7 @@ export class PaperAutoPilot {
       }
 
       const snapshot = this.options.portfolio.snapshot({}, timestamp);
+      const correlateWith = this.options.correlationBetween;
       const assessment = assessTrade(
         decision.opportunity,
         {
@@ -359,7 +371,13 @@ export class PaperAutoPilot {
             .openPositions()
             .map((p) => ({ symbol: p.symbol, quantity: p.quantity, entryPrice: p.entryPrice })),
         },
-        { dailyLossSoFar: this.options.getDailyLoss() },
+        {
+          limits: this.options.riskLimits ?? DEFAULT_RISK_LIMITS,
+          dailyLossSoFar: this.options.getDailyLoss(),
+          correlationTo: correlateWith
+            ? (other: string) => correlateWith(scanResult.symbol, other)
+            : undefined,
+        },
       );
       if (!assessment.approved) {
         skipped.push({ symbol: scanResult.symbol, reason: assessment.reasons.join('; ') });

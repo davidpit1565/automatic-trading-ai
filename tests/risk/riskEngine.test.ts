@@ -259,6 +259,65 @@ describe('assessTrade — portfolio exposure control', () => {
   });
 });
 
+describe('assessTrade — correlated-cluster exposure cap (optional, off by default)', () => {
+  const limits = { ...DEFAULT_RISK_LIMITS, correlationThreshold: 0.6, maxCorrelatedExposurePct: 25 };
+
+  it('is a no-op when the limits/option are not supplied (backward compatible)', () => {
+    // LINK is deeply correlated to ADA below, but with no correlation option
+    // supplied at all, the cap never engages — existing behaviour is unchanged.
+    const portfolio: PortfolioRiskState = {
+      equity: 10_000,
+      openPositions: [{ symbol: 'ADA/USD', quantity: 20, entryPrice: 100 }], // 20% of equity
+    };
+    const assessment = assessTrade(makeOpportunity({ symbol: 'LINK/USD' }), portfolio);
+    expect(assessment.approved).toBe(true);
+  });
+
+  it('rejects a new entry whose correlated cluster is already at the cap', () => {
+    const portfolio: PortfolioRiskState = {
+      equity: 10_000,
+      openPositions: [{ symbol: 'ADA/USD', quantity: 25, entryPrice: 100 }], // 25% — at the cluster cap
+    };
+    const correlationTo = (other: string): number => (other === 'ADA/USD' ? 0.8 : 0);
+    const assessment = assessTrade(makeOpportunity({ symbol: 'LINK/USD' }), portfolio, {
+      limits,
+      correlationTo,
+    });
+    expect(assessment.approved).toBe(false);
+    expect(assessment.reasons.some((r) => r.includes('correlated cluster'))).toBe(true);
+  });
+
+  it('shrinks (does not reject) a new entry that would only partially exceed the cluster cap', () => {
+    const portfolio: PortfolioRiskState = {
+      equity: 10_000,
+      openPositions: [{ symbol: 'ADA/USD', quantity: 15, entryPrice: 100 }], // 15% — headroom to 25%
+    };
+    const correlationTo = (other: string): number => (other === 'ADA/USD' ? 0.8 : 0);
+    const assessment = assessTrade(makeOpportunity({ symbol: 'LINK/USD' }), portfolio, {
+      limits,
+      correlationTo,
+    });
+    expect(assessment.approved).toBe(true);
+    expect(assessment.warnings.some((w) => w.includes('correlated-cluster'))).toBe(true);
+    // New position capped to the remaining 10% headroom (1,000 of 10,000 equity).
+    expect(assessment.positionValue).toBeCloseTo(1000, 5);
+  });
+
+  it('ignores uncorrelated open positions entirely', () => {
+    const portfolio: PortfolioRiskState = {
+      equity: 10_000,
+      openPositions: [{ symbol: 'BTC/USD', quantity: 25, entryPrice: 100 }], // 25%, but uncorrelated
+    };
+    const correlationTo = (other: string): number => (other === 'BTC/USD' ? 0.1 : 0);
+    const assessment = assessTrade(makeOpportunity({ symbol: 'LINK/USD' }), portfolio, {
+      limits,
+      correlationTo,
+    });
+    expect(assessment.approved).toBe(true);
+    expect(assessment.warnings.some((w) => w.includes('correlated-cluster'))).toBe(false);
+  });
+});
+
 describe('assessTrade — risk/reward and stop validation', () => {
   it('rejects reward/risk below the minimum', () => {
     const assessment = assessTrade(

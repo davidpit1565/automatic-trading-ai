@@ -32,6 +32,18 @@ export interface RiskLimits {
   readonly maxRewardRisk: number;
   /** Minimum stop distance as % of entry — closer stops are noise, not risk control. */
   readonly minStopDistancePct: number;
+  /**
+   * Optional cross-asset correlation cap. When set together with
+   * `AssessTradeOptions.correlationTo`, open positions in OTHER symbols whose
+   * return-correlation to the candidate is >= this threshold count toward a
+   * combined "correlated cluster" exposure cap (`maxCorrelatedExposurePct`),
+   * in addition to (not instead of) the per-asset cap. Targets co-movement
+   * risk (e.g. several correlated alts stopping out together) that the
+   * per-asset cap alone cannot see. Omit to leave this check off entirely.
+   */
+  readonly correlationThreshold?: number;
+  /** Cap on combined notional of a correlated cluster, as % of equity. */
+  readonly maxCorrelatedExposurePct?: number;
 }
 
 export const DEFAULT_RISK_LIMITS: RiskLimits = {
@@ -156,6 +168,13 @@ export interface AssessTradeOptions {
   readonly riskPerTradePct?: number;
   /** Realized loss so far this trading day (positive number = loss). */
   readonly dailyLossSoFar?: number;
+  /**
+   * Return-correlation of the candidate symbol to another open symbol
+   * (-1..1). Required alongside `limits.correlationThreshold` /
+   * `limits.maxCorrelatedExposurePct` for the correlated-cluster cap to
+   * apply; omit to leave that check off.
+   */
+  readonly correlationTo?: (otherSymbol: string) => number;
 }
 
 /** The final structured verdict — every field the UI needs, nothing hidden. */
@@ -276,6 +295,27 @@ export function assessTrade(
     );
   }
 
+  // --- Correlated-cluster exposure (co-movement risk) ---------------------
+  const hasCorrelationCap =
+    limits.correlationThreshold !== undefined &&
+    limits.maxCorrelatedExposurePct !== undefined &&
+    options.correlationTo !== undefined;
+  const clusterExposure = hasCorrelationCap
+    ? portfolio.openPositions
+        .filter(
+          (p) => p.symbol !== opportunity.symbol && options.correlationTo!(p.symbol) >= limits.correlationThreshold!,
+        )
+        .reduce((sum, p) => sum + notionalOf(p), 0)
+    : 0;
+  const clusterCap = hasCorrelationCap ? portfolio.equity * (limits.maxCorrelatedExposurePct! / 100) : 0;
+  const clusterHeadroom = clusterCap - clusterExposure;
+  if (hasCorrelationCap && clusterExposure > 0 && clusterHeadroom <= 0) {
+    reasons.push(
+      `${opportunity.symbol}'s correlated cluster already uses ${((clusterExposure / portfolio.equity) * 100).toFixed(1)}% ` +
+        `of equity — at or above the ${limits.maxCorrelatedExposurePct}% correlated-cluster cap`,
+    );
+  }
+
   if (reasons.length > 0) return rejected();
 
   // --- Sizing ------------------------------------------------------------------
@@ -302,6 +342,17 @@ export function assessTrade(
     constraintsApplied = [
       ...constraintsApplied,
       `size capped by the ${limits.maxExposurePerAssetPct}% per-asset cap (existing ${opportunity.symbol} exposure)`,
+    ];
+  }
+  // Correlated-cluster headroom can shrink it further still.
+  if (hasCorrelationCap && clusterExposure > 0 && positionValue > clusterHeadroom) {
+    quantity = clusterHeadroom / entry;
+    positionValue = clusterHeadroom;
+    maxLoss = quantity * (entry - stopLoss);
+    riskPctUsed = (maxLoss / portfolio.equity) * 100;
+    constraintsApplied = [
+      ...constraintsApplied,
+      `size capped by the ${limits.maxCorrelatedExposurePct}% correlated-cluster cap`,
     ];
   }
 
