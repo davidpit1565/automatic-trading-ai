@@ -66,6 +66,12 @@ export interface LivePipelineOptions {
   /** Timeframe of `higherCandles` (for the scan). Default '4h' when supplied. */
   readonly confirmationTimeframe?: Timeframe;
   /**
+   * Optional larger-trend regime gate (e.g. `buildDailyRegimeFilter`): when it
+   * returns false for the bar's timestamp, an otherwise-qualifying entry is
+   * rejected. Applied after the higher-timeframe gate.
+   */
+  readonly regimeFilter?: (atTimestamp: number) => boolean;
+  /**
    * Trailing stop. Once price runs `activateR` × initial-risk in favour, the
    * stop moves up to at least breakeven, then trails `trailR` × initial-risk
    * below the best price — locking gains and cutting noise stop-outs. Omit to
@@ -234,6 +240,9 @@ export function runLivePipelineBacktest(
               scanWindow,
             ),
           );
+        }
+        if (decision.kind === 'opportunity' && options.regimeFilter && !options.regimeFilter(bar.timestamp)) {
+          decision = { kind: 'rejected', symbol: options.symbol, timeframe: options.timeframe, reasons: ['daily trend regime is not bullish'] };
         }
         if (decision.kind === 'opportunity') {
           const equityNow = cash; // flat, so equity == cash
