@@ -31,17 +31,31 @@
   Telegram alert once/day (`buildDrawdownHaltAlert`).
 
 ## Pending Work (autonomous queue)
-- NEXT (upgraded priority — see finding below): regime filter (long only with
-  larger trend — EMA200/ADX), then confidence/volatility-based sizing. Needs
-  MORE than 30 days of history to get a trustworthy OOS trade count before
-  shipping (a quick adx30+conf35 tweak looked great in-sample but had only 2
-  OOS trades — inconclusive, correctly NOT shipped).
+- TESTED AND REJECTED (2026-07-20): a daily-trend regime filter
+  (`src/core/signal/regimeFilter.ts` — `buildDailyRegimeFilter`, EMA on 1d
+  closes, wired as an optional `regimeFilter` hook in `livePipeline.ts` only,
+  NOT wired into production) was the natural next hypothesis for the 8/8
+  losing streak. Measured honestly on ~2 YEARS of independent daily context
+  (not the same 30-day window): EMA200 gate → 0 trades at all (every symbol's
+  daily close currently sits below its 200-EMA); EMA100 → 1 trade; EMA50 → 11
+  trades but WORSE quality (win% 38.2→27.3, PF 1.11→0.54) than no filter.
+  **Conclusion: a simple daily-trend gate does not help — it either shuts
+  down trading almost entirely or actively hurts. Correctly NOT shipped.**
+  The module + tests are kept (harness gained a tested, inert capability) as
+  a documented negative result so this exact approach isn't retried blind.
+  An adx30+conf35 tweak was ALSO tested and rejected earlier the same day
+  (looked good in-sample, only 2 OOS trades — inconclusive).
 - FINDING (2026-07-20): live track record hit 8/8 losing trades. Root cause
-  confirmed with real data: BTC ~flat (-0.26%) over the window but choppy
-  (~3% range) — classic whipsaw conditions that stop out longs regardless of
-  entry quality. Not a code bug (wiring verified intact: minConfidence/
-  maxRsiForLong/trailing/haltNewEntries all correctly applied). Drawdown
-  breaker correctly has NOT engaged yet (~2.7% dd vs 8% threshold).
+  confirmed with real data at BOTH the 1h (choppy, ~3% range, ~flat) AND the
+  daily scale (broad daily downtrend across ALL 10 traded majors right now,
+  per the regime-filter test above) — this is a genuinely difficult market
+  period for a long-only strategy, not a fixable code defect. Wiring verified
+  intact (minConfidence/maxRsiForLong/trailing/haltNewEntries all correctly
+  applied). Drawdown breaker correctly has NOT engaged (~2.7% dd vs 8%
+  threshold) — it is not supposed to yet. Sample is tiny (8 trades, 9 days);
+  the readiness gate (needs 20 trades/14 days) exists exactly for this.
+  Right call: keep running the already-validated strategy on paper and
+  accumulate a real track record rather than force an unproven change.
 - Correlation-risk limit: 2026-07-20 saw ADA+LINK+LTC (all alts) stop out in
   the same cycle after a coverage gap — risk engine caps per-asset exposure
   but not co-movement. Worth a measured cross-asset exposure limit.
