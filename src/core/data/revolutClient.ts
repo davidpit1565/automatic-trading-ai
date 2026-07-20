@@ -24,7 +24,12 @@ import { parseCandleSeries } from './candles';
 export interface MarketDataSource {
   readonly name: string;
   getInstruments(): Promise<Result<Instrument[]>>;
-  getCandles(symbol: string, timeframe: Timeframe, limit: number): Promise<Result<Candle[]>>;
+  getCandles(
+    symbol: string,
+    timeframe: Timeframe,
+    limit: number,
+    opts?: { readonly priority?: boolean },
+  ): Promise<Result<Candle[]>>;
 }
 
 export interface RevolutXClientOptions {
