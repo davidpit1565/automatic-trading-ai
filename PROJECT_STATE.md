@@ -56,13 +56,48 @@
   the readiness gate (needs 20 trades/14 days) exists exactly for this.
   Right call: keep running the already-validated strategy on paper and
   accumulate a real track record rather than force an unproven change.
-- Correlation-risk limit: 2026-07-20 saw ADA+LINK+LTC (all alts) stop out in
-  the same cycle after a coverage gap — risk engine caps per-asset exposure
-  but not co-movement. Worth a measured cross-asset exposure limit. NEXT UP.
+- TESTED AND REJECTED (2026-07-20): a cross-asset correlated-cluster
+  exposure cap, built to address the 2026-07-20 ADA+LINK+LTC correlated
+  stop-out. Built as a fully additive, opt-in capability — `RiskLimits`
+  gained optional `correlationThreshold`/`maxCorrelatedExposurePct`;
+  `assessTrade` gained `AssessTradeOptions.correlationTo`; `PaperAutoPilot`
+  gained `riskLimits`/`correlationBetween` (all `undefined` by default — zero
+  behaviour change unless explicitly wired). A new pure `src/core/risk/
+  correlation.ts` computes real return-correlation from candle history.
+  Measured with `scripts/measureCorrelationLimit.mts`, which replays the
+  ACTUAL production `PaperAutoPilot` (not a simplified proxy) over real
+  Kraken history for the 10 majors, in-sample vs out-of-sample:
+  - threshold 0.6 / cap 30%: in-sample maxDD 3.41%→2.18%, clustered
+    stop-out cycles 3→2, but return -1.47%→-2.63% and PF 0.99→0.54 (worse).
+    Out-of-sample: maxDD 2.19%→1.36%, clustered cycles 1→0, return
+    -2.60%→-1.36% (better), PF 0.36→0.32 (flat/worse).
+  - threshold 0.7 / cap 40% (milder, tested to check robustness): WORSE on
+    every metric in both windows (in-sample return -1.47%→-4.92%, PF
+    0.99→0.41; OOS PF 0.36→0.17) — not monotonic with the milder setting,
+    i.e. the effect is parameter-sensitive rather than a stable improvement.
+  **Conclusion: consistently reduces clustered stop-outs and (mostly) max
+  drawdown, but does NOT consistently improve — and sometimes clearly
+  hurts — overall return/profit factor, and the result is sensitive to the
+  exact threshold/cap chosen. Real tradeoff, not a clear win. Correctly NOT
+  wired into `autopilotRunner.mts`.** Kept as a tested, inert, documented
+  capability (same treatment as the regime filter) — the code is real and
+  correct, it's just not proven to net-improve results yet. Re-measure once
+  there's more real trade history (current samples: 20-27 trades per
+  window) before revisiting.
+- FINDING (2026-07-20): `DailyLossTracker.record()` (`src/core/risk/
+  dailyLoss.ts`) is never called anywhere in `server/autopilotRunner.mts` or
+  any UI view (grep-confirmed) — realized losses are never actually
+  accumulated, so `dailyLossLimitPct` (3% of equity) never trips; `getDailyLoss`
+  always reads back 0. This is a genuine dormant capital-protection gap, not
+  yet fixed (found while building the correlation-limit measurement harness,
+  which mirrors this exact dead behaviour for fidelity to production — see
+  the harness's `getDailyLoss` comment). Queued: wire `.record(pnl, timestamp)`
+  after each realized exit (needs `CycleResult.closed` to carry `pnl`, which
+  it currently doesn't) and measure that the limit now actually engages.
 - The robot's TRADED universe stays pinned to the 10 curated majors
   (`slice(0, 10)`, deliberately) — widening THAT requires a proper sweep +
   out-of-sample validation first (measure, don't guess), not a slice change.
-  Not yet done; queued after the correlation-risk limit.
+  Not yet done.
 - Later: Telegram approve/reject flow (prerequisite for real money).
 
 ## Broadened the BROWSABLE (display) universe (2026-07-20)
@@ -83,7 +118,7 @@ fallback, and the one-fetch cache. Verified live against the real API
 (538 pairs, curated order intact, 324ms).
 
 ## Last Successful Tests
-tsc clean · 460 vitest tests green · vite build OK (main).
+tsc clean · 472 vitest tests green · vite build OK (main).
 Chart freeze root-fixed (two causes, both shipped):
 1. KrakenPublicSource queue now supports `priority` so an opened chart jumps
    ahead of the background list sweep (measured 8092ms → 1746ms for the exact

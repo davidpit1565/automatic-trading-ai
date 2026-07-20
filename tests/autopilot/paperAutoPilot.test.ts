@@ -17,6 +17,7 @@ import { ManualScheduler } from '../../src/core/monitor/scheduler';
 import { PortfolioEngine } from '../../src/core/position/portfolioEngine';
 import { PositionEngine } from '../../src/core/position/positionEngine';
 import { TradeJournal } from '../../src/core/position/tradeJournal';
+import { DEFAULT_RISK_LIMITS } from '../../src/core/risk/riskEngine';
 import { ok } from '../../src/core/types';
 
 const T = 1_700_000_000_000;
@@ -60,6 +61,8 @@ function makePilot(
     minConfidence?: number;
     maxRsiForLong?: number;
     haltNewEntries?: () => boolean;
+    riskLimits?: import('../../src/core/risk/riskEngine').RiskLimits;
+    correlationBetween?: (a: string, b: string) => number;
   } = {},
 ) {
   const store = new MemoryStore();
@@ -83,6 +86,8 @@ function makePilot(
     minConfidence: opts.minConfidence,
     maxRsiForLong: opts.maxRsiForLong,
     haltNewEntries: opts.haltNewEntries,
+    riskLimits: opts.riskLimits,
+    correlationBetween: opts.correlationBetween,
   });
   return { pilot, portfolio, positions, journal, killSwitch, audit };
 }
@@ -184,6 +189,26 @@ describe('autonomous paper entries', () => {
     expect(drained.ok).toBe(true);
     await pilot.runCycleOnce(T);
     expect(audit.entries().some((e) => e.event === 'rejected')).toBe(true);
+  });
+
+  it('refuses a new entry whose correlated cluster is already at the cap (opt-in correlation limit)', async () => {
+    const riskLimits = { ...DEFAULT_RISK_LIMITS, correlationThreshold: 0.6, maxCorrelatedExposurePct: 25 };
+    const correlationBetween = (a: string, b: string): number => (a !== b ? 0.8 : 1);
+
+    const { pilot, portfolio } = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { riskLimits, correlationBetween });
+    // Pre-open a correlated position already at the cluster cap.
+    const opened = portfolio.open({
+      symbol: 'OTHER/USD', quantity: 25, entryPrice: 100, stopLoss: 90, takeProfit: 130, timestamp: T,
+    });
+    expect(opened.ok).toBe(true);
+
+    const cycle = await pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(portfolio.openPositions()).toHaveLength(1); // still just OTHER/USD
+
+    // Without the correlation limit, the same setup opens normally.
+    const uncapped = makePilot({ 'QUAL/USD': { drift: 0.001 } });
+    expect((await uncapped.pilot.runCycleOnce(T)).opened).toHaveLength(1);
   });
 });
 
