@@ -26,6 +26,7 @@ import {
 } from '../charts';
 import { startLivePrice } from '../liveTicker';
 import { formatPrice, formatPct } from '../format';
+import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 20_000;
 /**
@@ -69,7 +70,7 @@ function tipStamp(ts: number, tf: Timeframe): string {
     : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-export function renderMarketsView(container: HTMLElement, data: ActiveDataSource): void {
+export function renderMarketsView(container: HTMLElement, data: ActiveDataSource): ViewHandle {
   container.innerHTML = `
     <div id="mk-list-view">
       <h2 class="view-title">Markets</h2>
@@ -88,6 +89,9 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   let listTimer = 0;
   let detailTimer = 0;
   let stopLive: (() => void) | null = null;
+  // Tracks which coin's detail is open (null = list view) so pause/resume can
+  // restart whichever was showing, instead of always falling back to the list.
+  let openCoinIndex: number | null = null;
 
   const stopLivePrice = (): void => {
     if (stopLive) {
@@ -130,6 +134,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   }
 
   function openDetail(index: number): void {
+    openCoinIndex = index;
     window.clearInterval(listTimer);
     listView.hidden = true;
     detailView.hidden = false;
@@ -380,6 +385,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   }
 
   function backToList(): void {
+    openCoinIndex = null;
     window.clearInterval(detailTimer);
     stopLivePrice();
     detailView.hidden = true;
@@ -390,4 +396,20 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
 
   void loadList();
   listTimer = window.setInterval(() => void loadList(), LIST_REFRESH_MS);
+
+  return {
+    pause: () => {
+      window.clearInterval(listTimer);
+      window.clearInterval(detailTimer);
+      stopLivePrice();
+    },
+    resume: () => {
+      if (openCoinIndex !== null) {
+        openDetail(openCoinIndex);
+      } else {
+        void loadList();
+        listTimer = window.setInterval(() => void loadList(), LIST_REFRESH_MS);
+      }
+    },
+  };
 }
