@@ -30,11 +30,22 @@ import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 20_000;
 /**
- * The Markets LIST refreshes ~26 coins through KrakenPublicSource's serialized
- * queue (150ms stagger) — at 20s the requests stacked faster than they drained
- * and the detail chart (same queue) went sluggish. 60s lets each sweep finish.
+ * The Markets LIST refreshes through KrakenPublicSource's serialized queue
+ * (150ms stagger) — at 20s the requests stacked faster than they drained and
+ * the detail chart (same queue) went sluggish. 60s lets each sweep finish.
  */
 const LIST_REFRESH_MS = 60_000;
+/**
+ * `getInstruments()` now broadens well beyond the 10 curated majors (every
+ * live EUR pair Kraken lists — 500+ as of 2026-07-20), but the list sweep
+ * still walks the queue one request at a time. Measured real per-request
+ * latency (~200-700ms) means an unbounded sweep of that many coins would
+ * take minutes, not seconds — reintroducing the exact freeze this queue was
+ * fixed for, just at a larger scale. Cap the auto-refreshed list at a size
+ * the queue clears well within one refresh cycle (60 coins ≈ 60 × ~0.5s incl.
+ * stagger ≈ 30s, comfortably under the 60s cadence below).
+ */
+const MARKETS_LIST_CAP = 60;
 const HOT = '#16c784';
 const COLD = '#ea3943';
 
@@ -125,7 +136,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     if (listLoading) return; // never overlap sweeps — overlaps stack the queue
     listLoading = true;
     try {
-      const fresh = await fetchTopMarkets(data);
+      const fresh = await fetchTopMarkets(data, MARKETS_LIST_CAP);
       if (fresh.length > 0) markets = fresh; // keep last good list on a bad sweep
       if (detailView.hidden) renderList();
     } finally {

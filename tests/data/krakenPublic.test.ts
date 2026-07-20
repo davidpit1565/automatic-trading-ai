@@ -10,6 +10,12 @@ import { describe, expect, it } from 'vitest';
 import { KrakenPublicSource } from '../../src/core/data/krakenPublic';
 
 const NOW = 1_700_000_000_000;
+// Mirrors the curated-majors order in src/core/data/krakenPublic.ts — the
+// robot trades exactly these 10, in this order (`slice(0, 10)`).
+const CURATED_SYMBOLS = [
+  'XBTEUR', 'ETHEUR', 'SOLEUR', 'XRPEUR', 'ADAEUR',
+  'DOGEEUR', 'LTCEUR', 'DOTEUR', 'LINKEUR', 'AVAXEUR',
+];
 
 /** Kraken OHLC row: [timeSec, open, high, low, close, vwap, volume, count]. */
 function krakenRow(timeSec: number, close: number, volume: number) {
@@ -37,11 +43,17 @@ function mockFetch(body: unknown, seenUrls: string[] = []): typeof fetch {
 }
 
 describe('instruments', () => {
-  it('serves a curated majors list without any network call', async () => {
+  it('leads with the curated majors, in fixed order, even when the live pair list succeeds', async () => {
     const source = new KrakenPublicSource({
-      fetchFn: (async () => {
-        throw new Error('must not be called');
-      }) as unknown as typeof fetch,
+      fetchFn: mockFetch({
+        error: [],
+        result: {
+          XXBTZEUR: { altname: 'XBTEUR', wsname: 'XBT/EUR', status: 'online' },
+          FOOEUR: { altname: 'FOOEUR', wsname: 'FOO/EUR', status: 'online' },
+          BAREUR: { altname: 'BARUSD', wsname: 'BAR/USD', status: 'online' }, // wrong quote — excluded
+          BAZEUR: { altname: 'BAZEUR', wsname: 'BAZ/EUR', status: 'cancel_only' }, // delisted — excluded
+        },
+      }),
     });
     const result = await source.getInstruments();
     expect(result.ok).toBe(true);
@@ -50,6 +62,38 @@ describe('instruments', () => {
     const bitcoin = result.value.find((i) => i.symbol === 'XBTEUR')!;
     expect(bitcoin.base).toBe('BTC'); // display name, not Kraken's XBT
     expect(bitcoin.quote).toBe('EUR');
+    expect(result.value.slice(0, 10).map((i) => i.symbol)).toEqual(CURATED_SYMBOLS);
+    // Broadened beyond the curated 10 with the newly-discovered EUR pair.
+    expect(result.value.some((i) => i.symbol === 'FOOEUR')).toBe(true);
+    // Wrong-quote and delisted pairs never make it in.
+    expect(result.value.some((i) => i.symbol === 'BARUSD')).toBe(false);
+    expect(result.value.some((i) => i.symbol === 'BAZEUR')).toBe(false);
+  });
+
+  it('falls back to the static display list (still curated-majors-first) if the live pair list fails', async () => {
+    const source = new KrakenPublicSource({
+      fetchFn: (async () => {
+        throw new Error('offline');
+      }) as unknown as typeof fetch,
+    });
+    const result = await source.getInstruments();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.slice(0, 10).map((i) => i.symbol)).toEqual(CURATED_SYMBOLS);
+    expect(result.value.length).toBeGreaterThan(20); // curated 10 + the static fallback extras
+  });
+
+  it('caches the merged instrument list — one network round trip, not one per call', async () => {
+    let calls = 0;
+    const source = new KrakenPublicSource({
+      fetchFn: (async () => {
+        calls++;
+        return new Response(JSON.stringify({ error: [], result: {} }), { status: 200 });
+      }) as unknown as typeof fetch,
+    });
+    await source.getInstruments();
+    await source.getInstruments();
+    expect(calls).toBe(1);
   });
 
   it('is read-only by construction (no order/trade methods)', () => {

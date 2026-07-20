@@ -37,8 +37,15 @@ const INTERVAL_MINUTES: Record<Timeframe, number> = {
   '1w': 10_080,
 };
 
-/** Curated majors, EUR-quoted. Kraken names Bitcoin XBT; we display BTC. */
-const INSTRUMENTS: Instrument[] = [
+/**
+ * Curated majors, EUR-quoted. Kraken names Bitcoin XBT; we display BTC.
+ * TRADED by the robot (`server/autopilotRunner.mts` trades exactly
+ * `instruments.slice(0, 10)`) — this order is load-bearing. Do NOT reorder
+ * or insert above this line; broadening the browsable universe happens by
+ * appending more instruments after it (see `getInstruments` below), never by
+ * changing what these first 10 are.
+ */
+const CURATED_INSTRUMENTS: Instrument[] = [
   { symbol: 'XBTEUR', base: 'BTC', quote: 'EUR' },
   { symbol: 'ETHEUR', base: 'ETH', quote: 'EUR' },
   { symbol: 'SOLEUR', base: 'SOL', quote: 'EUR' },
@@ -49,10 +56,16 @@ const INSTRUMENTS: Instrument[] = [
   { symbol: 'DOTEUR', base: 'DOT', quote: 'EUR' },
   { symbol: 'LINKEUR', base: 'LINK', quote: 'EUR' },
   { symbol: 'AVAXEUR', base: 'AVAX', quote: 'EUR' },
-  // Appended DISPLAY-only universe (each verified live on Kraken). These are
-  // browsable/charts only and are NOT traded by the robot: the autopilot trades
-  // strictly the first 10 validated majors above. Do NOT reorder the entries
-  // above this line. PAXG is a gold-backed token (tracks gold, not physical).
+];
+
+/**
+ * Static DISPLAY-only fallback, used only when the live AssetPairs call
+ * (see `fetchEurPairs`) fails — so a transient network error never shrinks
+ * the browsable list back down to just the 10 curated majors. Each entry
+ * verified live on Kraken. PAXG is a gold-backed token (tracks gold, not
+ * physical metal).
+ */
+const FALLBACK_DISPLAY_INSTRUMENTS: Instrument[] = [
   { symbol: 'POLEUR', base: 'POL', quote: 'EUR' },
   { symbol: 'TRXEUR', base: 'TRX', quote: 'EUR' },
   { symbol: 'ATOMEUR', base: 'ATOM', quote: 'EUR' },
@@ -103,6 +116,7 @@ export class KrakenPublicSource implements MarketDataSource {
    */
   private readonly pending: QueuedTask[] = [];
   private draining = false;
+  private instrumentsCache: Instrument[] | null = null;
 
   constructor(options: KrakenPublicSourceOptions = {}) {
     this.fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init));
@@ -111,8 +125,46 @@ export class KrakenPublicSource implements MarketDataSource {
     this.staggerMs = options.staggerMs ?? DEFAULT_STAGGER_MS;
   }
 
-  getInstruments(): Promise<Result<Instrument[]>> {
-    return Promise.resolve(ok([...INSTRUMENTS]));
+  /**
+   * The curated 10 majors always lead, in their fixed order (what the robot
+   * trades). Appended after them: every other EUR pair Kraken currently
+   * lists live, broadening the BROWSABLE universe — or, if that live call
+   * fails, the static fallback list, so browsing never regresses. Cached
+   * for the life of this source (one network round trip, not one per call).
+   */
+  async getInstruments(): Promise<Result<Instrument[]>> {
+    if (this.instrumentsCache) return ok([...this.instrumentsCache]);
+    const curatedSymbols = new Set(CURATED_INSTRUMENTS.map((i) => i.symbol));
+    const dynamic = await this.fetchEurPairs();
+    const extra = (dynamic.ok ? dynamic.value : FALLBACK_DISPLAY_INSTRUMENTS).filter(
+      (i) => !curatedSymbols.has(i.symbol),
+    );
+    const merged = [...CURATED_INSTRUMENTS, ...extra];
+    this.instrumentsCache = merged;
+    return ok([...merged]);
+  }
+
+  /** Every currently-tradeable EUR pair from Kraken's public AssetPairs list. */
+  private async fetchEurPairs(): Promise<Result<Instrument[]>> {
+    const payload = await this.enqueue(() => this.getJson(`${BASE_URL}/AssetPairs`), true);
+    if (!payload.ok) return payload;
+    const raw = payload.value as { error?: unknown[]; result?: Record<string, unknown> };
+    if (Array.isArray(raw.error) && raw.error.length > 0) {
+      return err(`Kraken error: ${raw.error.join('; ')}`);
+    }
+    const result = raw.result;
+    if (typeof result !== 'object' || result === null) {
+      return err('unexpected Kraken payload: no result object');
+    }
+    const instruments: Instrument[] = [];
+    for (const value of Object.values(result)) {
+      const info = value as { altname?: unknown; wsname?: unknown; status?: unknown };
+      if (info.status !== 'online' || typeof info.wsname !== 'string' || typeof info.altname !== 'string') continue;
+      const [wsBase, wsQuote] = info.wsname.split('/');
+      if (wsQuote !== 'EUR' || !wsBase) continue;
+      instruments.push({ symbol: info.altname, base: wsBase === 'XBT' ? 'BTC' : wsBase, quote: 'EUR' });
+    }
+    return instruments.length > 0 ? ok(instruments) : err('no online EUR pairs found in AssetPairs response');
   }
 
   async getCandles(

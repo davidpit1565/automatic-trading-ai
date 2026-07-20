@@ -58,12 +58,32 @@
   accumulate a real track record rather than force an unproven change.
 - Correlation-risk limit: 2026-07-20 saw ADA+LINK+LTC (all alts) stop out in
   the same cycle after a coverage gap — risk engine caps per-asset exposure
-  but not co-movement. Worth a measured cross-asset exposure limit.
-- Then: broaden universe carefully; re-tune with walkForward/robustness.
+  but not co-movement. Worth a measured cross-asset exposure limit. NEXT UP.
+- The robot's TRADED universe stays pinned to the 10 curated majors
+  (`slice(0, 10)`, deliberately) — widening THAT requires a proper sweep +
+  out-of-sample validation first (measure, don't guess), not a slice change.
+  Not yet done; queued after the correlation-risk limit.
 - Later: Telegram approve/reject flow (prerequisite for real money).
 
+## Broadened the BROWSABLE (display) universe (2026-07-20)
+David asked for more coins beyond the old ~26 and to actually reflect the
+full market in the app. `KrakenPublicSource.getInstruments()` now fetches
+Kraken's live AssetPairs list and appends every online EUR pair beyond the
+10 curated majors (measured live: 538 total today) instead of a fixed ~26
+list; falls back to the previous static ~16-coin list if that call fails, so
+browsing never regresses. The curated 10 majors always lead in their fixed,
+load-bearing order — `autopilotRunner.mts`'s `slice(0, 10)` (what the robot
+actually TRADES) is completely unaffected; this only broadens what's
+BROWSABLE. Guarded against reintroducing the chart-freeze bug: the Markets
+list's auto-refresh sweep (`fetchTopMarkets`) is now capped at 60 coins
+(`MARKETS_LIST_CAP`) instead of unbounded — measured per-request latency
+(~200-700ms) meant sweeping 500+ coins through the serialized queue would
+take minutes, not seconds. 3 new tests cover the broadening, the failure
+fallback, and the one-fetch cache. Verified live against the real API
+(538 pairs, curated order intact, 324ms).
+
 ## Last Successful Tests
-tsc clean · 458 vitest tests green · vite build OK (main).
+tsc clean · 460 vitest tests green · vite build OK (main).
 Chart freeze root-fixed (two causes, both shipped):
 1. KrakenPublicSource queue now supports `priority` so an opened chart jumps
    ahead of the background list sweep (measured 8092ms → 1746ms for the exact
