@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 5801.855202202524,
+    "cash": 3869.0160692497448,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -260.16908694661595,
@@ -60,8 +60,27 @@
       "feesPaid": 0.05142672942297304,
       "realizedPnl": 0,
       "highestPrice": 7.64602,
-      "lowestPrice": 7.6042,
+      "lowestPrice": 7.5881,
       "confidence": 36.602455899311195,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "DOTEUR:1784648053701:3",
+      "symbol": "DOTEUR",
+      "openedAt": 1784648053701,
+      "entryPrice": 0.7483,
+      "quantity": 2575.247840539293,
+      "initialQuantity": 2575.247840539293,
+      "stopLoss": 0.736974492676789,
+      "takeProfit": 0.7709510146464219,
+      "feesPaid": 5.781173877226658,
+      "realizedPnl": 0,
+      "highestPrice": 0.7483,
+      "lowestPrice": 0.7483,
+      "confidence": 33.91856459816334,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -880,12 +899,19 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit AVAXEUR: 332.64650808609747 @ 5.776 (stop-loss)"
+    },
+    {
+      "timestamp": 1784648053701,
+      "intentId": "DOTEUR:1784648053701:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry DOTEUR: 2575.247840539293 @ 0.7483 (stop 0.736974492676789, target 0.7709510146464219, confidence 34)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1784646837231,
+    "at": 1784648053701,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -3770,6 +3796,22 @@
     {
       "at": 1784646837231,
       "equity": 9742.68
+    },
+    {
+      "at": 1784647141721,
+      "equity": 9742.57
+    },
+    {
+      "at": 1784647445679,
+      "equity": 9744.41
+    },
+    {
+      "at": 1784647749649,
+      "equity": 9738.87
+    },
+    {
+      "at": 1784648053701,
+      "equity": 9727.2
     }
   ],
   "trade-journal": [
@@ -4023,7 +4065,8 @@
     "c:XBTEUR:1784548305985:1",
     "o:AVAXEUR:1784620837493:2",
     "o:LINKEUR:1784624190460:3",
-    "c:AVAXEUR:1784620837493:2"
+    "c:AVAXEUR:1784620837493:2",
+    "o:DOTEUR:1784648053701:3"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -4046,7 +4089,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -6.31%"
+        "detail": "vs buy-and-hold BTC -6.14%"
       },
       {
         "key": "drawdown",
@@ -4059,7 +4102,7 @@
         "detail": "profit factor 0.12 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — 10 / 20 closed trades; 5 / 14 days of history; after-fee return -2.60%; vs buy-and-hold BTC -6.31%; profit factor 0.12 (needs ≥ 1.2).",
+    "summary": "NOT READY — 10 / 20 closed trades; 5 / 14 days of history; after-fee return -2.60%; vs buy-and-hold BTC -6.14%; profit factor 0.12 (needs ≥ 1.2).",
     "unmet": [
       "trades",
       "days",
@@ -4077,7 +4120,8 @@
   "move-alert-buckets": {
     "ETHEUR:1784561524524:1": 0,
     "SOLEUR:1784562436331:2": 0,
-    "LINKEUR:1784624190460:3": 0
+    "LINKEUR:1784624190460:3": 0,
+    "DOTEUR:1784648053701:3": 0
   },
   "monthly-anchor": {
     "equity": 9704.845288873927,
