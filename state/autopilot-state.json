@@ -1,34 +1,15 @@
 {
   "portfolio-engine": {
-    "cash": 3871.25277522171,
+    "cash": 5853.598536342284,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -266.23723147751747,
+    "closedRealizedPnl": -231.45237919655932,
     "dayAnchor": {
       "day": "2026-07-21",
       "equity": 9686.80934653524
     }
   },
   "open-positions": [
-    {
-      "id": "XBTEUR:1784548305985:1",
-      "symbol": "XBTEUR",
-      "openedAt": 1784548305985,
-      "entryPrice": 56725.7,
-      "quantity": 0.03433295505986908,
-      "initialQuantity": 0.03433295505986908,
-      "stopLoss": 56161.05531568488,
-      "takeProfit": 57854.98936863024,
-      "feesPaid": 5.842682726518847,
-      "realizedPnl": 0,
-      "highestPrice": 57794.2,
-      "lowestPrice": 56241.8,
-      "confidence": 30.81239055207095,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
     {
       "id": "ETHEUR:1784561524524:1",
       "symbol": "ETHEUR",
@@ -810,13 +791,20 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused LINKEUR: no exposure headroom: 5815.56 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1784620229587,
+      "intentId": "XBTEUR:1784548305985:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit XBTEUR: 0.03433295505986908 @ 57912.6 (take-profit)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1784619621669,
+    "at": 1784620229587,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "daily-summary-last-day": "2026-07-14",
@@ -3372,6 +3360,14 @@
     {
       "at": 1784619621669,
       "equity": 9795.87
+    },
+    {
+      "at": 1784619926332,
+      "equity": 9791.03
+    },
+    {
+      "at": 1784620229587,
+      "equity": 9794.92
     }
   ],
   "trade-journal": [
@@ -3558,6 +3554,29 @@
       "validationVerdict": null,
       "confidence": 33.43168171383115,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "XBTEUR:1784548305985:1",
+      "symbol": "XBTEUR",
+      "entryTimestamp": 1784548305985,
+      "exitTimestamp": 1784620229587,
+      "entryPrice": 56725.7,
+      "exitPrice": 57912.6,
+      "positionSize": 0.03433295505986908,
+      "stopLoss": 56161.05531568488,
+      "takeProfit": 57854.98936863024,
+      "exitReason": "take-profit",
+      "fees": 11.807614806119368,
+      "slippage": 0,
+      "holdingDurationMs": 71923602,
+      "mfePct": 2.092349675720179,
+      "maePct": 0.8530524964874725,
+      "realizedPnl": 34.78485228095814,
+      "returnPct": 1.7860726266930183,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 30.81239055207095,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "alerted-trade-ids": [
@@ -3575,7 +3594,8 @@
     "o:XBTEUR:1784548305985:1",
     "c:ETHEUR:1784547695861:0",
     "o:ETHEUR:1784561524524:1",
-    "o:SOLEUR:1784562436331:2"
+    "o:SOLEUR:1784562436331:2",
+    "c:XBTEUR:1784548305985:1"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -3583,7 +3603,7 @@
       {
         "key": "trades",
         "ok": false,
-        "detail": "8 / 20 closed trades"
+        "detail": "9 / 20 closed trades"
       },
       {
         "key": "days",
@@ -3593,12 +3613,12 @@
       {
         "key": "profitable",
         "ok": false,
-        "detail": "after-fee return -2.66%"
+        "detail": "after-fee return -2.31%"
       },
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -4.50%"
+        "detail": "vs buy-and-hold BTC -4.72%"
       },
       {
         "key": "drawdown",
@@ -3608,10 +3628,10 @@
       {
         "key": "consistency",
         "ok": false,
-        "detail": "profit factor 0.00 (needs ≥ 1.2)"
+        "detail": "profit factor 0.13 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — 8 / 20 closed trades; 5 / 14 days of history; after-fee return -2.66%; vs buy-and-hold BTC -4.50%; profit factor 0.00 (needs ≥ 1.2).",
+    "summary": "NOT READY — 9 / 20 closed trades; 5 / 14 days of history; after-fee return -2.31%; vs buy-and-hold BTC -4.72%; profit factor 0.13 (needs ≥ 1.2).",
     "unmet": [
       "trades",
       "days",
@@ -3627,7 +3647,6 @@
   "weekly-report-last": "2026-07-19",
   "equity-peak": 9897.645063310654,
   "move-alert-buckets": {
-    "XBTEUR:1784548305985:1": 0,
     "ETHEUR:1784561524524:1": 0,
     "SOLEUR:1784562436331:2": 0
   },
