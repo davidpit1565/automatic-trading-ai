@@ -103,6 +103,18 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   // Tracks which coin's detail is open (null = list view) so pause/resume can
   // restart whichever was showing, instead of always falling back to the list.
   let openCoinIndex: number | null = null;
+  // Bumped by every openDetail()/backToList() call. A paint() in flight when
+  // the user switches coins (or backs out) checks this before writing to the
+  // shared detailView — without it, a slow fetch for a coin the user has
+  // already left resolves later and silently overwrites whatever is now on
+  // screen with the wrong coin's chart/price/live-ticker.
+  let detailGeneration = 0;
+  // The range/chart-mode the user last chose, so resume() (view pause while
+  // a detail is open, then coming back) reopens on the same view instead of
+  // silently resetting to 1D/Candle. A genuinely fresh tap from the list
+  // still starts at the defaults, same as before.
+  let savedRangeKey = '1D';
+  let savedChartMode: 'candle' | 'line' = 'candle';
 
   const stopLivePrice = (): void => {
     if (stopLive) {
@@ -144,16 +156,22 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     }
   }
 
-  function openDetail(index: number): void {
+  function openDetail(index: number, opts: { preserveRange?: boolean } = {}): void {
     openCoinIndex = index;
+    detailGeneration++;
+    const myGeneration = detailGeneration;
     window.clearInterval(listTimer);
     listView.hidden = true;
     detailView.hidden = false;
     let coin = index;
-    let rangeKey = '1D';
     // Candles by default; the choice persists across range/coin changes while
-    // this detail stays open.
-    let chartMode: 'candle' | 'line' = 'candle';
+    // this detail stays open. `resume()` asks to preserve the last choice
+    // instead (see `savedRangeKey`/`savedChartMode`); a fresh tap from the
+    // list always starts at the defaults.
+    let rangeKey = opts.preserveRange ? savedRangeKey : '1D';
+    let chartMode: 'candle' | 'line' = opts.preserveRange ? savedChartMode : 'candle';
+    savedRangeKey = rangeKey;
+    savedChartMode = chartMode;
     // Monotonic paint id: only the newest paint renders. Prevents an overlap
     // between the 20s auto-refresh and a slow fetch from freezing the chart.
     let paintSeq = 0;
@@ -248,7 +266,10 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         }
       }
 
-      if (seq !== paintSeq) return; // a newer paint superseded this one — don't render stale
+      // A newer paint superseded this one (same detail), or a different coin's
+      // detail (or the list) opened while this fetch was in flight — either
+      // way, this response is stale and must not touch the shared detailView.
+      if (seq !== paintSeq || myGeneration !== detailGeneration) return;
       const up = changePct >= 0;
       const rangeBar = RANGES.map(
         (r) => `<button class="range-btn ${r.key === rangeKey ? 'active' : ''}" data-range="${r.key}">${r.key}</button>`,
@@ -276,15 +297,15 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         </div>`;
 
       detailView.querySelector('#mk-back')!.addEventListener('click', backToList);
-      detailView.querySelector('#mk-prev')!.addEventListener('click', () => { if (coin > 0) { coin--; rangeKey = '1D'; void paint(); } });
-      detailView.querySelector('#mk-next')!.addEventListener('click', () => { if (coin < markets.length - 1) { coin++; rangeKey = '1D'; void paint(); } });
+      detailView.querySelector('#mk-prev')!.addEventListener('click', () => { if (coin > 0) { coin--; rangeKey = '1D'; savedRangeKey = rangeKey; void paint(); } });
+      detailView.querySelector('#mk-next')!.addEventListener('click', () => { if (coin < markets.length - 1) { coin++; rangeKey = '1D'; savedRangeKey = rangeKey; void paint(); } });
       detailView.querySelectorAll<HTMLButtonElement>('.range-btn').forEach((b) => {
-        b.addEventListener('click', () => { rangeKey = b.dataset['range']!; void paint(); });
+        b.addEventListener('click', () => { rangeKey = b.dataset['range']!; savedRangeKey = rangeKey; void paint(); });
       });
       detailView.querySelectorAll<HTMLButtonElement>('.ctoggle-btn').forEach((b) => {
         b.addEventListener('click', () => {
           const mode = b.dataset['mode'];
-          if (mode === 'candle' || mode === 'line') { chartMode = mode; void paint(); }
+          if (mode === 'candle' || mode === 'line') { chartMode = mode; savedChartMode = mode; void paint(); }
         });
       });
 
@@ -292,7 +313,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       } catch {
         // Never leave a frozen/broken chart. Keep the last good render; the
         // periodic refresh retries. If nothing has rendered yet, show a note.
-        if (seq === paintSeq && !detailView.querySelector('svg.pchart')) {
+        if (myGeneration === detailGeneration && seq === paintSeq && !detailView.querySelector('svg.pchart')) {
           detailView.innerHTML =
             '<button class="tool-back" id="mk-eb">← All markets</button>' +
             '<div class="empty">Chart unavailable — retrying…</div>';
@@ -397,6 +418,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
 
   function backToList(): void {
     openCoinIndex = null;
+    detailGeneration++; // invalidates any still-in-flight paint for the coin we're leaving
     window.clearInterval(detailTimer);
     stopLivePrice();
     detailView.hidden = true;
@@ -416,7 +438,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     },
     resume: () => {
       if (openCoinIndex !== null) {
-        openDetail(openCoinIndex);
+        openDetail(openCoinIndex, { preserveRange: true });
       } else {
         void loadList();
         listTimer = window.setInterval(() => void loadList(), LIST_REFRESH_MS);

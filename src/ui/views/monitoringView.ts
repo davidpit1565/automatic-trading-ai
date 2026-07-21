@@ -21,7 +21,7 @@ import {
   inAppChannel,
   requestNotificationPermission,
 } from '../alertChannels';
-import { escapeHtml, formatPrice, signClass } from '../format';
+import { escapeHtml, formatPrice, signClass, truncate } from '../format';
 
 const MONITOR_SYMBOL_LIMIT = 12;
 const ALERT_COOLDOWN_MS = 3_600_000; // one hour per symbol+timeframe
@@ -294,7 +294,7 @@ function renderAlerts(element: Element, engine: MonitoringEngine): void {
               <td>${new Date(a.createdAt).toLocaleString()}</td>
               <td>${escapeHtml(a.symbol)}</td>
               <td class="${signClass(a.confidence)}">${a.confidence.toFixed(0)}</td>
-              <td>${escapeHtml(a.message.slice(0, 140))}…</td>
+              <td>${escapeHtml(truncate(a.message, 140))}</td>
             </tr>`,
           )
           .join('')}

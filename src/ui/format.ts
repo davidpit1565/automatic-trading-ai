@@ -22,6 +22,11 @@ export function signClass(value: number | null): string {
   return value > 0 ? 'positive' : 'negative';
 }
 
+/** Truncate to `max` chars, appending an ellipsis only when actually cut. */
+export function truncate(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max)}…` : text;
+}
+
 export function escapeHtml(text: string): string {
   return text
     .replaceAll('&', '&amp;')

@@ -23,7 +23,8 @@ const HOUR = 3_600_000;
 interface Range {
   readonly key: string;
   readonly ms: number; // 0 = all
-  /** Width of each candle bucket for this range. */
+  /** Widest sensible candle bucket for this range, once there's enough
+   * history to fill it (e.g. 1Y → weekly candles once a year has elapsed). */
   readonly bucketMs: number;
   readonly fx: (ts: number) => string;
 }
@@ -38,13 +39,34 @@ const hm = (t: number): string => new Date(t).toLocaleTimeString('en-GB', { hour
 const dm = (t: number): string => new Date(t).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
 const mon = (t: number): string => new Date(t).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
 
+/** Aim for roughly this many candles — readable on a phone, but enough to
+ * show real structure even when a range's nominal bucket is far too wide
+ * for how much history actually exists yet (e.g. 'All'/'1Y' on day 5 of
+ * tracking, where a weekly bucket would flatten everything into 1-2 candles). */
+const TARGET_CANDLES = 30;
+/** Never bucket finer than this — avoids near-one-sample-per-candle noise
+ * when there's very little history. Roughly the cloud robot's recording
+ * cadence, so this floor rarely binds once tracking has run a while. */
+const MIN_BUCKET_MS = 5 * 60_000;
+
+/**
+ * Shrink `niceBucketMs` down toward the actual data span when there isn't
+ * enough history to fill it yet, so every range shows real structure
+ * instead of 1-2 giant candles. Once `spanMs` comfortably exceeds
+ * `niceBucketMs * TARGET_CANDLES`, this returns `niceBucketMs` unchanged.
+ */
+export function adaptiveBucketMs(spanMs: number, niceBucketMs: number): number {
+  if (spanMs <= 0) return niceBucketMs;
+  return Math.max(MIN_BUCKET_MS, Math.min(niceBucketMs, spanMs / TARGET_CANDLES));
+}
+
 /**
  * Bucket the raw equity samples (recorded every cloud cycle, ~5 min) into
  * real OHLC candles — open/close are the first/last sample in the bucket,
  * high/low the extremes seen. This is a genuine aggregation of recorded
  * data, not invented prices.
  */
-function bucketize(points: readonly { at: number; equity: number }[], bucketMs: number): Candle[] {
+export function bucketize(points: readonly { at: number; equity: number }[], bucketMs: number): Candle[] {
   const buckets = new Map<number, Candle>();
   for (const p of points) {
     const bucketStart = Math.floor(p.at / bucketMs) * bucketMs;
@@ -97,7 +119,8 @@ export function renderValueView(container: HTMLElement, _data: ActiveDataSource)
     const last = pts[pts.length - 1]!.equity;
     const ret = first > 0 ? ((last - first) / first) * 100 : 0;
     const up = ret >= 0;
-    const candles = bucketize(pts, range.bucketMs);
+    const spanMs = pts[pts.length - 1]!.at - pts[0]!.at;
+    const candles = bucketize(pts, adaptiveBucketMs(spanMs, range.bucketMs));
     const mode: 'candle' | 'line' = candles.length >= 2 ? chartMode : 'line';
 
     let chart: string;
