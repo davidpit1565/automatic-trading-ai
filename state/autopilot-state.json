@@ -1,9 +1,9 @@
 {
   "portfolio-engine": {
-    "cash": 3886.253070189341,
+    "cash": 5801.855202202524,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -231.45237919655932,
+    "closedRealizedPnl": -260.16908694661595,
     "dayAnchor": {
       "day": "2026-07-21",
       "equity": 9686.80934653524
@@ -43,25 +43,6 @@
       "highestPrice": 68.91,
       "lowestPrice": 67.79,
       "confidence": 24.878622217075005,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "AVAXEUR:1784620837493:2",
-      "symbol": "AVAXEUR",
-      "openedAt": 1784620837493,
-      "entryPrice": 5.845,
-      "quantity": 332.64650808609747,
-      "initialQuantity": 332.64650808609747,
-      "stopLoss": 5.77705073043542,
-      "takeProfit": 5.980898539129161,
-      "feesPaid": 5.832956519289719,
-      "realizedPnl": 0,
-      "highestPrice": 5.845,
-      "lowestPrice": 5.781,
-      "confidence": 22.06457980936763,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -892,13 +873,20 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused LTCEUR: no exposure headroom: 5829.46 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1784646531880,
+      "intentId": "AVAXEUR:1784620837493:2",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit AVAXEUR: 332.64650808609747 @ 5.776 (stop-loss)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1784645010893,
+    "at": 1784646531880,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "daily-summary-last-day": "2026-07-14",
@@ -3758,6 +3746,26 @@
     {
       "at": 1784645010893,
       "equity": 9755.98
+    },
+    {
+      "at": 1784645316072,
+      "equity": 9764.48
+    },
+    {
+      "at": 1784645619902,
+      "equity": 9763.07
+    },
+    {
+      "at": 1784645923818,
+      "equity": 9756.74
+    },
+    {
+      "at": 1784646227829,
+      "equity": 9746.73
+    },
+    {
+      "at": 1784646531880,
+      "equity": 9742.61
     }
   ],
   "trade-journal": [
@@ -3967,6 +3975,29 @@
       "validationVerdict": null,
       "confidence": 30.81239055207095,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "AVAXEUR:1784620837493:2",
+      "symbol": "AVAXEUR",
+      "entryTimestamp": 1784620837493,
+      "exitTimestamp": 1784646531880,
+      "entryPrice": 5.845,
+      "exitPrice": 5.776,
+      "positionSize": 332.64650808609747,
+      "stopLoss": 5.77705073043542,
+      "takeProfit": 5.980898539129161,
+      "exitReason": "stop-loss",
+      "fees": 11.597055211405616,
+      "slippage": 0,
+      "holdingDurationMs": 25694387,
+      "mfePct": 0,
+      "maePct": 1.1804961505560299,
+      "realizedPnl": -28.716707750056607,
+      "returnPct": -1.476954662104362,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 22.06457980936763,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "alerted-trade-ids": [
@@ -3987,7 +4018,8 @@
     "o:SOLEUR:1784562436331:2",
     "c:XBTEUR:1784548305985:1",
     "o:AVAXEUR:1784620837493:2",
-    "o:LINKEUR:1784624190460:3"
+    "o:LINKEUR:1784624190460:3",
+    "c:AVAXEUR:1784620837493:2"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -3995,7 +4027,7 @@
       {
         "key": "trades",
         "ok": false,
-        "detail": "9 / 20 closed trades"
+        "detail": "10 / 20 closed trades"
       },
       {
         "key": "days",
@@ -4005,12 +4037,12 @@
       {
         "key": "profitable",
         "ok": false,
-        "detail": "after-fee return -2.31%"
+        "detail": "after-fee return -2.60%"
       },
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -6.15%"
+        "detail": "vs buy-and-hold BTC -6.25%"
       },
       {
         "key": "drawdown",
@@ -4020,10 +4052,10 @@
       {
         "key": "consistency",
         "ok": false,
-        "detail": "profit factor 0.13 (needs ≥ 1.2)"
+        "detail": "profit factor 0.12 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — 9 / 20 closed trades; 5 / 14 days of history; after-fee return -2.31%; vs buy-and-hold BTC -6.15%; profit factor 0.13 (needs ≥ 1.2).",
+    "summary": "NOT READY — 10 / 20 closed trades; 5 / 14 days of history; after-fee return -2.60%; vs buy-and-hold BTC -6.25%; profit factor 0.12 (needs ≥ 1.2).",
     "unmet": [
       "trades",
       "days",
@@ -4041,7 +4073,6 @@
   "move-alert-buckets": {
     "ETHEUR:1784561524524:1": 0,
     "SOLEUR:1784562436331:2": 0,
-    "AVAXEUR:1784620837493:2": 0,
     "LINKEUR:1784624190460:3": 0
   },
   "monthly-anchor": {
