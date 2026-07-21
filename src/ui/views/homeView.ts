@@ -182,6 +182,10 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       const btcPct = ((prices[btc]! - state.benchmark.btc) / state.benchmark.btc) * 100;
       bench.hidden = false;
       bench.textContent = `vs Bitcoin — robot ${formatPct(bot)} · BTC ${formatPct(btcPct)}${bot >= btcPct ? ' · leading' : ''}`;
+    } else {
+      // A transient failure to price just this one cycle (e.g. BTC's fetch
+      // failed) must not leave a stale comparison on screen looking current.
+      bench.hidden = true;
     }
 
     renderPositions(prices);

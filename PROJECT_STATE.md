@@ -100,6 +100,59 @@
   Not yet done.
 - Later: Telegram approve/reject flow (prerequisite for real money).
 
+## FIXED: Portfolio Value chart flattened to 1-2 candles (2026-07-20)
+David reported the wallet-history chart still "isn't organized well at all."
+Root-caused with the REAL live cloud state (fetched from the raw
+githubusercontent state URL, not a guess): equity tracking is only ~5 days
+old (588 samples). `valueView.ts`'s 'All'/'1Y' ranges used a FIXED weekly
+(7-day) candle bucket — with only ~5 days of real history, that bucketed the
+ENTIRE history into just 1-2 giant candles. Since 'All' is the default range,
+this was the very first thing shown on opening the chart. Fixed with
+`adaptiveBucketMs(spanMs, niceBucketMs)`: shrinks the bucket toward the
+actual data span (targeting ~30 candles, floored at 5 min) when there isn't
+enough history to fill the nice bucket width yet; once real history exceeds
+`niceBucketMs × 30`, it returns the original nice width unchanged (1Y stays
+weekly once a year has actually elapsed). 6 new tests (pure `adaptiveBucketMs`/
+`bucketize` unit tests + a DOM-integration repro of the exact live scenario:
+5 days of history on the default 'All' range). Verified visually in a real
+Chromium browser (dev server + Playwright, mocked cloud-state fetch since
+this sandbox can't reach raw.githubusercontent.com directly): before would
+have shown ~1-2 candles, after shows 31 real candles with visible structure.
+
+## App-wide bug sweep (2026-07-20)
+David asked to go over the whole app in detail and fix what's found. Ran a
+systematic review agent over every view file (`src/ui/views/*.ts`) plus the
+shared UI utilities, looking specifically for concrete, reproducible defects
+(not style). Found and fixed 3 more real bugs beyond the value-chart one above:
+- **`marketsView.ts` — stale coin-detail fetch could overwrite a different
+  coin.** The staleness guard (`paintSeq`) was scoped per-`openDetail()` call,
+  not to the component instance. Repro: open BTC, switch its range (a slow
+  fetch), back out and open ETH before that fetch resolves — BTC's response
+  would land later and silently snap the screen back to BTC's chart/price/live
+  ticker. Fixed with a component-level `detailGeneration` counter bumped on
+  every `openDetail()`/`backToList()`, checked alongside `paintSeq` before any
+  write to the shared `detailView`. Test reproduces the exact race (fails on
+  the old code, passes fixed).
+- **`marketsView.ts` — `resume()` silently reset the user's range/chart mode.**
+  Pausing (switching tabs) then resuming a coin detail reopened the right coin
+  but always reset to 1D/Candle, contradicting the pause/resume design intent.
+  Fixed by threading `savedRangeKey`/`savedChartMode` through an
+  `openDetail(index, { preserveRange })` option; a genuinely fresh tap from the
+  list still starts at the defaults. Test confirms (fails old, passes fixed).
+- **`homeView.ts` — "vs Bitcoin" banner never cleared once shown.** If a later
+  refresh cycle failed to price BTC (one transient fetch failure), the stale
+  comparison stayed on screen looking current, with no `else` branch to hide
+  it. Fixed with `else { bench.hidden = true }`. Test confirms (fails old,
+  passes fixed).
+- **`monitoringView.ts` — alert messages always got a trailing "…"** even when
+  not truncated (a 20-char message rendered as `"...text..."…`). Extracted a
+  small `truncate(text, max)` helper (`src/ui/format.ts`) that only appends
+  the ellipsis when actually cut; unit tested.
+6 new tests total for this sweep (on top of the value-chart fix's 6).
+The audit also covered `main.ts`, `dataSource.ts`, `markets.ts`, `charts.ts`,
+`cloudState.ts`, `liveTicker.ts` — no further concrete (not stylistic) defects
+found there.
+
 ## Broadened the BROWSABLE (display) universe (2026-07-20)
 David asked for more coins beyond the old ~26 and to actually reflect the
 full market in the app. `KrakenPublicSource.getInstruments()` now fetches
@@ -118,7 +171,7 @@ fallback, and the one-fetch cache. Verified live against the real API
 (538 pairs, curated order intact, 324ms).
 
 ## Last Successful Tests
-tsc clean · 472 vitest tests green · vite build OK (main).
+tsc clean · 484 vitest tests green · vite build OK (main).
 Chart freeze root-fixed (two causes, both shipped):
 1. KrakenPublicSource queue now supports `priority` so an opened chart jumps
    ahead of the background list sweep (measured 8092ms → 1746ms for the exact

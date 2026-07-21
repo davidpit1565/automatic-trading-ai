@@ -13,6 +13,7 @@ import { renderHomeView } from '../../src/ui/views/homeView';
 import { renderMarketsView } from '../../src/ui/views/marketsView';
 import { renderHistoryView } from '../../src/ui/views/historyView';
 import { renderValueView } from '../../src/ui/views/valueView';
+import { err } from '../../src/core/types';
 
 const ANCHOR = 1_700_000_000_000;
 
@@ -81,6 +82,48 @@ describe('Home view (DOM integration)', () => {
     expect(card.querySelectorAll('.readiness-list li').length).toBe(3);
     expect(card.querySelector('.readiness-list li.ok')).not.toBeNull();
     expect(card.querySelector('.readiness-list li.no')).not.toBeNull();
+  });
+
+  it('clears the "vs Bitcoin" banner if a later cycle cannot price BTC (no stale comparison shown as current)', async () => {
+    const raw = {
+      'portfolio-engine': { cash: 5000, initialCash: 10000, baseCurrency: 'EUR' },
+      'open-positions': [],
+      'audit-log': [],
+      'benchmark-anchor': { btc: 50_000, equity: 10_000 },
+    };
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: true, json: () => Promise.resolve(raw) }));
+
+    const base = await makeData();
+    let btcCalls = 0;
+    const gatedSource: typeof base.source = {
+      name: base.source.name,
+      getInstruments: () => base.source.getInstruments(),
+      getCandles: (symbol, timeframe, limit, opts) => {
+        // limit 2 singles out the hero's own price refresh (livePrices calls
+        // getCandles(symbol, '1h', 2)); the markets-strip sweep also fetches
+        // BTC (with a much larger limit) and must not be gated here.
+        if (symbol === 'BTC/USD' && limit === 2) {
+          btcCalls++;
+          if (btcCalls >= 2) return Promise.resolve(err('offline'));
+        }
+        return base.source.getCandles(symbol, timeframe, limit, opts);
+      },
+    };
+    const data = { ...base, source: gatedSource };
+
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderHomeView(container, data);
+
+    await waitFor(() => container.querySelector('#hv-bench')?.hasAttribute('hidden') === false);
+    expect(container.querySelector('#hv-bench')!.textContent).toContain('vs Bitcoin');
+
+    // A later cycle (e.g. after navigating away and back) where BTC's price
+    // fetch fails must hide the banner, not keep showing the old comparison.
+    handle.pause();
+    handle.resume();
+    await waitFor(() => container.querySelector('#hv-bench')?.hasAttribute('hidden') === true);
+    expect(container.querySelector('#hv-bench')!.hasAttribute('hidden')).toBe(true);
   });
 });
 
@@ -173,6 +216,96 @@ describe('Markets view (DOM integration)', () => {
     expect(container.querySelector('.pcandle')).toBeNull();
     expect(container.querySelector('.pchart-now')).not.toBeNull();
   });
+
+  it('does not let a stale coin-detail fetch overwrite a different coin opened afterward', async () => {
+    // Real bug: the staleness guard was scoped per-openDetail-call, so a slow
+    // fetch for a coin the user has already left (backed out of, or switched
+    // away from) could resolve later and silently overwrite whatever coin is
+    // now on screen. Reproduce it: open BTC, switch its range to '1W' (a
+    // fetch we can hold open), back out to the list and open ETH before that
+    // fetch resolves, then release it — the screen must still show ETH.
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const base = await makeData();
+    let releaseGate: (() => void) | null = null;
+    const gatedSource: typeof base.source = {
+      name: base.source.name,
+      getInstruments: () => base.source.getInstruments(),
+      getCandles: (symbol, timeframe, limit, opts) => {
+        // limit 168 singles out the detail view's '1W' range request — the
+        // list sweep's own snapshot fetch also uses '1h' but with limit 48,
+        // and must not be gated or the list never renders at all.
+        if (symbol === 'BTC/USD' && timeframe === '1h' && limit === 168 && !releaseGate) {
+          return new Promise((resolve) => {
+            releaseGate = () => resolve(base.source.getCandles(symbol, timeframe, limit, opts));
+          });
+        }
+        return base.source.getCandles(symbol, timeframe, limit, opts);
+      },
+    };
+    const data = { ...base, source: gatedSource };
+
+    renderMarketsView(container, data);
+    await waitFor(() => container.querySelectorAll('.market-row').length >= 2);
+    (container.querySelectorAll('.market-row')[0] as HTMLButtonElement).click(); // BTC, default 1D
+    await waitFor(() => container.querySelector('.detail-name') !== null);
+    expect(container.querySelector('.detail-name')!.textContent).toBe('Bitcoin');
+
+    // Switch to '1W' (tf '1h') — this fetch hangs on our gate.
+    const rangeBtn = Array.from(container.querySelectorAll<HTMLButtonElement>('.range-btn')).find(
+      (b) => b.dataset['range'] === '1W',
+    )!;
+    rangeBtn.click();
+    await waitFor(() => releaseGate !== null);
+
+    // Back out (the 1D render is still showing, so its back button works) and open ETH.
+    (container.querySelector('#mk-back') as HTMLButtonElement).click();
+    await waitFor(() => container.querySelectorAll('.market-row').length >= 2);
+    (container.querySelectorAll('.market-row')[1] as HTMLButtonElement).click(); // ETH
+    await waitFor(() => container.querySelector('.detail-name')?.textContent === 'Ethereum');
+
+    // Now let BTC's stale '1W' fetch resolve.
+    releaseGate!();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    // Must still show ETH — not have snapped back to BTC's stale response.
+    expect(container.querySelector('.detail-name')!.textContent).toBe('Ethereum');
+  });
+
+  it('resume() reopens the same coin on the same range/mode the user had, not the defaults', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, await makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+    (container.querySelector('.market-row') as HTMLButtonElement).click(); // BTC, default 1D/Candle
+    await waitFor(() => container.querySelector('.range-bar') !== null);
+
+    // Switch to '1W' and Line.
+    const rangeBtn = Array.from(container.querySelectorAll<HTMLButtonElement>('.range-btn')).find(
+      (b) => b.dataset['range'] === '1W',
+    )!;
+    rangeBtn.click();
+    await waitFor(() => container.querySelector('.range-btn.active')?.getAttribute('data-range') === '1W');
+    const lineBtn = Array.from(container.querySelectorAll<HTMLButtonElement>('.ctoggle-btn')).find(
+      (b) => b.dataset['mode'] === 'line',
+    )!;
+    lineBtn.click();
+    await waitFor(() => container.querySelector('svg.pchart polyline') !== null);
+
+    // Navigate away (pause) and back (resume) — mirrors switching tabs.
+    // pause() doesn't clear the DOM, so the pre-pause range-bar is still
+    // sitting there; wait for resume's own repaint to actually replace it
+    // rather than a bare "a range-bar exists" check the stale one already
+    // satisfies before resume's async paint has had a chance to run.
+    const rangeBarBeforeResume = container.querySelector('.range-bar');
+    handle.pause();
+    handle.resume();
+    await waitFor(() => container.querySelector('.range-bar') !== rangeBarBeforeResume);
+
+    expect(container.querySelector('.detail-name')!.textContent).toBe('Bitcoin');
+    expect(container.querySelector('.range-btn.active')!.getAttribute('data-range')).toBe('1W');
+    expect(container.querySelector('.ctoggle-btn.active')!.getAttribute('data-mode')).toBe('line');
+  });
 });
 
 describe('Value view (DOM integration)', () => {
@@ -215,6 +348,33 @@ describe('Value view (DOM integration)', () => {
     const tip = container.querySelector<HTMLElement>('.pchart-tip')!;
     expect(tip.hidden).toBe(false);
     expect(tip.textContent).toContain('€');
+  });
+
+  it('shows real candle structure on the default All range with only a few days of history (real bug repro)', async () => {
+    // Mirrors the live incident: equity tracking is only ~5 days old, but
+    // the default range is 'All', whose "nice" bucket was a fixed 7 days —
+    // that flattened the ENTIRE history into 1-2 candles. Real cadence is
+    // roughly every 5-15 minutes; sample hourly here for a fast test.
+    const at0 = ANCHOR;
+    const equityHistory = Array.from({ length: 5 * 24 }, (_, i) => ({
+      at: at0 + i * 3_600_000,
+      equity: 10_000 + Math.sin(i / 3) * 50,
+    }));
+    const raw = {
+      'portfolio-engine': { cash: 6000, initialCash: 10000, baseCurrency: 'EUR' },
+      'open-positions': [],
+      'audit-log': [],
+      'equity-history': equityHistory,
+    };
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: true, json: () => Promise.resolve(raw) }));
+
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderValueView(container, await makeData());
+
+    await waitFor(() => container.querySelector('svg.pchart') !== null);
+    // Stayed in candle mode (the default) — a real chart, not a 1-candle flat line.
+    expect(container.querySelectorAll('.pcandle').length).toBeGreaterThan(15);
   });
 });
 
