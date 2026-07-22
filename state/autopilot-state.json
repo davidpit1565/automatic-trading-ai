@@ -1,9 +1,9 @@
 {
   "portfolio-engine": {
-    "cash": 3869.0160692497448,
+    "cash": 5756.401562767438,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -260.16908694661595,
+    "closedRealizedPnl": -299.8415525044759,
     "dayAnchor": {
       "day": "2026-07-22",
       "equity": 9740.811469492408
@@ -41,7 +41,7 @@
       "feesPaid": 5.784938987308143,
       "realizedPnl": 0,
       "highestPrice": 68.91,
-      "lowestPrice": 67.75,
+      "lowestPrice": 67.54,
       "confidence": 24.878622217075005,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -60,27 +60,8 @@
       "feesPaid": 0.05142672942297304,
       "realizedPnl": 0,
       "highestPrice": 7.65133,
-      "lowestPrice": 7.54646,
+      "lowestPrice": 7.54479,
       "confidence": 36.602455899311195,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "DOTEUR:1784648053701:3",
-      "symbol": "DOTEUR",
-      "openedAt": 1784648053701,
-      "entryPrice": 0.7483,
-      "quantity": 2575.247840539293,
-      "initialQuantity": 2575.247840539293,
-      "stopLoss": 0.736974492676789,
-      "takeProfit": 0.7709510146464219,
-      "feesPaid": 5.781173877226658,
-      "realizedPnl": 0,
-      "highestPrice": 0.7518,
-      "lowestPrice": 0.7376,
-      "confidence": 33.91856459816334,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -962,13 +943,20 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ADAEUR: no exposure headroom: 5812.20 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1784701663099,
+      "intentId": "DOTEUR:1784648053701:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit DOTEUR: 2575.247840539293 @ 0.7351 (stop-loss)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1784700442035,
+    "at": 1784701663099,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "daily-summary-last-day": "2026-07-14",
@@ -4300,6 +4288,22 @@
     {
       "at": 1784700442035,
       "equity": 9681.69
+    },
+    {
+      "at": 1784700748037,
+      "equity": 9678.12
+    },
+    {
+      "at": 1784701053199,
+      "equity": 9678.99
+    },
+    {
+      "at": 1784701358080,
+      "equity": 9670.27
+    },
+    {
+      "at": 1784701663099,
+      "equity": 9658.32
     }
   ],
   "trade-journal": [
@@ -4532,6 +4536,29 @@
       "validationVerdict": null,
       "confidence": 22.06457980936763,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "DOTEUR:1784648053701:3",
+      "symbol": "DOTEUR",
+      "entryTimestamp": 1784648053701,
+      "exitTimestamp": 1784701663099,
+      "entryPrice": 0.7483,
+      "exitPrice": 0.7351,
+      "positionSize": 2575.247840539293,
+      "stopLoss": 0.736974492676789,
+      "takeProfit": 0.7709510146464219,
+      "exitReason": "stop-loss",
+      "fees": 11.460367939967963,
+      "slippage": 0,
+      "holdingDurationMs": 53609398,
+      "mfePct": 0.4677268475210556,
+      "maePct": 1.7639983963650927,
+      "realizedPnl": -39.672465557859944,
+      "returnPct": -2.0587064011759977,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 33.91856459816334,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "alerted-trade-ids": [
@@ -4554,7 +4581,8 @@
     "o:AVAXEUR:1784620837493:2",
     "o:LINKEUR:1784624190460:3",
     "c:AVAXEUR:1784620837493:2",
-    "o:DOTEUR:1784648053701:3"
+    "o:DOTEUR:1784648053701:3",
+    "c:DOTEUR:1784648053701:3"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -4562,7 +4590,7 @@
       {
         "key": "trades",
         "ok": false,
-        "detail": "10 / 20 closed trades"
+        "detail": "11 / 20 closed trades"
       },
       {
         "key": "days",
@@ -4572,25 +4600,25 @@
       {
         "key": "profitable",
         "ok": false,
-        "detail": "after-fee return -2.60%"
+        "detail": "after-fee return -3.00%"
       },
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -5.58%"
+        "detail": "vs buy-and-hold BTC -5.65%"
       },
       {
         "key": "drawdown",
         "ok": true,
-        "detail": "max drawdown 2.7% (limit 10%)"
+        "detail": "max drawdown 3.0% (limit 10%)"
       },
       {
         "key": "consistency",
         "ok": false,
-        "detail": "profit factor 0.12 (needs ≥ 1.2)"
+        "detail": "profit factor 0.10 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — 10 / 20 closed trades; 6 / 14 days of history; after-fee return -2.60%; vs buy-and-hold BTC -5.58%; profit factor 0.12 (needs ≥ 1.2).",
+    "summary": "NOT READY — 11 / 20 closed trades; 6 / 14 days of history; after-fee return -3.00%; vs buy-and-hold BTC -5.65%; profit factor 0.10 (needs ≥ 1.2).",
     "unmet": [
       "trades",
       "days",
@@ -4608,8 +4636,7 @@
   "move-alert-buckets": {
     "ETHEUR:1784561524524:1": 0,
     "SOLEUR:1784562436331:2": 0,
-    "LINKEUR:1784624190460:3": 0,
-    "DOTEUR:1784648053701:3": 0
+    "LINKEUR:1784624190460:3": 0
   },
   "monthly-anchor": {
     "equity": 9704.845288873927,
