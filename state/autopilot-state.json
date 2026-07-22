@@ -1,9 +1,9 @@
 {
   "portfolio-engine": {
-    "cash": 3866.502612290543,
+    "cash": 5773.38019655733,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -249.12661189519193,
+    "closedRealizedPnl": -280.8579249002602,
     "dayAnchor": {
       "day": "2026-07-22",
       "equity": 9740.811469492408
@@ -24,25 +24,6 @@
       "highestPrice": 69.01,
       "lowestPrice": 67.46,
       "confidence": 24.878622217075005,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "XRPEUR:1784735656265:2",
-      "symbol": "XRPEUR",
-      "openedAt": 1784735656265,
-      "entryPrice": 1.00833,
-      "quantity": 1922.5936918190037,
-      "initialQuantity": 1922.5936918190037,
-      "stopLoss": 0.9961074308817499,
-      "takeProfit": 1.0327751382365,
-      "feesPaid": 5.815826691815567,
-      "realizedPnl": 0,
-      "highestPrice": 1.01384,
-      "lowestPrice": 0.99679,
-      "confidence": 35.891693572430015,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -79,7 +60,7 @@
       "feesPaid": 5.738322266070471,
       "realizedPnl": 0,
       "highestPrice": 41.36,
-      "lowestPrice": 41.34,
+      "lowestPrice": 41.32,
       "confidence": 21.509813054217997,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -1046,13 +1027,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry LTCEUR: 46.25813999250682 @ 41.35 (stop 40.92183082849731, target 42.20633834300538, confidence 22)"
+    },
+    {
+      "timestamp": 1784750571155,
+      "intentId": "XRPEUR:1784735656265:2",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit XRPEUR: 1922.5936918190037 @ 0.99481 (stop-loss)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1784749962143,
+    "at": 1784750571155,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "daily-summary-last-day": "2026-07-14",
@@ -5016,6 +5004,14 @@
     {
       "at": 1784749962143,
       "equity": 9654.59
+    },
+    {
+      "at": 1784750267184,
+      "equity": 9651.93
+    },
+    {
+      "at": 1784750571155,
+      "equity": 9643.92
     }
   ],
   "trade-journal": [
@@ -5340,6 +5336,29 @@
       "validationVerdict": null,
       "confidence": 30.344202826794117,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "XRPEUR:1784735656265:2",
+      "symbol": "XRPEUR",
+      "entryTimestamp": 1784735656265,
+      "exitTimestamp": 1784750571155,
+      "entryPrice": 1.00833,
+      "exitPrice": 0.99481,
+      "positionSize": 1922.5936918190037,
+      "stopLoss": 0.9961074308817499,
+      "takeProfit": 1.0327751382365,
+      "exitReason": "stop-loss",
+      "fees": 11.553672983490955,
+      "slippage": 0,
+      "holdingDurationMs": 14914890,
+      "mfePct": 0.5464480874317065,
+      "maePct": 1.3408308787797623,
+      "realizedPnl": -31.731313005068273,
+      "returnPct": -1.636808386143423,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 35.891693572430015,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "alerted-trade-ids": [
@@ -5370,7 +5389,8 @@
     "o:XRPEUR:1784735656265:2",
     "o:AVAXEUR:1784735656265:3",
     "c:ADAEUR:1784732686780:2",
-    "o:LTCEUR:1784749351776:3"
+    "o:LTCEUR:1784749351776:3",
+    "c:XRPEUR:1784735656265:2"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -5378,7 +5398,7 @@
       {
         "key": "trades",
         "ok": false,
-        "detail": "14 / 20 closed trades"
+        "detail": "15 / 20 closed trades"
       },
       {
         "key": "days",
@@ -5388,12 +5408,12 @@
       {
         "key": "profitable",
         "ok": false,
-        "detail": "after-fee return -2.49%"
+        "detail": "after-fee return -2.81%"
       },
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -5.79%"
+        "detail": "vs buy-and-hold BTC -5.90%"
       },
       {
         "key": "drawdown",
@@ -5403,10 +5423,10 @@
       {
         "key": "consistency",
         "ok": false,
-        "detail": "profit factor 0.27 (needs ≥ 1.2)"
+        "detail": "profit factor 0.25 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — 14 / 20 closed trades; 6 / 14 days of history; after-fee return -2.49%; vs buy-and-hold BTC -5.79%; profit factor 0.27 (needs ≥ 1.2).",
+    "summary": "NOT READY — 15 / 20 closed trades; 6 / 14 days of history; after-fee return -2.81%; vs buy-and-hold BTC -5.90%; profit factor 0.25 (needs ≥ 1.2).",
     "unmet": [
       "trades",
       "days",
@@ -5423,7 +5443,6 @@
   "equity-peak": 9897.645063310654,
   "move-alert-buckets": {
     "SOLEUR:1784562436331:2": 0,
-    "XRPEUR:1784735656265:2": 0,
     "AVAXEUR:1784735656265:3": 0,
     "LTCEUR:1784749351776:3": 0
   },
@@ -5434,6 +5453,6 @@
   "monthly-report-last": "2026-07-20",
   "daily-loss": {
     "day": "2026-07-22",
-    "loss": 6.540327015618687
+    "loss": 38.27164002068696
   }
 }
