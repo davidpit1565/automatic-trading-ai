@@ -31,6 +31,22 @@
   Telegram alert once/day (`buildDrawdownHaltAlert`).
 
 ## Pending Work (autonomous queue)
+- TESTED AND REJECTED (2026-07-20): David asked whether a CLOSER take-profit
+  target (easier to hit, so more trades close in profit instead of stopping
+  out) would help, having noticed recent closes were mostly stop-losses.
+  Measured with `scripts/sweepStrategy.mts` on real Kraken history (5
+  symbols, 720 1h candles, production trailing stop 1.0/2.0 held fixed):
+  lowering `atrTargetMultiple` from 4 (current, 2:1 reward/risk) to 3 (1.5:1,
+  the `minRiskReward` floor) DOES raise win% (52.9%→61.3%) exactly as
+  expected, but out-of-sample profit factor drops (2.10→1.60) — same pattern
+  at 3.5 (OOS-PF 1.92) and even at a FARTHER target of 5/2.5R (OOS-PF 1.49).
+  **The current 4/2R setting has the best OOS-PF of everything tested.**
+  Conclusion: win rate and profitability aren't the same thing — a closer
+  target wins more often but each win is smaller and the edge is less
+  robust out-of-sample. Correctly NOT changed. (Noted in passing: the
+  existing "PROD + trail 1.5/1.5" candidate scored OOS-PF 3.18, the best of
+  the whole sweep — unrelated to this question, not investigated further
+  yet, worth a dedicated look later.)
 - TESTED AND REJECTED (2026-07-20): a daily-trend regime filter
   (`src/core/signal/regimeFilter.ts` — `buildDailyRegimeFilter`, EMA on 1d
   closes, wired as an optional `regimeFilter` hook in `livePipeline.ts` only,
