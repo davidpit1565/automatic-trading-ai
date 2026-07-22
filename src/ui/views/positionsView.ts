@@ -72,6 +72,7 @@ export function renderPositionsView(container: HTMLElement, data: ActiveDataSour
     killSwitch,
     audit,
     getDailyLoss: () => new DailyLossTracker(store).lossToday(Date.now()),
+    onRealizedPnl: (pnl, ts) => new DailyLossTracker(store).record(pnl, ts),
     store,
   });
   // Reload survival: pick the schedule back up if it was running, and run a

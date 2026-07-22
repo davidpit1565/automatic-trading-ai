@@ -63,6 +63,7 @@ function makePilot(
     haltNewEntries?: () => boolean;
     riskLimits?: import('../../src/core/risk/riskEngine').RiskLimits;
     correlationBetween?: (a: string, b: string) => number;
+    onRealizedPnl?: (pnl: number, timestamp: number) => void;
   } = {},
 ) {
   const store = new MemoryStore();
@@ -88,6 +89,7 @@ function makePilot(
     haltNewEntries: opts.haltNewEntries,
     riskLimits: opts.riskLimits,
     correlationBetween: opts.correlationBetween,
+    onRealizedPnl: opts.onRealizedPnl,
   });
   return { pilot, portfolio, positions, journal, killSwitch, audit };
 }
@@ -253,6 +255,43 @@ describe('autonomous paper exits', () => {
     const cycle = await pilot.runCycleOnce(T + 3_600_000);
     expect(cycle.closed).toHaveLength(0);
     expect(portfolio.openPositions()).toHaveLength(1);
+  });
+
+  it("reports the exit's realized P&L on a losing stop-out and feeds it to onRealizedPnl", async () => {
+    // Real bug: DailyLossTracker.record() was never called anywhere in
+    // production, so the daily-loss limit could never trip — this is the
+    // wiring that makes it actually work. CycleResult.closed must carry the
+    // real realized P&L, matching what lands in the trade journal.
+    const recorded: { pnl: number; timestamp: number }[] = [];
+    const market = { 'QUAL/USD': { drift: 0.001 } } as Record<string, { drift: number; lastPrice?: number }>;
+    const { pilot, portfolio, journal } = makePilot(market, {
+      onRealizedPnl: (pnl, ts) => recorded.push({ pnl, timestamp: ts }),
+    });
+    await pilot.runCycleOnce(T);
+    const position = portfolio.openPositions()[0]!;
+
+    market['QUAL/USD'] = { drift: 0.001, lastPrice: position.stopLoss * 0.99 };
+    const exitAt = T + 3_600_000;
+    const cycle = await pilot.runCycleOnce(exitAt);
+
+    expect(cycle.closed[0]!.pnl).toBeCloseTo(journal.entries()[0]!.realizedPnl, 6);
+    expect(cycle.closed[0]!.pnl).toBeLessThan(0); // a stop-loss is a real loss
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]!.pnl).toBeCloseTo(journal.entries()[0]!.realizedPnl, 6);
+    expect(recorded[0]!.timestamp).toBe(exitAt);
+  });
+
+  it("reports the exit's realized P&L on a winning take-profit (not fed to the loss tracker)", async () => {
+    const market = { 'QUAL/USD': { drift: 0.001 } } as Record<string, { drift: number; lastPrice?: number }>;
+    const { pilot, portfolio, journal } = makePilot(market);
+    await pilot.runCycleOnce(T);
+    const position = portfolio.openPositions()[0]!;
+
+    market['QUAL/USD'] = { drift: 0.001, lastPrice: position.takeProfit * 1.01 };
+    const cycle = await pilot.runCycleOnce(T + 3_600_000);
+
+    expect(cycle.closed[0]!.pnl).toBeCloseTo(journal.entries()[0]!.realizedPnl, 6);
+    expect(cycle.closed[0]!.pnl).toBeGreaterThan(0);
   });
 });
 

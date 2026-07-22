@@ -100,16 +100,22 @@
   correct, it's just not proven to net-improve results yet. Re-measure once
   there's more real trade history (current samples: 20-27 trades per
   window) before revisiting.
-- FINDING (2026-07-20): `DailyLossTracker.record()` (`src/core/risk/
-  dailyLoss.ts`) is never called anywhere in `server/autopilotRunner.mts` or
-  any UI view (grep-confirmed) — realized losses are never actually
-  accumulated, so `dailyLossLimitPct` (3% of equity) never trips; `getDailyLoss`
-  always reads back 0. This is a genuine dormant capital-protection gap, not
-  yet fixed (found while building the correlation-limit measurement harness,
-  which mirrors this exact dead behaviour for fidelity to production — see
-  the harness's `getDailyLoss` comment). Queued: wire `.record(pnl, timestamp)`
-  after each realized exit (needs `CycleResult.closed` to carry `pnl`, which
-  it currently doesn't) and measure that the limit now actually engages.
+- FIXED (2026-07-21): `DailyLossTracker.record()` (`src/core/risk/
+  dailyLoss.ts`) was never called anywhere — realized losses were never
+  actually accumulated, so `dailyLossLimitPct` (3% of equity) could never
+  trip; `getDailyLoss` always read back 0. A real dormant capital-protection
+  gap (found while building the correlation-limit measurement harness).
+  Fixed: `PaperAutoPilot` now computes each exit's realized P&L (mirroring
+  `PortfolioEngine.exit`'s own math) and exposes it on `CycleResult.closed[].
+  pnl`, plus an optional `onRealizedPnl(pnl, timestamp)` hook. Wired in both
+  places that run a real exits loop — `server/autopilotRunner.mts` (the
+  actual cloud robot) and `positionsView.ts` (the in-browser local
+  autopilot) — to `dailyLossTracker.record(pnl, timestamp)`.
+  `DailyLossTracker.record()` itself already ignores non-negative P&L, so
+  wins never touch the loss counter. 2 new tests confirm the reported `pnl`
+  matches the trade journal's `realizedPnl` exactly and that `onRealizedPnl`
+  fires with the right amount/timestamp on a loss (and not is-a-loss on a
+  win). The daily-loss limit now actually engages when it should.
 - The robot's TRADED universe stays pinned to the 10 curated majors
   (`slice(0, 10)`, deliberately) — widening THAT requires a proper sweep +
   out-of-sample validation first (measure, don't guess), not a slice change.
@@ -187,7 +193,7 @@ fallback, and the one-fetch cache. Verified live against the real API
 (538 pairs, curated order intact, 324ms).
 
 ## Last Successful Tests
-tsc clean · 484 vitest tests green · vite build OK (main).
+tsc clean · 486 vitest tests green · vite build OK (main).
 Chart freeze root-fixed (two causes, both shipped):
 1. KrakenPublicSource queue now supports `priority` so an opened chart jumps
    ahead of the background list sweep (measured 8092ms → 1746ms for the exact

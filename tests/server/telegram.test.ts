@@ -150,7 +150,7 @@ describe('buildCycleMessage', () => {
     const msg = buildCycleMessage({
       timestamp: 0,
       opened: [],
-      closed: [{ symbol: 'ETH-EUR', reason: 'take-profit', price: 1600 }],
+      closed: [{ symbol: 'ETH-EUR', reason: 'take-profit', price: 1600, pnl: 50 }],
     });
     expect(msg).toContain('ETH-EUR');
     expect(msg).toContain('הגיע ליעד'); // translated take-profit
@@ -180,7 +180,7 @@ describe('buildCycleMessage', () => {
     const msg = buildCycleMessage({
       timestamp: 0,
       opened: [{ symbol: 'BTC-EUR', quantity: 0.01, entry: 54700 }],
-      closed: [{ symbol: 'ETH-EUR', reason: 'stop-loss', price: 1500 }],
+      closed: [{ symbol: 'ETH-EUR', reason: 'stop-loss', price: 1500, pnl: -25 }],
     });
     expect(msg).toContain('BTC-EUR');
     expect(msg).toContain('ETH-EUR');

@@ -233,6 +233,9 @@ async function main(): Promise<void> {
     killSwitch: new PersistedKillSwitch(store),
     audit: new PersistedAuditLog(store),
     getDailyLoss: () => new DailyLossTracker(store).lossToday(Date.now()),
+    // Feeds the tracker above: without this, realized losses were never
+    // actually recorded, so the daily-loss limit could never trip.
+    onRealizedPnl: (pnl, ts) => new DailyLossTracker(store).record(pnl, ts),
     costRate: COST_RATE,
     // Only commit capital to setups with real conviction — refuses the weak
     // ~4–12% signals that were producing churn and losses.
