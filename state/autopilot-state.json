@@ -1,9 +1,9 @@
 {
   "portfolio-engine": {
-    "cash": 5756.401562767438,
+    "cash": 5773.246912742132,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -299.8415525044759,
+    "closedRealizedPnl": -300.1384456707734,
     "dayAnchor": {
       "day": "2026-07-22",
       "equity": 9740.811469492408
@@ -43,25 +43,6 @@
       "highestPrice": 68.91,
       "lowestPrice": 67.46,
       "confidence": 24.878622217075005,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "LINKEUR:1784624190460:3",
-      "symbol": "LINKEUR",
-      "openedAt": 1784624190460,
-      "entryPrice": 7.62473,
-      "quantity": 2.248242644787555,
-      "initialQuantity": 2.248242644787555,
-      "stopLoss": 7.519468081334178,
-      "takeProfit": 7.835253837331643,
-      "feesPaid": 0.05142672942297304,
-      "realizedPnl": 0,
-      "highestPrice": 7.65133,
-      "lowestPrice": 7.52697,
-      "confidence": 36.602455899311195,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -950,13 +931,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit DOTEUR: 2575.247840539293 @ 0.7351 (stop-loss)"
+    },
+    {
+      "timestamp": 1784707147121,
+      "intentId": "LINKEUR:1784624190460:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit LINKEUR: 2.248242644787555 @ 7.51522 (stop-loss)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1784705928005,
+    "at": 1784707147121,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "daily-summary-last-day": "2026-07-14",
@@ -4360,6 +4348,22 @@
     {
       "at": 1784705928005,
       "equity": 9654.03
+    },
+    {
+      "at": 1784706233301,
+      "equity": 9654.62
+    },
+    {
+      "at": 1784706537941,
+      "equity": 9658.65
+    },
+    {
+      "at": 1784706842595,
+      "equity": 9657.71
+    },
+    {
+      "at": 1784707147121,
+      "equity": 9658.7
     }
   ],
   "trade-journal": [
@@ -4615,6 +4619,29 @@
       "validationVerdict": null,
       "confidence": 33.91856459816334,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "LINKEUR:1784624190460:3",
+      "symbol": "LINKEUR",
+      "entryTimestamp": 1784624190460,
+      "exitTimestamp": 1784707147121,
+      "entryPrice": 7.62473,
+      "exitPrice": 7.51522,
+      "positionSize": 2.248242644787555,
+      "stopLoss": 7.519468081334178,
+      "takeProfit": 7.835253837331643,
+      "exitReason": "stop-loss",
+      "fees": 0.10211484368985405,
+      "slippage": 0,
+      "holdingDurationMs": 82956661,
+      "mfePct": 0.34886481226220706,
+      "maePct": 1.4362475786027746,
+      "realizedPnl": -0.2968931662975647,
+      "returnPct": -1.7319388358669665,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 36.602455899311195,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "alerted-trade-ids": [
@@ -4638,7 +4665,8 @@
     "o:LINKEUR:1784624190460:3",
     "c:AVAXEUR:1784620837493:2",
     "o:DOTEUR:1784648053701:3",
-    "c:DOTEUR:1784648053701:3"
+    "c:DOTEUR:1784648053701:3",
+    "c:LINKEUR:1784624190460:3"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -4646,7 +4674,7 @@
       {
         "key": "trades",
         "ok": false,
-        "detail": "11 / 20 closed trades"
+        "detail": "12 / 20 closed trades"
       },
       {
         "key": "days",
@@ -4661,7 +4689,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -5.55%"
+        "detail": "vs buy-and-hold BTC -5.67%"
       },
       {
         "key": "drawdown",
@@ -4674,7 +4702,7 @@
         "detail": "profit factor 0.10 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — 11 / 20 closed trades; 6 / 14 days of history; after-fee return -3.00%; vs buy-and-hold BTC -5.55%; profit factor 0.10 (needs ≥ 1.2).",
+    "summary": "NOT READY — 12 / 20 closed trades; 6 / 14 days of history; after-fee return -3.00%; vs buy-and-hold BTC -5.67%; profit factor 0.10 (needs ≥ 1.2).",
     "unmet": [
       "trades",
       "days",
@@ -4691,8 +4719,7 @@
   "equity-peak": 9897.645063310654,
   "move-alert-buckets": {
     "ETHEUR:1784561524524:1": 0,
-    "SOLEUR:1784562436331:2": 0,
-    "LINKEUR:1784624190460:3": 0
+    "SOLEUR:1784562436331:2": 0
   },
   "monthly-anchor": {
     "equity": 9704.845288873927,
