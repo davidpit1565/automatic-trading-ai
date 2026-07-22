@@ -112,6 +112,12 @@ export interface AutoPilotOptions {
    * applies as always).
    */
   readonly correlationBetween?: (a: string, b: string) => number;
+  /**
+   * Called with each position's realized P&L (positive or negative) as it
+   * closes, so callers can feed a `DailyLossTracker` (or similar). Optional —
+   * omit if nothing needs to observe realized results.
+   */
+  readonly onRealizedPnl?: (pnl: number, timestamp: number) => void;
   readonly clock?: () => number;
   /** Persists the desired running state so the autopilot survives reloads. */
   readonly store?: KeyValueStore;
@@ -138,7 +144,7 @@ export interface CycleResult {
     /** Short labels of the strongest reasons the entry was taken. */
     reasons?: string[];
   }[];
-  readonly closed: { id?: string; symbol: string; reason: ExitReason; price: number }[];
+  readonly closed: { id?: string; symbol: string; reason: ExitReason; price: number; pnl: number }[];
   readonly skipped: { symbol: string; reason: string }[];
 }
 
@@ -275,15 +281,20 @@ export class PaperAutoPilot {
       else if (price >= position.takeProfit) reason = 'take-profit';
       if (reason === null) continue;
 
+      const exitFee = position.quantity * price * costRate;
       const exit = this.options.portfolio.exit(position.id, {
         quantity: position.quantity,
         price,
         timestamp,
         reason,
-        fee: position.quantity * price * costRate,
+        fee: exitFee,
       });
       if (exit.ok) {
-        closed.push({ id: position.id, symbol: position.symbol, reason, price });
+        // Mirrors PortfolioEngine.exit's own realized-P&L math (a full close,
+        // which is the only kind the autopilot ever does).
+        const pnl = position.realizedPnl + (price - position.entryPrice) * position.quantity - exitFee;
+        closed.push({ id: position.id, symbol: position.symbol, reason, price, pnl });
+        this.options.onRealizedPnl?.(pnl, timestamp);
         audit.append({
           timestamp,
           intentId: position.id,
