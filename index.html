@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Trading Assistant</title>
+    <meta name="theme-color" content="#0f1420" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Trading AI" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon.svg" />
+    <script type="module" crossorigin src="/automatic-trading-ai/assets/index-Cbp-C8pk.js"></script>
+    <link rel="stylesheet" crossorigin href="/automatic-trading-ai/assets/index-i1rWXaQn.css">
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand"><span class="brand-dot"></span>Trading</div>
+        <div class="topbar-btc" id="topbar-btc" hidden></div>
+      </header>
+
+      <div id="data-source-banner" class="data-source-banner" hidden></div>
+
+      <main class="content">
+        <section id="view-home" class="view active" role="tabpanel" aria-label="Home"></section>
+        <section id="view-value" class="view" role="tabpanel" aria-label="Portfolio value"></section>
+        <section id="view-markets" class="view" role="tabpanel" aria-label="Markets"></section>
+        <section id="view-history" class="view" role="tabpanel" aria-label="History"></section>
+
+        <section id="view-tools" class="view" role="tabpanel" aria-label="Tools">
+          <div id="tools-menu">
+            <h2 class="view-title">Tools</h2>
+            <p class="view-sub">Advanced analysis and simulation — all on simulated money.</p>
+            <div class="tools-grid">
+              <button class="tool-card" data-tab="scan"><strong>Market Scan</strong><small>Score every market now</small></button>
+              <button class="tool-card" data-tab="backtest"><strong>Backtesting Lab</strong><small>Test strategies on history</small></button>
+              <button class="tool-card" data-tab="grid"><strong>Grid Simulation</strong><small>Range-trading simulator</small></button>
+              <button class="tool-card" data-tab="portfolio"><strong>Paper Trading</strong><small>Manual practice</small></button>
+              <button class="tool-card" data-tab="positions"><strong>Portfolio</strong><small>Positions &amp; analytics</small></button>
+              <button class="tool-card" data-tab="validation"><strong>Validation</strong><small>Walk-forward robustness</small></button>
+              <button class="tool-card" data-tab="monitoring"><strong>Monitoring</strong><small>Continuous scanning</small></button>
+              <button class="tool-card" data-tab="learn"><strong>Learn</strong><small>How it works</small></button>
+            </div>
+          </div>
+
+          <div id="tool-detail" hidden>
+            <button class="tool-back" data-tool-back>← Back to Tools</button>
+            <section id="tab-backtest" class="tab-panel" role="tabpanel"></section>
+            <section id="tab-grid" class="tab-panel" role="tabpanel"></section>
+            <section id="tab-portfolio" class="tab-panel" role="tabpanel"></section>
+            <section id="tab-positions" class="tab-panel" role="tabpanel"></section>
+            <section id="tab-validation" class="tab-panel" role="tabpanel"></section>
+            <section id="tab-monitoring" class="tab-panel" role="tabpanel"></section>
+            <section id="tab-scan" class="tab-panel" role="tabpanel"></section>
+            <section id="tab-learn" class="tab-panel" role="tabpanel">
+              <h2>Learn</h2>
+              <article class="learn-card">
+                <h3>What this platform is</h3>
+                <p>
+                  A professional analysis assistant. It reads market data, computes technical
+                  indicators, backtests strategies on history, and scores current conditions.
+                  It does <strong>not</strong> place real orders and it never guarantees outcomes.
+                </p>
+              </article>
+              <article class="learn-card">
+                <h3>How to read a Market Scan</h3>
+                <p>
+                  Each market gets a score from −100 to +100 built from transparent components:
+                  trend (EMA 20/50 confirmed by ADX), momentum (RSI), MACD histogram, stochastic
+                  position, and volume. <span class="badge badge-hot">HOT</span> means strong
+                  bullish evidence, <span class="badge badge-cold">COLD</span> strong bearish
+                  evidence, <span class="badge badge-neutral">NEUTRAL</span> no clear edge.
+                </p>
+              </article>
+              <article class="learn-card">
+                <h3>Backtesting honestly</h3>
+                <p>
+                  Past performance never guarantees future results. Backtests here include fees,
+                  report maximum drawdown alongside returns, and liquidate at the end so
+                  strategies are compared on equal terms.
+                </p>
+              </article>
+              <article class="learn-card">
+                <h3>Risk first</h3>
+                <p>
+                  Position sizing, stop losses, and exposure limits matter more than entries.
+                  Any future live order will always require your explicit confirmation.
+                </p>
+              </article>
+              <p class="disclaimer">
+                Educational and analytical tool. Not financial advice. No profit is promised or implied.
+              </p>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" role="tablist" aria-label="Primary">
+        <button class="nav-btn active" data-nav="home" role="tab" aria-label="Home">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5 10v9h5v-6h4v6h5v-9"/></svg>
+          <span>Home</span>
+        </button>
+        <button class="nav-btn" data-nav="markets" role="tab" aria-label="Markets">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m4 14v-6m4 6V8m4 11v-9m4 9V6"/></svg>
+          <span>Markets</span>
+        </button>
+        <button class="nav-btn" data-nav="history" role="tab" aria-label="History">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M4 12a8 8 0 1 0 8-8 8 8 0 0 0-7 4M4 5v3h3"/></svg>
+          <span>History</span>
+        </button>
+        <button class="nav-btn" data-nav="tools" role="tab" aria-label="Tools">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7M4 12h7M4 19h7M15 5h5M15 12h5M15 19h5"/></svg>
+          <span>Tools</span>
+        </button>
+      </nav>
+    </div>
+
+  </body>
+</html>
