@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 5847.981607934183,
+    "cash": 3874.8054676066745,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -242.58628487957324,
@@ -40,9 +40,47 @@
       "takeProfit": 0.1604385321553311,
       "feesPaid": 5.750249647967143,
       "realizedPnl": 0,
-      "highestPrice": 0.155608,
+      "highestPrice": 0.155999,
       "lowestPrice": 0.154465,
       "confidence": 30.344202826794117,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "XRPEUR:1784735656265:2",
+      "symbol": "XRPEUR",
+      "openedAt": 1784735656265,
+      "entryPrice": 1.00833,
+      "quantity": 1922.5936918190037,
+      "initialQuantity": 1922.5936918190037,
+      "stopLoss": 0.9961074308817499,
+      "takeProfit": 1.0327751382365,
+      "feesPaid": 5.815826691815567,
+      "realizedPnl": 0,
+      "highestPrice": 1.00833,
+      "lowestPrice": 1.00833,
+      "confidence": 35.891693572430015,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "AVAXEUR:1784735656265:3",
+      "symbol": "AVAXEUR",
+      "openedAt": 1784735656265,
+      "entryPrice": 5.804,
+      "quantity": 4.938907667733671,
+      "initialQuantity": 4.938907667733671,
+      "stopLoss": 5.732985591911633,
+      "takeProfit": 5.946028816176734,
+      "feesPaid": 0.08599626031057869,
+      "realizedPnl": 0,
+      "highestPrice": 5.804,
+      "lowestPrice": 5.804,
+      "confidence": 22.458271909668007,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -959,12 +997,26 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ETHEUR: 1.1740283427177343 @ 1706.3 (take-profit)"
+    },
+    {
+      "timestamp": 1784735656265,
+      "intentId": "XRPEUR:1784735656265:2",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry XRPEUR: 1922.5936918190037 @ 1.00833 (stop 0.9961074308817499, target 1.0327751382365, confidence 36)"
+    },
+    {
+      "timestamp": 1784735656265,
+      "intentId": "AVAXEUR:1784735656265:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry AVAXEUR: 4.938907667733671 @ 5.804 (stop 5.732985591911633, target 5.946028816176734, confidence 22)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1784734207619,
+    "at": 1784735656265,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 2,
     "closed": 0,
     "halted": false
   },
@@ -4737,6 +4789,10 @@
     {
       "at": 1784734207619,
       "equity": 9730.08
+    },
+    {
+      "at": 1784735656265,
+      "equity": 9722.41
     }
   ],
   "trade-journal": [
@@ -5064,7 +5120,9 @@
     "c:DOTEUR:1784648053701:3",
     "c:LINKEUR:1784624190460:3",
     "o:ADAEUR:1784732686780:2",
-    "c:ETHEUR:1784561524524:1"
+    "c:ETHEUR:1784561524524:1",
+    "o:XRPEUR:1784735656265:2",
+    "o:AVAXEUR:1784735656265:3"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -5087,7 +5145,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -5.34%"
+        "detail": "vs buy-and-hold BTC -5.26%"
       },
       {
         "key": "drawdown",
@@ -5100,7 +5158,7 @@
         "detail": "profit factor 0.28 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — 13 / 20 closed trades; 6 / 14 days of history; after-fee return -2.43%; vs buy-and-hold BTC -5.34%; profit factor 0.28 (needs ≥ 1.2).",
+    "summary": "NOT READY — 13 / 20 closed trades; 6 / 14 days of history; after-fee return -2.43%; vs buy-and-hold BTC -5.26%; profit factor 0.28 (needs ≥ 1.2).",
     "unmet": [
       "trades",
       "days",
@@ -5117,7 +5175,9 @@
   "equity-peak": 9897.645063310654,
   "move-alert-buckets": {
     "SOLEUR:1784562436331:2": 0,
-    "ADAEUR:1784732686780:2": 0
+    "ADAEUR:1784732686780:2": 0,
+    "XRPEUR:1784735656265:2": 0,
+    "AVAXEUR:1784735656265:3": 0
   },
   "monthly-anchor": {
     "equity": 9704.845288873927,
