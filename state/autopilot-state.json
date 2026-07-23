@@ -1,35 +1,15 @@
 {
   "portfolio-engine": {
-    "cash": 7682.308497081768,
+    "cash": 9570.0511830218,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -313.3691331695061,
+    "closedRealizedPnl": -353.9394429988554,
     "dayAnchor": {
       "day": "2026-07-23",
       "equity": 9633.902442937542
     }
   },
-  "open-positions": [
-    {
-      "id": "SOLEUR:1784562436331:2",
-      "symbol": "SOLEUR",
-      "openedAt": 1784562436331,
-      "entryPrice": 67.98,
-      "quantity": 28.36588696336247,
-      "initialQuantity": 28.36588696336247,
-      "stopLoss": 66.83754883757958,
-      "takeProfit": 70.26490232484086,
-      "feesPaid": 5.784938987308143,
-      "realizedPnl": 0,
-      "highestPrice": 69.01,
-      "lowestPrice": 66.92,
-      "confidence": 24.878622217075005,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "open-positions": [],
   "audit-log": [
     {
       "timestamp": 1784042069348,
@@ -1010,10 +990,17 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit LTCEUR: 46.25813999250682 @ 40.78 (stop-loss)"
+    },
+    {
+      "timestamp": 1784819660313,
+      "intentId": "SOLEUR:1784562436331:2",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit SOLEUR: 28.36588696336247 @ 66.75 (stop-loss)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1784819354733,
+    "at": 1784819660313,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 1,
@@ -5624,6 +5611,10 @@
     {
       "at": 1784819354733,
       "equity": 9580.55
+    },
+    {
+      "at": 1784819660313,
+      "equity": 9570.05
     }
   ],
   "trade-journal": [
@@ -6017,6 +6008,29 @@
       "validationVerdict": null,
       "confidence": 21.509813054217997,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "SOLEUR:1784562436331:2",
+      "symbol": "SOLEUR",
+      "entryTimestamp": 1784562436331,
+      "exitTimestamp": 1784819660313,
+      "entryPrice": 67.98,
+      "exitPrice": 66.75,
+      "positionSize": 28.36588696336247,
+      "stopLoss": 66.83754883757958,
+      "takeProfit": 70.26490232484086,
+      "exitReason": "stop-loss",
+      "fees": 11.465207851721479,
+      "slippage": 0,
+      "holdingDurationMs": 257223982,
+      "mfePct": 1.5151515151515167,
+      "maePct": 1.8093556928508443,
+      "realizedPnl": -40.570309829349284,
+      "returnPct": -2.1039276257722914,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 24.878622217075005,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "alerted-trade-ids": [
@@ -6050,7 +6064,8 @@
     "o:LTCEUR:1784749351776:3",
     "c:XRPEUR:1784735656265:2",
     "c:AVAXEUR:1784735656265:3",
-    "c:LTCEUR:1784749351776:3"
+    "c:LTCEUR:1784749351776:3",
+    "c:SOLEUR:1784562436331:2"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -6058,7 +6073,7 @@
       {
         "key": "trades",
         "ok": false,
-        "detail": "17 / 20 closed trades"
+        "detail": "18 / 20 closed trades"
       },
       {
         "key": "days",
@@ -6068,25 +6083,25 @@
       {
         "key": "profitable",
         "ok": false,
-        "detail": "after-fee return -3.13%"
+        "detail": "after-fee return -3.54%"
       },
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -5.21%"
+        "detail": "vs buy-and-hold BTC -5.18%"
       },
       {
         "key": "drawdown",
         "ok": true,
-        "detail": "max drawdown 3.1% (limit 10%)"
+        "detail": "max drawdown 3.5% (limit 10%)"
       },
       {
         "key": "consistency",
         "ok": false,
-        "detail": "profit factor 0.23 (needs ≥ 1.2)"
+        "detail": "profit factor 0.21 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — 17 / 20 closed trades; 7 / 14 days of history; after-fee return -3.13%; vs buy-and-hold BTC -5.21%; profit factor 0.23 (needs ≥ 1.2).",
+    "summary": "NOT READY — 18 / 20 closed trades; 7 / 14 days of history; after-fee return -3.54%; vs buy-and-hold BTC -5.18%; profit factor 0.21 (needs ≥ 1.2).",
     "unmet": [
       "trades",
       "days",
@@ -6101,9 +6116,6 @@
   },
   "weekly-report-last": "2026-07-19",
   "equity-peak": 9897.645063310654,
-  "move-alert-buckets": {
-    "SOLEUR:1784562436331:2": 0
-  },
   "monthly-anchor": {
     "equity": 9704.845288873927,
     "at": 1784574274109
@@ -6111,6 +6123,6 @@
   "monthly-report-last": "2026-07-20",
   "daily-loss": {
     "day": "2026-07-23",
-    "loss": 32.511208269245934
+    "loss": 73.08151809859521
   }
 }
