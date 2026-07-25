@@ -1,9 +1,9 @@
 {
   "portfolio-engine": {
-    "cash": 7650.298915707627,
+    "cash": 7668.913401683125,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -353.9394429988554,
+    "closedRealizedPnl": -324.9118406409353,
     "dayAnchor": {
       "day": "2026-07-25",
       "equity": 9570.0511830218
@@ -11,19 +11,19 @@
   },
   "open-positions": [
     {
-      "id": "DOGEEUR:1784990154033:0",
-      "symbol": "DOGEEUR",
-      "openedAt": 1784990154033,
-      "entryPrice": 0.0616887,
-      "quantity": 31026.918002881568,
-      "initialQuantity": 31026.918002881568,
-      "stopLoss": 0.06114035104425815,
-      "takeProfit": 0.0627853979114837,
-      "feesPaid": 5.742030709813081,
+      "id": "LINKEUR:1784995002402:0",
+      "symbol": "LINKEUR",
+      "openedAt": 1784995002402,
+      "entryPrice": 7.37507,
+      "quantity": 260.15581559686643,
+      "initialQuantity": 260.15581559686643,
+      "stopLoss": 7.321484837813493,
+      "takeProfit": 7.482240324373015,
+      "feesPaid": 5.756002052801945,
       "realizedPnl": 0,
-      "highestPrice": 0.0622987,
-      "lowestPrice": 0.0616887,
-      "confidence": 21.01269185456137,
+      "highestPrice": 7.37507,
+      "lowestPrice": 7.37507,
+      "confidence": 22.3958279852177,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -1024,13 +1024,27 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry DOGEEUR: 31026.918002881568 @ 0.0616887 (stop 0.06114035104425815, target 0.0627853979114837, confidence 21)"
+    },
+    {
+      "timestamp": 1784995002402,
+      "intentId": "DOGEEUR:1784990154033:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit DOGEEUR: 31026.918002881568 @ 0.0628127 (take-profit)"
+    },
+    {
+      "timestamp": 1784995002402,
+      "intentId": "LINKEUR:1784995002402:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry LINKEUR: 260.15581559686643 @ 7.37507 (stop 7.321484837813493, target 7.482240324373015, confidence 22)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1784993487534,
+    "at": 1784995002402,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
-    "closed": 0,
+    "opened": 1,
+    "closed": 1,
     "halted": false
   },
   "daily-summary-last-day": "2026-07-14",
@@ -7250,6 +7264,26 @@
     {
       "at": 1784993487534,
       "equity": 9578.37
+    },
+    {
+      "at": 1784993791208,
+      "equity": 9587.01
+    },
+    {
+      "at": 1784994093939,
+      "equity": 9586.32
+    },
+    {
+      "at": 1784994396802,
+      "equity": 9594.07
+    },
+    {
+      "at": 1784994699615,
+      "equity": 9593.34
+    },
+    {
+      "at": 1784995002402,
+      "equity": 9587.58
     }
   ],
   "trade-journal": [
@@ -7666,6 +7700,29 @@
       "validationVerdict": null,
       "confidence": 24.878622217075005,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "DOGEEUR:1784990154033:0",
+      "symbol": "DOGEEUR",
+      "entryTimestamp": 1784990154033,
+      "exitTimestamp": 1784995002402,
+      "entryPrice": 0.0616887,
+      "exitPrice": 0.0628127,
+      "positionSize": 31026.918002881568,
+      "stopLoss": 0.06114035104425815,
+      "takeProfit": 0.0627853979114837,
+      "exitReason": "take-profit",
+      "fees": 11.588684187131879,
+      "slippage": 0,
+      "holdingDurationMs": 4848369,
+      "mfePct": 1.8220516885588445,
+      "maePct": 0,
+      "realizedPnl": 29.027602357920088,
+      "returnPct": 1.5165855334931682,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 21.01269185456137,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "alerted-trade-ids": [
@@ -7701,7 +7758,9 @@
     "c:AVAXEUR:1784735656265:3",
     "c:LTCEUR:1784749351776:3",
     "c:SOLEUR:1784562436331:2",
-    "o:DOGEEUR:1784990154033:0"
+    "o:DOGEEUR:1784990154033:0",
+    "o:LINKEUR:1784995002402:0",
+    "c:DOGEEUR:1784990154033:0"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -7709,7 +7768,7 @@
       {
         "key": "trades",
         "ok": false,
-        "detail": "18 / 20 closed trades"
+        "detail": "19 / 20 closed trades"
       },
       {
         "key": "days",
@@ -7719,12 +7778,12 @@
       {
         "key": "profitable",
         "ok": false,
-        "detail": "after-fee return -3.54%"
+        "detail": "after-fee return -3.25%"
       },
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -4.27%"
+        "detail": "vs buy-and-hold BTC -4.17%"
       },
       {
         "key": "drawdown",
@@ -7734,10 +7793,10 @@
       {
         "key": "consistency",
         "ok": false,
-        "detail": "profit factor 0.21 (needs ≥ 1.2)"
+        "detail": "profit factor 0.27 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — 18 / 20 closed trades; 9 / 14 days of history; after-fee return -3.54%; vs buy-and-hold BTC -4.27%; profit factor 0.21 (needs ≥ 1.2).",
+    "summary": "NOT READY — 19 / 20 closed trades; 9 / 14 days of history; after-fee return -3.25%; vs buy-and-hold BTC -4.17%; profit factor 0.27 (needs ≥ 1.2).",
     "unmet": [
       "trades",
       "days",
@@ -7762,6 +7821,6 @@
     "loss": 73.08151809859521
   },
   "move-alert-buckets": {
-    "DOGEEUR:1784990154033:0": 0
+    "LINKEUR:1784995002402:0": 0
   }
 }
