@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 5738.617668653545,
+    "cash": 3822.3477613745717,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -330.80286391390126,
@@ -43,6 +43,25 @@
       "highestPrice": 66.11,
       "lowestPrice": 65.34,
       "confidence": 33.477223739482845,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "DOTEUR:1785058630743:2",
+      "symbol": "DOTEUR",
+      "openedAt": 1785058630743,
+      "entryPrice": 0.7267,
+      "quantity": 2629.060537225495,
+      "initialQuantity": 2629.060537225495,
+      "stopLoss": 0.7205806407366144,
+      "takeProfit": 0.7389387185267711,
+      "feesPaid": 5.731614877205302,
+      "realizedPnl": 0,
+      "highestPrice": 0.7267,
+      "lowestPrice": 0.7267,
+      "confidence": 26.355180628477918,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -1120,12 +1139,19 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit XRPEUR: 1984.1642269051658 @ 0.96634 (stop-loss)"
+    },
+    {
+      "timestamp": 1785058630743,
+      "intentId": "DOTEUR:1785058630743:2",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry DOTEUR: 2629.060537225495 @ 0.7267 (stop 0.7205806407366144, target 0.7389387185267711, confidence 26)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1785058022108,
+    "at": 1785058630743,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -8010,6 +8036,14 @@
     {
       "at": 1785058022108,
       "equity": 9591.22
+    },
+    {
+      "at": 1785058327020,
+      "equity": 9592.12
+    },
+    {
+      "at": 1785058630743,
+      "equity": 9587.85
     }
   ],
   "trade-journal": [
@@ -8512,7 +8546,8 @@
     "c:DOGEEUR:1784990154033:0",
     "o:XRPEUR:1784996216208:1",
     "o:SOLEUR:1785001371750:2",
-    "c:XRPEUR:1784996216208:1"
+    "c:XRPEUR:1784996216208:1",
+    "o:DOTEUR:1785058630743:2"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -8573,6 +8608,7 @@
   },
   "move-alert-buckets": {
     "LINKEUR:1784995002402:0": 0,
-    "SOLEUR:1785001371750:2": 0
+    "SOLEUR:1785001371750:2": 0,
+    "DOTEUR:1785058630743:2": 0
   }
 }
