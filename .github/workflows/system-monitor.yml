@@ -1,0 +1,45 @@
+name: System Monitor — detect changes & alert
+
+on:
+  schedule:
+    # Every 90 minutes, approximately. Cron doesn't support 90m exactly, so we use 2h intervals.
+    # Fires at: 00:00, 02:00, 04:00, ... UTC
+    - cron: '0 */2 * * *'
+  workflow_dispatch: # Manual trigger for testing
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run system monitor
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          npx tsx --eval "
+            import { FileStore } from './server/fileStore.mts';
+            import { monitorSystemChanges } from './server/systemMonitor.mts';
+
+            const store = new FileStore('./state');
+            await monitorSystemChanges(
+              store,
+              {
+                token: process.env.TELEGRAM_BOT_TOKEN || '',
+                chatId: process.env.TELEGRAM_CHAT_ID || '',
+              },
+              Date.now()
+            );
+          "
