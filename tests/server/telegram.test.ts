@@ -4,8 +4,6 @@
  */
 
 import { describe, expect, it } from 'vitest';
-// prettier-ignore
-// @ts-expect-error plain-TS server module run via tsx; imported directly in tests
 import { buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildTestMessage, readinessLineHe, sendTelegramMessage } from '../../server/telegram.mts';
 import { assessRealMoneyReadiness, READINESS_THRESHOLDS } from '../../src/core/feedback/realMoneyReadiness';
 

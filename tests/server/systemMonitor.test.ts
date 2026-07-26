@@ -3,8 +3,6 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-// prettier-ignore
-// @ts-expect-error plain-TS server module run via tsx; imported directly in tests
 import { fetchSystemState, monitorSystemChanges } from '../../server/systemMonitor.mts';
 
 describe('fetchSystemState', () => {

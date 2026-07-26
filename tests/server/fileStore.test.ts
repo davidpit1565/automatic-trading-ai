@@ -7,7 +7,6 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-// @ts-expect-error plain-TS server module run via tsx; imported directly in tests
 import { FileStore } from '../../server/fileStore.mts';
 
 let dir: string;
