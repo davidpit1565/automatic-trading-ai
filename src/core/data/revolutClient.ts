@@ -17,7 +17,7 @@
  * confirmation.
  */
 
-import type { Candle, Instrument, Result, Timeframe } from '../types';
+import type { Candle, Instrument, Result, Ticker, Timeframe } from '../types';
 import { err, ok, TIMEFRAME_MS } from '../types';
 import { parseCandleSeries } from './candles';
 
@@ -30,6 +30,13 @@ export interface MarketDataSource {
     limit: number,
     opts?: { readonly priority?: boolean },
   ): Promise<Result<Candle[]>>;
+  /**
+   * Every listed market's current price in ONE request, when the exchange
+   * offers a batch ticker. OPTIONAL: sources without one simply omit it and
+   * callers fall back to per-symbol candles. Callers must feature-detect
+   * (`source.getTickers?.()`) rather than assume it exists.
+   */
+  getTickers?(): Promise<Result<Ticker[]>>;
 }
 
 export interface RevolutXClientOptions {

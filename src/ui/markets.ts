@@ -111,6 +111,27 @@ export interface MarketSnapshot {
   readonly closes: number[];
 }
 
+/**
+ * One row of the full markets list. Deliberately has NO price series: it is
+ * built from a single batch-ticker request covering every market, which is
+ * what makes a several-hundred-row list possible at all. Sparklines would
+ * need one candle request per symbol, so they live in the detail view.
+ */
+export interface MarketRow {
+  readonly symbol: string;
+  readonly label: string;
+  /** Clean asset code (BTC, ETH) — the key for logos and search. */
+  readonly base: string;
+  readonly price: number;
+  /** Absolute daily change in the quote currency. */
+  readonly change: number;
+  readonly changePct: number;
+  /** Liquidity, for sorting. */
+  readonly quoteVolume: number;
+  /** When this row was fetched — drives the freshness indicator. */
+  readonly updatedAt: number;
+}
+
 /** Majors in display order, matched by the instrument's clean `base` code. */
 const MAJORS: ReadonlyArray<{ base: string; label: string }> = [
   { base: 'BTC', label: 'Bitcoin' },
@@ -197,4 +218,70 @@ export async function fetchTopMarkets(data: ActiveDataSource, max = Infinity): P
   const chosen = targets.slice(0, max);
   const snaps = await Promise.all(chosen.map((t) => fetchSnapshot(data, t.symbol, t.label)));
   return snaps.filter((s): s is MarketSnapshot => s !== null);
+}
+
+/**
+ * The full markets list, from ONE batch-ticker request when the active source
+ * offers it (Kraken does). Ordering: the curated majors first, in their fixed
+ * display order, then every remaining market by liquidity.
+ *
+ * Falls back to the per-symbol candle sweep for sources without a batch
+ * ticker, so a source swap degrades to the old, smaller list rather than an
+ * empty screen.
+ */
+export async function fetchMarketRows(
+  data: ActiveDataSource,
+  fallbackMax = 60,
+  now: () => number = Date.now,
+): Promise<MarketRow[]> {
+  const batch = data.source.getTickers ? await data.source.getTickers() : null;
+  if (batch?.ok && batch.value.length > 0) {
+    const at = now();
+    const byBase = new Map<string, number>();
+    MAJORS.forEach((m, i) => byBase.set(m.base, i));
+
+    const rows = batch.value.map((t): MarketRow => {
+      const inst = data.instruments.find((i) => i.symbol === t.symbol);
+      const base = (inst?.base ?? t.symbol).toUpperCase();
+      return {
+        symbol: t.symbol,
+        label: labelFor(data, t.symbol),
+        base,
+        price: t.price,
+        change: t.price - t.open,
+        changePct: t.open > 0 ? ((t.price - t.open) / t.open) * 100 : 0,
+        quoteVolume: t.quoteVolume,
+        updatedAt: at,
+      };
+    });
+
+    // Majors keep their fixed order at the top; the rest by liquidity. Sorting
+    // a copy keeps this pure for callers holding the previous list.
+    return [...rows].sort((a, b) => {
+      const ra = byBase.get(a.base);
+      const rb = byBase.get(b.base);
+      if (ra !== undefined && rb !== undefined) return ra - rb;
+      if (ra !== undefined) return -1;
+      if (rb !== undefined) return 1;
+      return b.quoteVolume - a.quoteVolume;
+    });
+  }
+
+  // No batch ticker on this source — degrade to the per-symbol sweep.
+  const at = now();
+  const snaps = await fetchTopMarkets(data, fallbackMax);
+  return snaps.map((s): MarketRow => {
+    const inst = data.instruments.find((i) => i.symbol === s.symbol);
+    const previous = s.closes[0] ?? s.price;
+    return {
+      symbol: s.symbol,
+      label: s.label,
+      base: (inst?.base ?? s.symbol).toUpperCase(),
+      price: s.price,
+      change: s.price - previous,
+      changePct: s.changePct,
+      quoteVolume: 0,
+      updatedAt: at,
+    };
+  });
 }

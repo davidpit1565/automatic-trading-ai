@@ -9,15 +9,14 @@
 import type { ActiveDataSource } from '../dataSource';
 import type { Timeframe } from '../../core/types';
 import {
-  fetchTopMarkets,
+  fetchMarketRows,
   fetchSeries,
   fetchCandleSeries,
-  type MarketSnapshot,
+  type MarketRow,
   type CandleSeries,
   type PriceSeries,
 } from '../markets';
 import {
-  sparklineSvg,
   priceChartSvg,
   candleChartSvg,
   chartGeometry,
@@ -25,7 +24,7 @@ import {
   type ChartGeometry,
 } from '../charts';
 import { startLivePrice } from '../liveTicker';
-import { formatPrice, formatPct } from '../format';
+import { escapeHtml, formatClock, formatMarketPrice, formatPct, formatPrice, formatSignedPrice } from '../format';
 import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 20_000;
@@ -36,16 +35,18 @@ const REFRESH_MS = 20_000;
  */
 const LIST_REFRESH_MS = 60_000;
 /**
- * `getInstruments()` now broadens well beyond the 10 curated majors (every
- * live EUR pair Kraken lists — 500+ as of 2026-07-20), but the list sweep
- * still walks the queue one request at a time. Measured real per-request
- * latency (~200-700ms) means an unbounded sweep of that many coins would
- * take minutes, not seconds — reintroducing the exact freeze this queue was
- * fixed for, just at a larger scale. Cap the auto-refreshed list at a size
- * the queue clears well within one refresh cycle (60 coins ≈ 60 × ~0.5s incl.
- * stagger ≈ 30s, comfortably under the 60s cadence below).
+ * FALLBACK cap only. The list normally comes from one batch-ticker request
+ * covering every EUR market (535 in ~80ms, measured live), so no cap applies.
+ * A source without a batch ticker degrades to the old per-symbol sweep, which
+ * walks the serialized queue one request at a time — at ~200-700ms each, an
+ * uncapped sweep would take minutes and reintroduce the freeze that queue was
+ * built to fix. 60 coins clears well inside the 60s refresh cadence.
  */
 const MARKETS_LIST_CAP = 60;
+/** Rows added per scroll page — see `visibleCount` in the view. */
+const PAGE_SIZE = 50;
+/** A row is stale (amber clock) once its data is older than this. */
+const STALE_AFTER_MS = 5 * 60_000;
 const HOT = '#16c784';
 const COLD = '#ea3943';
 
@@ -96,7 +97,16 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   const list = container.querySelector<HTMLElement>('#mk-list')!;
   const status = container.querySelector<HTMLElement>('#mk-status')!;
 
-  let markets: MarketSnapshot[] = [];
+  let markets: MarketRow[] = [];
+  /**
+   * Rows currently in the DOM. The full EUR universe is ~535 markets; building
+   * all of them up front is wasted work on a phone when only a handful are on
+   * screen. Grows a page at a time as the user reaches the bottom, and is
+   * preserved across the background refresh so the list never jumps under a
+   * scrolling finger.
+   */
+  let visibleCount = PAGE_SIZE;
+  let moreObserver: IntersectionObserver | null = null;
   let listTimer = 0;
   let detailTimer = 0;
   let stopLive: (() => void) | null = null;
@@ -123,24 +133,55 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     }
   };
 
+  /** One market row: identity on the left, price and daily change on the right. */
+  function rowHtml(m: MarketRow, index: number): string {
+    const up = m.changePct >= 0;
+    const stale = Date.now() - m.updatedAt > STALE_AFTER_MS;
+    return (
+      `<button class="market-row tappable" data-row="${index}">` +
+      `<span class="market-row-id">` +
+      `<span class="row-title">${escapeHtml(m.label)}</span>` +
+      `<span class="row-sub"><span class="row-clock ${stale ? 'stale' : 'fresh'}" aria-hidden="true"></span>` +
+      `${formatClock(m.updatedAt)} · ${escapeHtml(m.symbol)}</span>` +
+      `</span>` +
+      `<span class="market-row-num">` +
+      `<span class="row-price">€${formatMarketPrice(m.price)}</span>` +
+      `<span class="chg ${up ? 'up' : 'down'}">${formatSignedPrice(m.change)} (${formatPct(m.changePct)})</span>` +
+      `</span>` +
+      `</button>`
+    );
+  }
+
+  /** Observe the "load more" sentinel so the next page builds as it scrolls in. */
+  function observeMore(): void {
+    moreObserver?.disconnect();
+    moreObserver = null;
+    const sentinel = list.querySelector('#mk-more');
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return;
+    moreObserver = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      visibleCount = Math.min(visibleCount + PAGE_SIZE, markets.length);
+      renderList();
+    }, { rootMargin: '400px' });
+    moreObserver.observe(sentinel);
+  }
+
   function renderList(): void {
     if (markets.length === 0) {
       list.innerHTML = '<div class="empty">Live market data is unavailable right now.</div>';
       return;
     }
-    list.innerHTML = '';
-    markets.forEach((m, index) => {
-      const up = m.changePct >= 0;
-      const row = document.createElement('button');
-      row.className = 'market-row tappable';
-      row.innerHTML = `
-        <div class="market-row-id"><span class="row-title">${m.label}</span><span class="row-sub">${m.symbol}</span></div>
-        <div class="market-row-spark" style="color:${up ? HOT : COLD}">${sparklineSvg(m.closes, { stroke: up ? HOT : COLD, fill: true, width: 130, height: 40 })}</div>
-        <div class="market-row-num"><span class="row-title">€${formatPrice(m.price)}</span><span class="chg ${up ? 'up' : 'down'}">${formatPct(m.changePct)}</span></div>`;
-      row.addEventListener('click', () => openDetail(index));
-      list.appendChild(row);
-    });
-    status.textContent = `Live · updated ${hm(Date.now())} · ~48h change`;
+    // Re-rendering the SAME number of rows keeps the list's height identical,
+    // so the browser holds the scroll position across a background refresh.
+    const shown = Math.min(visibleCount, markets.length);
+    const rows = markets.slice(0, shown).map(rowHtml).join('');
+    const more =
+      shown < markets.length
+        ? `<div id="mk-more" class="market-more">Loading more markets… (${shown} of ${markets.length})</div>`
+        : `<div class="market-more muted-line">All ${markets.length} EUR markets shown</div>`;
+    list.innerHTML = rows + more;
+    observeMore();
+    status.textContent = `Live · ${markets.length} markets · updated ${hm(Date.now())} · change since 00:00 UTC`;
   }
 
   let listLoading = false;
@@ -148,7 +189,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     if (listLoading) return; // never overlap sweeps — overlaps stack the queue
     listLoading = true;
     try {
-      const fresh = await fetchTopMarkets(data, MARKETS_LIST_CAP);
+      const fresh = await fetchMarketRows(data, MARKETS_LIST_CAP);
       if (fresh.length > 0) markets = fresh; // keep last good list on a bad sweep
       if (detailView.hidden) renderList();
     } finally {
@@ -449,6 +490,15 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     listTimer = window.setInterval(() => void loadList(), LIST_REFRESH_MS);
   }
 
+  // Delegated so 500+ rows cost one listener, not one each — and so rows
+  // re-rendered by a refresh stay clickable without rebinding.
+  list.addEventListener('click', (event) => {
+    const row = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-row]');
+    if (!row) return;
+    const index = Number(row.dataset['row']);
+    if (Number.isInteger(index) && index >= 0 && index < markets.length) openDetail(index);
+  });
+
   void loadList();
   listTimer = window.setInterval(() => void loadList(), LIST_REFRESH_MS);
 
@@ -456,6 +506,8 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     pause: () => {
       window.clearInterval(listTimer);
       window.clearInterval(detailTimer);
+      moreObserver?.disconnect();
+      moreObserver = null;
       stopLivePrice();
     },
     resume: () => {

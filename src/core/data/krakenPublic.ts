@@ -15,7 +15,7 @@
  * active source so this is never hidden.
  */
 
-import type { Candle, Instrument, Result, Timeframe } from '../types';
+import type { Candle, Instrument, Result, Ticker, Timeframe } from '../types';
 import { err, ok } from '../types';
 import { parseCandleSeries } from './candles';
 import type { MarketDataSource } from './revolutClient';
@@ -57,6 +57,21 @@ const CURATED_INSTRUMENTS: Instrument[] = [
   { symbol: 'LINKEUR', base: 'LINK', quote: 'EUR' },
   { symbol: 'AVAXEUR', base: 'AVAX', quote: 'EUR' },
 ];
+
+/**
+ * Kraken's internal asset codes for assets the rest of the world names
+ * differently. Verified against the live AssetPairs list: of the ten curated
+ * majors, only these two differ. Without the mapping the curated entry and the
+ * discovered entry look like two separate assets, and the coin is listed twice
+ * — once under its real name, once under Kraken's code.
+ */
+const ASSET_ALIASES: Readonly<Record<string, string>> = {
+  XBT: 'BTC',
+  XDG: 'DOGE',
+};
+
+/** Curated symbol per asset code, so a discovered pair reuses it rather than duplicating. */
+const CURATED_SYMBOL_BY_BASE = new Map(CURATED_INSTRUMENTS.map((i) => [i.base, i.symbol]));
 
 /**
  * Static DISPLAY-only fallback, used only when the live AssetPairs call
@@ -117,6 +132,15 @@ export class KrakenPublicSource implements MarketDataSource {
   private readonly pending: QueuedTask[] = [];
   private draining = false;
   private instrumentsCache: Instrument[] | null = null;
+  /**
+   * Kraken's internal pair key -> the symbol we actually display
+   * (XXBTZEUR -> XBTEUR, XDGEUR -> DOGEEUR). `/Ticker` is keyed by the
+   * internal id while everything else here speaks altnames, and the two
+   * differ for the older pairs. Built from the same AssetPairs response that
+   * discovers instruments — verified 535/535 keys line up — so no guessing or
+   * string-munging is involved.
+   */
+  private pairKeyToSymbol: Map<string, string> | null = null;
 
   constructor(options: KrakenPublicSourceOptions = {}) {
     this.fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init));
@@ -157,14 +181,77 @@ export class KrakenPublicSource implements MarketDataSource {
       return err('unexpected Kraken payload: no result object');
     }
     const instruments: Instrument[] = [];
-    for (const value of Object.values(result)) {
+    const keyToSymbol = new Map<string, string>();
+    for (const [pairKey, value] of Object.entries(result)) {
       const info = value as { altname?: unknown; wsname?: unknown; status?: unknown };
       if (info.status !== 'online' || typeof info.wsname !== 'string' || typeof info.altname !== 'string') continue;
       const [wsBase, wsQuote] = info.wsname.split('/');
       if (wsQuote !== 'EUR' || !wsBase) continue;
-      instruments.push({ symbol: info.altname, base: wsBase === 'XBT' ? 'BTC' : wsBase, quote: 'EUR' });
+      const base = ASSET_ALIASES[wsBase] ?? wsBase;
+      // When a curated major already covers this asset, reuse ITS symbol: the
+      // caller then dedupes it away, and the robot's trading symbol is left
+      // exactly as-is. Otherwise the pair broadens the universe under its own
+      // altname.
+      const symbol = CURATED_SYMBOL_BY_BASE.get(base) ?? info.altname;
+      instruments.push({ symbol, base, quote: 'EUR' });
+      keyToSymbol.set(pairKey, symbol);
     }
-    return instruments.length > 0 ? ok(instruments) : err('no online EUR pairs found in AssetPairs response');
+    if (instruments.length === 0) return err('no online EUR pairs found in AssetPairs response');
+    this.pairKeyToSymbol = keyToSymbol;
+    return ok(instruments);
+  }
+
+  /**
+   * Every EUR market's current price in ONE request (`/Ticker` with no pair
+   * argument returns all ~1,500 listed pairs). Replaces one OHLC call per
+   * symbol, which is what previously capped the browsable list: a
+   * several-hundred-market screen is a single round trip this way.
+   *
+   * Only pairs present in the EUR instrument map are returned, so the USD and
+   * other-quote pairs in the same payload are dropped rather than shown with
+   * a euro sign.
+   */
+  async getTickers(): Promise<Result<Ticker[]>> {
+    // Populates pairKeyToSymbol as a side effect; also gives us the cache.
+    await this.getInstruments();
+    const keyToSymbol = this.pairKeyToSymbol;
+    if (!keyToSymbol || keyToSymbol.size === 0) {
+      return err('EUR pair map unavailable — cannot map Kraken ticker keys to symbols');
+    }
+    const payload = await this.enqueue(() => this.getJson(`${BASE_URL}/Ticker`), true);
+    if (!payload.ok) return payload;
+    const raw = payload.value as { error?: unknown[]; result?: Record<string, unknown> };
+    if (Array.isArray(raw.error) && raw.error.length > 0) {
+      return err(`Kraken error: ${raw.error.join('; ')}`);
+    }
+    if (typeof raw.result !== 'object' || raw.result === null) {
+      return err('unexpected Kraken payload: no result object');
+    }
+
+    const tickers: Ticker[] = [];
+    for (const [pairKey, value] of Object.entries(raw.result)) {
+      const symbol = keyToSymbol.get(pairKey);
+      if (symbol === undefined) continue; // not a EUR pair we list
+      const entry = value as {
+        c?: unknown; o?: unknown; h?: unknown; l?: unknown; v?: unknown; p?: unknown;
+      };
+      // Kraken sends every number as a string; arrays are [today, last24h].
+      const price = num(first(entry.c));
+      const open = num(entry.o);
+      if (price === null || open === null) continue; // malformed — skip, never NaN
+      const volume = num(last24h(entry.v)) ?? 0;
+      const vwap = num(last24h(entry.p)) ?? price;
+      tickers.push({
+        symbol,
+        price,
+        open,
+        high: num(last24h(entry.h)) ?? price,
+        low: num(last24h(entry.l)) ?? price,
+        volume,
+        quoteVolume: volume * vwap,
+      });
+    }
+    return ok(tickers);
   }
 
   async getCandles(
@@ -268,4 +355,25 @@ export class KrakenPublicSource implements MarketDataSource {
       clearTimeout(timer);
     }
   }
+}
+
+// --- Ticker payload helpers -------------------------------------------------
+// Kraken encodes every number as a string, and several fields arrive as
+// [today, last24h] pairs. These normalise that without ever yielding NaN.
+
+/** Finite number from a Kraken string field, or null when unusable. */
+function num(value: unknown): number | null {
+  if (typeof value !== 'string' && typeof value !== 'number') return null;
+  const parsed = typeof value === 'number' ? value : Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/** First element of a Kraken tuple (e.g. `c` = [last, lotVolume]). */
+function first(value: unknown): unknown {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+/** The rolling-24h element of a [today, last24h] tuple. */
+function last24h(value: unknown): unknown {
+  return Array.isArray(value) ? value[1] ?? value[0] : value;
 }

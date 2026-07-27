@@ -249,3 +249,171 @@ describe('getCandles', () => {
     expect(order[1]).toBe('XBTEUR');
   });
 });
+
+describe('batch tickers', () => {
+  /** Routes AssetPairs and Ticker to different bodies, like the real API. */
+  function routedFetch(
+    assetPairs: unknown,
+    ticker: unknown,
+    seenUrls: string[] = [],
+  ): typeof fetch {
+    return (async (url: RequestInfo | URL) => {
+      const href = String(url);
+      seenUrls.push(href);
+      const body = href.includes('/Ticker') ? ticker : assetPairs;
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }) as typeof fetch;
+  }
+
+  const ASSET_PAIRS = {
+    error: [],
+    result: {
+      XXBTZEUR: { altname: 'XBTEUR', wsname: 'XBT/EUR', status: 'online' },
+      FOOEUR: { altname: 'FOOEUR', wsname: 'FOO/EUR', status: 'online' },
+      BARUSD: { altname: 'BARUSD', wsname: 'BAR/USD', status: 'online' },
+    },
+  };
+
+  /** Kraken ticker entry: c=[last,lot] o=open h/l/v/p=[today,last24h] */
+  const tickerEntry = (last: string, open: string, vol: string, vwap: string) => ({
+    a: [last, '1', '1.0'],
+    b: [last, '1', '1.0'],
+    c: [last, '0.5'],
+    v: ['1.0', vol],
+    p: [vwap, vwap],
+    t: [10, 20],
+    l: ['1', '1'],
+    h: ['9', '9'],
+    o: open,
+  });
+
+  it('returns every EUR market from a single request, keyed by altname', async () => {
+    const seen: string[] = [];
+    const source = new KrakenPublicSource({
+      fetchFn: routedFetch(
+        ASSET_PAIRS,
+        {
+          error: [],
+          result: {
+            XXBTZEUR: tickerEntry('100', '80', '3', '90'),
+            FOOEUR: tickerEntry('5', '5', '10', '5'),
+            BARUSD: tickerEntry('7', '7', '1', '7'), // not EUR — must be dropped
+          },
+        },
+        seen,
+      ),
+    });
+
+    const result = await source.getTickers!();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    // Kraken's internal key (XXBTZEUR) is translated to our altname (XBTEUR).
+    const btc = result.value.find((t) => t.symbol === 'XBTEUR');
+    expect(btc).toBeDefined();
+    expect(btc!.price).toBe(100);
+    expect(btc!.open).toBe(80);
+    expect(btc!.volume).toBe(3); // the 24h element, not today's
+    expect(btc!.quoteVolume).toBe(270); // volume x vwap
+
+    // Non-EUR pairs never appear, even though Ticker returns them.
+    expect(result.value.some((t) => t.symbol === 'BARUSD')).toBe(false);
+
+    // Exactly ONE Ticker request covers every market — the whole point.
+    expect(seen.filter((u) => u.includes('/Ticker'))).toHaveLength(1);
+  });
+
+  it('reports a Kraken API error instead of returning half a market list', async () => {
+    const source = new KrakenPublicSource({
+      fetchFn: routedFetch(ASSET_PAIRS, { error: ['EGeneral:Temporary lockout'], result: {} }),
+    });
+    const result = await source.getTickers!();
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain('Temporary lockout');
+  });
+
+  it('skips malformed entries rather than emitting NaN prices', async () => {
+    const source = new KrakenPublicSource({
+      fetchFn: routedFetch(ASSET_PAIRS, {
+        error: [],
+        result: {
+          XXBTZEUR: tickerEntry('100', '80', '3', '90'),
+          FOOEUR: { c: ['not-a-number', '1'], o: '5', v: ['1', '2'], p: ['5', '5'] },
+        },
+      }),
+    });
+    const result = await source.getTickers!();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value).toHaveLength(1);
+    expect(result.value[0]!.symbol).toBe('XBTEUR');
+    expect(result.value.every((t) => Number.isFinite(t.price))).toBe(true);
+  });
+});
+
+describe('Kraken asset aliases', () => {
+  /**
+   * Kraken lists Dogecoin as XDG, not DOGE — exactly like XBT for Bitcoin.
+   * Without normalising it, the curated DOGEEUR entry and the discovered
+   * XDGEUR entry are treated as two different assets and Dogecoin appears
+   * TWICE in the browsable universe: once as "Dogecoin", once as "XDG".
+   */
+  const ASSET_PAIRS_WITH_XDG = {
+    error: [],
+    result: {
+      XXBTZEUR: { altname: 'XBTEUR', wsname: 'XBT/EUR', status: 'online' },
+      XDGEUR: { altname: 'XDGEUR', wsname: 'XDG/EUR', status: 'online' },
+      NEWEUR: { altname: 'NEWEUR', wsname: 'NEW/EUR', status: 'online' },
+    },
+  };
+
+  function routed(assetPairs: unknown, ticker: unknown): typeof fetch {
+    return (async (url: RequestInfo | URL) =>
+      new Response(JSON.stringify(String(url).includes('/Ticker') ? ticker : assetPairs), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })) as typeof fetch;
+  }
+
+  it('lists Dogecoin exactly once, under its curated symbol', async () => {
+    const source = new KrakenPublicSource({
+      fetchFn: routed(ASSET_PAIRS_WITH_XDG, { error: [], result: {} }),
+    });
+    const result = await source.getInstruments();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const dogecoins = result.value.filter((i) => i.base === 'DOGE' || i.base === 'XDG');
+    expect(dogecoins).toHaveLength(1);
+    expect(dogecoins[0]!.base).toBe('DOGE');
+    // The curated symbol is preserved — the robot's trading path is untouched.
+    expect(dogecoins[0]!.symbol).toBe('DOGEEUR');
+    expect(result.value.some((i) => i.symbol === 'XDGEUR')).toBe(false);
+    // Unrelated new pairs still broaden the universe as before.
+    expect(result.value.some((i) => i.symbol === 'NEWEUR')).toBe(true);
+  });
+
+  it("maps Dogecoin's ticker onto the curated symbol, so it is not lost from the list", async () => {
+    const entry = (last: string, open: string) => ({
+      c: [last, '1'], o: open, v: ['1', '2'], p: ['1', '1'], h: ['1', '1'], l: ['1', '1'],
+    });
+    const source = new KrakenPublicSource({
+      fetchFn: routed(ASSET_PAIRS_WITH_XDG, {
+        error: [],
+        result: { XDGEUR: entry('0.20', '0.25'), XXBTZEUR: entry('100', '90') },
+      }),
+    });
+    const result = await source.getTickers!();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const doge = result.value.find((t) => t.symbol === 'DOGEEUR');
+    expect(doge).toBeDefined();
+    expect(doge!.price).toBe(0.2);
+    expect(result.value.some((t) => t.symbol === 'XDGEUR')).toBe(false);
+  });
+});
