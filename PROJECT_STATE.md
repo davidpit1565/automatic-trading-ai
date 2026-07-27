@@ -326,7 +326,21 @@ Quick price reference on candlestick charts:
   other chart elements.
 - Enables quick price scanning without hovering or touching the chart.
 
-PR #8 created as draft, waiting for CI. All 490 tests passing, tsc clean,
+PR #8 merged (2026-07-27T02:50Z). All 490 tests passing, tsc clean,
+vite build successful.
+
+## UI/UX Overhaul Phase 6: Support/Resistance Levels & Smooth Transitions (2026-07-27)
+Enhanced chart context and polished interactions:
+- **Support/Resistance levels**: `calculateSRLevels(candles, lookback=20)`
+  computes support (min low) and resistance (max high) from last 20 candles,
+  rendered as dashed lines (green for resistance, red for support, 0.3 opacity).
+- **Smooth timeframe transitions**: range changes (1D/1W/1M/All) and chart mode
+  toggles (candle↔line) now fade out (200ms), re-render, and fade in (300ms)
+  for polished UX.
+- CSS animations via `.detail-chart.fade-out` / `.fade-in` keyframes.
+- Event handlers in `marketsView.ts` integrate animations with range/mode changes.
+
+PR #9 created, waiting for CI. All 490 tests passing, tsc clean,
 vite build successful locally.
 
 ## Important Decisions
