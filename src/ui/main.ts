@@ -31,13 +31,12 @@ const PRIMARY_VIEWS: Record<string, ViewRenderer> = {
 };
 
 const TOOL_VIEWS: Record<string, ViewRenderer | null> = {
-  backtest: renderBacktestView,
-  grid: renderGridView,
-  portfolio: renderPortfolioView,
-  positions: renderPositionsView,
-  validation: renderValidationView,
-  monitoring: renderMonitoringView,
   scan: renderMarketScanView,
+  backtest: renderBacktestView,
+  validation: renderValidationView,
+  portfolio: renderPortfolioView,
+  grid: renderGridView,
+  monitoring: renderMonitoringView,
   learn: null,
 };
 
