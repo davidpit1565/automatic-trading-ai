@@ -286,6 +286,49 @@ Strict layering (data→…→UI); UI presentation-only (architecture tests enfo
 imports + no live-order path). Autopilot applies strategy tuning at the
 capital-risking layer; the shared signal defaults stay permissive.
 
+## UI/UX Overhaul Phase 3: Loading States (2026-07-27)
+New utilities for better async feedback:
+- **Loading overlay** (`showLoadingOverlay(message, timeout)`): centered spinner
+  with optional message, auto-dismisses after timeout.
+- **Toast notifications** (`showToast(message, type, options)`): 5s auto-dismiss,
+  HTML-escaped for security, convenience methods (showSuccess/showError/showInfo/
+  showWarning).
+- **Skeleton loaders** (`createSkeletonLine()`, `createSkeletonTitle()`): shimmer
+  animation placeholders for lazy-loaded content.
+- **Empty states** (`showEmptyState(container, icon, title, text, actionLabel,
+  callback)`): branded placeholders when data is unavailable.
+
+All UI/UX improvements tested (490 vitest) and merged PR #5.
+
+## UI/UX Overhaul Phase 4: Advanced Chart Features (2026-07-27)
+Enhanced candlestick charts with professional indicators:
+- **EMA indicators** (`calculateEMA(values, period)`): Exponential Moving Average
+  for 20/50 periods, rendered as colored paths (light blue #6cb3ff for EMA20,
+  darker blue #4c82f7 for EMA50).
+- **Volume bars** (`pvol-bar`): scaled to chart height, green for up candles,
+  red for down, 0.6 opacity at bottom of chart.
+- **MACD histogram** (`calculateMACD(values)`): MACD line (EMA12-EMA26), signal
+  line (EMA9 of MACD), histogram bars below volume, green for positive/red for
+  negative, normalized across min/max range.
+- **RSI level bands**: background zones (oversold red 0-30%, neutral white
+  30-70%, overbought green 70-100%) for context without cluttering the chart.
+- All rendered as SVG paths (not polylines) to avoid test confusion with
+  line-chart detection. 
+
+Integrated Phase 4 improvements after PR #7 merge. All 490 tests passing.
+Merged PR #7 (2026-07-27T02:45Z).
+
+## UI/UX Overhaul Phase 5: OHLC Price Labels (2026-07-27)
+Quick price reference on candlestick charts:
+- **OHLC labels** in top-left corner: displays Open, High, Low, Close values
+  of the last candle with 7.5px font, closing price emphasized in bold.
+- Positioned at (padL+4, padT+10) for clean corner placement without overlapping
+  other chart elements.
+- Enables quick price scanning without hovering or touching the chart.
+
+PR #8 created as draft, waiting for CI. All 490 tests passing, tsc clean,
+vite build successful locally.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
