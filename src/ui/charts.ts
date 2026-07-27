@@ -19,6 +19,7 @@ export interface LineChartOptions {
 /**
  * Compact sparkline (no axes) for a series of closes. Colour is passed by
  * the caller (green up / red down) via CSS custom property on the wrapper.
+ * Gradient fill for improved visual appeal.
  */
 export function sparklineSvg(
   values: readonly number[],
@@ -27,6 +28,7 @@ export function sparklineSvg(
   const width = opts.width ?? 120;
   const height = opts.height ?? 40;
   const pad = 3;
+  const gradId = `grad-${Math.random().toString(36).slice(2, 9)}`;
   if (values.length < 2) return `<svg viewBox="0 0 ${width} ${height}" aria-hidden="true"></svg>`;
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -38,10 +40,14 @@ export function sparklineSvg(
   });
   const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
   const area = opts.fill
-    ? `<polygon fill="${opts.stroke}" fill-opacity="0.12" points="${pad},${height - pad} ${line} ${width - pad},${height - pad}" />`
+    ? `<defs><linearGradient id="${gradId}" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" style="stop-color:${opts.stroke};stop-opacity:0.25" />
+        <stop offset="100%" style="stop-color:${opts.stroke};stop-opacity:0.02" />
+      </linearGradient></defs>
+      <polygon fill="url(#${gradId})" points="${pad},${height - pad} ${line} ${width - pad},${height - pad}" />`
     : '';
   return `<svg class="spark" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
-    ${area}<polyline fill="none" stroke="${opts.stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="${line}" /></svg>`;
+    ${area}<polyline fill="none" stroke="${opts.stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="${line}" /></svg>`;
 }
 
 /**

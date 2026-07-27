@@ -1,5 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <!-- Background -->
   <rect width="180" height="180" rx="36" fill="#0f1420"/>
-  <polyline points="28,120 62,96 88,108 124,64 152,44" fill="none" stroke="#2fbf71" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="152" cy="44" r="10" fill="#4f8ef7"/>
+
+  <!-- Main candlestick body (bullish uptrend) -->
+  <rect x="50" y="75" width="24" height="65" fill="#16c784" rx="2"/>
+
+  <!-- Candlestick wick (high) -->
+  <line x1="62" y1="40" x2="62" y2="75" stroke="#16c784" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Candlestick wick (low) -->
+  <line x1="62" y1="140" x2="62" y2="160" stroke="#16c784" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- AI accent: three ascending dots with connecting lines -->
+  <!-- Dot 1 (bottom-left of candle) -->
+  <circle cx="95" cy="125" r="4" fill="#4c82f7"/>
+
+  <!-- Dot 2 (middle) -->
+  <circle cx="110" cy="105" r="4" fill="#4c82f7"/>
+
+  <!-- Dot 3 (top-right) -->
+  <circle cx="125" cy="85" r="4" fill="#4c82f7"/>
+
+  <!-- Connecting lines between dots (neural network style) -->
+  <line x1="95" y1="125" x2="110" y2="105" stroke="#4c82f7" stroke-width="1.5" opacity="0.5" stroke-linecap="round"/>
+  <line x1="110" y1="105" x2="125" y2="85" stroke="#4c82f7" stroke-width="1.5" opacity="0.5" stroke-linecap="round"/>
+  <line x1="95" y1="125" x2="125" y2="85" stroke="#4c82f7" stroke-width="1" opacity="0.3" stroke-linecap="round"/>
+
+  <!-- Corner accent glow effect -->
+  <circle cx="125" cy="85" r="12" fill="none" stroke="#4c82f7" stroke-width="1" opacity="0.3"/>
 </svg>

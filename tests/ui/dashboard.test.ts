@@ -14,8 +14,8 @@ const html = readFileSync(resolve(root, 'index.html'), 'utf8');
 const css = readFileSync(resolve(root, 'src/ui/styles.css'), 'utf8');
 
 describe('dashboard shell', () => {
-  it('has a tab button and panel for every section, including Portfolio', () => {
-    const tabs = ['backtest', 'grid', 'portfolio', 'positions', 'validation', 'monitoring', 'scan', 'learn'];
+  it('has a tab button and panel for every tool section', () => {
+    const tabs = ['scan', 'backtest', 'validation', 'portfolio', 'grid', 'monitoring', 'learn'];
     for (const tab of tabs) {
       expect(html).toContain(`data-tab="${tab}"`);
       expect(html).toContain(`id="tab-${tab}"`);
