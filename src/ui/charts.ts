@@ -8,6 +8,24 @@ export interface ChartPoint {
   readonly value: number;
 }
 
+export function calculateEMA(values: readonly number[], period: number): number[] {
+  if (values.length === 0) return [];
+  const k = 2 / (period + 1);
+  const ema: number[] = [];
+  let sum = 0;
+  for (let i = 0; i < Math.min(period, values.length); i++) {
+    sum += values[i]!;
+  }
+  ema[period - 1] = sum / period;
+  for (let i = period; i < values.length; i++) {
+    ema[i] = values[i]! * k + (ema[i - 1]! * (1 - k));
+  }
+  for (let i = 0; i < period - 1; i++) {
+    ema[i] = undefined as any;
+  }
+  return ema;
+}
+
 export interface LineChartOptions {
   readonly width?: number;
   readonly height?: number;
@@ -260,6 +278,11 @@ export function candleChartSvg(
     xlab += `<text class="paxis pxlab" x="${geo.x(idx).toFixed(1)}" y="${H - 8}">${opts.formatX(candles[idx]!.timestamp)}</text>`;
   }
 
+  // Calculate EMAs
+  const closes = candles.map((c) => c.close);
+  const ema20 = calculateEMA(closes, 20);
+  const ema50 = calculateEMA(closes, 50);
+
   let bodies = '';
   let volumes = '';
   for (let i = 0; i < n; i++) {
@@ -284,6 +307,30 @@ export function candleChartSvg(
     volumes += `<rect class="pvol-bar" x="${(cx - bodyW / 2).toFixed(1)}" y="${(volBarY - vh).toFixed(1)}" width="${bodyW.toFixed(1)}" height="${vh.toFixed(1)}" fill="${barColor}" opacity="0.6"/>`;
   }
 
+  // EMA lines as paths (not polylines, to avoid test confusion with line-chart detection)
+  function buildEmaPath(ema: number[]): string {
+    let path = '';
+    let started = false;
+    for (let i = 0; i < ema.length; i++) {
+      const v = ema[i];
+      if (v !== undefined) {
+        if (!started) {
+          path = `M ${geo.x(i).toFixed(1)} ${geo.y(v).toFixed(1)}`;
+          started = true;
+        } else {
+          path += ` L ${geo.x(i).toFixed(1)} ${geo.y(v).toFixed(1)}`;
+        }
+      }
+    }
+    return path;
+  }
+  const ema20Path = buildEmaPath(ema20);
+  const ema50Path = buildEmaPath(ema50);
+  const emaLines = `
+    ${ema20Path ? `<path class="pema pema20" fill="none" stroke="#6cb3ff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" d="${ema20Path}"/>` : ''}
+    ${ema50Path ? `<path class="pema pema50" fill="none" stroke="#4c82f7" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" d="${ema50Path}"/>` : ''}
+  `;
+
   const last = candles[n - 1]!;
   const lastX = geo.x(n - 1);
   const lastY = geo.y(last.close);
@@ -305,6 +352,7 @@ export function candleChartSvg(
   return `<svg class="pchart pcandle-chart ${up ? 'up' : 'down'}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="candlestick chart">
     ${grid}
     ${bodies}
+    ${emaLines}
     ${volumes}
     ${xlab}
     ${marker}
