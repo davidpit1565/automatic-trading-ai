@@ -675,7 +675,13 @@ button.secondary:active {
 
 .hero { background: linear-gradient(150deg, var(--surface-raised), var(--surface));
   border: 1px solid var(--border); border-radius: 20px; padding: 1.6rem 1.3rem; margin-bottom: 1.25rem;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28); }
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  animation: heroGradient 8s ease-in-out infinite;
+  background-size: 200% 200%; }
+@keyframes heroGradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
 .hero-label { color: var(--text-dim); font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; }
 .tag-sim { font-size: 0.6rem; letter-spacing: 0.5px; background: rgba(79, 142, 247, 0.14);
   color: var(--accent); border: 1px solid rgba(79, 142, 247, 0.35); padding: 0.1rem 0.4rem; border-radius: 6px; }
@@ -720,9 +726,13 @@ button.secondary:active {
 .row-sub { color: var(--text-dim); font-size: 0.78rem; }
 .trade.buy { border-inline-start: 3px solid var(--hot); }
 .trade.sell { border-inline-start: 3px solid var(--cold); }
+.trade.profit { border-inline-start: 3px solid var(--hot); }
+.trade.loss { border-inline-start: 3px solid var(--cold); }
 .pill { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.5px; padding: 0.18rem 0.45rem; border-radius: 6px; }
 .pill.buy { background: rgba(47, 191, 113, 0.15); color: var(--hot); }
 .pill.sell { background: rgba(228, 87, 79, 0.15); color: var(--cold); }
+.pill.profit { background: rgba(22, 199, 132, 0.15); color: var(--hot); }
+.pill.loss { background: rgba(234, 57, 67, 0.15); color: var(--cold); }
 .empty { color: var(--text-dim); background: var(--surface); border: 1px dashed var(--border);
   border-radius: 14px; padding: 1.1rem; text-align: center; font-size: 0.9rem; }
 .muted-line { color: var(--text-dim); font-size: 0.75rem; text-align: center; margin-top: 1.1rem; }
