@@ -420,6 +420,25 @@ comments (+0.03% return, PF 1.15) from earlier the same day. Paper money only,
 so nothing is at risk, but the tuning needs re-measuring before real money is
 ever considered. Sample is small (6 trades) — do not over-fit to it.
 
+## Confidence-floor ordering — measured and settled (2026-07-27, PR #14)
+`applyHigherTimeframeGate` grants +8 confidence when the 4h trend confirms, but
+the autopilot applies `minConfidence` (40) INSIDE `evaluateScan`, before that
+bonus. So the bonus can never rescue a setup — it only changes the reported
+confidence in audit entries and Telegram messages. This reads like a bug.
+
+It is not. A/B on real Kraken data (10 majors, 720 1h candles, in/out of
+sample) moving the floor to AFTER the bonus:
+
+| Window | floor first (current) | floor after (candidate) |
+|---|---|---|
+| In-sample | -0.44% · DD 0.66% · 3 trades | -2.35% · DD 3.24% · 13 trades |
+| Out-of-sample | -1.20% · DD 1.02% · 3 trades | -1.62% · DD 1.60% · 7 trades |
+| Full | -1.63% · DD 1.67% · 6 trades | **-3.93% · DD 4.44% · 20 trades** |
+
+The candidate admits 14 extra trades that are net-losing and nearly triples
+drawdown. Current ordering kept; the reasoning is now a comment at the call
+site in `paperAutoPilot.ts` so it is not "fixed" by a later reader.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
