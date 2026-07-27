@@ -20,6 +20,32 @@ import { renderPortfolioView } from './views/portfolioView';
 import { renderPositionsView } from './views/positionsView';
 import { renderValidationView } from './views/validationView';
 import type { ViewHandle } from './viewLifecycle';
+import { showToast, showSuccess, showError, showInfo, showWarning } from './toastNotifications';
+import {
+  showLoadingOverlay,
+  hideLoadingOverlay,
+  createLoadingSpinner,
+  showEmptyState,
+} from './loadingStates';
+
+// Export UI helpers globally for view code
+declare global {
+  interface Window {
+    toast: {
+      show: typeof showToast;
+      success: typeof showSuccess;
+      error: typeof showError;
+      info: typeof showInfo;
+      warning: typeof showWarning;
+    };
+    loading: {
+      show: typeof showLoadingOverlay;
+      hide: typeof hideLoadingOverlay;
+      spinner: typeof createLoadingSpinner;
+      empty: typeof showEmptyState;
+    };
+  }
+}
 
 type ViewRenderer = (container: HTMLElement, data: ActiveDataSource) => ViewHandle | void;
 
@@ -57,6 +83,21 @@ function showBanner(data: ActiveDataSource): void {
 }
 
 async function bootstrap(): Promise<void> {
+  // Setup global UI helpers
+  window.toast = {
+    show: showToast,
+    success: showSuccess,
+    error: showError,
+    info: showInfo,
+    warning: showWarning,
+  };
+  window.loading = {
+    show: showLoadingOverlay,
+    hide: hideLoadingOverlay,
+    spinner: createLoadingSpinner,
+    empty: showEmptyState,
+  };
+
   const data = await initDataSource();
   showBanner(data);
 
