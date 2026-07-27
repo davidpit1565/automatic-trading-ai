@@ -8,6 +8,24 @@ export interface ChartPoint {
   readonly value: number;
 }
 
+export interface SRLevels {
+  support: number;
+  resistance: number;
+}
+
+export function calculateSRLevels(
+  candles: readonly { high: number; low: number }[],
+  lookback: number = 20,
+): SRLevels {
+  const window = candles.slice(Math.max(0, candles.length - lookback));
+  const highs = window.map((c) => c.high);
+  const lows = window.map((c) => c.low);
+  return {
+    resistance: Math.max(...highs),
+    support: Math.min(...lows),
+  };
+}
+
 export function calculateEMA(values: readonly number[], period: number): number[] {
   if (values.length === 0) return [];
   const k = 2 / (period + 1);
