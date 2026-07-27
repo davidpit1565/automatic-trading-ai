@@ -1,35 +1,15 @@
 {
   "portfolio-engine": {
-    "cash": 7664.358416139154,
+    "cash": 9552.995145764386,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -301.9172678223743,
+    "closedRealizedPnl": -336.50487090363515,
     "dayAnchor": {
       "day": "2026-07-27",
       "equity": 9586.007653468125
     }
   },
-  "open-positions": [
-    {
-      "id": "DOGEEUR:1785083914349:1",
-      "symbol": "DOGEEUR",
-      "openedAt": 1785083914349,
-      "entryPrice": 0.0643478,
-      "quantity": 29887.95782771893,
-      "initialQuantity": 29887.95782771893,
-      "stopLoss": 0.06356005875727756,
-      "takeProfit": 0.06592328248544485,
-      "feesPaid": 5.769672998119477,
-      "realizedPnl": 0,
-      "highestPrice": 0.0643809,
-      "lowestPrice": 0.0636388,
-      "confidence": 39.81025625300452,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "open-positions": [],
   "audit-log": [
     {
       "timestamp": 1784042069348,
@@ -1136,13 +1116,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit DOTEUR: 2629.060537225495 @ 0.7202 (stop-loss)"
+    },
+    {
+      "timestamp": 1785162222042,
+      "intentId": "DOGEEUR:1785083914349:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit DOGEEUR: 29887.95782771893 @ 0.0633807 (stop-loss)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1785161917527,
+    "at": 1785162222042,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "daily-summary-last-day": "2026-07-14",
@@ -8882,6 +8869,10 @@
     {
       "at": 1785161917527,
       "equity": 9569.36
+    },
+    {
+      "at": 1785162222042,
+      "equity": 9553
     }
   ],
   "trade-journal": [
@@ -9413,6 +9404,29 @@
       "validationVerdict": null,
       "confidence": 26.355180628477918,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "DOGEEUR:1785083914349:1",
+      "symbol": "DOGEEUR",
+      "entryTimestamp": 1785083914349,
+      "exitTimestamp": 1785162222042,
+      "entryPrice": 0.0643478,
+      "exitPrice": 0.0633807,
+      "positionSize": 29887.95782771893,
+      "stopLoss": 0.06356005875727756,
+      "takeProfit": 0.06592328248544485,
+      "exitReason": "stop-loss",
+      "fees": 11.452632064193391,
+      "slippage": 0,
+      "holdingDurationMs": 78307693,
+      "mfePct": 0.05143921004293561,
+      "maePct": 1.5029262849701133,
+      "realizedPnl": -34.587603081260845,
+      "returnPct": -1.7984175061152026,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 39.81025625300452,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "alerted-trade-ids": [
@@ -9458,7 +9472,8 @@
     "c:LINKEUR:1784995002402:0",
     "c:SOLEUR:1785001371750:2",
     "o:DOGEEUR:1785083914349:1",
-    "c:DOTEUR:1785058630743:2"
+    "c:DOTEUR:1785058630743:2",
+    "c:DOGEEUR:1785083914349:1"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -9466,7 +9481,7 @@
       {
         "key": "trades",
         "ok": true,
-        "detail": "23 / 20 closed trades"
+        "detail": "24 / 20 closed trades"
       },
       {
         "key": "days",
@@ -9476,12 +9491,12 @@
       {
         "key": "profitable",
         "ok": false,
-        "detail": "after-fee return -3.02%"
+        "detail": "after-fee return -3.37%"
       },
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -5.85%"
+        "detail": "vs buy-and-hold BTC -5.78%"
       },
       {
         "key": "drawdown",
@@ -9491,10 +9506,10 @@
       {
         "key": "consistency",
         "ok": false,
-        "detail": "profit factor 0.36 (needs ≥ 1.2)"
+        "detail": "profit factor 0.34 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — 11 / 14 days of history; after-fee return -3.02%; vs buy-and-hold BTC -5.85%; profit factor 0.36 (needs ≥ 1.2).",
+    "summary": "NOT READY — 11 / 14 days of history; after-fee return -3.37%; vs buy-and-hold BTC -5.78%; profit factor 0.34 (needs ≥ 1.2).",
     "unmet": [
       "days",
       "profitable",
@@ -9514,10 +9529,7 @@
   },
   "monthly-report-last": "2026-07-20",
   "daily-loss": {
-    "day": "2026-07-26",
-    "loss": 22.76924168869528
-  },
-  "move-alert-buckets": {
-    "DOGEEUR:1785083914349:1": 0
+    "day": "2026-07-27",
+    "loss": 34.587603081260845
   }
 }
