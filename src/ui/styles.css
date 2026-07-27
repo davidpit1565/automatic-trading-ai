@@ -742,11 +742,35 @@ button.secondary:active {
   font-size: 0.62rem; font-weight: 800; letter-spacing: -0.02em; color: #fff;
   background: hsl(var(--coin-hue, 210) 55% 42%); text-transform: uppercase; }
 
+/* Search + sort. The star overlays the row, so the row itself stays one big
+   tap target and the star is not nested inside it (a button inside a button is
+   invalid HTML and its clicks are unreliable). */
+.mk-controls { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
+.mk-search { flex: 1 1 auto; min-width: 0; padding: 0.55rem 0.8rem; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.9rem; }
+.mk-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgb(76 130 247 / 0.2); }
+.mk-sort { flex: 0 0 auto; padding: 0.55rem 0.6rem; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.86rem; }
+
+.market-row-wrap { position: relative; display: block; }
+.mk-star { position: absolute; top: 50%; right: 0.35rem; transform: translateY(-50%);
+  width: 30px; height: 30px; border: 0; border-radius: 50%; background: transparent;
+  color: var(--border); font-size: 0.95rem; line-height: 1; cursor: pointer; padding: 0;
+  transition: color 150ms ease; }
+.mk-star:hover { color: var(--muted); }
+.mk-star.on { color: #f0b90b; }
+
 .market-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.75rem;
   width: 100%; text-align: left;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 0.7rem 0.9rem; }
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  /* Extra room on the right keeps the price clear of the overlaid star. */
+  padding: 0.7rem 2.4rem 0.7rem 0.9rem; }
 .market-row-id { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
-.market-row-id .row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Both lines truncate rather than wrap. A wide change value ("+0.0019 (+0.22%)")
+   squeezes this column, and a wrapped symbol made those rows taller than the
+   rest — uneven row heights also undermine the scroll-stable paging. */
+.market-row-id .row-title,
+.market-row-id .row-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .market-row-num { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
 /* Tabular figures stop the digits jittering as prices tick. */
 .row-price { font-weight: 700; font-size: 1.02rem; font-variant-numeric: tabular-nums;
@@ -761,7 +785,9 @@ button.secondary:active {
 .market-more { padding: 0.9rem; text-align: center; font-size: 0.82rem; color: var(--muted); }
 
 @media (min-width: 860px) {
-  .market-row { padding: 0.8rem 1.1rem; }
+  /* Keeps the right padding that clears the overlaid star — a plain
+     `padding: 0.8rem 1.1rem` here would put the price back under it. */
+  .market-row { padding: 0.8rem 2.6rem 0.8rem 1.1rem; }
   .row-price { font-size: 1.1rem; }
 }
 

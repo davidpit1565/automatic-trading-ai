@@ -260,3 +260,195 @@ describe('Markets categories and logos', () => {
     handle.pause();
   });
 });
+
+describe('Markets categories without volume data', () => {
+  /**
+   * Only Kraken exposes a batch ticker. On the demo source — which is exactly
+   * what the deployed app falls back to when Kraken is unreachable — rows come
+   * from the per-symbol sweep and carry no volume at all. The mover tabs must
+   * still work rather than showing an empty screen.
+   */
+  function makeNoVolumeData(): ActiveDataSource {
+    const source: MarketDataSource = {
+      name: 'no-batch-ticker',
+      getInstruments: async () => ok(INSTRUMENTS.slice(0, 6)),
+      getCandles: async (symbol) => {
+        // First instrument falls, the rest rise, so both mover tabs have input.
+        const rising = symbol !== 'XBTEUR';
+        return ok(
+          Array.from({ length: 50 }, (_, i) => {
+            const close = rising ? 100 + i : 100 - i;
+            return { timestamp: ANCHOR - (50 - i) * 3_600_000, open: close, high: close, low: close, close, volume: 5 };
+          }) as Candle[],
+        );
+      },
+      // deliberately no getTickers
+    };
+    return { source, instruments: INSTRUMENTS.slice(0, 6), isLive: true, kind: 'demo' as ActiveDataSource['kind'], diagnostics: [] };
+  }
+
+  it('still fills Gainers when the source reports no volume', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeNoVolumeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    container.querySelector<HTMLElement>('[data-cat="gainers"]')!.click();
+    const rows = container.querySelectorAll('.market-row').length;
+    expect(rows).toBeGreaterThan(0);
+    expect(container.querySelector('.empty')).toBeNull();
+    handle.pause();
+  });
+
+  it('still fills Losers when the source reports no volume', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeNoVolumeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    container.querySelector<HTMLElement>('[data-cat="losers"]')!.click();
+    expect(container.querySelectorAll('.market-row').length).toBeGreaterThan(0);
+    handle.pause();
+  });
+
+  it('keeps the volume floor when volume IS reported, so microcaps stay out', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    // The standard fixture has descending volume; the thinnest rows are far
+    // below the floor and must not appear among the movers.
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    container.querySelector<HTMLElement>('[data-cat="gainers"]')!.click();
+    const shown = container.querySelectorAll('.market-row').length;
+    expect(shown).toBeGreaterThan(0);
+    expect(shown).toBeLessThan(COUNT - 1); // the sub-floor tail is excluded
+    handle.pause();
+  });
+});
+
+describe('Markets search, sort and watchlist', () => {
+  /** The search input is debounced; give it time to settle. */
+  async function type(container: HTMLElement, text: string): Promise<void> {
+    const input = container.querySelector<HTMLInputElement>('#mk-search')!;
+    input.value = text;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 200));
+  }
+
+  beforeEach(() => window.localStorage.clear());
+
+  it('filters the list as you type, matching name or symbol', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    await type(container, 'bitcoin');
+    let titles = [...container.querySelectorAll('.market-row .row-title')].map((e) => e.textContent);
+    expect(titles).toEqual(['Bitcoin']);
+
+    await type(container, 'xbteur');
+    titles = [...container.querySelectorAll('.market-row .row-title')].map((e) => e.textContent);
+    expect(titles).toEqual(['Bitcoin']);
+    handle.pause();
+  });
+
+  it('says so when nothing matches, rather than showing a blank list', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    await type(container, 'zzzznope');
+    expect(container.querySelectorAll('.market-row')).toHaveLength(0);
+    expect(container.querySelector('.empty')!.textContent).toContain('zzzznope');
+    handle.pause();
+  });
+
+  it('searches the whole universe, not just the rows already rendered', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    // C119 is the last of 120 markets — far past the first rendered page, and
+    // outside the 40-row Popular tab entirely.
+    await type(container, 'C119');
+    const titles = [...container.querySelectorAll('.market-row .row-title')].map((e) => e.textContent);
+    expect(titles).toContain('C119');
+    handle.pause();
+  });
+
+  it('reorders on sort without refetching', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    const select = container.querySelector<HTMLSelectElement>('#mk-sort')!;
+    select.value = 'name';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+
+    const titles = [...container.querySelectorAll('.market-row .row-title')].map((e) => e.textContent!);
+    expect(titles).toEqual([...titles].sort((a, b) => a.localeCompare(b)));
+    handle.pause();
+  });
+
+  it('stars a market and collects it under the Watchlist tab', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    container.querySelector<HTMLElement>('[data-star="XBTEUR"]')!.click();
+    container.querySelector<HTMLElement>('[data-cat="watchlist"]')!.click();
+
+    const titles = [...container.querySelectorAll('.market-row .row-title')].map((e) => e.textContent);
+    expect(titles).toEqual(['Bitcoin']);
+    expect(container.querySelector<HTMLElement>('[data-star="XBTEUR"]')!.className).toContain('on');
+    handle.pause();
+  });
+
+  it('starring does not also open the coin detail', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    container.querySelector<HTMLElement>('[data-star="XBTEUR"]')!.click();
+    await new Promise((r) => setTimeout(r, 100));
+    expect(container.querySelector<HTMLElement>('#mk-detail-view')!.hidden).toBe(true);
+    handle.pause();
+  });
+
+  it('explains the empty watchlist instead of looking broken', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    container.querySelector<HTMLElement>('[data-cat="watchlist"]')!.click();
+    expect(container.querySelector('.empty')!.textContent).toContain('No starred markets yet');
+    handle.pause();
+  });
+
+  it('keeps the watchlist across a remount', async () => {
+    const first = document.createElement('section');
+    document.body.appendChild(first);
+    const h1 = renderMarketsView(first, makeData());
+    await waitFor(() => first.querySelector('.market-row') !== null);
+    first.querySelector<HTMLElement>('[data-star="XBTEUR"]')!.click();
+    h1.pause();
+
+    const second = document.createElement('section');
+    document.body.appendChild(second);
+    const h2 = renderMarketsView(second, makeData());
+    await waitFor(() => second.querySelector('.market-row') !== null);
+    second.querySelector<HTMLElement>('[data-cat="watchlist"]')!.click();
+
+    const titles = [...second.querySelectorAll('.market-row .row-title')].map((e) => e.textContent);
+    expect(titles).toEqual(['Bitcoin']);
+    h2.pause();
+  });
+});
