@@ -374,7 +374,9 @@ Complete responsive design optimization for all screen sizes:
   - **Large Desktop** (≥1400px): 3-column tools grid, 300px charts, 2rem padding, 1200px max-width
 - **Responsive components**:
   - Tools grid: 1 col → 2 cols → 2 cols → 3 cols
-  - Market rows: 2 cols → 3 cols → 4 cols
+  - Market rows: 2 cols (sparkline hidden) → 3 cols. Never 4 — rows render
+    exactly three cells (`-id`, `-spark`, `-num`); the 4-track rule was the
+    defect PR #12 removed
   - Price chart scales by `aspect-ratio` (380/240 → 480/260 → 600/300), NOT by
     `height`: `.detail-chart svg.pchart` sets `height:auto` and outranks any
     `.detail-chart svg { height }` rule, so height-based breakpoints are inert
@@ -384,6 +386,39 @@ Complete responsive design optimization for all screen sizes:
 
 PR #11 merged (2026-07-27T12:30Z). Vercel preview deployed successfully. 
 All 490 tests passing, all CI checks green, bundle optimized.
+
+## Risk-path bug audit (2026-07-27, PR #13)
+Two defects in the capital-protection path, neither visible from the test
+suite (the gate was green before and after):
+1. **Equity was not marked to market when sizing entries.** The autopilot
+   called `portfolio.snapshot({}, t)`, and `snapshot`/`unrealizedPnl` value any
+   symbol missing from the price map at its ENTRY price. So the equity handed
+   to the risk engine ignored unrealized P&L: a position 20% underwater sized
+   the next entry identically to one at break-even. Every equity-derived limit
+   (per-trade risk, max position, total exposure, daily-loss allowance) rode on
+   that inflated number, precisely while trades were losing. The cycle already
+   fetches each held symbol's latest close for exit checks, so those prices are
+   now passed to `snapshot` — no extra fetches. Same call fixed in the manual
+   Portfolio path and in `measureCorrelationLimit.mts`. The cloud runner was
+   already correct via `latestPrices`; the autopilot was the outlier.
+2. **The per-asset cap never bound a first position** — the sizing clamp was
+   guarded by `assetExposure > 0`, so `maxExposurePerAssetPct` only constrained
+   top-ups. No-op at current defaults (both 20%); closes the hole for any
+   stricter setting.
+
+A/B measured on real Kraken history (10 majors, 720 1h candles, in/out of
+sample, both arms scored mark-to-market): **performance-neutral** — full window
+-1.625% → -1.628% return, maxDD 1.669% → 1.672%, identical trade count and win
+rate. The fix is correctness/safety, not alpha; its protection only bites in a
+deeper drawdown than this window contains.
+
+**Open finding (not addressed by PR #13):** that same replay shows the CURRENT
+production strategy is net-losing on the last ~30 days — full window -1.63%,
+PF 0.24, win rate 16.7% over 6 trades, and out-of-sample PF 0.00 (0/3 wins).
+This does not match the numbers recorded in `paperAutoPilot.ts`'s tuning
+comments (+0.03% return, PF 1.15) from earlier the same day. Paper money only,
+so nothing is at risk, but the tuning needs re-measuring before real money is
+ever considered. Sample is small (6 trades) — do not over-fit to it.
 
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
