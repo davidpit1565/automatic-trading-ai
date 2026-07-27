@@ -636,19 +636,24 @@ button.secondary:active {
 @keyframes viewfade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 .bottom-nav {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-  display: flex; justify-content: space-around;
-  background: var(--surface);
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(14px);
-  border-top: 1px solid var(--border);
-  padding: 0.35rem 0.25rem calc(0.35rem + env(safe-area-inset-bottom));
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 20px; z-index: 30;
+  display: flex; justify-content: space-around; align-items: center; gap: 0.5rem;
+  background: color-mix(in srgb, var(--surface) 75%, transparent);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 50px;
+  padding: 0.5rem 1rem;
+  width: fit-content;
+  max-width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
 }
-.nav-btn { flex: 1; background: none; border: none; color: var(--text-dim);
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  padding: 0.4rem; font-size: 0.7rem; cursor: pointer; border-radius: 12px; transition: color 0.15s; }
-.nav-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; }
-.nav-btn.active { color: var(--accent); }
+.nav-btn { flex: none; background: rgba(255,255,255,0.05); border: none; color: var(--text-dim);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  padding: 0.5rem 0.7rem; font-size: 0.65rem; cursor: pointer; border-radius: 12px;
+  transition: all 150ms ease; }
+.nav-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.nav-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+.nav-btn.active { background: rgba(76,130,247,0.15); color: var(--accent); }
 
 .hero { background: linear-gradient(150deg, var(--surface-raised), var(--surface));
   border: 1px solid var(--border); border-radius: 20px; padding: 1.6rem 1.3rem; margin-bottom: 1.25rem;
@@ -719,10 +724,19 @@ button.secondary:active {
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
+/* Mobile: floating nav bar stays centered at bottom */
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+.content { flex: 1; padding-bottom: 80px; }
+
 @media (min-width: 860px) {
-  .bottom-nav { flex-direction: column; top: 0; bottom: 0; right: auto; width: 210px;
-    justify-content: flex-start; gap: 0.25rem; padding: 4.25rem 0.6rem 1rem; border-top: none; border-inline-end: 1px solid var(--border); }
-  .nav-btn { flex: none; flex-direction: row; justify-content: flex-start; gap: 0.8rem; font-size: 0.95rem; padding: 0.75rem 1rem; width: 100%; }
+  .bottom-nav { flex-direction: column; top: 0; bottom: auto; right: auto; left: 1rem;
+    transform: none; width: auto; gap: 0.25rem; padding: 4.25rem 0.6rem 1rem;
+    border: 1px solid var(--border); border-radius: 14px; border-inline-end: 1px solid var(--border);
+    justify-content: flex-start; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+  .nav-btn { flex: none; flex-direction: row; justify-content: flex-start; gap: 0.8rem; font-size: 0.95rem;
+    padding: 0.75rem 1rem; width: 100%; background: transparent; }
+  .nav-btn:hover { background: rgba(255,255,255,0.05); }
+  .nav-btn.active { background: rgba(76,130,247,0.15); }
   .content { margin-inline-start: 210px; padding-bottom: 2rem; }
   .topbar { padding-inline-start: calc(210px + 1rem); }
   .tools-grid { grid-template-columns: repeat(2, 1fr); gap: 0.9rem; }
