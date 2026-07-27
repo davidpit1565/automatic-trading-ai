@@ -26,6 +26,38 @@ export function calculateEMA(values: readonly number[], period: number): number[
   return ema;
 }
 
+export interface MACDData {
+  readonly macd: (number | undefined)[];
+  readonly signal: (number | undefined)[];
+  readonly histogram: (number | undefined)[];
+  readonly min: number;
+  readonly max: number;
+}
+
+export function calculateMACD(values: readonly number[]): MACDData {
+  const ema12 = calculateEMA(values, 12);
+  const ema26 = calculateEMA(values, 26);
+  const macd = ema12.map((v12, i) => {
+    const v26 = ema26[i];
+    return v12 !== undefined && v26 !== undefined ? v12 - v26 : undefined;
+  });
+  const signal = calculateEMA(
+    macd.map((m) => m ?? 0),
+    9,
+  );
+  const histogram = macd.map((m, i) => (m !== undefined && signal[i] !== undefined ? m - signal[i]! : undefined));
+  let min = 0;
+  let max = 0;
+  for (const h of histogram) {
+    if (h !== undefined) {
+      min = Math.min(min, h);
+      max = Math.max(max, h);
+    }
+  }
+  const margin = Math.max(Math.abs(min), Math.abs(max)) * 0.1 || 0.01;
+  return { macd, signal, histogram, min: min - margin, max: max + margin };
+}
+
 export interface LineChartOptions {
   readonly width?: number;
   readonly height?: number;
@@ -259,9 +291,13 @@ export function candleChartSvg(
   const bodyW = Math.max(1, ((W - padL - padR) / n) * 0.7);
 
   // Volume bar area: use bottom 18 units of padB
-  const volBarHeight = 16;
+  const volBarHeight = 14;
   const volBarY = H - padB + 2;
   const maxVol = Math.max(...candles.map((c) => c.volume)) || 1;
+
+  // MACD area: below volume bars (not rendered in main view due to space, but calculation ready for expansion)
+  const macdBarHeight = 12;
+  const macdBaseY = H - padB + 18;
 
   let grid = '';
   const yTicks = 4;
@@ -278,10 +314,11 @@ export function candleChartSvg(
     xlab += `<text class="paxis pxlab" x="${geo.x(idx).toFixed(1)}" y="${H - 8}">${opts.formatX(candles[idx]!.timestamp)}</text>`;
   }
 
-  // Calculate EMAs
+  // Calculate EMAs and MACD
   const closes = candles.map((c) => c.close);
   const ema20 = calculateEMA(closes, 20);
   const ema50 = calculateEMA(closes, 50);
+  const macd = calculateMACD(closes);
 
   let bodies = '';
   let volumes = '';
@@ -305,6 +342,16 @@ export function candleChartSvg(
     const vh = (c.volume / maxVol) * volBarHeight;
     const barColor = up ? 'var(--hot)' : 'var(--cold)';
     volumes += `<rect class="pvol-bar" x="${(cx - bodyW / 2).toFixed(1)}" y="${(volBarY - vh).toFixed(1)}" width="${bodyW.toFixed(1)}" height="${vh.toFixed(1)}" fill="${barColor}" opacity="0.6"/>`;
+
+    // MACD histogram bars (below volume bars)
+    const h = macd.histogram[i];
+    if (h !== undefined && macd.max !== macd.min) {
+      const hNorm = (h - macd.min) / (macd.max - macd.min);
+      const hPixels = hNorm * macdBarHeight;
+      const hColor = h > 0 ? 'var(--hot)' : 'var(--cold)';
+      const hY = h > 0 ? macdBaseY - hPixels : macdBaseY;
+      volumes += `<rect class="pmacd-bar" x="${(cx - bodyW / 2).toFixed(1)}" y="${hY.toFixed(1)}" width="${bodyW.toFixed(1)}" height="${Math.abs(hPixels).toFixed(1)}" fill="${hColor}" opacity="0.5"/>`;
+    }
   }
 
   // EMA lines as paths (not polylines, to avoid test confusion with line-chart detection)
