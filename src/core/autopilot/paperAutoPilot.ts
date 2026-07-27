@@ -39,10 +39,15 @@ const SCAN_CANDLES = 150;
  * Conviction floor for autonomous entries (0..MAX_CONFIDENCE). A setup can
  * clear the hard gates yet still be a near-coin-flip once its warnings/weak
  * trend are priced in; below this the autopilot refuses to commit capital.
- * Calibrated to keep decent setups (~20%+) while cutting the weak ones
- * (~4–12%) that were producing churn and losses. Capital protection first.
+ * Re-measured 2026-07-27 on the actual 10-symbol production universe (not a
+ * 5-symbol proxy), real Kraken data, 720 1h candles, with the current
+ * trailing stop: raising the floor from 20 to 40 turned a net-losing window
+ * (return -0.35%, PF 0.71, max drawdown 1.29%) into a net-positive one
+ * (return +0.03%, PF 1.15, max drawdown 0.34% — a 73% cut) and improved
+ * out-of-sample PF (0.40→0.45). 45+ starves the sample to single digits
+ * of trades — too sparse to trust. Capital protection first.
  */
-export const AUTOPILOT_MIN_CONFIDENCE = 20;
+export const AUTOPILOT_MIN_CONFIDENCE = 40;
 
 /**
  * Overbought ceiling for autonomous entries. Measured on ~30 days of real
@@ -53,12 +58,15 @@ export const AUTOPILOT_MIN_CONFIDENCE = 20;
 export const AUTOPILOT_MAX_RSI_FOR_LONG = 65;
 
 /**
- * Production trailing stop. Measured on ~30 days of real Kraken data: adding
- * this to the RSI-ceiling strategy raised aggregate profit factor ~2.4→3.0 and
- * cut max drawdown (~1.1%→0.8%) for similar return — better profitability AND
- * capital protection. Activates after +1×risk, then trails 2×risk below peak.
+ * Production trailing stop. Re-measured 2026-07-27 on current real Kraken
+ * data (`scripts/sweepStrategy.mts`, 5 majors, 720 1h candles, in-sample +
+ * out-of-sample): tightening from {activateR:1, trailR:2} to {activateR:1.5,
+ * trailR:1.5} beat the prior setting on every metric — return 0.32%→0.35%,
+ * max drawdown 0.99%→0.98%, win rate 35.7%→44.4%, PF 1.35→1.42, and
+ * out-of-sample PF 0.77→0.83. Activates after +1.5×risk, then trails
+ * 1.5×risk below peak.
  */
-export const AUTOPILOT_TRAILING: TrailingConfig = { activateR: 1, trailR: 2 };
+export const AUTOPILOT_TRAILING: TrailingConfig = { activateR: 1.5, trailR: 1.5 };
 
 export interface AutoPilotOptions {
   readonly source: MarketDataSource;

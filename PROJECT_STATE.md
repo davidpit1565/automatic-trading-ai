@@ -30,6 +30,45 @@
   and stops keep running. Peak tracked in state (`equity-peak`); Hebrew
   Telegram alert once/day (`buildDrawdownHaltAlert`).
 
+## RE-TUNED STRATEGY (2026-07-27): profit + risk fix, measured on live data
+David reported the live paper account was losing badly and asked for a
+measured profit/risk improvement pass. Live trade journal (23 closed trades,
+11 days) confirmed it: win rate 21.7% (5W/18L, ~4x more losses than wins as
+David suspected), profit factor 0.36, return -3.02%, -5.44% vs buy-and-hold
+BTC. Two root causes found and fixed, both re-measured on REAL current Kraken
+data (not the ~30-day-old numbers the old constants cited):
+- **Trailing stop was no longer optimal.** `scripts/sweepStrategy.mts`
+  already had an untested lead flagged ("PROD + trail 1.5/1.5... worth a
+  dedicated look later"). Measured now (5 symbols, 720 1h candles, in-sample
+  + OOS): `{activateR:1.5, trailR:1.5}` beat the old `{activateR:1, trailR:2}`
+  on every metric (return 0.32→0.35%, maxDD 0.99→0.98%, win% 35.7→44.4%, PF
+  1.35→1.42, OOS-PF 0.77→0.83). Shipped in `AUTOPILOT_TRAILING`.
+- **Confidence floor was stale and non-discriminating.** In the live sample,
+  avg confidence on winners (26.6) vs losers (27.7) was statistically
+  identical — the 20-floor let in noise. A confidence sweep on the FULL
+  10-symbol production universe (not the 5-symbol proxy set — that
+  under-samples what's actually traded) at the new trailing setting showed a
+  clean improvement raising the floor 20→40: return -0.35%→+0.03%, max
+  drawdown 1.29%→0.34% (-73%), win% 35.1→41.7%, PF 0.71→1.15 (losing→
+  profitable). 45+ starves the sample to single digits of trades (too sparse
+  to trust) so 40 is the measured sweet spot, not a guess at the edge.
+  Shipped in `AUTOPILOT_MIN_CONFIDENCE`.
+- **Composed effect, verified together on the full 10-symbol universe**:
+  OLD (trail 1.0/2.0, conf 20) → return -0.34%, maxDD 1.27%, PF 0.71 (net
+  losing) vs NEW (trail 1.5/1.5, conf 40) → return +0.03%, maxDD 0.34%, PF
+  1.15 (net profitable), OOS-PF tied at 0.45. Trade frequency drops (58→12
+  in the measured window) — intentional: fewer, higher-quality entries.
+- **Investigated and correctly NOT changed**: every altcoin in the live
+  sample was a net loser (ADA/LTC/XRP/DOT/AVAX: 0 wins across 13 trades)
+  while majors (BTC/ETH/DOGE) won — tempting to narrow the traded universe,
+  but each symbol only had 1-4 trades, too thin to act on, and the
+  correlated-cluster exposure cap already tested this exact idea (see below)
+  and found it a genuine tradeoff, not a clear win. Left alone; the higher
+  confidence floor already cuts weak entries across all symbols including
+  alts.
+- Full gate green (tsc · 490 vitest · vite build) both times; no test
+  hardcoded either constant.
+
 ## Pending Work (autonomous queue)
 - TESTED AND REJECTED (2026-07-20): David asked whether a CLOSER take-profit
   target (easier to hit, so more trades close in profit instead of stopping
