@@ -409,12 +409,21 @@ export function candleChartSvg(
       <circle class="pchart-cross-dot" cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="4"/>
     </g>`;
 
+  // OHLC labels in top-left corner
+  const ohlc = `<g class="pohlc-labels" transform="translate(${(padL + 4).toFixed(1)}, ${(geo.padT + 10).toFixed(1)})">
+    <text class="pohlc-label pohlc-text" x="0" y="0" font-size="7.5" fill="currentColor" opacity="0.7">O ${opts.formatY(last.open)}</text>
+    <text class="pohlc-label pohlc-text" x="0" y="7" font-size="7.5" fill="currentColor" opacity="0.7">H ${opts.formatY(last.high)}</text>
+    <text class="pohlc-label pohlc-text" x="0" y="14" font-size="7.5" fill="currentColor" opacity="0.7">L ${opts.formatY(last.low)}</text>
+    <text class="pohlc-label pohlc-text" x="0" y="21" font-size="7.5" fill="currentColor" opacity="0.9" font-weight="600">C ${opts.formatY(last.close)}</text>
+  </g>`;
+
   return `<svg class="pchart pcandle-chart ${up ? 'up' : 'down'}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="candlestick chart">
     ${rsiBands}
     ${grid}
     ${bodies}
     ${emaLines}
     ${volumes}
+    ${ohlc}
     ${xlab}
     ${marker}
     ${crosshair}
