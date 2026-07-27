@@ -329,6 +329,28 @@ Quick price reference on candlestick charts:
 PR #8 created as draft, waiting for CI. All 490 tests passing, tsc clean,
 vite build successful locally.
 
+## UI/UX Overhaul Phase 6: Mobile Optimization (2026-07-27)
+Dark-mode-only mobile-first layout optimization:
+- **Removed theme toggle**: Eliminated the theme-toggle button from the header 
+  and removed all light-mode CSS variables. App now enforces dark mode only 
+  (the original design intention).
+- **Removed light mode CSS**: Deleted `:root[data-theme="light"]` block and 
+  `.theme-toggle` button styles, simplifying the stylesheet and removing 
+  dead code path.
+- **Full-width mobile layout**: Updated responsive CSS to use 100% width on 
+  phones and tablets (≤859px viewport) while preserving the 760px max-width 
+  constraint for larger desktop screens, ensuring the app utilizes the full 
+  available space on mobile devices.
+- **Improved viewport coverage**: Changed min-height from 100vh to 100dvh 
+  (dynamic viewport height) for better mobile browser support, preventing the 
+  address bar from cutting off content.
+- **Theme initialization**: Simplified `src/ui/main.ts` to always set dark mode 
+  on app startup, removing localStorage theme persistence code.
+
+PR #10 created as draft. All 490 tests passing, tsc clean, vite build 
+successful. Mobile layout verified to use full viewport width/height while 
+maintaining the glassmorphic floating navigation bar design.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
