@@ -102,20 +102,36 @@ describe('fetchMarketRows', () => {
     expect(rows[0]!.change).toBe(10);
   });
 
-  it('falls back rather than showing an empty screen when the batch request fails', async () => {
+  it('retries the batch request once before giving up on it', async () => {
+    let attempts = 0;
+    const data = makeData({
+      getTickers: async (): Promise<Result<Ticker[]>> => {
+        attempts++;
+        return attempts === 1
+          ? { ok: false, error: 'transient' }
+          : ok([ticker('XBTEUR', 110, 100, 1_000)]);
+      },
+    });
+    const rows = await fetchMarketRows(data, 60, () => AT);
+    expect(attempts).toBe(2);
+    expect(rows).toHaveLength(1); // the retry succeeded, no sweep needed
+  });
+
+  it('does NOT storm the API with a per-symbol sweep when the batch request fails', async () => {
+    // 60 sequential requests taking ~9s is the wrong answer to one cheap
+    // request failing — especially if the cause is rate limiting. Observed
+    // live: the sweep failed too. Return nothing; the caller keeps its last
+    // good list and the cheap request retries on the next refresh.
     let candleCalls = 0;
     const data = makeData({
       getTickers: async (): Promise<Result<Ticker[]>> => ({ ok: false, error: 'rate limited' }),
       getCandles: async () => {
         candleCalls++;
-        return ok([
-          { timestamp: AT - 3600_000, open: 100, high: 100, low: 100, close: 100, volume: 1 },
-          { timestamp: AT, open: 100, high: 110, low: 100, close: 110, volume: 1 },
-        ] as Candle[]);
+        return ok([] as Candle[]);
       },
     });
     const rows = await fetchMarketRows(data, 60, () => AT);
-    expect(candleCalls).toBeGreaterThan(0);
-    expect(rows.length).toBeGreaterThan(0);
+    expect(candleCalls).toBe(0);
+    expect(rows).toEqual([]);
   });
 });

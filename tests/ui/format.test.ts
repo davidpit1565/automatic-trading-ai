@@ -47,3 +47,24 @@ describe('market list formatting', () => {
     expect(formatSignedPrice(Number.POSITIVE_INFINITY)).toBe('—');
   });
 });
+
+describe('change decimals follow the price', () => {
+  it('renders a small change at the same scale as its price', () => {
+    // Cardano: price €0.1372 — the change must not sprawl to 6 decimals.
+    expect(formatSignedPrice(-0.008137, 0.1372)).toBe('-0.0081');
+    expect(formatSignedPrice(-0.0022084, 0.0621)).toBe('-0.0022');
+  });
+
+  it('keeps two decimals on large prices', () => {
+    expect(formatSignedPrice(-1192.4, 56168)).toBe('-1,192.40');
+    expect(formatSignedPrice(-1.43, 40.54)).toBe('-1.43');
+  });
+
+  it('still trims sub-cent assets sensibly', () => {
+    expect(formatMarketPrice(0.0000123, 0.0000456)).toBe('0.0000123');
+  });
+
+  it('defaults the reference to the value itself when none is given', () => {
+    expect(formatSignedPrice(-1192.4)).toBe('-1,192.40');
+  });
+});

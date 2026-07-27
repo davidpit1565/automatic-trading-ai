@@ -98,11 +98,17 @@ describe('Markets list (DOM integration)', () => {
     handle.pause();
   });
 
+  /** Switch to the All tab, which is the only category that pages. */
+  function showAll(container: HTMLElement): void {
+    container.querySelector<HTMLElement>('[data-cat="all"]')!.click();
+  }
+
   it('renders one page of rows up front, not all several hundred', async () => {
     const container = document.createElement('section');
     document.body.appendChild(container);
     const handle = renderMarketsView(container, makeData());
     await waitFor(() => container.querySelector('.market-row') !== null);
+    showAll(container);
 
     const rendered = container.querySelectorAll('.market-row').length;
     expect(rendered).toBe(50);
@@ -157,9 +163,100 @@ describe('Markets list (DOM integration)', () => {
     document.body.appendChild(container);
     const handle = renderMarketsView(container, makeData());
     await waitFor(() => container.querySelector('.market-row') !== null);
+    showAll(container); // All is the category that actually pages
 
     disconnect.mockClear();
     handle.pause();
     expect(disconnect).toHaveBeenCalled();
+  });
+});
+
+describe('Markets categories and logos', () => {
+  function showAll(container: HTMLElement): void {
+    container.querySelector<HTMLElement>('[data-cat="all"]')!.click();
+  }
+
+  it('switches category without refetching — every tab is a view of one response', async () => {
+    let tickerCalls = 0;
+    const data = makeData();
+    const original = data.source.getTickers!.bind(data.source);
+    (data.source as { getTickers: () => unknown }).getTickers = () => {
+      tickerCalls++;
+      return original();
+    };
+
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, data);
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    const afterLoad = tickerCalls;
+    showAll(container);
+    container.querySelector<HTMLElement>('[data-cat="gainers"]')!.click();
+    container.querySelector<HTMLElement>('[data-cat="volume"]')!.click();
+
+    expect(tickerCalls).toBe(afterLoad); // no extra network for a tab switch
+    expect(container.querySelector('.mk-tab.active')!.textContent).toBe('Volume');
+    handle.pause();
+  });
+
+  it('shows only rising markets under Gainers, ranked hardest first', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    container.querySelector<HTMLElement>('[data-cat="gainers"]')!.click();
+    const changes = [...container.querySelectorAll('.market-row .chg')].map((e) => e.textContent!);
+    expect(changes.length).toBeGreaterThan(0);
+    expect(changes.every((c) => c.startsWith('+'))).toBe(true);
+    // BTC is the only faller in the fixture, so it must be absent.
+    const titles = [...container.querySelectorAll('.market-row .row-title')].map((e) => e.textContent);
+    expect(titles).not.toContain('Bitcoin');
+    handle.pause();
+  });
+
+  it('resets to the top of the list when the category changes', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    showAll(container);
+    expect(container.querySelectorAll('.market-row').length).toBe(50);
+    container.querySelector<HTMLElement>('[data-cat="volume"]')!.click();
+    // A fresh category starts at one page again, not wherever the last had scrolled.
+    expect(container.querySelectorAll('.market-row').length).toBe(50);
+    handle.pause();
+  });
+
+  it('gives every row a logo — a real mark where one exists, a letter tile otherwise', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    const rows = [...container.querySelectorAll('.market-row')];
+    expect(rows.every((r) => r.querySelector('.coin-logo') !== null)).toBe(true);
+
+    // BTC ships a real SVG; the synthetic C1..C119 codes cannot, so they tile.
+    expect(rows[0]!.querySelector('img.coin-logo')).not.toBeNull();
+    expect(rows[1]!.querySelector('.coin-logo-tile')).not.toBeNull();
+    handle.pause();
+  });
+
+  it('requests no image for an asset with no bundled mark', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+    showAll(container);
+
+    // Emitting <img> for all 535 assets would fire hundreds of 404s per render.
+    const images = container.querySelectorAll('img.coin-logo').length;
+    const tiles = container.querySelectorAll('.coin-logo-tile').length;
+    expect(images).toBe(1); // BTC only
+    expect(images + tiles).toBe(container.querySelectorAll('.market-row').length);
+    handle.pause();
   });
 });

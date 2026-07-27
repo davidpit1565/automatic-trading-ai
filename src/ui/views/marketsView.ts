@@ -25,6 +25,7 @@ import {
 } from '../charts';
 import { startLivePrice } from '../liveTicker';
 import { escapeHtml, formatClock, formatMarketPrice, formatPct, formatPrice, formatSignedPrice } from '../format';
+import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
 import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 20_000;
@@ -49,6 +50,46 @@ const PAGE_SIZE = 50;
 const STALE_AFTER_MS = 5 * 60_000;
 const HOT = '#16c784';
 const COLD = '#ea3943';
+/** Vite's deploy base — GitHub Pages serves from /<repo>/, so logo URLs need it. */
+const BASE_URL = import.meta.env.BASE_URL;
+
+/**
+ * Category tabs. Each is a pure view over the same single batch-ticker
+ * response — switching is instant and costs no extra request, which is the
+ * whole reason the batch endpoint was worth moving to.
+ */
+interface Category {
+  readonly key: string;
+  readonly label: string;
+  readonly apply: (rows: readonly MarketRow[]) => MarketRow[];
+}
+/** Ignore microcaps when ranking movers — a 300% move on €40 of volume is noise. */
+const MOVER_MIN_VOLUME = 25_000;
+const CATEGORIES: Category[] = [
+  { key: 'popular', label: 'Popular', apply: (rows) => rows.slice(0, 40) },
+  { key: 'all', label: 'All', apply: (rows) => [...rows] },
+  {
+    key: 'gainers',
+    label: 'Gainers',
+    apply: (rows) =>
+      rows
+        .filter((r) => r.quoteVolume >= MOVER_MIN_VOLUME && r.changePct > 0)
+        .sort((a, b) => b.changePct - a.changePct),
+  },
+  {
+    key: 'losers',
+    label: 'Losers',
+    apply: (rows) =>
+      rows
+        .filter((r) => r.quoteVolume >= MOVER_MIN_VOLUME && r.changePct < 0)
+        .sort((a, b) => a.changePct - b.changePct),
+  },
+  {
+    key: 'volume',
+    label: 'Volume',
+    apply: (rows) => [...rows].sort((a, b) => b.quoteVolume - a.quoteVolume),
+  },
+];
 
 interface Range {
   readonly key: string;
@@ -86,7 +127,12 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   container.innerHTML = `
     <div id="mk-list-view">
       <h2 class="view-title">Markets</h2>
-      <p class="view-sub">Largest cryptocurrencies, live. Prices in EUR (€). Tap a coin for its chart.</p>
+      <p class="view-sub">Every EUR market on Kraken, live. Tap a coin for its chart.</p>
+      <div class="mk-tabs" id="mk-tabs" role="tablist">${CATEGORIES.map(
+        (c, i) =>
+          `<button class="mk-tab${i === 0 ? ' active' : ''}" role="tab" ` +
+          `aria-selected="${i === 0}" data-cat="${c.key}">${c.label}</button>`,
+      ).join('')}</div>
       <div class="stack" id="mk-list"><div class="empty">Loading markets…</div></div>
       <p class="muted-line" id="mk-status"></p>
     </div>
@@ -98,6 +144,16 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   const status = container.querySelector<HTMLElement>('#mk-status')!;
 
   let markets: MarketRow[] = [];
+  /** The active category applied to `markets` — what the list actually shows. */
+  let view: MarketRow[] = [];
+  let category: Category = CATEGORIES[0]!;
+  /**
+   * Snapshot of `view` taken when a detail opens. The detail's prev/next pages
+   * through THIS, not the live list: categories like Gainers reorder on every
+   * refresh, and navigating a list that reshuffles underneath you sends "Next"
+   * somewhere arbitrary.
+   */
+  let detailRows: MarketRow[] = [];
   /**
    * Rows currently in the DOM. The full EUR universe is ~535 markets; building
    * all of them up front is wasted work on a phone when only a handful are on
@@ -133,12 +189,13 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     }
   };
 
-  /** One market row: identity on the left, price and daily change on the right. */
+  /** One market row: logo + identity on the left, price and change on the right. */
   function rowHtml(m: MarketRow, index: number): string {
     const up = m.changePct >= 0;
     const stale = Date.now() - m.updatedAt > STALE_AFTER_MS;
     return (
       `<button class="market-row tappable" data-row="${index}">` +
+      coinLogoHtml(m.base, BASE_URL) +
       `<span class="market-row-id">` +
       `<span class="row-title">${escapeHtml(m.label)}</span>` +
       `<span class="row-sub"><span class="row-clock ${stale ? 'stale' : 'fresh'}" aria-hidden="true"></span>` +
@@ -146,7 +203,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       `</span>` +
       `<span class="market-row-num">` +
       `<span class="row-price">€${formatMarketPrice(m.price)}</span>` +
-      `<span class="chg ${up ? 'up' : 'down'}">${formatSignedPrice(m.change)} (${formatPct(m.changePct)})</span>` +
+      `<span class="chg ${up ? 'up' : 'down'}">${formatSignedPrice(m.change, m.price)} (${formatPct(m.changePct)})</span>` +
       `</span>` +
       `</button>`
     );
@@ -171,17 +228,25 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       list.innerHTML = '<div class="empty">Live market data is unavailable right now.</div>';
       return;
     }
+    view = category.apply(markets);
+    if (view.length === 0) {
+      list.innerHTML = `<div class="empty">No markets in ${category.label} right now.</div>`;
+      status.textContent = `Live · ${markets.length} markets · updated ${hm(Date.now())}`;
+      return;
+    }
     // Re-rendering the SAME number of rows keeps the list's height identical,
     // so the browser holds the scroll position across a background refresh.
-    const shown = Math.min(visibleCount, markets.length);
-    const rows = markets.slice(0, shown).map(rowHtml).join('');
+    const shown = Math.min(visibleCount, view.length);
+    const rows = view.slice(0, shown).map(rowHtml).join('');
     const more =
-      shown < markets.length
-        ? `<div id="mk-more" class="market-more">Loading more markets… (${shown} of ${markets.length})</div>`
-        : `<div class="market-more muted-line">All ${markets.length} EUR markets shown</div>`;
+      shown < view.length
+        ? `<div id="mk-more" class="market-more">Loading more markets… (${shown} of ${view.length})</div>`
+        : `<div class="market-more muted-line">All ${view.length} markets shown</div>`;
     list.innerHTML = rows + more;
     observeMore();
-    status.textContent = `Live · ${markets.length} markets · updated ${hm(Date.now())} · change since 00:00 UTC`;
+    status.textContent =
+      `Live · ${view.length} of ${markets.length} EUR markets · updated ${hm(Date.now())} · ` +
+      `change since 00:00 UTC`;
   }
 
   let listLoading = false;
@@ -198,6 +263,9 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   }
 
   function openDetail(index: number, opts: { preserveRange?: boolean } = {}): void {
+    // Freeze the ordering the user was looking at, so prev/next stays coherent
+    // even as a refresh reshuffles a category like Gainers underneath.
+    if (!opts.preserveRange || detailRows.length === 0) detailRows = view.length > 0 ? [...view] : [...markets];
     openCoinIndex = index;
     detailGeneration++;
     const myGeneration = detailGeneration;
@@ -225,7 +293,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       const seq = ++paintSeq;
       stopLivePrice();
       try {
-      const m = markets[coin]!;
+      const m = detailRows[coin]!;
       const range = RANGES.find((r) => r.key === rangeKey)!;
       // Long ranges force a smooth line; short ranges honour the toggle.
       const mode: 'candle' | 'line' = range.long ? 'line' : chartMode;
@@ -333,13 +401,13 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         <div class="detail-chart"><div class="pchart-wrap">${chart}<div class="pchart-tip" hidden></div></div></div>
         <div class="detail-nav">
           <button class="pager" id="mk-prev" ${coin === 0 ? 'disabled' : ''}>‹ Prev</button>
-          <span class="row-sub">${coin + 1} / ${markets.length}</span>
-          <button class="pager" id="mk-next" ${coin === markets.length - 1 ? 'disabled' : ''}>Next ›</button>
+          <span class="row-sub">${coin + 1} / ${detailRows.length}</span>
+          <button class="pager" id="mk-next" ${coin === detailRows.length - 1 ? 'disabled' : ''}>Next ›</button>
         </div>`;
 
       detailView.querySelector('#mk-back')!.addEventListener('click', backToList);
       detailView.querySelector('#mk-prev')!.addEventListener('click', () => { if (coin > 0) { coin--; rangeKey = '1D'; savedRangeKey = rangeKey; void paint(); } });
-      detailView.querySelector('#mk-next')!.addEventListener('click', () => { if (coin < markets.length - 1) { coin++; rangeKey = '1D'; savedRangeKey = rangeKey; void paint(); } });
+      detailView.querySelector('#mk-next')!.addEventListener('click', () => { if (coin < detailRows.length - 1) { coin++; rangeKey = '1D'; savedRangeKey = rangeKey; void paint(); } });
       detailView.querySelectorAll<HTMLButtonElement>('.range-btn').forEach((b) => {
         b.addEventListener('click', () => {
           const chart = detailView.querySelector<HTMLElement>('.detail-chart');
@@ -496,7 +564,24 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     const row = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-row]');
     if (!row) return;
     const index = Number(row.dataset['row']);
-    if (Number.isInteger(index) && index >= 0 && index < markets.length) openDetail(index);
+    if (Number.isInteger(index) && index >= 0 && index < view.length) openDetail(index);
+  });
+  // One capture-phase listener covers every row's logo (error does not bubble).
+  attachCoinLogoFallback(list);
+
+  container.querySelector('#mk-tabs')!.addEventListener('click', (event) => {
+    const tab = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-cat]');
+    if (!tab) return;
+    const picked = CATEGORIES.find((c) => c.key === tab.dataset['cat']);
+    if (!picked || picked === category) return;
+    category = picked;
+    visibleCount = PAGE_SIZE; // a new category starts at the top
+    for (const el of container.querySelectorAll<HTMLElement>('.mk-tab')) {
+      const active = el.dataset['cat'] === picked.key;
+      el.classList.toggle('active', active);
+      el.setAttribute('aria-selected', String(active));
+    }
+    renderList();
   });
 
   void loadList();
