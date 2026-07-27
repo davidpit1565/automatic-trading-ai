@@ -42,23 +42,31 @@ export function escapeHtml(text: string): string {
  * falls back to exponential notation on sub-cent assets — `toPrecision` emits
  * "1.000e-7" below 1e-7, which is unreadable in a price column.
  */
-export function formatMarketPrice(value: number): string {
+export function formatMarketPrice(value: number, reference = value): string {
   if (!Number.isFinite(value)) return '—';
+  // Precision follows `reference` (the price) rather than the value itself, so
+  // a change renders at the same scale as the price it belongs to. Judging a
+  // small change on its own magnitude gives absurd rows like a price of
+  // €0.1372 next to a change of -0.008137.
+  const scale = Math.abs(Number.isFinite(reference) ? reference : value);
   const abs = Math.abs(value);
-  if (abs >= 1000) {
+  if (scale >= 1000) {
     return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
-  if (abs >= 1) return value.toFixed(2);
-  if (abs >= 0.01) return value.toFixed(4);
+  if (scale >= 1) return value.toFixed(2);
+  if (scale >= 0.01) return value.toFixed(4);
   if (abs === 0) return '0.00';
   // Sub-cent: fixed notation, trailing zeros trimmed so 0.00001230 reads 0.0000123.
   return value.toFixed(10).replace(/0+$/, '').replace(/\.$/, '');
 }
 
-/** Absolute change with an explicit sign, e.g. "+1,243.70" / "-0.0000123". */
-export function formatSignedPrice(value: number): string {
+/**
+ * Absolute change with an explicit sign, e.g. "+1,243.70" / "-0.0081". Pass the
+ * price as `reference` so the change carries the same number of decimals.
+ */
+export function formatSignedPrice(value: number, reference = value): string {
   if (!Number.isFinite(value)) return '—';
-  const body = formatMarketPrice(Math.abs(value));
+  const body = formatMarketPrice(Math.abs(value), reference);
   return `${value >= 0 ? '+' : '-'}${body}`;
 }
 

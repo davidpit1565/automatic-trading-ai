@@ -234,7 +234,12 @@ export async function fetchMarketRows(
   fallbackMax = 60,
   now: () => number = Date.now,
 ): Promise<MarketRow[]> {
-  const batch = data.source.getTickers ? await data.source.getTickers() : null;
+  let batch = data.source.getTickers ? await data.source.getTickers() : null;
+  // One cheap retry. Observed live: the batch request fails transiently now and
+  // then, and retrying the single request beats the alternative by a wide
+  // margin — see below.
+  if (data.source.getTickers && !batch?.ok) batch = await data.source.getTickers();
+
   if (batch?.ok && batch.value.length > 0) {
     const at = now();
     const byBase = new Map<string, number>();
@@ -267,7 +272,14 @@ export async function fetchMarketRows(
     });
   }
 
-  // No batch ticker on this source — degrade to the per-symbol sweep.
+  // A source WITH a batch ticker that is currently failing must not trigger the
+  // per-symbol sweep: that is 60 sequential requests taking ~9s (measured
+  // during a real outage) which then failed anyway — and if the cause is rate
+  // limiting, it makes it worse. Return nothing and let the caller keep the
+  // last good list; the single cheap request is retried on the next refresh.
+  if (data.source.getTickers) return [];
+
+  // Genuinely no batch endpoint on this source — degrade to the per-symbol sweep.
   const at = now();
   const snaps = await fetchTopMarkets(data, fallbackMax);
   return snaps.map((s): MarketRow => {

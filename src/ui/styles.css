@@ -724,7 +724,25 @@ button.secondary:active {
    it would cost one candle request per symbol, which is what capped the list
    at 60 rows; the whole EUR universe now comes from one batch ticker. Charts
    live in the detail view. */
-.market-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0.75rem;
+/* Category tabs. Horizontally scrollable so more can be added without wrapping
+   onto a second line on a phone. */
+.mk-tabs { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none;
+  padding-bottom: 0.5rem; margin-bottom: 0.25rem; -webkit-overflow-scrolling: touch; }
+.mk-tabs::-webkit-scrollbar { display: none; }
+.mk-tab { flex: 0 0 auto; padding: 0.45rem 0.9rem; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  font-size: 0.86rem; font-weight: 600; cursor: pointer; transition: all 150ms ease; }
+.mk-tab:hover { color: var(--text); }
+.mk-tab.active { background: var(--accent, #2b6cf6); border-color: transparent; color: #fff; }
+
+/* Coin logo, or a generated tile for the long tail with no bundled mark.
+   Both share a size so rows never reflow when one falls back to the other. */
+.coin-logo { width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto; display: block; }
+.coin-logo-tile { display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.62rem; font-weight: 800; letter-spacing: -0.02em; color: #fff;
+  background: hsl(var(--coin-hue, 210) 55% 42%); text-transform: uppercase; }
+
+.market-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.75rem;
   width: 100%; text-align: left;
   background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 0.7rem 0.9rem; }
 .market-row-id { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
