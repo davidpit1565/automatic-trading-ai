@@ -733,12 +733,12 @@ button.secondary:active {
 
 @media (min-width: 431px) and (max-width: 859px) {
   .market-row { grid-template-columns: 1fr 120px auto; }
-  .market-row-spark svg { width: 100px; height: 36px; }
+  .market-row-spark svg { width: 120px; height: 36px; }
 }
 
 @media (min-width: 860px) {
-  .market-row { grid-template-columns: 1fr 130px 100px auto; }
-  .market-row-spark svg { width: 130px; height: 40px; }
+  .market-row { grid-template-columns: 1fr 160px auto; }
+  .market-row-spark svg { width: 160px; height: 40px; }
 }
 
 .stack { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -783,17 +783,21 @@ button.secondary:active {
 
 /* Responsive layout system: phone-first */
 .app { display: flex; flex-direction: column; min-height: 100dvh; width: 100%; }
-.content { flex: 1; padding-bottom: 80px; width: 100%; }
+/* Bottom padding must clear the floating nav (bottom:20px) AND the iOS home
+   indicator — hence env(safe-area-inset-bottom), not a flat pixel value. */
+.content { flex: 1; padding-bottom: calc(84px + env(safe-area-inset-bottom)); width: 100%; }
 
 /* ===== PHONE: ≤480px ===== */
 @media (max-width: 480px) {
-  .content { max-width: 100%; margin: 0; padding: 0.75rem; padding-bottom: calc(80px + 0.75rem); }
+  .content { max-width: 100%; margin: 0; padding: 0.75rem;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
   .topbar { padding: 0.75rem; }
 }
 
 /* ===== PHONE/TABLET: 481px - 859px ===== */
 @media (min-width: 481px) and (max-width: 859px) {
-  .content { max-width: 100%; margin: 0; padding: 1rem 1.25rem; padding-bottom: calc(80px + 1.25rem); }
+  .content { max-width: 100%; margin: 0; padding: 1rem 1.25rem;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
   .topbar { padding: 1rem 1.25rem 0.75rem; }
 }
 
@@ -831,7 +835,6 @@ button.secondary:active {
     max-width: 1200px;
   }
   .tools-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-  .detail-chart svg.pchart { aspect-ratio: 600 / 300; }
 }
 
 .disclaimer { color: var(--text-dim); font-size: 0.72rem; text-align: center; margin: 1.5rem 0 0; }
@@ -846,24 +849,7 @@ button.secondary:active {
 .detail-chart {
   background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 0.75rem;
 }
-.detail-chart svg { width: 100%; display: block; }
-
-/* Chart height responsive */
-@media (max-width: 480px) {
-  .detail-chart svg { height: 180px; }
-}
-
-@media (min-width: 481px) and (max-width: 859px) {
-  .detail-chart svg { height: 200px; }
-}
-
-@media (min-width: 860px) {
-  .detail-chart svg { height: 240px; }
-}
-
-@media (min-width: 1200px) {
-  .detail-chart svg { height: 300px; }
-}
+.detail-chart svg { width: 100%; height: 210px; display: block; }
 .detail-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; }
 .pager { background: var(--surface); border: 1px solid var(--border); color: var(--text);
   border-radius: 10px; padding: 0.5rem 1rem; cursor: pointer; font-weight: 600; }
@@ -875,7 +861,13 @@ button.secondary:active {
 .range-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
   border-radius: 9px; padding: 0.4rem 0.75rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; flex: 0 0 auto; }
 .range-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* The price chart sizes by aspect-ratio, not height — a `height` rule on
+   `.detail-chart svg` cannot reach it (this selector is more specific and
+   sets height:auto). Widen the ratio as the viewport grows so the chart
+   gets taller in absolute terms without ever overflowing. */
 .detail-chart svg.pchart { width: 100%; height: auto; aspect-ratio: 380 / 240; touch-action: none; }
+@media (min-width: 860px) { .detail-chart svg.pchart { aspect-ratio: 480 / 260; } }
+@media (min-width: 1400px) { .detail-chart svg.pchart { aspect-ratio: 600 / 300; } }
 .pchart .pgrid { stroke: var(--border); stroke-width: 0.8; opacity: 0.4; stroke-dasharray: 2 2; }
 .pchart .paxis { fill: var(--text-dim); font-size: 9px; font-family: inherit; }
 .pchart .pxlab { text-anchor: middle; }
