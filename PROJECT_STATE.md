@@ -231,8 +231,40 @@ take minutes, not seconds. 3 new tests cover the broadening, the failure
 fallback, and the one-fetch cache. Verified live against the real API
 (538 pairs, curated order intact, 324ms).
 
+## UI/UX Overhaul Phase 1 & 2 (2026-07-27): Logo, Cards, Charts, Mobile
+Delivered comprehensive visual + UX polish across the application:
+
+**Phase 1: Core Styling**
+- **New logo** (public/icon.svg): candlestick (bullish green) + AI accent
+  (3 blue dots in ascending neural-net pattern). Replaces generic line chart.
+- **Tool cards** (`src/ui/styles.css`): gradient background (light→dark),
+  hover lift (+4px translateY, 1.02 scale), glow shadow (blue). 1-column
+  mobile, 2-column tablet+.
+- **Removed Paper Trading tool** (`src/ui/main.ts`, `index.html`): tool cards
+  reordered by workflow (Scan → Backtest → Validation → Portfolio → Grid →
+  Monitoring → Guide). 7 tools instead of 8 (Paper Trading overlaps Portfolio +
+  Autopilot).
+- **Button polish**: glow effects on hover/focus, smooth 150ms transitions,
+  press animation (scale 0.98).
+- **Input fields**: focus glow (blue), better placeholder visibility.
+- **Topbar**: gradient background (darker→lighter), improved shadow, larger
+  brand dot with glow.
+
+**Phase 2: Charts & Mobile**
+- **Sparkline gradients** (`src/ui/charts.ts`): linear gradient fill
+  (0.25→0.02 opacity), smoother polylines (2.5px stroke).
+- **Candlestick charts** (already implemented, enhanced styling): rounded bodies,
+  opacity 0.85 (up)/0.75 (down), cleaner wicks (1.2px).
+- **Grid overlay**: subtle dashed lines (2 2 pattern, 0.4 opacity) for
+  readability without clutter.
+- **Mobile responsive**: tools grid 1-column <480px, 2-column ≥860px; charts
+  full-width no horizontal scroll; improved padding/gaps.
+
+All 490 tests passing, TypeScript clean, 118KB production bundle.
+Merged PR #5 (2026-07-27T02:04Z).
+
 ## Last Successful Tests
-tsc clean · 486 vitest tests green · vite build OK (main).
+tsc clean · 490 vitest tests green · vite build OK (main).
 Chart freeze root-fixed (two causes, both shipped):
 1. KrakenPublicSource queue now supports `priority` so an opened chart jumps
    ahead of the background list sweep (measured 8092ms → 1746ms for the exact
