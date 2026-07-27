@@ -139,7 +139,20 @@ async function runReplay(
     const cycle = await pilot.runCycleOnce(t);
     const stopExits = cycle.closed.filter((c) => c.reason === 'stop-loss').length;
     if (stopExits >= 2) clusteredStopCycles++;
-    latestEquity = portfolio.snapshot({}, t).equity;
+    // Mark open positions to market before reading equity, exactly as the
+    // production runner does. Valuing them at entry price would hide the
+    // unrealized drawdown this measurement is meant to detect.
+    const prices: Record<string, number> = {};
+    for (const position of portfolio.openPositions()) {
+      const series = h1.get(position.symbol) ?? [];
+      for (let i = series.length - 1; i >= 0; i--) {
+        if (series[i]!.timestamp <= t) {
+          prices[position.symbol] = series[i]!.close;
+          break;
+        }
+      }
+    }
+    latestEquity = portfolio.snapshot(prices, t).equity;
     peak = Math.max(peak, latestEquity);
   }
 

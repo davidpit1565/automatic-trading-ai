@@ -332,16 +332,19 @@ export function assessTrade(
     return rejected();
   }
 
-  // Per-asset headroom can shrink the position further than global caps.
+  // Per-asset headroom can shrink the position further than global caps. This
+  // applies to a first position in the asset too, not only to a top-up: the
+  // per-asset cap is independent of maxPositionPct and may be stricter than it.
   let { quantity, positionValue, maxLoss, riskPctUsed, constraintsApplied } = sizing.value;
-  if (assetExposure > 0 && positionValue > assetHeadroom) {
+  if (positionValue > assetHeadroom) {
     quantity = assetHeadroom / entry;
     positionValue = assetHeadroom;
     maxLoss = quantity * (entry - stopLoss);
     riskPctUsed = (maxLoss / portfolio.equity) * 100;
     constraintsApplied = [
       ...constraintsApplied,
-      `size capped by the ${limits.maxExposurePerAssetPct}% per-asset cap (existing ${opportunity.symbol} exposure)`,
+      `size capped by the ${limits.maxExposurePerAssetPct}% per-asset cap` +
+        (assetExposure > 0 ? ` (existing ${opportunity.symbol} exposure)` : ''),
     ];
   }
   // Correlated-cluster headroom can shrink it further still.

@@ -160,6 +160,13 @@ export function renderPositionsView(container: HTMLElement, data: ActiveDataSour
     return scan.ok ? scan.value : null;
   }
 
+  /**
+   * Latest known price per held symbol, refreshed by `refresh()` below. Kept so
+   * equity is marked to market wherever it is read — valuing open positions at
+   * their entry price would overstate equity while trades are underwater.
+   */
+  let lastPrices: Record<string, number> = {};
+
   async function refresh(): Promise<void> {
     const open = portfolio.openPositions();
     const prices: Record<string, number> = {};
@@ -172,6 +179,7 @@ export function renderPositionsView(container: HTMLElement, data: ActiveDataSour
         positions.updateMarketPrice(position.symbol, scan.snapshot.price, Date.now());
       }
     }
+    lastPrices = prices;
     const snapshot = portfolio.snapshot(prices, Date.now());
     renderOverview(container.querySelector('#pf-overview')!, snapshot);
     renderPositions(container.querySelector('#pf-positions')!, portfolio, prices, scans, () => void refresh(), status);
@@ -197,7 +205,7 @@ export function renderPositionsView(container: HTMLElement, data: ActiveDataSour
     const assessment = assessTrade(
       decision.opportunity,
       {
-        equity: portfolio.snapshot({}, Date.now()).equity,
+        equity: portfolio.snapshot(lastPrices, Date.now()).equity,
         openPositions: openPositions.map((p) => ({
           symbol: p.symbol,
           quantity: p.quantity,

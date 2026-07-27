@@ -197,7 +197,12 @@ describe('autonomous paper entries', () => {
     const riskLimits = { ...DEFAULT_RISK_LIMITS, correlationThreshold: 0.6, maxCorrelatedExposurePct: 25 };
     const correlationBetween = (a: string, b: string): number => (a !== b ? 0.8 : 1);
 
-    const { pilot, portfolio } = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { riskLimits, correlationBetween });
+    // OTHER/USD is pinned to its entry price so equity stays exactly 10_000 and
+    // the cluster sits exactly at the cap — the case this test is about.
+    const { pilot, portfolio } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 }, 'OTHER/USD': { drift: 0, lastPrice: 100 } },
+      { riskLimits, correlationBetween },
+    );
     // Pre-open a correlated position already at the cluster cap.
     const opened = portfolio.open({
       symbol: 'OTHER/USD', quantity: 25, entryPrice: 100, stopLoss: 90, takeProfit: 130, timestamp: T,
@@ -211,6 +216,35 @@ describe('autonomous paper entries', () => {
     // Without the correlation limit, the same setup opens normally.
     const uncapped = makePilot({ 'QUAL/USD': { drift: 0.001 } });
     expect((await uncapped.pilot.runCycleOnce(T)).opened).toHaveLength(1);
+  });
+
+  it('sizes new entries against mark-to-market equity, not entry-price equity', async () => {
+    // Identical setup twice; only the CURRENT price of an already-held
+    // position differs. Its stop/target sit far away so it never exits, so the
+    // sole difference is the mark-to-market value of the equity that the risk
+    // engine sizes the new entry against.
+    const sizeWithHeldPriceAt = async (lastPrice: number): Promise<number> => {
+      const { pilot, portfolio } = makePilot({
+        'QUAL/USD': { drift: 0.001 },
+        'HOLD/USD': { drift: 0, lastPrice },
+      });
+      const held = portfolio.open({
+        symbol: 'HOLD/USD', quantity: 20, entryPrice: 100, stopLoss: 50, takeProfit: 500, timestamp: T,
+      });
+      expect(held.ok).toBe(true);
+      const cycle = await pilot.runCycleOnce(T);
+      expect(cycle.opened).toHaveLength(1);
+      return cycle.opened[0]!.quantity;
+    };
+
+    const flat = await sizeWithHeldPriceAt(100); // held position at break-even
+    const underwater = await sizeWithHeldPriceAt(80); // 20% down = 400 less equity
+
+    // Equity is genuinely lower while the held position is underwater, so the
+    // new position must be sized smaller. Valuing the held position at its
+    // entry price would make these two identical — overstating equity exactly
+    // during a drawdown, which is when undersizing matters most.
+    expect(underwater).toBeLessThan(flat);
   });
 });
 
