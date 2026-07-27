@@ -525,7 +525,13 @@ async function maybeSendSummaries(
       marketValue: a.marketValue,
       pctOfEquity: a.pctOfEquity,
     })),
-    openedLast24h: open.filter((p) => p.openedAt >= since).length,
+    // Counts every position OPENED in the window, including ones already
+    // closed again — `openPositions()` alone would hide any trade that opened
+    // and hit its stop or target inside the same 24 hours. The two sources
+    // cannot overlap: the journal holds only closed trades, `open` only live ones.
+    openedLast24h:
+      open.filter((p) => p.openedAt >= since).length +
+      journal.entries().filter((e) => e.entryTimestamp >= since).length,
     closedLast24h: journal.entries().filter((e) => e.exitTimestamp >= since).length,
     benchmark,
     readiness: store.get<RealMoneyReadiness>(READINESS_KEY) ?? null,

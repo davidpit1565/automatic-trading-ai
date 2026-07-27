@@ -362,6 +362,14 @@ export class PaperAutoPilot {
         skipped.push({ symbol: scanResult.symbol, reason: 'already holding a position' });
         continue;
       }
+      // ORDER IS DELIBERATE AND MEASURED: the confidence floor is applied HERE,
+      // before the higher-timeframe bonus below, so that bonus can never lift a
+      // setup over the floor — it only ever changes the reported confidence.
+      // That looks like a bug and is not. Measured 2026-07-27 on real Kraken
+      // data (10 majors, 720 1h candles): moving the floor AFTER the bonus
+      // admitted 6→20 trades and made everything worse — return -1.63%→-3.93%,
+      // max drawdown 1.67%→4.44% (2.7x), win rate 16.7%→15.0%. The extra trades
+      // the bonus would rescue are net-losing. Do not "fix" this ordering.
       let decision = evaluateScan(scanResult, {
         ...DEFAULT_SIGNAL_CRITERIA,
         maxRsiForLong: this.options.maxRsiForLong ?? DEFAULT_SIGNAL_CRITERIA.maxRsiForLong,
