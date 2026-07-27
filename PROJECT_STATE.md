@@ -375,7 +375,9 @@ Complete responsive design optimization for all screen sizes:
 - **Responsive components**:
   - Tools grid: 1 col → 2 cols → 2 cols → 3 cols
   - Market rows: 2 cols → 3 cols → 4 cols
-  - Chart heights scale: 180px → 200px → 240px → 300px
+  - Price chart scales by `aspect-ratio` (380/240 → 480/260 → 600/300), NOT by
+    `height`: `.detail-chart svg.pchart` sets `height:auto` and outranks any
+    `.detail-chart svg { height }` rule, so height-based breakpoints are inert
   - Typography: fonts and spacing scale proportionally across all breakpoints
 - **Consistent layout**: Single-column phone, sidebar nav on desktop, optimal content width on all sizes
 - **Touch-optimized**: All interactive elements properly sized for touch and mouse input
