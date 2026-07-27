@@ -720,25 +720,31 @@ button.secondary:active {
 .chg.up, .up { color: var(--hot); }
 .chg.down, .down { color: var(--cold); }
 
-.market-row { display: grid; grid-template-columns: 1fr 130px auto; align-items: center; gap: 0.75rem;
+/* Markets list: identity left, price + daily change right. No sparkline —
+   it would cost one candle request per symbol, which is what capped the list
+   at 60 rows; the whole EUR universe now comes from one batch ticker. Charts
+   live in the detail view. */
+.market-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0.75rem;
+  width: 100%; text-align: left;
   background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 0.7rem 0.9rem; }
-.market-row-id { display: flex; flex-direction: column; }
-.market-row-spark svg { width: 130px; height: 40px; }
-.market-row-num { display: flex; flex-direction: column; align-items: flex-end; }
-/* Market row responsive adjustments */
-@media (max-width: 430px) {
-  .market-row { grid-template-columns: 1fr auto; }
-  .market-row-spark { display: none; }
-}
-
-@media (min-width: 431px) and (max-width: 859px) {
-  .market-row { grid-template-columns: 1fr 120px auto; }
-  .market-row-spark svg { width: 120px; height: 36px; }
-}
+.market-row-id { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.market-row-id .row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.market-row-num { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
+/* Tabular figures stop the digits jittering as prices tick. */
+.row-price { font-weight: 700; font-size: 1.02rem; font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1; }
+.market-row-num .chg { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1;
+  white-space: nowrap; }
+/* Freshness dot beside the update time, mirroring the reference market apps. */
+.row-clock { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  margin-inline-end: 0.35rem; vertical-align: baseline; }
+.row-clock.fresh { background: var(--hot); }
+.row-clock.stale { background: #f0a020; }
+.market-more { padding: 0.9rem; text-align: center; font-size: 0.82rem; color: var(--muted); }
 
 @media (min-width: 860px) {
-  .market-row { grid-template-columns: 1fr 160px auto; }
-  .market-row-spark svg { width: 160px; height: 40px; }
+  .market-row { padding: 0.8rem 1.1rem; }
+  .row-price { font-size: 1.1rem; }
 }
 
 .stack { display: flex; flex-direction: column; gap: 0.5rem; }

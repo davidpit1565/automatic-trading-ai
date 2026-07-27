@@ -37,6 +37,28 @@ export interface Instrument {
   readonly quote: string;
 }
 
+/**
+ * A whole market's current state in one row, as returned by an exchange's
+ * batch ticker endpoint — every listed pair in a single request, rather than
+ * one candle call per symbol. This is what makes a several-hundred-market
+ * list possible on a rate-limited public API.
+ *
+ * `open` is the exchange's session open (Kraken: UTC midnight), so
+ * `price - open` is the conventional DAILY change shown on market screens —
+ * not a rolling 24-hour window, which would need per-symbol candles.
+ */
+export interface Ticker {
+  readonly symbol: string;
+  readonly price: number;
+  readonly open: number;
+  readonly high: number;
+  readonly low: number;
+  /** Volume in the base asset over the last 24h. */
+  readonly volume: number;
+  /** Volume valued in the quote currency — the useful sort key for liquidity. */
+  readonly quoteVolume: number;
+}
+
 /** Result type used across layers so errors are values, never silent. */
 export type Result<T, E = string> =
   | { readonly ok: true; readonly value: T }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { truncate } from '../../src/ui/format';
+import { formatMarketPrice, formatSignedPrice, truncate } from '../../src/ui/format';
 
 describe('truncate', () => {
   it('returns short text unchanged, with no ellipsis appended', () => {
@@ -15,5 +15,35 @@ describe('truncate', () => {
   it('leaves text exactly at the limit unchanged (not truncated)', () => {
     const exact = 'x'.repeat(140);
     expect(truncate(exact, 140)).toBe(exact);
+  });
+});
+
+describe('market list formatting', () => {
+  it('keeps cents on large prices instead of rounding to whole units', () => {
+    expect(formatMarketPrice(56370.6)).toBe('56,370.60');
+    expect(formatMarketPrice(64161.15)).toBe('64,161.15');
+  });
+
+  it('never emits exponential notation for sub-cent assets', () => {
+    expect(formatMarketPrice(0.0000123)).toBe('0.0000123');
+    expect(formatMarketPrice(0.0000001)).not.toContain('e');
+    expect(formatMarketPrice(0.0000001)).toBe('0.0000001');
+  });
+
+  it('scales decimals to the size of the price', () => {
+    expect(formatMarketPrice(3.5)).toBe('3.50');
+    expect(formatMarketPrice(0.5)).toBe('0.5000');
+    expect(formatMarketPrice(0)).toBe('0.00');
+  });
+
+  it('signs absolute changes explicitly in both directions', () => {
+    expect(formatSignedPrice(1243.7)).toBe('+1,243.70');
+    expect(formatSignedPrice(-58.5)).toBe('-58.50');
+    expect(formatSignedPrice(0)).toBe('+0.00');
+  });
+
+  it('returns a dash rather than NaN for unusable input', () => {
+    expect(formatMarketPrice(Number.NaN)).toBe('—');
+    expect(formatSignedPrice(Number.POSITIVE_INFINITY)).toBe('—');
   });
 });

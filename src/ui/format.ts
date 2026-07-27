@@ -35,3 +35,34 @@ export function escapeHtml(text: string): string {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 }
+
+/**
+ * Price for the markets list. Unlike `formatPrice` this keeps cents on large
+ * values (the reference market screens show 64,161.2, not 64,161) and never
+ * falls back to exponential notation on sub-cent assets — `toPrecision` emits
+ * "1.000e-7" below 1e-7, which is unreadable in a price column.
+ */
+export function formatMarketPrice(value: number): string {
+  if (!Number.isFinite(value)) return '—';
+  const abs = Math.abs(value);
+  if (abs >= 1000) {
+    return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  if (abs >= 1) return value.toFixed(2);
+  if (abs >= 0.01) return value.toFixed(4);
+  if (abs === 0) return '0.00';
+  // Sub-cent: fixed notation, trailing zeros trimmed so 0.00001230 reads 0.0000123.
+  return value.toFixed(10).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+/** Absolute change with an explicit sign, e.g. "+1,243.70" / "-0.0000123". */
+export function formatSignedPrice(value: number): string {
+  if (!Number.isFinite(value)) return '—';
+  const body = formatMarketPrice(Math.abs(value));
+  return `${value >= 0 ? '+' : '-'}${body}`;
+}
+
+/** Clock label for a row's freshness stamp. */
+export function formatClock(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
