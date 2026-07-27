@@ -299,6 +299,19 @@ export function candleChartSvg(
   const macdBarHeight = 12;
   const macdBaseY = H - padB + 18;
 
+  // RSI level bands (visual zones)
+  let rsiBands = '';
+  const rsiLevels = [
+    { lo: 0.0, hi: 0.3, color: 'rgba(234,57,67,0.04)' },
+    { lo: 0.3, hi: 0.7, color: 'rgba(255,255,255,0.01)' },
+    { lo: 0.7, hi: 1.0, color: 'rgba(22,199,132,0.04)' },
+  ];
+  for (const level of rsiLevels) {
+    const y1 = geo.y(geo.min + (geo.max - geo.min) * (1 - level.hi));
+    const y2 = geo.y(geo.min + (geo.max - geo.min) * (1 - level.lo));
+    rsiBands += `<rect x="${padL.toFixed(1)}" y="${y1.toFixed(1)}" width="${(W - padL - padR).toFixed(1)}" height="${(y2 - y1).toFixed(1)}" fill="${level.color}" pointer-events="none"/>`;
+  }
+
   let grid = '';
   const yTicks = 4;
   for (let k = 0; k <= yTicks; k++) {
@@ -397,6 +410,7 @@ export function candleChartSvg(
     </g>`;
 
   return `<svg class="pchart pcandle-chart ${up ? 'up' : 'down'}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="candlestick chart">
+    ${rsiBands}
     ${grid}
     ${bodies}
     ${emaLines}
