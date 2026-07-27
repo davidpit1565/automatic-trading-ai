@@ -361,9 +361,27 @@ Dark-mode-only mobile-first layout optimization:
 - **Theme initialization**: Simplified `src/ui/main.ts` to always set dark mode 
   on app startup, removing localStorage theme persistence code.
 
-PR #10 created as draft. All 490 tests passing, tsc clean, vite build 
+PR #10 merged (2026-07-27T11:12Z). All 490 tests passing, tsc clean, vite build 
 successful. Mobile layout verified to use full viewport width/height while 
 maintaining the glassmorphic floating navigation bar design.
+
+## UI/UX Overhaul Phase 7: Comprehensive Responsive Design (2026-07-27)
+Complete responsive design optimization for all screen sizes:
+- **4 optimized breakpoints**:
+  - **Phone** (≤480px): Single-column tools grid, 180px charts, 0.75rem padding
+  - **Tablet** (481-859px): 2-column tools grid, 200px charts, 1.25rem padding
+  - **Desktop** (860-1399px): Sidebar nav (210px), 2-column tools, 240px charts, 1.5rem padding
+  - **Large Desktop** (≥1400px): 3-column tools grid, 300px charts, 2rem padding, 1200px max-width
+- **Responsive components**:
+  - Tools grid: 1 col → 2 cols → 2 cols → 3 cols
+  - Market rows: 2 cols → 3 cols → 4 cols
+  - Chart heights scale: 180px → 200px → 240px → 300px
+  - Typography: fonts and spacing scale proportionally across all breakpoints
+- **Consistent layout**: Single-column phone, sidebar nav on desktop, optimal content width on all sizes
+- **Touch-optimized**: All interactive elements properly sized for touch and mouse input
+
+PR #11 merged (2026-07-27T12:30Z). Vercel preview deployed successfully. 
+All 490 tests passing, all CI checks green, bundle optimized.
 
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
