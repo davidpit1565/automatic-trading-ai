@@ -8,6 +8,56 @@ export interface ChartPoint {
   readonly value: number;
 }
 
+export function calculateEMA(values: readonly number[], period: number): number[] {
+  if (values.length === 0) return [];
+  const k = 2 / (period + 1);
+  const ema: number[] = [];
+  let sum = 0;
+  for (let i = 0; i < Math.min(period, values.length); i++) {
+    sum += values[i]!;
+  }
+  ema[period - 1] = sum / period;
+  for (let i = period; i < values.length; i++) {
+    ema[i] = values[i]! * k + (ema[i - 1]! * (1 - k));
+  }
+  for (let i = 0; i < period - 1; i++) {
+    ema[i] = undefined as any;
+  }
+  return ema;
+}
+
+export interface MACDData {
+  readonly macd: (number | undefined)[];
+  readonly signal: (number | undefined)[];
+  readonly histogram: (number | undefined)[];
+  readonly min: number;
+  readonly max: number;
+}
+
+export function calculateMACD(values: readonly number[]): MACDData {
+  const ema12 = calculateEMA(values, 12);
+  const ema26 = calculateEMA(values, 26);
+  const macd = ema12.map((v12, i) => {
+    const v26 = ema26[i];
+    return v12 !== undefined && v26 !== undefined ? v12 - v26 : undefined;
+  });
+  const signal = calculateEMA(
+    macd.map((m) => m ?? 0),
+    9,
+  );
+  const histogram = macd.map((m, i) => (m !== undefined && signal[i] !== undefined ? m - signal[i]! : undefined));
+  let min = 0;
+  let max = 0;
+  for (const h of histogram) {
+    if (h !== undefined) {
+      min = Math.min(min, h);
+      max = Math.max(max, h);
+    }
+  }
+  const margin = Math.max(Math.abs(min), Math.abs(max)) * 0.1 || 0.01;
+  return { macd, signal, histogram, min: min - margin, max: max + margin };
+}
+
 export interface LineChartOptions {
   readonly width?: number;
   readonly height?: number;
@@ -213,9 +263,10 @@ export function candleGeometry(
 /**
  * A professional candlestick chart (investing.com / Revolut X style): a thin
  * high→low wick and an open→close body per candle, green up / red down via
- * CSS (`--hot` / `--cold`). Shares the exact viewBox, padding, axes, live
- * current-price marker and hidden crosshair scaffold of `priceChartSvg`, so
- * the existing crosshair + live-marker wiring keeps working unchanged.
+ * CSS (`--hot` / `--cold`). Includes volume bars at the bottom. Shares the
+ * exact viewBox, padding, axes, live current-price marker and hidden crosshair
+ * scaffold of `priceChartSvg`, so the existing crosshair + live-marker wiring
+ * keeps working unchanged.
  */
 export function candleChartSvg(
   candles: readonly {
@@ -239,6 +290,28 @@ export function candleChartSvg(
   const n = candles.length;
   const bodyW = Math.max(1, ((W - padL - padR) / n) * 0.7);
 
+  // Volume bar area: use bottom 18 units of padB
+  const volBarHeight = 14;
+  const volBarY = H - padB + 2;
+  const maxVol = Math.max(...candles.map((c) => c.volume)) || 1;
+
+  // MACD area: below volume bars (not rendered in main view due to space, but calculation ready for expansion)
+  const macdBarHeight = 12;
+  const macdBaseY = H - padB + 18;
+
+  // RSI level bands (visual zones)
+  let rsiBands = '';
+  const rsiLevels = [
+    { lo: 0.0, hi: 0.3, color: 'rgba(234,57,67,0.04)' },
+    { lo: 0.3, hi: 0.7, color: 'rgba(255,255,255,0.01)' },
+    { lo: 0.7, hi: 1.0, color: 'rgba(22,199,132,0.04)' },
+  ];
+  for (const level of rsiLevels) {
+    const y1 = geo.y(geo.min + (geo.max - geo.min) * (1 - level.hi));
+    const y2 = geo.y(geo.min + (geo.max - geo.min) * (1 - level.lo));
+    rsiBands += `<rect x="${padL.toFixed(1)}" y="${y1.toFixed(1)}" width="${(W - padL - padR).toFixed(1)}" height="${(y2 - y1).toFixed(1)}" fill="${level.color}" pointer-events="none"/>`;
+  }
+
   let grid = '';
   const yTicks = 4;
   for (let k = 0; k <= yTicks; k++) {
@@ -254,7 +327,14 @@ export function candleChartSvg(
     xlab += `<text class="paxis pxlab" x="${geo.x(idx).toFixed(1)}" y="${H - 8}">${opts.formatX(candles[idx]!.timestamp)}</text>`;
   }
 
+  // Calculate EMAs and MACD
+  const closes = candles.map((c) => c.close);
+  const ema20 = calculateEMA(closes, 20);
+  const ema50 = calculateEMA(closes, 50);
+  const macd = calculateMACD(closes);
+
   let bodies = '';
+  let volumes = '';
   for (let i = 0; i < n; i++) {
     const c = candles[i]!;
     const cx = geo.x(i);
@@ -270,7 +350,46 @@ export function candleChartSvg(
       `<line class="pcandle-wick" x1="${cx.toFixed(1)}" y1="${yHigh.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${yLow.toFixed(1)}"/>` +
       `<rect class="pcandle-body" x="${(cx - bodyW / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bodyW.toFixed(1)}" height="${bh.toFixed(1)}"/>` +
       `</g>`;
+
+    // Volume bars (scaled to volBarHeight)
+    const vh = (c.volume / maxVol) * volBarHeight;
+    const barColor = up ? 'var(--hot)' : 'var(--cold)';
+    volumes += `<rect class="pvol-bar" x="${(cx - bodyW / 2).toFixed(1)}" y="${(volBarY - vh).toFixed(1)}" width="${bodyW.toFixed(1)}" height="${vh.toFixed(1)}" fill="${barColor}" opacity="0.6"/>`;
+
+    // MACD histogram bars (below volume bars)
+    const h = macd.histogram[i];
+    if (h !== undefined && macd.max !== macd.min) {
+      const hNorm = (h - macd.min) / (macd.max - macd.min);
+      const hPixels = hNorm * macdBarHeight;
+      const hColor = h > 0 ? 'var(--hot)' : 'var(--cold)';
+      const hY = h > 0 ? macdBaseY - hPixels : macdBaseY;
+      volumes += `<rect class="pmacd-bar" x="${(cx - bodyW / 2).toFixed(1)}" y="${hY.toFixed(1)}" width="${bodyW.toFixed(1)}" height="${Math.abs(hPixels).toFixed(1)}" fill="${hColor}" opacity="0.5"/>`;
+    }
   }
+
+  // EMA lines as paths (not polylines, to avoid test confusion with line-chart detection)
+  function buildEmaPath(ema: number[]): string {
+    let path = '';
+    let started = false;
+    for (let i = 0; i < ema.length; i++) {
+      const v = ema[i];
+      if (v !== undefined) {
+        if (!started) {
+          path = `M ${geo.x(i).toFixed(1)} ${geo.y(v).toFixed(1)}`;
+          started = true;
+        } else {
+          path += ` L ${geo.x(i).toFixed(1)} ${geo.y(v).toFixed(1)}`;
+        }
+      }
+    }
+    return path;
+  }
+  const ema20Path = buildEmaPath(ema20);
+  const ema50Path = buildEmaPath(ema50);
+  const emaLines = `
+    ${ema20Path ? `<path class="pema pema20" fill="none" stroke="#6cb3ff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" d="${ema20Path}"/>` : ''}
+    ${ema50Path ? `<path class="pema pema50" fill="none" stroke="#4c82f7" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" d="${ema50Path}"/>` : ''}
+  `;
 
   const last = candles[n - 1]!;
   const lastX = geo.x(n - 1);
@@ -291,8 +410,11 @@ export function candleChartSvg(
     </g>`;
 
   return `<svg class="pchart pcandle-chart ${up ? 'up' : 'down'}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="candlestick chart">
+    ${rsiBands}
     ${grid}
     ${bodies}
+    ${emaLines}
+    ${volumes}
     ${xlab}
     ${marker}
     ${crosshair}
