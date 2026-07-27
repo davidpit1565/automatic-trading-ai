@@ -172,23 +172,10 @@ async function bootstrap(): Promise<void> {
       return;
     }
     if (target.closest('[data-tool-back]')) resetTools();
-    const themeBtn = target.closest<HTMLElement>('#theme-toggle');
-    if (themeBtn) {
-      const current = document.documentElement.getAttribute('data-theme') || 'dark';
-      const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('theme', next);
-      themeBtn.textContent = next === 'dark' ? '☀️' : '🌙';
-    }
   });
 
-  // Initialize theme from localStorage
-  const savedTheme = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-  const themeToggle = document.getElementById('theme-toggle');
-  if (themeToggle) {
-    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-  }
+  // Set dark mode (always dark, no toggle)
+  document.documentElement.setAttribute('data-theme', 'dark');
 
   activateView('home');
   void mountTopbarBtc(data);
