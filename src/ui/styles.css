@@ -816,3 +816,217 @@ button.secondary:active {
 .readiness-list li.ok::first-letter { color: var(--hot); font-weight: 800; }
 .readiness-list li.no { color: var(--text-dim); }
 .readiness-list li.no::first-letter { color: var(--warn); font-weight: 800; }
+
+/* ---------- Loading Spinners ---------- */
+
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(76,130,247,0.3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner.sm { width: 16px; height: 16px; border-width: 2px; }
+.spinner.lg { width: 32px; height: 32px; border-width: 3px; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+
+.loading-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.loading-modal .spinner { width: 40px; height: 40px; }
+
+/* ---------- Toast Notifications ---------- */
+
+.toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  pointer-events: none;
+  max-width: 400px;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  backdrop-filter: blur(12px);
+  animation: slideIn 300ms ease-out, slideOut 300ms ease-in 4.7s forwards;
+  pointer-events: auto;
+  min-width: 280px;
+  font-size: 0.95rem;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(400px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+  to { transform: translateX(400px); opacity: 0; }
+}
+
+.toast.success { border-color: var(--hot); background: rgba(22,199,132,0.1); }
+.toast.success .toast-icon { color: var(--hot); }
+.toast.error { border-color: var(--cold); background: rgba(234,57,67,0.1); }
+.toast.error .toast-icon { color: var(--cold); }
+.toast.info { border-color: var(--accent); background: rgba(76,130,247,0.1); }
+.toast.info .toast-icon { color: var(--accent); }
+.toast.warning { border-color: var(--warn); background: rgba(240,185,11,0.1); }
+.toast.warning .toast-icon { color: var(--warn); }
+
+.toast-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  flex: 1;
+  color: var(--text);
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  transition: color 150ms ease;
+}
+
+.toast-close:hover { color: var(--text); }
+
+/* ---------- Empty States ---------- */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+.empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.6;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+.empty-state-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.empty-state-text {
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  max-width: 300px;
+}
+
+.empty-state-action {
+  display: inline-block;
+}
+
+/* ---------- Smooth Page Transitions ---------- */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in-up {
+  animation: fadeInUp 300ms ease-out;
+}
+
+.content section.active {
+  animation: fadeInUp 220ms ease-out;
+}
+
+/* ---------- Skeleton Loading ---------- */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface) 0%,
+    var(--surface-raised) 50%,
+    var(--surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-line {
+  height: 1rem;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+}
+
+.skeleton-title {
+  height: 1.4rem;
+  width: 60%;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+/* Responsive for mobile */
+@media (max-width: 480px) {
+  .toast-container { right: 0.75rem; left: 0.75rem; }
+  .toast { min-width: auto; }
+}
