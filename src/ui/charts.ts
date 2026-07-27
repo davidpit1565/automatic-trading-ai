@@ -213,9 +213,10 @@ export function candleGeometry(
 /**
  * A professional candlestick chart (investing.com / Revolut X style): a thin
  * high→low wick and an open→close body per candle, green up / red down via
- * CSS (`--hot` / `--cold`). Shares the exact viewBox, padding, axes, live
- * current-price marker and hidden crosshair scaffold of `priceChartSvg`, so
- * the existing crosshair + live-marker wiring keeps working unchanged.
+ * CSS (`--hot` / `--cold`). Includes volume bars at the bottom. Shares the
+ * exact viewBox, padding, axes, live current-price marker and hidden crosshair
+ * scaffold of `priceChartSvg`, so the existing crosshair + live-marker wiring
+ * keeps working unchanged.
  */
 export function candleChartSvg(
   candles: readonly {
@@ -239,6 +240,11 @@ export function candleChartSvg(
   const n = candles.length;
   const bodyW = Math.max(1, ((W - padL - padR) / n) * 0.7);
 
+  // Volume bar area: use bottom 18 units of padB
+  const volBarHeight = 16;
+  const volBarY = H - padB + 2;
+  const maxVol = Math.max(...candles.map((c) => c.volume)) || 1;
+
   let grid = '';
   const yTicks = 4;
   for (let k = 0; k <= yTicks; k++) {
@@ -255,6 +261,7 @@ export function candleChartSvg(
   }
 
   let bodies = '';
+  let volumes = '';
   for (let i = 0; i < n; i++) {
     const c = candles[i]!;
     const cx = geo.x(i);
@@ -270,6 +277,11 @@ export function candleChartSvg(
       `<line class="pcandle-wick" x1="${cx.toFixed(1)}" y1="${yHigh.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${yLow.toFixed(1)}"/>` +
       `<rect class="pcandle-body" x="${(cx - bodyW / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bodyW.toFixed(1)}" height="${bh.toFixed(1)}"/>` +
       `</g>`;
+
+    // Volume bars (scaled to volBarHeight)
+    const vh = (c.volume / maxVol) * volBarHeight;
+    const barColor = up ? 'var(--hot)' : 'var(--cold)';
+    volumes += `<rect class="pvol-bar" x="${(cx - bodyW / 2).toFixed(1)}" y="${(volBarY - vh).toFixed(1)}" width="${bodyW.toFixed(1)}" height="${vh.toFixed(1)}" fill="${barColor}" opacity="0.6"/>`;
   }
 
   const last = candles[n - 1]!;
@@ -293,6 +305,7 @@ export function candleChartSvg(
   return `<svg class="pchart pcandle-chart ${up ? 'up' : 'down'}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="candlestick chart">
     ${grid}
     ${bodies}
+    ${volumes}
     ${xlab}
     ${marker}
     ${crosshair}
