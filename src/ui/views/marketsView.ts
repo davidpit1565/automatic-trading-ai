@@ -300,12 +300,34 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       detailView.querySelector('#mk-prev')!.addEventListener('click', () => { if (coin > 0) { coin--; rangeKey = '1D'; savedRangeKey = rangeKey; void paint(); } });
       detailView.querySelector('#mk-next')!.addEventListener('click', () => { if (coin < markets.length - 1) { coin++; rangeKey = '1D'; savedRangeKey = rangeKey; void paint(); } });
       detailView.querySelectorAll<HTMLButtonElement>('.range-btn').forEach((b) => {
-        b.addEventListener('click', () => { rangeKey = b.dataset['range']!; savedRangeKey = rangeKey; void paint(); });
+        b.addEventListener('click', () => {
+          const chart = detailView.querySelector<HTMLElement>('.detail-chart');
+          if (chart) chart.classList.add('fade-out');
+          setTimeout(() => {
+            rangeKey = b.dataset['range']!;
+            savedRangeKey = rangeKey;
+            void paint();
+            if (chart) {
+              chart.classList.remove('fade-out');
+              chart.classList.add('fade-in');
+              setTimeout(() => chart.classList.remove('fade-in'), 300);
+            }
+          }, 200);
+        });
       });
       detailView.querySelectorAll<HTMLButtonElement>('.ctoggle-btn').forEach((b) => {
         b.addEventListener('click', () => {
-          const mode = b.dataset['mode'];
-          if (mode === 'candle' || mode === 'line') { chartMode = mode; savedChartMode = mode; void paint(); }
+          const chart = detailView.querySelector<HTMLElement>('.detail-chart');
+          if (chart) chart.classList.add('fade-out');
+          setTimeout(() => {
+            const mode = b.dataset['mode'];
+            if (mode === 'candle' || mode === 'line') { chartMode = mode; savedChartMode = mode; void paint(); }
+            if (chart) {
+              chart.classList.remove('fade-out');
+              chart.classList.add('fade-in');
+              setTimeout(() => chart.classList.remove('fade-in'), 300);
+            }
+          }, 200);
         });
       });
 

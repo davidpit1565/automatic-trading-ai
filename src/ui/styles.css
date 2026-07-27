@@ -829,6 +829,17 @@ button.secondary:active {
 .pchart .pchart-cross-line { stroke: var(--text-dim); stroke-width: 1; stroke-dasharray: 2 3; }
 .pchart .pchart-cross-dot { stroke: #fff; stroke-width: 1.5; }
 
+/* Support/Resistance levels with smooth animation */
+.pchart .psr { transition: stroke 300ms ease, opacity 300ms ease; }
+.pchart .psr-resistance { stroke: rgba(22, 199, 132, 0.3); }
+.pchart .psr-support { stroke: rgba(234, 57, 67, 0.3); }
+
+/* Smooth chart transitions */
+.detail-chart { transition: opacity 200ms ease; }
+.detail-chart.fade-out { opacity: 0; }
+.detail-chart.fade-in { opacity: 1; animation: fadeIn 300ms ease-out; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
 /* Chart wrapper + floating tooltip */
 .pchart-wrap { position: relative; }
 .pchart-tip {

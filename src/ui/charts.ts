@@ -409,6 +409,15 @@ export function candleChartSvg(
     ${ema50Path ? `<path class="pema pema50" fill="none" stroke="#4c82f7" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" d="${ema50Path}"/>` : ''}
   `;
 
+  // Support/Resistance levels (last 20 candles)
+  const sr = calculateSRLevels(candles, 20);
+  const srResistanceY = geo.y(sr.resistance);
+  const srSupportY = geo.y(sr.support);
+  const srLines = `
+    <line class="psr psr-resistance" x1="${padL.toFixed(1)}" y1="${srResistanceY.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${srResistanceY.toFixed(1)}" stroke="rgba(22, 199, 132, 0.3)" stroke-width="1" stroke-dasharray="3,2"/>
+    <line class="psr psr-support" x1="${padL.toFixed(1)}" y1="${srSupportY.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${srSupportY.toFixed(1)}" stroke="rgba(234, 57, 67, 0.3)" stroke-width="1" stroke-dasharray="3,2"/>
+  `;
+
   const last = candles[n - 1]!;
   const lastX = geo.x(n - 1);
   const lastY = geo.y(last.close);
@@ -440,6 +449,7 @@ export function candleChartSvg(
     ${grid}
     ${bodies}
     ${emaLines}
+    ${srLines}
     ${volumes}
     ${ohlc}
     ${xlab}
