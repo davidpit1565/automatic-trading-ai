@@ -26,6 +26,8 @@ import {
 import { startLivePrice } from '../liveTicker';
 import { escapeHtml, formatClock, formatMarketPrice, formatPct, formatPrice, formatSignedPrice } from '../format';
 import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
+import { SORT_OPTIONS, searchRows, sortRows, Watchlist, type SortKey } from '../marketFilters';
+import { LocalStorageStore } from '../../core/data/storage';
 import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 20_000;
@@ -65,24 +67,35 @@ interface Category {
 }
 /** Ignore microcaps when ranking movers — a 300% move on €40 of volume is noise. */
 const MOVER_MIN_VOLUME = 25_000;
+/**
+ * Liquidity filter for the mover tabs — but ONLY when the source actually
+ * reports volume. Just the Kraken batch ticker does; the per-symbol fallback
+ * and the demo source both report zero, which is the state the deployed app
+ * lands in whenever Kraken is unreachable. Applying the floor unconditionally
+ * emptied Gainers and Losers completely in exactly that situation.
+ */
+function liquidEnough(rows: readonly MarketRow[]): (row: MarketRow) => boolean {
+  const hasVolume = rows.some((r) => r.quoteVolume > 0);
+  return (row) => !hasVolume || row.quoteVolume >= MOVER_MIN_VOLUME;
+}
 const CATEGORIES: Category[] = [
   { key: 'popular', label: 'Popular', apply: (rows) => rows.slice(0, 40) },
   { key: 'all', label: 'All', apply: (rows) => [...rows] },
   {
     key: 'gainers',
     label: 'Gainers',
-    apply: (rows) =>
-      rows
-        .filter((r) => r.quoteVolume >= MOVER_MIN_VOLUME && r.changePct > 0)
-        .sort((a, b) => b.changePct - a.changePct),
+    apply: (rows) => {
+      const liquid = liquidEnough(rows);
+      return rows.filter((r) => r.changePct > 0 && liquid(r)).sort((a, b) => b.changePct - a.changePct);
+    },
   },
   {
     key: 'losers',
     label: 'Losers',
-    apply: (rows) =>
-      rows
-        .filter((r) => r.quoteVolume >= MOVER_MIN_VOLUME && r.changePct < 0)
-        .sort((a, b) => a.changePct - b.changePct),
+    apply: (rows) => {
+      const liquid = liquidEnough(rows);
+      return rows.filter((r) => r.changePct < 0 && liquid(r)).sort((a, b) => a.changePct - b.changePct);
+    },
   },
   {
     key: 'volume',
@@ -132,7 +145,14 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         (c, i) =>
           `<button class="mk-tab${i === 0 ? ' active' : ''}" role="tab" ` +
           `aria-selected="${i === 0}" data-cat="${c.key}">${c.label}</button>`,
-      ).join('')}</div>
+      ).join('')}<button class="mk-tab" role="tab" aria-selected="false" data-cat="watchlist">★ Watchlist</button></div>
+      <div class="mk-controls">
+        <input id="mk-search" class="mk-search" type="search" inputmode="search"
+          placeholder="Search 500+ markets…" aria-label="Search markets" autocomplete="off">
+        <select id="mk-sort" class="mk-sort" aria-label="Sort markets">${SORT_OPTIONS.map(
+          (o) => `<option value="${o.key}">${o.label}</option>`,
+        ).join('')}</select>
+      </div>
       <div class="stack" id="mk-list"><div class="empty">Loading markets…</div></div>
       <p class="muted-line" id="mk-status"></p>
     </div>
@@ -144,9 +164,15 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   const status = container.querySelector<HTMLElement>('#mk-status')!;
 
   let markets: MarketRow[] = [];
-  /** The active category applied to `markets` — what the list actually shows. */
+  /** Category + search + sort applied to `markets` — what the list shows. */
   let view: MarketRow[] = [];
   let category: Category = CATEGORIES[0]!;
+  let query = '';
+  let sortKey: SortKey = 'default';
+  /** null until the Watchlist tab is first used — nothing touches storage before then. */
+  let watchlist: Watchlist | null = null;
+  let showingWatchlist = false;
+  const getWatchlist = (): Watchlist => (watchlist ??= new Watchlist(new LocalStorageStore()));
   /**
    * Snapshot of `view` taken when a detail opens. The detail's prev/next pages
    * through THIS, not the live list: categories like Gainers reorder on every
@@ -193,7 +219,11 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   function rowHtml(m: MarketRow, index: number): string {
     const up = m.changePct >= 0;
     const stale = Date.now() - m.updatedAt > STALE_AFTER_MS;
+    // Only consult the watchlist once it exists — an untouched watchlist must
+    // not force a storage read on every one of hundreds of rows.
+    const starred = watchlist !== null && watchlist.has(m.symbol);
     return (
+      `<span class="market-row-wrap">` +
       `<button class="market-row tappable" data-row="${index}">` +
       coinLogoHtml(m.base, BASE_URL) +
       `<span class="market-row-id">` +
@@ -205,7 +235,13 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       `<span class="row-price">€${formatMarketPrice(m.price)}</span>` +
       `<span class="chg ${up ? 'up' : 'down'}">${formatSignedPrice(m.change, m.price)} (${formatPct(m.changePct)})</span>` +
       `</span>` +
-      `</button>`
+      `</button>` +
+      // Sibling, not a child: a <button> inside a <button> is invalid HTML and
+      // the inner one's clicks are unreliable across browsers.
+      `<button class="mk-star${starred ? ' on' : ''}" data-star="${escapeHtml(m.symbol)}" ` +
+      `aria-pressed="${starred}" aria-label="${starred ? 'Remove' : 'Add'} ${escapeHtml(m.label)} ` +
+      `${starred ? 'from' : 'to'} watchlist">★</button>` +
+      `</span>`
     );
   }
 
@@ -217,7 +253,10 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     if (!sentinel || typeof IntersectionObserver === 'undefined') return;
     moreObserver = new IntersectionObserver((entries) => {
       if (!entries.some((e) => e.isIntersecting)) return;
-      visibleCount = Math.min(visibleCount + PAGE_SIZE, markets.length);
+      // Bounded by the FILTERED list, which is what is actually rendered —
+      // growing against `markets` would inflate the counter past the end of a
+      // narrow category like Gainers.
+      visibleCount = Math.min(visibleCount + PAGE_SIZE, view.length);
       renderList();
     }, { rootMargin: '400px' });
     moreObserver.observe(sentinel);
@@ -228,9 +267,25 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       list.innerHTML = '<div class="empty">Live market data is unavailable right now.</div>';
       return;
     }
-    view = category.apply(markets);
+    // Each a pure pass over rows already in memory, so none of this costs a
+    // request. A search deliberately escapes the active category and covers the
+    // WHOLE universe: "Popular" holds 40 of 535 markets, so searching inside it
+    // would silently fail to find most of what the user types. Within the
+    // watchlist a search does stay scoped — there, narrowing is the intent.
+    const searching = query.trim() !== '';
+    const scoped = showingWatchlist
+      ? getWatchlist().filter(markets)
+      : searching
+        ? markets
+        : category.apply(markets);
+    view = sortRows(searchRows(scoped, query), sortKey);
     if (view.length === 0) {
-      list.innerHTML = `<div class="empty">No markets in ${category.label} right now.</div>`;
+      const reason = query.trim() !== ''
+        ? `No markets match “${escapeHtml(query.trim())}”.`
+        : showingWatchlist
+          ? 'No starred markets yet. Tap ★ on any market to add it here.'
+          : `No markets in ${category.label} right now.`;
+      list.innerHTML = `<div class="empty">${reason}</div>`;
       status.textContent = `Live · ${markets.length} markets · updated ${hm(Date.now())}`;
       return;
     }
@@ -569,18 +624,47 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   // One capture-phase listener covers every row's logo (error does not bubble).
   attachCoinLogoFallback(list);
 
+  // Starring must not also open the coin — the star sits above the row.
+  list.addEventListener('click', (event) => {
+    const star = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-star]');
+    if (!star) return;
+    event.stopPropagation();
+    getWatchlist().toggle(star.dataset['star']!);
+    renderList();
+  });
+
   container.querySelector('#mk-tabs')!.addEventListener('click', (event) => {
     const tab = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-cat]');
     if (!tab) return;
-    const picked = CATEGORIES.find((c) => c.key === tab.dataset['cat']);
-    if (!picked || picked === category) return;
-    category = picked;
+    const key = tab.dataset['cat']!;
+    const picked = CATEGORIES.find((c) => c.key === key);
+    if (key !== 'watchlist' && !picked) return;
+    if (key === 'watchlist' ? showingWatchlist : picked === category && !showingWatchlist) return;
+    showingWatchlist = key === 'watchlist';
+    if (picked) category = picked;
     visibleCount = PAGE_SIZE; // a new category starts at the top
     for (const el of container.querySelectorAll<HTMLElement>('.mk-tab')) {
-      const active = el.dataset['cat'] === picked.key;
+      const active = el.dataset['cat'] === key;
       el.classList.toggle('active', active);
       el.setAttribute('aria-selected', String(active));
     }
+    renderList();
+  });
+
+  // Debounced so typing does not rebuild several hundred rows per keystroke.
+  let searchTimer = 0;
+  container.querySelector<HTMLInputElement>('#mk-search')!.addEventListener('input', (event) => {
+    query = (event.target as HTMLInputElement).value;
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(() => {
+      visibleCount = PAGE_SIZE; // new results start at the top
+      renderList();
+    }, 120);
+  });
+
+  container.querySelector<HTMLSelectElement>('#mk-sort')!.addEventListener('change', (event) => {
+    sortKey = (event.target as HTMLSelectElement).value as SortKey;
+    visibleCount = PAGE_SIZE;
     renderList();
   });
 
