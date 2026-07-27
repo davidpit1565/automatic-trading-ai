@@ -247,6 +247,19 @@ describe('assessTrade — portfolio exposure control', () => {
     expect(assessment.reasons.some((r) => r.toLowerCase().includes('exposure'))).toBe(true);
   });
 
+  it('applies the per-asset cap to a first position, not only to a top-up', () => {
+    // A per-asset cap stricter than maxPositionPct must still bind when the
+    // portfolio holds none of the asset yet — otherwise the cap only ever
+    // constrains additions to an existing position.
+    const limits = { ...DEFAULT_RISK_LIMITS, maxExposurePerAssetPct: 5 };
+    const portfolio: PortfolioRiskState = { equity: 10_000, openPositions: [] };
+    const assessment = assessTrade(makeOpportunity({ symbol: 'BTC/USD' }), portfolio, { limits });
+    expect(assessment.approved).toBe(true);
+    // 5% of 10,000 — not the 20% that maxPositionPct alone would have allowed.
+    expect(assessment.positionValue).toBeCloseTo(500, 10);
+    expect(assessment.warnings.some((w) => w.includes('per-asset cap'))).toBe(true);
+  });
+
   it('reports portfolio exposure after the proposed trade', () => {
     const portfolio: PortfolioRiskState = {
       equity: 10_000,

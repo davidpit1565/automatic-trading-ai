@@ -257,6 +257,13 @@ export class PaperAutoPilot {
     const closed: CycleResult['closed'] = [];
     const skipped: CycleResult['skipped'] = [];
     const costRate = this.options.costRate ?? 0;
+    /**
+     * Latest close per held symbol, collected while checking exits below and
+     * fed to `portfolio.snapshot` so the equity the Risk Engine sizes against
+     * is marked to market. Valuing open positions at their entry price instead
+     * would overstate equity precisely while trades are underwater.
+     */
+    const marketPrices: Record<string, number> = {};
 
     // --- Exits first: protect what is already open. ------------------------
     for (const position of this.options.positions.openPositions()) {
@@ -270,6 +277,7 @@ export class PaperAutoPilot {
         continue;
       }
       const price = candles.value[candles.value.length - 1]!.close;
+      marketPrices[position.symbol] = price;
       this.options.positions.updateMarketPrice(position.symbol, price, timestamp);
 
       // Trailing stop: ratchet the stop up as the trade runs in profit. Uses
@@ -380,7 +388,7 @@ export class PaperAutoPilot {
         }
       }
 
-      const snapshot = this.options.portfolio.snapshot({}, timestamp);
+      const snapshot = this.options.portfolio.snapshot(marketPrices, timestamp);
       const correlateWith = this.options.correlationBetween;
       const assessment = assessTrade(
         decision.opportunity,
