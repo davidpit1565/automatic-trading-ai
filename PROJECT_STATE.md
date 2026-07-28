@@ -475,6 +475,135 @@ Not done here — 6 trades is far too small a sample to re-tune on without
 curve-fitting, and a longer window needs a timeframe change (Kraken caps 1h at
 720 candles).
 
+## Swept on the correct harness: no configuration has an edge (2026-07-28)
+Ran `scripts/sweepAutopilot.mts` — 8 configurations × 2 entry timeframes,
+replaying the REAL autopilot, in-sample and out-of-sample.
+
+**1h entry / 30 days** (buy & hold over the same window: **-3.86%**)
+
+| Config | Full return | PF | Trades | OOS return |
+|---|---|---|---|---|
+| PROD (40 / 65 / 1.5-1.5) | -1.63% | 0.24 | 6 | -1.20% |
+| floor 20 | -7.01% | 0.38 | 41 | -1.30% |
+| floor 30 | -6.39% | 0.33 | 31 | -2.25% |
+| floor 50 | 0.00% | — | **0** | 0.00% |
+| rsi 55 | 0.00% | — | **0** | 0.00% |
+| rsi 75 | -7.45% | 0.06 | 21 | -4.08% |
+| fixed stop | -1.63% | 0.24 | 6 | -1.20% |
+| trail 1.0/2.0 | -1.28% | 0.31 | 6 | -0.95% |
+
+**4h entry / 120 days** (buy & hold: **-22.23%**) — PROD -5.79% (13 trades),
+floor 20 -3.04% but -9.27% out-of-sample, floor 50 +0.24% on **2 trades**
+(meaningless), everything else negative.
+
+Two conclusions, and both matter:
+
+1. **No configuration produces a positive absolute return** on either window
+   with a usable sample. Every profit factor is below 1. The only "positive"
+   entries take zero or two trades — an off switch, not a strategy. **More
+   trading means more loss** (floor 20: 41 trades, -7.0%), so the per-trade
+   edge is negative, not merely small.
+2. **But the current tuning beats buy-and-hold on both windows** — by 2.2
+   points over 30 days and 16.4 points over 120 — essentially by staying in
+   cash through a falling market. Configs that trade more *underperform* the
+   benchmark. Capital preservation is real; demonstrated edge is not.
+
+**Nothing was re-tuned.** Nothing won, and the current settings are already the
+least-bad — the direction that helps is "trade less", whose limit is "do not
+trade". This also explains the original tuning's apparent gain from raising the
+floor 20 to 40: it cut exposure to a losing signal rather than improving it.
+
+The readiness gate correctly blocks real money on this record (requires PF ≥
+1.2 and a positive return; actual PF 0.24, negative). **The open question is no
+longer parameters — it is whether the signal itself has an edge.**
+
+## Shadow evaluation: forward-testing candidates for free (2026-07-28)
+The sweep established that no parameter setting of the current signal has an
+edge, and that hunting one across a 30-day window manufactures an illusion.
+The honest alternative is FORWARD testing, so that is what now runs.
+
+`src/core/autopilot/shadowEvaluator.ts` runs candidate strategies alongside the
+real account on every cloud cycle. Each gets a full `PaperAutoPilot` cycle with
+its **own** portfolio, positions, journal, audit log and kill switch, namespaced
+inside the same state file via `PrefixedStore`. Candidates decide on live bars
+as they arrive, building records they cannot have been fitted to.
+
+Two primitives make it safe and free:
+- **`PrefixedStore`** — namespaced view over a `KeyValueStore`. The engines all
+  persist under fixed keys, so without it two instances silently overwrite each
+  other. `keys()` returns unprefixed keys, so a candidate cannot reach a
+  sibling's data.
+- **`CachingSource`** — memoises `getCandles` for the duration of one cycle, so
+  N candidates cost the requests of one. Failures are never cached (a transient
+  error must not poison the cycle) and the cache is cleared per cycle, never
+  time-based — serving a stale price to a strategy about to decide is exactly
+  the bug this must not add.
+
+Guarantees covered by tests: the real account's state, positions and kill
+switch are provably untouched; a candidate with a blank or duplicate key is
+rejected loudly rather than silently sharing a record; one failing candidate
+never takes the run down.
+
+Current candidates deliberately differ in IDEA, not in nearby values of one
+knob (nearby values of a losing signal all lose): `live-mirror` (production
+baseline, always present for like-for-like), `no-confirm` (what the 4h gate
+contributes), `fixed-stop` (what trailing contributes), `high-conviction`
+(whether selectivity alone helps).
+
+Read the scoreboard with `npx tsx scripts/shadowStandings.mts`. It refuses to
+rank until a candidate clears 20 trades, so an early lead cannot be mistaken
+for a result. Verified end to end against live Kraken: 4 isolated namespaces,
+real account untouched, state file ~4 KB.
+
+## Mean reversion is the first idea with a real edge (2026-07-28)
+Parameter space was exhausted (see above): every setting of the production
+MOMENTUM signal loses, and more trading loses more. So the search moved to
+IDEA space. `PaperAutoPilot` gained an optional `evaluate` hook; two new
+families live in `src/core/signal/alternativeSignals.ts`. Everything downstream
+(risk sizing, caps, exits, ATR stop/target geometry) is identical, so families
+are judged purely on WHEN they enter.
+
+**1h entry / 30 days** — buy & hold **-3.49%**
+
+| Config | Return | PF | Trades | OOS return | OOS PF |
+|---|---|---|---|---|---|
+| **MEAN-REVERSION** | **+0.660%** | **1.578** | **24** | **+0.677%** | **2.012** |
+| MEAN-REV fixed stop | -1.312% | 1.054 | 23 | +0.091% | 1.471 |
+| PROD momentum | -1.628% | 0.244 | 6 | -1.198% | 0.000 |
+| BREAKOUT | -6.980% | 0.222 | 31 | -0.474% | 1.159 |
+| (every other momentum setting) | negative | <1 | — | negative | — |
+
+**4h entry / 120 days** — buy & hold **-22.10%**. MEAN-REVERSION **-4.232%,
+PF 0.222, only 8 trades** (OOS +1.089%); BREAKOUT -8.349%; all momentum negative.
+
+Mean reversion is the **only** thing measured all session with a positive
+absolute return, PF > 1, a usable sample, AND a positive out-of-sample half —
+with OOS *better* than in-sample, which is the opposite of the overfit
+signature. It beats buy-and-hold by 4.2 points on 1h and by 18 points on 4h.
+Breakout is not interesting: negative on both windows.
+
+**NOT shipped to production, deliberately.** The bar set before running was
+"wins on both windows, out-of-sample". It does not — the 4h window is negative.
+That result is arguably inconclusive rather than a refutation (8 trades, below
+the 20-trade bar, because the setup is rarer on 4h bars), but "the disagreeing
+evidence is probably noise" is exactly the reasoning that ships curve-fitted
+strategies. One 30-day window is not a basis for risking money.
+
+Instead it is now a **shadow candidate**, accumulating a forward record on live
+bars it cannot have been fitted to. If that record holds up over the coming
+weeks, it is the candidate to promote — and that decision will rest on
+out-of-sample evidence rather than on a backtest.
+
+## Learning analysis is display-only (2026-07-28)
+`confidenceCalibration`, `exitReasonBreakdown`, `efficiencyReport` and
+`strategyBreakdown` exist in `src/core/feedback/performanceFeedback.ts` and are
+consumed by exactly ONE caller: `positionsView.ts`, a UI panel. **Nothing feeds
+back into any trading decision.** The robot analyses and displays; it does not
+adapt. Wiring calibration into sizing or entry selection is the obvious next
+step for the "learn and understand" goal, but it needs enough closed trades for
+the buckets to be signal rather than noise — which is what the shadow records
+are now generating.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.

@@ -417,3 +417,60 @@ describe('Kraken asset aliases', () => {
     expect(result.value.some((t) => t.symbol === 'XDGEUR')).toBe(false);
   });
 });
+
+describe('transient failure handling', () => {
+  /** Responds with `statuses` in order, then a valid payload. */
+  function flakyFetch(statuses: number[], seen: { attempts: number }): typeof fetch {
+    return (async () => {
+      const status = statuses[seen.attempts];
+      seen.attempts++;
+      if (status !== undefined) {
+        return new Response('busy', { status });
+      }
+      return new Response(
+        JSON.stringify({ error: [], result: { XXBTZEUR: { altname: 'XBTEUR', wsname: 'XBT/EUR', status: 'online' } } }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }) as typeof fetch;
+  }
+
+  it('retries a 503 and succeeds — a busy exchange must not silently drop a symbol', async () => {
+    const seen = { attempts: 0 };
+    const source = new KrakenPublicSource({ fetchFn: flakyFetch([503, 503], seen), staggerMs: 0 });
+    const result = await source.getInstruments();
+
+    expect(result.ok).toBe(true);
+    expect(seen.attempts).toBe(3); // two failures, then the success
+    if (!result.ok) return;
+    expect(result.value.some((i) => i.symbol === 'XBTEUR')).toBe(true);
+  });
+
+  it('retries a 429 rate limit', async () => {
+    const seen = { attempts: 0 };
+    const source = new KrakenPublicSource({ fetchFn: flakyFetch([429], seen), staggerMs: 0 });
+    expect((await source.getInstruments()).ok).toBe(true);
+    expect(seen.attempts).toBe(2);
+  });
+
+  it('does NOT retry a 404 — that wastes a scarce rate budget on a real error', async () => {
+    const seen = { attempts: 0 };
+    const source = new KrakenPublicSource({ fetchFn: flakyFetch([404, 404, 404, 404], seen), staggerMs: 0 });
+    // Falls back to the static display list rather than hanging on retries.
+    const result = await source.getInstruments();
+    expect(result.ok).toBe(true);
+    expect(seen.attempts).toBe(1); // one attempt only
+  });
+
+  it('gives up after a bounded number of retries rather than looping forever', async () => {
+    const seen = { attempts: 0 };
+    const source = new KrakenPublicSource({
+      fetchFn: flakyFetch([503, 503, 503, 503, 503, 503], seen),
+      staggerMs: 0,
+    });
+    const result = await source.getCandles('XBTEUR', '1h', 10);
+    expect(result.ok).toBe(false);
+    expect(seen.attempts).toBe(4); // initial + 3 retries
+    if (result.ok) return;
+    expect(result.error).toContain('retries');
+  });
+});

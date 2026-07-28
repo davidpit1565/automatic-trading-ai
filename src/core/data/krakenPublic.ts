@@ -337,7 +337,31 @@ export class KrakenPublicSource implements MarketDataSource {
     }
   }
 
+  /**
+   * One HTTP GET with a bounded retry on transient failures.
+   *
+   * Kraken answers 429 (rate limited) and 5xx (busy) under load, and observed
+   * live: a burst of requests draws a wall of 503s. Without a retry each of
+   * those silently drops that symbol from the cycle, so the robot decides on a
+   * partial view of the market and the gap never surfaces.
+   *
+   * Only these transient statuses are retried, with exponential backoff. A 4xx
+   * other than 429 is a real error — retrying a bad request just wastes the
+   * rate budget that is already scarce.
+   */
   private async getJson(url: string): Promise<Result<unknown>> {
+    let lastError = `request failed for ${url}`;
+    for (let attempt = 0; attempt <= RETRY_STATUSES_MAX_ATTEMPTS; attempt++) {
+      if (attempt > 0) await delay(RETRY_BASE_MS * 2 ** (attempt - 1));
+      const result = await this.getJsonOnce(url);
+      if (result.ok) return result;
+      lastError = result.error;
+      if (!isTransient(result.error)) return result;
+    }
+    return err(`${lastError} (after ${RETRY_STATUSES_MAX_ATTEMPTS} retries)`);
+  }
+
+  private async getJsonOnce(url: string): Promise<Result<unknown>> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
@@ -355,6 +379,16 @@ export class KrakenPublicSource implements MarketDataSource {
       clearTimeout(timer);
     }
   }
+}
+
+/** Retries after ~0.5s, 1s, 2s — enough for a rate-limit burst to clear. */
+const RETRY_STATUSES_MAX_ATTEMPTS = 3;
+const RETRY_BASE_MS = 500;
+const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Rate-limit and server-busy responses are worth retrying; a 404 is not. */
+function isTransient(error: string): boolean {
+  return /HTTP (429|5\d\d) /.test(error);
 }
 
 // --- Ticker payload helpers -------------------------------------------------
