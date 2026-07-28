@@ -666,6 +666,44 @@ backtestView, portfolioView, gridView. Found and fixed 6 concrete bugs:
 `alertChannels.ts`/`toastNotifications.ts`/`liveTicker.ts` reviewed, no
 concrete defects found. 11 new tests lock in the fixes.
 
+## US stocks — fully isolated paper autopilot (2026-07-28)
+David asked whether the platform could extend to stocks. Decision: extend
+this app rather than build a new one, with a completely isolated stocks arm
+(own portfolio in USD, own state file `state/stocks-state.json`, own GitHub
+Actions workflow `stocks-autopilot.yml`) — nothing here can touch the crypto
+robot that already works. Chose **Alpaca** (official, documented, versioned
+Market Data API) over a free keyless alternative (Yahoo Finance's unofficial
+chart endpoint — verified reachable, but undocumented and could break/get
+blocked without warning), since David wants this to eventually be able to
+carry real capital, where long-term stability matters more than avoiding a
+signup.
+
+**Setup needed before this runs for real** (David, not yet done): create a
+free Alpaca paper-trading account at alpaca.markets (no credit card), then
+add two GitHub repo secrets (Settings → Secrets and variables → Actions):
+`ALPACA_API_KEY_ID` and `ALPACA_API_SECRET_KEY`. Until then the workflow
+runs on schedule, logs "Alpaca credentials not configured", and exits
+cleanly — no error, no crash, nothing to fix.
+
+Built: `AlpacaStockSource` (mirrors `krakenPublic.ts`'s retry/error style,
+plugs into every existing engine unchanged since they were already
+asset-agnostic), `isUsMarketOpen()` (NYSE hours gate, ignores holidays — a
+known simplification, fails safe: a missed holiday just wastes one cycle,
+never causes a wrong trade), `server/stocksRunner.mts` (entrypoint-guarded
+from the start, unlike the crypto runner which needed that retrofitted),
+a new "Stocks" tool tab (Tools → Stocks) reusing the same equity chart
+component as History/Portfolio value (now takes a `currencySymbol` option,
+default `€` unchanged, stocks passes `$`).
+
+**Strategy constants are NOT measured** — the engine's permissive defaults,
+explicitly documented as a placeholder. Unlike crypto's
+`AUTOPILOT_MIN_CONFIDENCE`/`AUTOPILOT_MAX_RSI_FOR_LONG`/`AUTOPILOT_TRAILING`
+(each backed by a real sweep on Kraken history), there is no real Alpaca
+history yet to measure against. Once the key is live, running the
+`sweepStrategy.mts` equivalent on real stock history is a prerequisite
+before trusting any specific number here — measure, don't guess applies to
+this asset class exactly as it does to crypto.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
