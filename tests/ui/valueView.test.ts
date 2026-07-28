@@ -1,5 +1,6 @@
 /**
- * Pure-function tests for the Portfolio value chart's bucketing.
+ * Pure-function tests for the shared equity chart's bucketing (used by both
+ * the Portfolio value view and the History view).
  *
  * Root-caused bug: 'All'/'1Y' used a fixed weekly bucket width. With real
  * live data (equity tracking only ~5 days old), that flattened the WHOLE
@@ -9,7 +10,7 @@
  * long histories keep the original nice round bucket widths.
  */
 import { describe, expect, it } from 'vitest';
-import { adaptiveBucketMs, bucketize } from '../../src/ui/views/valueView';
+import { adaptiveBucketMs, bucketize } from '../../src/ui/equityChartPanel';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
