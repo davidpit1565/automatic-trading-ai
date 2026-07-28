@@ -629,6 +629,21 @@ pass:
   from any real RSI value). 10 new tests in `tests/ui/charts.test.ts` (charts.ts
   had zero coverage before this).
 
+## Cloud autopilot runner gained test coverage (2026-07-28)
+`server/autopilotRunner.mts` — the headless script driving every real
+(simulated-money) trade decision and Telegram alert — had zero tests. It ran
+`await main()` unconditionally at module top level, so importing it would
+kick off a live cycle. Both the daily-digest and weekly/monthly-report skip
+bugs (fixed earlier) were only ever caught by manual review — exactly what
+missing coverage lets back in. Guarded `main()` behind an entrypoint check
+(no-op on import, runs exactly as before when invoked directly via `npx tsx
+server/autopilotRunner.mts`, as the workflow does — verified by running it
+end to end against a scratch state path: one real cycle + shadow evaluation
+both completed normally). Exported `localDayAndHour`, `breakerEngaged`,
+`maybeSendSummaries`, `maybeSendPeriodicReports`; 10 new tests cover the
+digest/report "due" gating directly, including the exact coverage-gap
+scenario the earlier bugs came from.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
