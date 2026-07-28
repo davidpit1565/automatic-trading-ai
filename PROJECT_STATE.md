@@ -644,6 +644,28 @@ both completed normally). Exported `localDayAndHour`, `breakerEngaged`,
 digest/report "due" gating directly, including the exact coverage-gap
 scenario the earlier bugs came from.
 
+## UI bug sweep, round 2 (2026-07-28)
+Extended the file-coverage audit to everything still untested: alertChannels,
+toastNotifications, loadingStates, liveTicker, coinLogo(Manifest),
+backtestView, portfolioView, gridView. Found and fixed 6 concrete bugs:
+- `coinLogo.ts`'s `initialsFor` capped at 3 chars past length 4, so PENGU and
+  PENDLE both collapsed to "PEN" — directly contradicting its own doc comment.
+  Now takes up to 4 (PENG vs PEND).
+- `loadingStates.ts`: `showLoadingOverlay`'s own cleanup called the shared
+  `hideLoadingOverlay()` (removes every overlay in the document), so two
+  overlapping callers would have one rip down the other's still-active
+  overlay. Each cleanup now removes only its own element.
+- `gridView.ts`: zero candles (`ok: true`, empty array) fed `Math.min(...[])`/
+  `Math.max(...[])` — Infinity/-Infinity grid bounds instead of a message.
+- `portfolioView.ts`: Buy/Sell stayed enabled mid-trade, so a rapid
+  double-click fired two concurrent trades. Both now disable during the call.
+- `backtestView.ts` + `gridView.ts`: win rate and max drawdown are plain
+  0-100% magnitudes rendered through the signed-delta formatter — a spurious
+  "+" on win rate and "-0.00%" for a near-zero drawdown (`(-0.004).toFixed(2)`
+  really is `"-0.00"` in JS). Now plain unsigned percentages.
+`alertChannels.ts`/`toastNotifications.ts`/`liveTicker.ts` reviewed, no
+concrete defects found. 11 new tests lock in the fixes.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
