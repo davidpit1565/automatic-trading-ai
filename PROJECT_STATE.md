@@ -475,6 +475,48 @@ Not done here — 6 trades is far too small a sample to re-tune on without
 curve-fitting, and a longer window needs a timeframe change (Kraken caps 1h at
 720 candles).
 
+## Swept on the correct harness: no configuration has an edge (2026-07-28)
+Ran `scripts/sweepAutopilot.mts` — 8 configurations × 2 entry timeframes,
+replaying the REAL autopilot, in-sample and out-of-sample.
+
+**1h entry / 30 days** (buy & hold over the same window: **-3.86%**)
+
+| Config | Full return | PF | Trades | OOS return |
+|---|---|---|---|---|
+| PROD (40 / 65 / 1.5-1.5) | -1.63% | 0.24 | 6 | -1.20% |
+| floor 20 | -7.01% | 0.38 | 41 | -1.30% |
+| floor 30 | -6.39% | 0.33 | 31 | -2.25% |
+| floor 50 | 0.00% | — | **0** | 0.00% |
+| rsi 55 | 0.00% | — | **0** | 0.00% |
+| rsi 75 | -7.45% | 0.06 | 21 | -4.08% |
+| fixed stop | -1.63% | 0.24 | 6 | -1.20% |
+| trail 1.0/2.0 | -1.28% | 0.31 | 6 | -0.95% |
+
+**4h entry / 120 days** (buy & hold: **-22.23%**) — PROD -5.79% (13 trades),
+floor 20 -3.04% but -9.27% out-of-sample, floor 50 +0.24% on **2 trades**
+(meaningless), everything else negative.
+
+Two conclusions, and both matter:
+
+1. **No configuration produces a positive absolute return** on either window
+   with a usable sample. Every profit factor is below 1. The only "positive"
+   entries take zero or two trades — an off switch, not a strategy. **More
+   trading means more loss** (floor 20: 41 trades, -7.0%), so the per-trade
+   edge is negative, not merely small.
+2. **But the current tuning beats buy-and-hold on both windows** — by 2.2
+   points over 30 days and 16.4 points over 120 — essentially by staying in
+   cash through a falling market. Configs that trade more *underperform* the
+   benchmark. Capital preservation is real; demonstrated edge is not.
+
+**Nothing was re-tuned.** Nothing won, and the current settings are already the
+least-bad — the direction that helps is "trade less", whose limit is "do not
+trade". This also explains the original tuning's apparent gain from raising the
+floor 20 to 40: it cut exposure to a losing signal rather than improving it.
+
+The readiness gate correctly blocks real money on this record (requires PF ≥
+1.2 and a positive return; actual PF 0.24, negative). **The open question is no
+longer parameters — it is whether the signal itself has an edge.**
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
