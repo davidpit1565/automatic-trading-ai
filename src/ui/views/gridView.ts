@@ -68,6 +68,10 @@ export function renderGridView(container: HTMLElement, data: ActiveDataSource): 
         status.innerHTML = `<span class="error-line">${escapeHtml(candles.error)}</span>`;
         return;
       }
+      if (candles.value.length === 0) {
+        status.innerHTML = '<span class="error-line">No history available for this market yet.</span>';
+        return;
+      }
       // Grid bounds from observed range — a starting point the user can reason about.
       const lows = candles.value.map((c) => c.low);
       const highs = candles.value.map((c) => c.high);
@@ -87,11 +91,11 @@ export function renderGridView(container: HTMLElement, data: ActiveDataSource): 
           <div class="stat-card"><div class="stat-label">Return</div>
             <div class="stat-value ${signClass(result.totalReturnPct)}">${formatPct(result.totalReturnPct)}</div></div>
           <div class="stat-card"><div class="stat-label">Max drawdown</div>
-            <div class="stat-value">${formatPct(-result.maxDrawdownPct)}</div></div>
+            <div class="stat-value">${result.maxDrawdownPct.toFixed(2)}%</div></div>
           <div class="stat-card"><div class="stat-label">Closed trades</div>
             <div class="stat-value">${result.stats.tradeCount}</div></div>
           <div class="stat-card"><div class="stat-label">Win rate</div>
-            <div class="stat-value">${result.stats.winRatePct === null ? '—' : formatPct(result.stats.winRatePct, 0)}</div></div>
+            <div class="stat-value">${result.stats.winRatePct === null ? '—' : `${result.stats.winRatePct.toFixed(0)}%`}</div></div>
         </div>
       `;
     } catch (cause) {

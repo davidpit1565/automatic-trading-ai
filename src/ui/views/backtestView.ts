@@ -120,9 +120,9 @@ function renderComparisonTable(container: HTMLElement, results: BacktestResult[]
           <td>${escapeHtml(r.strategyName)}</td>
           <td>${formatPrice(r.finalEquity)}</td>
           <td class="${signClass(r.totalReturnPct)}">${formatPct(r.totalReturnPct)}</td>
-          <td>${formatPct(-r.maxDrawdownPct)}</td>
+          <td>${r.maxDrawdownPct.toFixed(2)}%</td>
           <td>${r.stats.tradeCount}</td>
-          <td>${r.stats.winRatePct === null ? '—' : formatPct(r.stats.winRatePct, 0)}</td>
+          <td>${r.stats.winRatePct === null ? '—' : `${r.stats.winRatePct.toFixed(0)}%`}</td>
           <td>${formatPrice(r.feesPaid)}</td>
         </tr>`,
         )

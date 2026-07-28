@@ -22,9 +22,9 @@ export function hueFor(base: string): number {
   return hash;
 }
 
-/** Up to three characters — enough to tell PEPE, PENGU and PENDLE apart. */
+/** Up to four characters — enough to tell PEPE, PENGU and PENDLE apart. */
 export function initialsFor(base: string): string {
-  return base.slice(0, base.length <= 4 ? base.length : 3);
+  return base.slice(0, 4);
 }
 
 function escapeAttribute(value: string): string {
