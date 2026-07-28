@@ -30,6 +30,7 @@ import { DailyLossTracker } from '../src/core/risk/dailyLoss';
 import { drawdownBreached } from '../src/core/risk/drawdownBreaker';
 import { DEFAULT_RISK_LIMITS } from '../src/core/risk/riskEngine';
 import { tradeAnalytics } from '../src/core/position/analytics';
+import { maxDrawdownPct } from '../src/core/backtest/metrics';
 import {
   assessRealMoneyReadiness,
   type RealMoneyReadiness,
@@ -428,14 +429,22 @@ async function recordEquity(
     history.length > EQUITY_HISTORY_CAP ? history.slice(-EQUITY_HISTORY_CAP) : history,
   );
 
-  // Honest real-money readiness: purely from the (after-fee) journal record.
+  // Honest real-money readiness: trade quality from the (after-fee) journal
+  // record, but DRAWDOWN from the mark-to-market equity series above. The
+  // journal curve steps only at exits, so a portfolio sitting through a deep
+  // unrealized drawdown recorded none of it and could clear the 10% safety
+  // criterion while real equity was far below its peak. Whichever is worse
+  // wins, so the gate can only ever get stricter.
   const analytics = tradeAnalytics(journal.entries(), { initialCash: INITIAL_CASH });
+  const liveDrawdownPct = maxDrawdownPct(
+    history.map((point) => ({ timestamp: point.at, equity: point.equity })),
+  );
   const benchmark = await computeBenchmark(store, source, equity, now);
   const readiness = assessRealMoneyReadiness({
     closedTrades: analytics.tradeCount,
     profitFactor: analytics.profitFactor,
     realizedReturnPct: (analytics.totalPnl / INITIAL_CASH) * 100,
-    maxDrawdownPct: analytics.maxDrawdownPct,
+    maxDrawdownPct: Math.max(analytics.maxDrawdownPct, liveDrawdownPct),
     vsBenchmarkPct: benchmark ? benchmark.portfolioPct - benchmark.assetPct : null,
     daysRunning: (now - firstAt) / DAY_MS,
   });

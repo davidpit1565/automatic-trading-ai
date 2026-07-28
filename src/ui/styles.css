@@ -1209,3 +1209,39 @@ button.secondary:active {
   .toast-container { right: 0.75rem; left: 0.75rem; }
   .toast { min-width: auto; }
 }
+
+/* Skeleton rows mirror a real row's geometry so the list does not jump when
+   data lands — but deliberately do NOT carry the .market-row class: a
+   placeholder must never be picked up by code selecting real rows. */
+.skeleton-row { pointer-events: none;
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.75rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 0.7rem 2.4rem 0.7rem 0.9rem; }
+.skeleton-dot { width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto; }
+.skeleton-bar { height: 0.7rem; border-radius: 6px; display: block; }
+.skeleton-bar.w-40 { width: 40%; }
+.skeleton-bar.w-50 { width: 50%; }
+.skeleton-bar.w-60 { width: 60%; }
+.skeleton-bar.w-70 { width: 70%; }
+.market-row-num .skeleton-bar { margin-left: auto; }
+.skeleton-dot, .skeleton-bar {
+  background: linear-gradient(90deg, var(--border) 25%, var(--surface) 50%, var(--border) 75%);
+  background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* Price tick flash. Rides on freshly-rendered markup so it plays once per
+   change with no timers to manage. */
+@keyframes flash-up-kf { from { color: var(--hot); } to { color: var(--text); } }
+@keyframes flash-down-kf { from { color: var(--cold); } to { color: var(--text); } }
+.row-price.flash-up { animation: flash-up-kf 900ms ease-out; }
+.row-price.flash-down { animation: flash-down-kf 900ms ease-out; }
+
+.mk-pull { min-height: 0; text-align: center; font-size: 0.8rem; color: var(--muted); }
+.mk-pull:not(:empty) { padding: 0.4rem 0; }
+
+/* Respect a reduced-motion preference: keep the colour cue, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-dot, .skeleton-bar { animation: none; }
+  .row-price.flash-up, .row-price.flash-down { animation-duration: 1ms; }
+}

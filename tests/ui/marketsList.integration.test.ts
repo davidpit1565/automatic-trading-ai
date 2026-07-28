@@ -452,3 +452,76 @@ describe('Markets search, sort and watchlist', () => {
     h2.pause();
   });
 });
+
+describe('Markets loading and tick feedback', () => {
+  it('shows skeleton placeholders before data lands, and they are not real rows', () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+
+    // Synchronously after mount, before the fetch resolves.
+    expect(container.querySelectorAll('.skeleton-row').length).toBeGreaterThan(0);
+    // A placeholder must never be picked up by code selecting real rows.
+    expect(container.querySelector('.market-row')).toBeNull();
+    handle.pause();
+  });
+
+  it('replaces the skeletons once data arrives', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    expect(container.querySelectorAll('.skeleton-row')).toHaveLength(0);
+    handle.pause();
+  });
+
+  it('flashes only the prices that actually moved on a refresh', async () => {
+    let tick = 0;
+    const data = makeData();
+    const original = data.source.getTickers!.bind(data.source);
+    (data.source as { getTickers: () => unknown }).getTickers = async () => {
+      const result = (await original()) as { ok: true; value: Ticker[] };
+      tick++;
+      // On the second load, move BTC up and leave everything else alone.
+      return tick < 2 ? result : {
+        ok: true,
+        value: result.value.map((t, i) => (i === 0 ? { ...t, price: t.price + 100 } : t)),
+      };
+    };
+
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, data);
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    // First render establishes a baseline — nothing has "moved" yet.
+    expect(container.querySelectorAll('.flash-up, .flash-down')).toHaveLength(0);
+
+    // Force a second load; BTC's price is now higher, nothing else changed.
+    handle.pause();
+    handle.resume();
+    await waitFor(() => container.querySelector('.flash-up') !== null);
+
+    const flashed = container.querySelectorAll('.flash-up, .flash-down');
+    expect(flashed).toHaveLength(1); // exactly the one that moved, not the whole list
+    const btcRow = container.querySelector('.market-row')!;
+    expect(btcRow.querySelector('.row-price')!.className).toContain('flash-up');
+    handle.pause();
+  });
+
+  it('says so when the very first load finds nothing, instead of showing skeletons forever', async () => {
+    const data = makeData();
+    (data.source as { getTickers: () => unknown }).getTickers = async () => ({ ok: false, error: 'down' });
+    data.source.getCandles = async () => ok([] as Candle[]);
+
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, data);
+    await waitFor(() => container.querySelector('.empty') !== null);
+
+    expect(container.querySelector('.empty')!.textContent).toContain('unavailable');
+    expect(container.querySelectorAll('.skeleton-row')).toHaveLength(0);
+    handle.pause();
+  });
+});
