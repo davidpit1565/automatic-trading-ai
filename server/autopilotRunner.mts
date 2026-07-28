@@ -12,6 +12,7 @@
  */
 
 import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { KrakenPublicSource } from '../src/core/data/krakenPublic';
 import { CoinbasePublicSource } from '../src/core/data/coinbasePublic';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
@@ -132,7 +133,7 @@ const DD_BREAKER_PCT = Number(process.env['DD_BREAKER_PCT']) || 8;
 const EQUITY_PEAK_KEY = 'equity-peak';
 
 /** Portfolio circuit-breaker state, derived live from the stored peak + last equity. */
-function breakerEngaged(store: FileStore): boolean {
+export function breakerEngaged(store: FileStore): boolean {
   const peak = store.get<number>(EQUITY_PEAK_KEY);
   const history = store.get<Array<{ at: number; equity: number }>>(EQUITY_HISTORY_KEY);
   const current = history?.[history.length - 1]?.equity;
@@ -150,7 +151,7 @@ const ALLCLEAR_INTERVAL_MS = 14 * 24 * 60 * 60 * 1000;
 const SUMMARY_TIMEZONE = process.env['SUMMARY_TIMEZONE'] || 'Asia/Jerusalem';
 
 /** Local date parts (in the given timezone) used to schedule digests. */
-function localDayAndHour(
+export function localDayAndHour(
   now: number,
   timeZone: string,
 ): { day: string; hour: number; weekday: string; dayOfMonth: number } {
@@ -550,7 +551,7 @@ async function maybeSendMoveAlerts(
  * per local day. So the user sees where things stand at the start and end
  * of the day without a message every cycle. No-op without Telegram.
  */
-async function maybeSendSummaries(
+export async function maybeSendSummaries(
   store: FileStore,
   source: MarketDataSource,
   portfolio: PortfolioEngine,
@@ -639,7 +640,7 @@ async function maybeSendAllClear(
 }
 
 /** Weekly (Sunday) and monthly (1st) evening performance reports. */
-async function maybeSendPeriodicReports(
+export async function maybeSendPeriodicReports(
   store: FileStore,
   source: MarketDataSource,
   portfolio: PortfolioEngine,
@@ -774,4 +775,9 @@ async function computeBenchmark(
   };
 }
 
-await main();
+// Only run when invoked directly (`npx tsx server/autopilotRunner.mts`, as the
+// GitHub Actions workflow does) — never on import, so tests can exercise the
+// exported pure/testable pieces above without kicking off a live cycle.
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  await main();
+}
