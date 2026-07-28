@@ -307,6 +307,34 @@ export function buildCycleMessage(
   return lines.join('\n');
 }
 
+function dollar(value: number): string {
+  return `$${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * Same shape as `buildCycleMessage`, for the separate stocks paper autopilot
+ * — a distinct function (not a parameterised currency) so the crypto
+ * message builder above is never touched by stocks-only changes.
+ */
+export function buildStockCycleMessage(
+  cycle: Pick<CycleResult, 'opened' | 'closed' | 'timestamp'>,
+): string | null {
+  if (cycle.opened.length === 0 && cycle.closed.length === 0) return null;
+  const lines: string[] = ['📈 רובוט מניות (כסף מדומה)'];
+  for (const o of cycle.opened) {
+    let line = `🟢 קנייה ${o.symbol}: ${formatQty(o.quantity)} יח׳ במחיר ${dollar(o.entry)}`;
+    if (typeof o.confidence === 'number') line += ` · ביטחון ${o.confidence.toFixed(0)}%`;
+    if (o.reasons && o.reasons.length > 0) {
+      line += ` · ${o.reasons.map(driverHe).join(', ')}`;
+    }
+    lines.push(line);
+  }
+  for (const c of cycle.closed) {
+    lines.push(`🔴 מכירה ${c.symbol} במחיר ${dollar(c.price)} (${reasonHe(c.reason)})`);
+  }
+  return lines.join('\n');
+}
+
 export async function sendTelegramMessage(
   text: string,
   config: TelegramConfig,

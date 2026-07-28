@@ -19,6 +19,7 @@ import { renderMonitoringView } from './views/monitoringView';
 import { renderPortfolioView } from './views/portfolioView';
 import { renderPositionsView } from './views/positionsView';
 import { renderValidationView } from './views/validationView';
+import { renderStocksView } from './views/stocksView';
 import type { ViewHandle } from './viewLifecycle';
 import { showToast, showSuccess, showError, showInfo, showWarning } from './toastNotifications';
 import {
@@ -63,6 +64,7 @@ const TOOL_VIEWS: Record<string, ViewRenderer | null> = {
   portfolio: renderPortfolioView,
   grid: renderGridView,
   monitoring: renderMonitoringView,
+  stocks: renderStocksView,
   learn: null,
 };
 

@@ -1,0 +1,75 @@
+# Cloud Paper Autopilot — US STOCKS. Fully isolated from the crypto autopilot
+# (autopilot.yml): separate state file, separate portfolio (USD), separate
+# concurrency group. A failure or bug here cannot affect the crypto robot.
+#
+# Needs a free Alpaca paper-trading account (alpaca.markets, no credit card)
+# and its API key added as repo secrets ALPACA_API_KEY_ID / ALPACA_API_SECRET_KEY.
+# Without them the run logs a message and exits cleanly — no error, no crash.
+#
+# Telegram is optional, same TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID as crypto.
+# SIMULATED money only — the core has no live-order path.
+
+name: Cloud Paper Autopilot — Stocks
+
+on:
+  schedule:
+    # Every 15 min, weekdays, 13:00-21:00 UTC — a deliberately wide band
+    # covering NYSE regular hours (9:30-16:00 ET) across both EST and EDT.
+    # `isUsMarketOpen()` inside the script is the authoritative gate; firing
+    # a little outside real hours just costs one cheap, fast no-op.
+    - cron: '*/15 13-21 * * 1-5'
+  workflow_dispatch: {}
+
+concurrency:
+  group: stocks-autopilot
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run one stocks cycle
+        env:
+          ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
+          ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: npx tsx server/stocksRunner.mts
+      - name: Commit updated state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state/stocks-state.json
+          if git diff --staged --quiet; then
+            echo "No state change."
+            exit 0
+          fi
+          git commit -m "Stocks autopilot state ${GITHUB_RUN_ID}"
+          pushed=""
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              pushed="yes"
+              break
+            fi
+            echo "Push rejected — rebasing onto latest main (attempt $attempt)."
+            git fetch origin main || true
+            git rebase -X theirs origin/main || git rebase --abort || true
+            sleep $((attempt * 3))
+          done
+          if [ -z "$pushed" ]; then
+            echo "::error::Could not persist stocks autopilot state after retries." >&2
+            exit 1
+          fi
+          echo "State persisted."

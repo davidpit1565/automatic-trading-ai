@@ -98,7 +98,11 @@ export interface EquityChartPanelHandle {
  * `container` (which the caller owns and clears itself). Call `setHistory`
  * once data first arrives and again on every refresh.
  */
-export function mountEquityChartPanel(container: HTMLElement): EquityChartPanelHandle {
+export function mountEquityChartPanel(
+  container: HTMLElement,
+  options: { readonly currencySymbol?: string } = {},
+): EquityChartPanelHandle {
+  const currency = options.currencySymbol ?? '€';
   let history: readonly EquityPoint[] = [];
   let rangeKey = 'All';
   let chartMode: 'candle' | 'line' = 'candle';
@@ -130,11 +134,11 @@ export function mountEquityChartPanel(container: HTMLElement): EquityChartPanelH
     let chart: string;
     let geo: ChartGeometry | null = null;
     if (mode === 'candle') {
-      chart = candleChartSvg(candles, { formatX: range.fx, formatY: (v) => `€${formatPrice(v)}` });
+      chart = candleChartSvg(candles, { formatX: range.fx, formatY: (v) => `${currency}${formatPrice(v)}` });
       geo = candleGeometry(candles);
     } else {
       const points = pts.map((p) => ({ timestamp: p.at, value: p.equity }));
-      chart = priceChartSvg(points, { stroke: up ? HOT : COLD, formatX: range.fx, formatY: (v) => `€${formatPrice(v)}` });
+      chart = priceChartSvg(points, { stroke: up ? HOT : COLD, formatX: range.fx, formatY: (v) => `${currency}${formatPrice(v)}` });
       geo = chartGeometry(points);
     }
     const rangeBar = RANGES.map(
@@ -144,7 +148,7 @@ export function mountEquityChartPanel(container: HTMLElement): EquityChartPanelH
     container.innerHTML = `
       <div class="hero">
         <div class="hero-label">Now <span class="tag-sim">SIMULATED</span></div>
-        <div class="hero-value">€${formatPrice(last)}</div>
+        <div class="hero-value">${currency}${formatPrice(last)}</div>
         <div class="hero-change ${up ? 'up' : 'down'}">${formatPct(ret)} · ${rangeKey}</div>
         <div class="hero-split"><span>since ${new Date(pts[0]!.at).toLocaleDateString('en-GB')}</span></div>
       </div>
@@ -196,10 +200,10 @@ export function mountEquityChartPanel(container: HTMLElement): EquityChartPanelH
       });
       tip.innerHTML =
         mode === 'candle'
-          ? `<span class="pchart-tip-price">€${formatPrice(c.close)}</span>` +
-            `<span class="pchart-tip-ohlc">O €${formatPrice(c.open)} · H €${formatPrice(c.high)} · L €${formatPrice(c.low)} · C €${formatPrice(c.close)}</span>` +
+          ? `<span class="pchart-tip-price">${currency}${formatPrice(c.close)}</span>` +
+            `<span class="pchart-tip-ohlc">O ${currency}${formatPrice(c.open)} · H ${currency}${formatPrice(c.high)} · L ${currency}${formatPrice(c.low)} · C ${currency}${formatPrice(c.close)}</span>` +
             `<span class="pchart-tip-time">${stamp}</span>`
-          : `<span class="pchart-tip-price">€${formatPrice(c.close)}</span><span class="pchart-tip-time">${stamp}</span>`;
+          : `<span class="pchart-tip-price">${currency}${formatPrice(c.close)}</span><span class="pchart-tip-time">${stamp}</span>`;
       tip.style.left = `${(px / geo.W) * 100}%`;
       tip.style.top = `${(py / geo.H) * 100}%`;
     };
