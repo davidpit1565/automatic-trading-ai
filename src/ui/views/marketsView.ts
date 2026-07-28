@@ -128,6 +128,27 @@ const dm = (t: number): string => new Date(t).toLocaleDateString('en-GB', { day:
 const mon = (t: number): string => new Date(t).toLocaleDateString('en-GB', { month: 'short' });
 const yr = (t: number): string => String(new Date(t).getFullYear());
 
+/**
+ * Placeholder rows for the first load. Shaped like real rows so the list does
+ * not jump when the data lands — a plain "Loading…" line collapses the layout
+ * and then shoves it back down.
+ */
+function skeletonRows(count: number): string {
+  return Array.from(
+    { length: count },
+    () =>
+      '<div class="skeleton-row" aria-hidden="true">' +
+      '<span class="skeleton-dot"></span>' +
+      '<span class="market-row-id"><span class="skeleton-bar w-40"></span>' +
+      '<span class="skeleton-bar w-60"></span></span>' +
+      '<span class="market-row-num"><span class="skeleton-bar w-70"></span>' +
+      '<span class="skeleton-bar w-50"></span></span></div>',
+  ).join('');
+}
+
+/** Drag distance (px) past the top that commits to a refresh. */
+const PULL_THRESHOLD = 70;
+
 /** Full stamp for the crosshair tooltip (adds time on intraday ranges). */
 function tipStamp(ts: number, tf: Timeframe): string {
   const d = new Date(ts);
@@ -153,7 +174,8 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
           (o) => `<option value="${o.key}">${o.label}</option>`,
         ).join('')}</select>
       </div>
-      <div class="stack" id="mk-list"><div class="empty">Loading markets…</div></div>
+      <div class="mk-pull" id="mk-pull" aria-live="polite"></div>
+      <div class="stack" id="mk-list">${skeletonRows(8)}</div>
       <p class="muted-line" id="mk-status"></p>
     </div>
     <div id="mk-detail-view" hidden></div>`;
@@ -189,6 +211,10 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
    */
   let visibleCount = PAGE_SIZE;
   let moreObserver: IntersectionObserver | null = null;
+  /** Last price rendered per symbol, so a refresh can flash only what moved. */
+  const shownPrices = new Map<string, number>();
+  /** True until the first successful load, so the skeleton shows only once. */
+  let firstLoad = true;
   let listTimer = 0;
   let detailTimer = 0;
   let stopLive: (() => void) | null = null;
@@ -222,6 +248,13 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     // Only consult the watchlist once it exists — an untouched watchlist must
     // not force a storage read on every one of hundreds of rows.
     const starred = watchlist !== null && watchlist.has(m.symbol);
+    // Flash the price when it actually moved since the last render. The class
+    // rides on freshly-created markup, so the CSS animation plays once per
+    // change on its own — no timers to schedule or clean up.
+    const previous = shownPrices.get(m.symbol);
+    const flash =
+      previous === undefined || previous === m.price ? '' : m.price > previous ? ' flash-up' : ' flash-down';
+    shownPrices.set(m.symbol, m.price);
     return (
       `<span class="market-row-wrap">` +
       `<button class="market-row tappable" data-row="${index}">` +
@@ -232,7 +265,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       `${formatClock(m.updatedAt)} · ${escapeHtml(m.symbol)}</span>` +
       `</span>` +
       `<span class="market-row-num">` +
-      `<span class="row-price">€${formatMarketPrice(m.price)}</span>` +
+      `<span class="row-price${flash}">€${formatMarketPrice(m.price)}</span>` +
       `<span class="chg ${up ? 'up' : 'down'}">${formatSignedPrice(m.change, m.price)} (${formatPct(m.changePct)})</span>` +
       `</span>` +
       `</button>` +
@@ -310,12 +343,71 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     listLoading = true;
     try {
       const fresh = await fetchMarketRows(data, MARKETS_LIST_CAP);
-      if (fresh.length > 0) markets = fresh; // keep last good list on a bad sweep
+      if (fresh.length > 0) {
+        markets = fresh; // keep last good list on a bad sweep
+        firstLoad = false;
+      } else if (firstLoad) {
+        // Nothing yet and nothing cached — say so instead of showing skeletons
+        // forever, which reads as a hang.
+        list.innerHTML = '<div class="empty">Live market data is unavailable right now.</div>';
+        return;
+      }
       if (detailView.hidden) renderList();
     } finally {
       listLoading = false;
     }
   }
+
+  /**
+   * Pull-to-refresh. Only arms at the very top of the scroller and only for a
+   * downward drag, so it never competes with normal scrolling or with the
+   * horizontal swipe on the category tabs.
+   */
+  function attachPullToRefresh(): void {
+    const indicator = container.querySelector<HTMLElement>('#mk-pull')!;
+    const scroller = (): HTMLElement | null => listView.closest<HTMLElement>('.content');
+    let startY: number | null = null;
+    let pulled = 0;
+
+    listView.addEventListener(
+      'touchstart',
+      (event) => {
+        const top = scroller()?.scrollTop ?? 0;
+        startY = top <= 0 && event.touches.length === 1 ? (event.touches[0]?.clientY ?? null) : null;
+        pulled = 0;
+      },
+      { passive: true },
+    );
+
+    listView.addEventListener(
+      'touchmove',
+      (event) => {
+        if (startY === null) return;
+        pulled = (event.touches[0]?.clientY ?? startY) - startY;
+        if (pulled <= 0) {
+          indicator.textContent = '';
+          return;
+        }
+        indicator.textContent = pulled >= PULL_THRESHOLD ? 'Release to refresh' : 'Pull to refresh';
+      },
+      { passive: true },
+    );
+
+    listView.addEventListener('touchend', () => {
+      const trigger = startY !== null && pulled >= PULL_THRESHOLD;
+      startY = null;
+      pulled = 0;
+      if (!trigger) {
+        indicator.textContent = '';
+        return;
+      }
+      indicator.textContent = 'Refreshing…';
+      void loadList().finally(() => {
+        indicator.textContent = '';
+      });
+    });
+  }
+  attachPullToRefresh();
 
   function openDetail(index: number, opts: { preserveRange?: boolean } = {}): void {
     // Freeze the ordering the user was looking at, so prev/next stays coherent

@@ -9,12 +9,27 @@
  * or sizing math of its own. This is what lets us measure a strategy change
  * against a faithful baseline instead of guessing.
  *
+ * ⚠️ NOT the instrument to TUNE with. Use `scripts/validateAutopilot.mts`,
+ * which replays the real `PaperAutoPilot`. Measured on identical inputs
+ * (2026-07-27, 5 majors, 720 1h candles, same parameters), the two disagree
+ * enough to invert a verdict:
+ *
+ *     this harness, per-symbol, averaged   return -0.002%  PF 0.985  3 trades
+ *     PaperAutoPilot, one shared account   return -0.857%  PF 0.019  3 trades
+ *
+ * Same three entries. The cause is the intrabar exit convention below: on ADA
+ * this harness booked a take-profit at 0.1584 that the robot never saw, because
+ * the robot only observes CLOSES and exited at 0.1529 on the trailed stop
+ * instead. With few trades one such flip moves the profit factor fifty-fold.
+ * This harness stays useful as the fast approximation for sweeps.
+ *
  * Deliberate, documented deviations from `paperAutoPilot.runCycleOnce`:
  *  - Exits are checked INTRABAR (low <= stop, high >= target) rather than on
- *    the candle close. This is the honest backtest convention: within a bar a
- *    stop is hit before we could ever have acted on the close, so close-only
- *    exits would flatter results. Stop is checked before target (conservative:
- *    if a bar spans both, we assume the loss).
+ *    the candle close. Stop is checked before target (conservative: if a bar
+ *    spans both, we assume the loss). This is the right convention for a system
+ *    with resting stop/target orders at the exchange — but this robot has none:
+ *    it polls and acts on a close, so intrabar OVERSTATES what it can capture,
+ *    especially on winners.
  *  - A single position at a time (the autopilot holds <=1 per symbol; this
  *    harness runs one symbol, so the portfolio is flat or holds exactly one).
  *  - Higher-timeframe confirmation: the caller passes the higher-TF candles;

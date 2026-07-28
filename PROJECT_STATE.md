@@ -439,6 +439,42 @@ The candidate admits 14 extra trades that are net-losing and nearly triples
 drawdown. Current ordering kept; the reasoning is now a comment at the call
 site in `paperAutoPilot.ts` so it is not "fixed" by a later reader.
 
+## The tuning was measured with the wrong instrument (2026-07-27)
+Every production tuning constant (`AUTOPILOT_MIN_CONFIDENCE`,
+`AUTOPILOT_MAX_RSI_FOR_LONG`, `AUTOPILOT_TRAILING`) was measured with
+`sweepStrategy.mts` / `validateStrategy.mts`. **Both drive
+`runLivePipelineBacktest`, not the `PaperAutoPilot` that actually trades.**
+
+On identical inputs (5 majors, 720 1h candles, same parameters):
+
+| Harness | Return | PF | Trades |
+|---|---|---|---|
+| livePipeline, per-symbol, averaged | -0.002% | 0.985 | 3 |
+| PaperAutoPilot, one shared account | **-0.857%** | **0.019** | 3 |
+
+Same three entries, opposite verdicts. The cause is **exit granularity, not
+position sizing**: livePipeline checks exits intrabar (`low <= stop`,
+`high >= target`); the autopilot only ever sees candle closes. On ADA the
+backtest booked a take-profit at 0.1584 the robot never saw — it exited at a
+close of 0.1529 on the trailed stop. With few trades one such flip moves the
+profit factor fiftyfold.
+
+Intrabar is correct for a system with resting exchange orders. This robot polls
+and acts on a close, so intrabar overstates what it can capture, on winners
+especially. Added `scripts/validateAutopilot.mts` — replays the real autopilot
+over the real 10-symbol universe with the real risk limits. **Tune against that
+one**; livePipeline remains the fast approximation for sweeps.
+
+Honest current scoreboard (full 570-bar window, 10 majors):
+return **-1.63%**, maxDD 1.67%, PF 0.24, 6 trades, win 16.7%; out-of-sample PF
+0.00 (0/3). The recorded +0.03% / PF 1.15 was the other harness.
+
+**Consequence: the current parameter values are unvalidated against production
+behaviour and should be re-swept with the new script before they are trusted.**
+Not done here — 6 trades is far too small a sample to re-tune on without
+curve-fitting, and a longer window needs a timeframe change (Kraken caps 1h at
+720 candles).
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
