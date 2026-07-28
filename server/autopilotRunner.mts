@@ -32,7 +32,7 @@ import { DEFAULT_RISK_LIMITS } from '../src/core/risk/riskEngine';
 import { tradeAnalytics } from '../src/core/position/analytics';
 import { maxDrawdownPct } from '../src/core/backtest/metrics';
 import { CachingSource } from '../src/core/data/cachingSource';
-import { runShadowCycle, SHADOW_CANDIDATES } from '../src/core/autopilot/shadowEvaluator';
+import { runShadowCycle, SHADOW_CANDIDATES, type ShadowStanding } from '../src/core/autopilot/shadowEvaluator';
 import {
   assessRealMoneyReadiness,
   type RealMoneyReadiness,
@@ -600,9 +600,17 @@ async function maybeSendSummaries(
     readiness: store.get<RealMoneyReadiness>(READINESS_KEY) ?? null,
   };
 
+  // Only the evening digest carries the shadow-strategy line — once a day is
+  // plenty, and repeating it in the morning digest too would just be noise.
+  const shadowSaved = store.get<{ standings: ShadowStanding[] }>(SHADOW_STANDINGS_KEY);
   for (const slot of dueSlots) {
+    const isEvening = slot.key === 'daily-summary-evening';
     const result = await sendTelegramMessage(
-      buildDailySummary({ ...baseSummary, heading: slot.heading }),
+      buildDailySummary({
+        ...baseSummary,
+        heading: slot.heading,
+        ...(isEvening && shadowSaved ? { shadows: shadowSaved.standings } : {}),
+      }),
       telegram,
     );
     if (result.sent) {

@@ -70,6 +70,13 @@ export interface ShadowStanding {
 
 const STARTED_AT_KEY = 'shadow-started-at';
 
+/**
+ * Below this many closed trades, a candidate's record is too short to mean
+ * anything — an early streak is luck, not edge. Shared by the standings
+ * script and the Telegram digest so both apply the same bar.
+ */
+export const SHADOW_MEANINGFUL_TRADES = 20;
+
 export interface ShadowRunOptions {
   readonly source: CachingSource;
   readonly symbols: readonly string[];
