@@ -17,16 +17,19 @@ export function showLoadingOverlay(message = 'Loading...', timeout = 30000): () 
 
   // Auto-dismiss after timeout
   const timeoutId = setTimeout(() => {
-    hideLoadingOverlay();
+    overlay.remove();
   }, timeout);
 
-  // Return cleanup function
+  // Return cleanup function — removes only THIS overlay, so two overlapping
+  // callers each get their own independent show/hide instead of one hiding
+  // the other's still-in-flight overlay.
   return () => {
     clearTimeout(timeoutId);
-    hideLoadingOverlay();
+    overlay.remove();
   };
 }
 
+/** Removes every overlay currently shown — a hard reset, not a per-call cleanup. */
 export function hideLoadingOverlay(): void {
   const overlays = document.querySelectorAll('.loading-overlay');
   overlays.forEach((o) => o.remove());

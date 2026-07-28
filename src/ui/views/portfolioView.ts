@@ -39,6 +39,8 @@ export function renderPortfolioView(container: HTMLElement, data: ActiveDataSour
   `;
 
   const status = container.querySelector<HTMLElement>('#pp-status')!;
+  const buyButton = container.querySelector<HTMLButtonElement>('#pp-buy')!;
+  const sellButton = container.querySelector<HTMLButtonElement>('#pp-sell')!;
 
   async function latestPrice(symbol: string): Promise<number | null> {
     const candles = await data.source.getCandles(symbol, '1m', 2);
@@ -62,26 +64,33 @@ export function renderPortfolioView(container: HTMLElement, data: ActiveDataSour
   }
 
   async function trade(side: 'buy' | 'sell'): Promise<void> {
-    const symbol = container.querySelector<HTMLSelectElement>('#pp-symbol')!.value;
-    const quantity = Number(container.querySelector<HTMLInputElement>('#pp-quantity')!.value);
-    status.textContent = `Fetching ${symbol} price…`;
-    const price = await latestPrice(symbol);
-    if (price === null) {
-      status.innerHTML = `<span class="error-line">No price available for ${escapeHtml(symbol)}</span>`;
-      return;
+    buyButton.disabled = true;
+    sellButton.disabled = true;
+    try {
+      const symbol = container.querySelector<HTMLSelectElement>('#pp-symbol')!.value;
+      const quantity = Number(container.querySelector<HTMLInputElement>('#pp-quantity')!.value);
+      status.textContent = `Fetching ${symbol} price…`;
+      const price = await latestPrice(symbol);
+      if (price === null) {
+        status.innerHTML = `<span class="error-line">No price available for ${escapeHtml(symbol)}</span>`;
+        return;
+      }
+      const result =
+        side === 'buy'
+          ? portfolio.buy(symbol, quantity, price, Date.now())
+          : portfolio.sell(symbol, quantity, price, Date.now());
+      status.innerHTML = result.ok
+        ? `${side === 'buy' ? 'Bought' : 'Sold'} ${quantity} ${escapeHtml(symbol)} @ ${formatPrice(price)} (${data.source.name})`
+        : `<span class="error-line">${escapeHtml(result.error)}</span>`;
+      await refresh();
+    } finally {
+      buyButton.disabled = false;
+      sellButton.disabled = false;
     }
-    const result =
-      side === 'buy'
-        ? portfolio.buy(symbol, quantity, price, Date.now())
-        : portfolio.sell(symbol, quantity, price, Date.now());
-    status.innerHTML = result.ok
-      ? `${side === 'buy' ? 'Bought' : 'Sold'} ${quantity} ${escapeHtml(symbol)} @ ${formatPrice(price)} (${data.source.name})`
-      : `<span class="error-line">${escapeHtml(result.error)}</span>`;
-    await refresh();
   }
 
-  container.querySelector('#pp-buy')!.addEventListener('click', () => void trade('buy'));
-  container.querySelector('#pp-sell')!.addEventListener('click', () => void trade('sell'));
+  buyButton.addEventListener('click', () => void trade('buy'));
+  sellButton.addEventListener('click', () => void trade('sell'));
   container.querySelector('#pp-reset')!.addEventListener('click', () => {
     if (window.confirm('Reset the paper portfolio to 10,000 and clear the journal?')) {
       portfolio.reset(10_000);
