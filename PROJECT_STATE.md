@@ -604,6 +604,31 @@ step for the "learn and understand" goal, but it needs enough closed trades for
 the buckets to be signal rather than noise — which is what the shadow records
 are now generating.
 
+## History gained a P&L chart; real chart bugs fixed (2026-07-28)
+David asked for a profit/loss chart on the History view (it only listed trades
+as text) and for the charts in general to be audited — "not 100% correct
+across all dates and types." Extracted the range-selector + candle/line +
+crosshair chart machinery out of `valueView.ts` into a shared
+`src/ui/equityChartPanel.ts` so History and Portfolio value render from one
+implementation. Screenshot-audited `src/ui/charts.ts` across candle counts
+5/15/25/30/60/150 and both modes (real code + real CSS, headless Chromium),
+which surfaced 3 concrete bugs beyond the earlier "no further defects found"
+pass:
+- `calculateEMA` fabricated a wrong average at an out-of-bounds index whenever
+  `values.length < period` — silently rendered as an invisible single-point
+  path. Hits the Portfolio/History chart almost always (its ~30-candle target
+  bucket count is under EMA50's period=50). Now returns `undefined` until
+  there's genuinely enough history.
+- First x-axis date label was losing its leading character (confirmed:
+  rendered "4/11" instead of "14/11") — centered text at the left padding
+  edge extended past the viewBox's `x=0` and got clipped. Edge labels now
+  anchor start/end instead of middle.
+- Removed MACD histogram bars (a comment claimed "not rendered... due to
+  space" while the code rendered them anyway, overlapping volume bars/labels)
+  and fake "RSI level bands" (static 30/40/30 price-range slices, not derived
+  from any real RSI value). 10 new tests in `tests/ui/charts.test.ts` (charts.ts
+  had zero coverage before this).
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
