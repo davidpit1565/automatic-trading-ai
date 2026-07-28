@@ -28,7 +28,7 @@ import { assessTrade, DEFAULT_RISK_LIMITS, type RiskLimits } from '../risk/riskE
 import { trailingStopPrice, type TrailingConfig } from '../risk/trailingStop';
 import { scanCandles, scanMarket, type ScanResult } from '../scan/marketScanner';
 import { applyHigherTimeframeGate } from '../signal/multiTimeframe';
-import { DEFAULT_SIGNAL_CRITERIA, evaluateScan } from '../signal/signalEngine';
+import { DEFAULT_SIGNAL_CRITERIA, evaluateScan, type SignalDecision } from '../signal/signalEngine';
 import type { Timeframe } from '../types';
 import type { PersistedAuditLog } from './auditLog';
 import type { PersistedKillSwitch } from './killSwitch';
@@ -96,6 +96,18 @@ export interface AutoPilotOptions {
    * permissive value; production sets AUTOPILOT_MAX_RSI_FOR_LONG.
    */
   readonly maxRsiForLong?: number;
+  /**
+   * Replaces the entry signal entirely. Defaults to `evaluateScan`, the
+   * production trend/momentum signal.
+   *
+   * This exists because sweeping parameters proved the *current* signal has a
+   * negative per-trade edge — no setting of it wins. Testing a genuinely
+   * different idea therefore has to be possible without touching this class,
+   * and without any candidate being able to reach production by accident.
+   * Everything downstream — risk sizing, portfolio caps, exits, the audit log —
+   * is unchanged, so two signals are compared on equal terms.
+   */
+  readonly evaluate?: (scan: ScanResult, floor: number) => SignalDecision;
   /**
    * Trailing stop for open positions. When set, the stop ratchets up as the
    * trade runs in profit (measured to raise profit factor and cut drawdown).
@@ -370,11 +382,14 @@ export class PaperAutoPilot {
       // admitted 6→20 trades and made everything worse — return -1.63%→-3.93%,
       // max drawdown 1.67%→4.44% (2.7x), win rate 16.7%→15.0%. The extra trades
       // the bonus would rescue are net-losing. Do not "fix" this ordering.
-      let decision = evaluateScan(scanResult, {
-        ...DEFAULT_SIGNAL_CRITERIA,
-        maxRsiForLong: this.options.maxRsiForLong ?? DEFAULT_SIGNAL_CRITERIA.maxRsiForLong,
-        minConfidence: this.options.minConfidence ?? 0,
-      });
+      const floor = this.options.minConfidence ?? 0;
+      let decision = this.options.evaluate
+        ? this.options.evaluate(scanResult, floor)
+        : evaluateScan(scanResult, {
+            ...DEFAULT_SIGNAL_CRITERIA,
+            maxRsiForLong: this.options.maxRsiForLong ?? DEFAULT_SIGNAL_CRITERIA.maxRsiForLong,
+            minConfidence: floor,
+          });
       if (decision.kind === 'rejected') continue; // no signal / below floor — nothing to audit
 
       // Multi-timeframe confirmation: never open against the larger trend.

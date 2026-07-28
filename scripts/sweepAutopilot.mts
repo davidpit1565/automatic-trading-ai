@@ -28,11 +28,21 @@ import { TradeJournal } from '../src/core/position/tradeJournal';
 import { tradeAnalytics } from '../src/core/position/analytics';
 import { drawdownBreached } from '../src/core/risk/drawdownBreaker';
 import { DEFAULT_RISK_LIMITS } from '../src/core/risk/riskEngine';
+import { meanReversionSignal, breakoutSignal } from '../src/core/signal/alternativeSignals';
+import type { ScanResult } from '../src/core/scan/marketScanner';
+import type { SignalDecision } from '../src/core/signal/signalEngine';
 import type { Candle, Timeframe } from '../src/core/types';
 import { ok } from '../src/core/types';
 
 const CASH = 10_000, COST = 0.003, DD = 8, WARMUP = 150;
-interface Cfg { name: string; minConfidence: number; maxRsiForLong: number; trailing?: { activateR: number; trailR: number } }
+interface Cfg {
+  name: string;
+  minConfidence: number;
+  maxRsiForLong: number;
+  trailing?: { activateR: number; trailR: number };
+  /** A different signal FAMILY, not a different setting of the same one. */
+  evaluate?: (scan: ScanResult, floor: number) => SignalDecision;
+}
 const CONFIGS: Cfg[] = [
   { name: 'PROD (40/65/1.5-1.5)', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 } },
   { name: 'floor 20            ', minConfidence: 20, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 } },
@@ -42,6 +52,12 @@ const CONFIGS: Cfg[] = [
   { name: 'rsi 75              ', minConfidence: 40, maxRsiForLong: 75, trailing: { activateR: 1.5, trailR: 1.5 } },
   { name: 'fixed stop (no trail)', minConfidence: 40, maxRsiForLong: 65 },
   { name: 'trail 1.0/2.0       ', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1, trailR: 2 } },
+  // Different IDEAS. Floors are 0 because these signals score on their own
+  // scale; the production floor would silently mute them.
+  { name: 'MEAN-REVERSION      ', minConfidence: 0, maxRsiForLong: 100, trailing: { activateR: 1.5, trailR: 1.5 }, evaluate: meanReversionSignal },
+  { name: 'BREAKOUT            ', minConfidence: 0, maxRsiForLong: 100, trailing: { activateR: 1.5, trailR: 1.5 }, evaluate: breakoutSignal },
+  { name: 'MEAN-REV fixed stop ', minConfidence: 0, maxRsiForLong: 100, evaluate: meanReversionSignal },
+  { name: 'BREAKOUT fixed stop ', minConfidence: 0, maxRsiForLong: 100, evaluate: breakoutSignal },
 ];
 
 const source = new KrakenPublicSource();
@@ -55,7 +71,9 @@ async function load(entryTf: Timeframe, confirmTf: Timeframe) {
     const a = await source.getCandles(s, entryTf, 720);
     const b = await source.getCandles(s, confirmTf, 720);
     if (a.ok) e.set(s, a.value);
+    else console.error(`  fetch failed ${s} ${entryTf}: ${a.error}`);
     if (b.ok) c.set(s, b.value);
+    else console.error(`  fetch failed ${s} ${confirmTf}: ${b.error}`);
   }
   return { e, c };
 }
@@ -77,6 +95,7 @@ async function replay(cfg: Cfg, e: Map<string, Candle[]>, c: Map<string, Candle[
     portfolio, positions, killSwitch: new PersistedKillSwitch(store), audit: new PersistedAuditLog(store),
     getDailyLoss: () => 0, costRate: COST, minConfidence: cfg.minConfidence,
     maxRsiForLong: cfg.maxRsiForLong, trailing: cfg.trailing, riskLimits: DEFAULT_RISK_LIMITS,
+    ...(cfg.evaluate ? { evaluate: cfg.evaluate } : {}),
     haltNewEntries: () => drawdownBreached({ peakEquity: peak, currentEquity: equity, maxDrawdownPct: DD }),
   });
   for (const t of stamps) {
@@ -96,7 +115,13 @@ async function replay(cfg: Cfg, e: Map<string, Candle[]>, c: Map<string, Candle[
 
 for (const [entryTf, confirmTf, label] of [['1h', '4h', '1h entry / 30 days'], ['4h', '1d', '4h entry / 120 days']] as const) {
   const { e, c } = await load(entryTf, confirmTf);
-  const ref = e.get(symbols[0]!)!;
+  // Any symbol can fail to fetch transiently, so anchor the timeline on the
+  // longest series we actually got rather than assuming the first one loaded.
+  const ref = [...e.values()].sort((a, b) => b.length - a.length)[0];
+  if (!ref || ref.length <= WARMUP) {
+    console.error(`skipping ${label}: not enough history fetched`);
+    continue;
+  }
   const usable = ref.slice(WARMUP).map((x) => x.timestamp);
   const mid = Math.floor(usable.length / 2);
   let bhSum = 0, bhN = 0;
