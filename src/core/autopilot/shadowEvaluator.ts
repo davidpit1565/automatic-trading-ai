@@ -28,6 +28,9 @@ import { TradeJournal } from '../position/tradeJournal';
 import { tradeAnalytics } from '../position/analytics';
 import { DEFAULT_RISK_LIMITS } from '../risk/riskEngine';
 import type { TrailingConfig } from '../risk/trailingStop';
+import type { ScanResult } from '../scan/marketScanner';
+import type { SignalDecision } from '../signal/signalEngine';
+import { breakoutSignal, meanReversionSignal } from '../signal/alternativeSignals';
 import type { Timeframe } from '../types';
 import { PersistedAuditLog } from './auditLog';
 import { PersistedKillSwitch } from './killSwitch';
@@ -44,6 +47,12 @@ export interface ShadowCandidate {
   readonly trailing?: TrailingConfig;
   /** Omit to skip higher-timeframe confirmation entirely. */
   readonly confirmationTimeframe?: Timeframe;
+  /**
+   * A different entry signal FAMILY. Omit to use the production signal.
+   * This is what lets a genuinely different idea accumulate a forward record
+   * beside the incumbent, on the same bars, judged on the same risk terms.
+   */
+  readonly evaluate?: (scan: ScanResult, floor: number) => SignalDecision;
 }
 
 export interface ShadowStanding {
@@ -143,6 +152,7 @@ async function runOne(
     costRate: options.costRate,
     minConfidence: candidate.minConfidence,
     maxRsiForLong: candidate.maxRsiForLong,
+    ...(candidate.evaluate ? { evaluate: candidate.evaluate } : {}),
     ...(candidate.trailing ? { trailing: candidate.trailing } : {}),
     riskLimits: DEFAULT_RISK_LIMITS,
   });
@@ -202,5 +212,24 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     maxRsiForLong: 65,
     trailing: { activateR: 1.5, trailR: 1.5 },
     confirmationTimeframe: '4h',
+  },
+  // A different FAMILY, not a different setting. Backtested positive with a
+  // usable sample where every momentum setting lost — which is exactly the
+  // situation where a forward record is worth more than another backtest.
+  {
+    key: 'mean-reversion',
+    label: 'Mean reversion (buys oversold stretch, refuses a falling knife)',
+    minConfidence: 0,
+    maxRsiForLong: 100,
+    trailing: { activateR: 1.5, trailR: 1.5 },
+    evaluate: meanReversionSignal,
+  },
+  {
+    key: 'breakout',
+    label: 'Breakout from compression (narrow base + volume)',
+    minConfidence: 0,
+    maxRsiForLong: 100,
+    trailing: { activateR: 1.5, trailR: 1.5 },
+    evaluate: breakoutSignal,
   },
 ];

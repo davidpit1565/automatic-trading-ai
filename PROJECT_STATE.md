@@ -555,6 +555,55 @@ rank until a candidate clears 20 trades, so an early lead cannot be mistaken
 for a result. Verified end to end against live Kraken: 4 isolated namespaces,
 real account untouched, state file ~4 KB.
 
+## Mean reversion is the first idea with a real edge (2026-07-28)
+Parameter space was exhausted (see above): every setting of the production
+MOMENTUM signal loses, and more trading loses more. So the search moved to
+IDEA space. `PaperAutoPilot` gained an optional `evaluate` hook; two new
+families live in `src/core/signal/alternativeSignals.ts`. Everything downstream
+(risk sizing, caps, exits, ATR stop/target geometry) is identical, so families
+are judged purely on WHEN they enter.
+
+**1h entry / 30 days** — buy & hold **-3.49%**
+
+| Config | Return | PF | Trades | OOS return | OOS PF |
+|---|---|---|---|---|---|
+| **MEAN-REVERSION** | **+0.660%** | **1.578** | **24** | **+0.677%** | **2.012** |
+| MEAN-REV fixed stop | -1.312% | 1.054 | 23 | +0.091% | 1.471 |
+| PROD momentum | -1.628% | 0.244 | 6 | -1.198% | 0.000 |
+| BREAKOUT | -6.980% | 0.222 | 31 | -0.474% | 1.159 |
+| (every other momentum setting) | negative | <1 | — | negative | — |
+
+**4h entry / 120 days** — buy & hold **-22.10%**. MEAN-REVERSION **-4.232%,
+PF 0.222, only 8 trades** (OOS +1.089%); BREAKOUT -8.349%; all momentum negative.
+
+Mean reversion is the **only** thing measured all session with a positive
+absolute return, PF > 1, a usable sample, AND a positive out-of-sample half —
+with OOS *better* than in-sample, which is the opposite of the overfit
+signature. It beats buy-and-hold by 4.2 points on 1h and by 18 points on 4h.
+Breakout is not interesting: negative on both windows.
+
+**NOT shipped to production, deliberately.** The bar set before running was
+"wins on both windows, out-of-sample". It does not — the 4h window is negative.
+That result is arguably inconclusive rather than a refutation (8 trades, below
+the 20-trade bar, because the setup is rarer on 4h bars), but "the disagreeing
+evidence is probably noise" is exactly the reasoning that ships curve-fitted
+strategies. One 30-day window is not a basis for risking money.
+
+Instead it is now a **shadow candidate**, accumulating a forward record on live
+bars it cannot have been fitted to. If that record holds up over the coming
+weeks, it is the candidate to promote — and that decision will rest on
+out-of-sample evidence rather than on a backtest.
+
+## Learning analysis is display-only (2026-07-28)
+`confidenceCalibration`, `exitReasonBreakdown`, `efficiencyReport` and
+`strategyBreakdown` exist in `src/core/feedback/performanceFeedback.ts` and are
+consumed by exactly ONE caller: `positionsView.ts`, a UI panel. **Nothing feeds
+back into any trading decision.** The robot analyses and displays; it does not
+adapt. Wiring calibration into sizing or entry selection is the obvious next
+step for the "learn and understand" goal, but it needs enough closed trades for
+the buckets to be signal rather than noise — which is what the shadow records
+are now generating.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
