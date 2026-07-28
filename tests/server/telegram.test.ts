@@ -258,3 +258,70 @@ describe('sendTelegramMessage', () => {
     expect(result.sent).toBe(false);
   });
 });
+
+describe('buildDailySummary — shadow strategy line', () => {
+  const base = {
+    equity: 10_250,
+    cash: 4_000,
+    totalReturnPct: 2.5,
+    realizedPnl: 100,
+    unrealizedPnl: 150,
+    openedLast24h: 0,
+    closedLast24h: 0,
+    positions: [],
+  };
+
+  const standing = (over: Partial<{
+    key: string; label: string; returnPct: number; trades: number;
+    profitFactor: number | null; winRatePct: number | null; equity: number;
+    openPositions: number; startedAt: number;
+  }>) => ({
+    key: 'x', label: 'X', returnPct: 0, trades: 0, profitFactor: null,
+    winRatePct: null, equity: 10_000, openPositions: 0, startedAt: 0,
+    ...over,
+  });
+
+  it('omits the section entirely when no shadows are passed', () => {
+    const msg = buildDailySummary(base);
+    expect(msg).not.toContain('בבדיקה');
+  });
+
+  it('says data is still being collected when no candidate has enough trades', () => {
+    const msg = buildDailySummary({
+      ...base,
+      shadows: [standing({ key: 'a', trades: 5 }), standing({ key: 'b', trades: 12 })],
+    });
+    expect(msg).toContain('12/20');
+    expect(msg).toContain('מוקדם לדרג');
+  });
+
+  it('names the leading candidate once one clears the meaningful-trades bar', () => {
+    const msg = buildDailySummary({
+      ...base,
+      shadows: [
+        standing({ key: 'a', label: 'Mean reversion', trades: 24, returnPct: 0.66, profitFactor: 1.58 }),
+        standing({ key: 'b', label: 'Breakout', trades: 25, returnPct: -6.98, profitFactor: 0.22 }),
+      ],
+    });
+    expect(msg).toContain('Mean reversion');
+    expect(msg).toContain('+0.66%');
+    expect(msg).not.toContain('Breakout'); // only the leader is named
+  });
+
+  it('excludes a candidate below the bar from the ranking, even if its return looks best', () => {
+    const msg = buildDailySummary({
+      ...base,
+      shadows: [
+        standing({ key: 'a', label: 'Lucky streak', trades: 3, returnPct: 50 }),
+        standing({ key: 'b', label: 'Steady', trades: 22, returnPct: 1 }),
+      ],
+    });
+    expect(msg).toContain('Steady');
+    expect(msg).not.toContain('Lucky streak');
+  });
+
+  it('makes clear this is simulated and does not affect the real account', () => {
+    const msg = buildDailySummary({ ...base, shadows: [standing({ trades: 25, returnPct: 1 })] });
+    expect(msg).toContain('כסף מדומה');
+  });
+});

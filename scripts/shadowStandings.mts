@@ -10,12 +10,11 @@
  */
 
 import { FileStore } from '../server/fileStore.mts';
+import { SHADOW_MEANINGFUL_TRADES } from '../src/core/autopilot/shadowEvaluator';
 import type { ShadowStanding } from '../src/core/autopilot/shadowEvaluator';
 
 const STATE_PATH = process.env['AUTOPILOT_STATE_PATH'] ?? 'state/autopilot-state.json';
 const DAY_MS = 24 * 60 * 60 * 1000;
-/** Below this, a record is too short to mean anything — say so rather than rank it. */
-const MEANINGFUL_TRADES = 20;
 
 const store = new FileStore(STATE_PATH);
 const saved = store.get<{ at: number; standings: ShadowStanding[] }>('shadow-standings');
@@ -42,17 +41,17 @@ if (!saved || saved.standings.length === 0) {
   console.log('');
   for (const s of saved.standings) console.log(`  ${s.key.padEnd(17)} ${s.label}`);
 
-  const ranked = saved.standings.filter((s) => s.trades >= MEANINGFUL_TRADES);
+  const ranked = saved.standings.filter((s) => s.trades >= SHADOW_MEANINGFUL_TRADES);
   console.log('');
   if (ranked.length === 0) {
     const most = Math.max(...saved.standings.map((s) => s.trades));
     console.log(
       `Too early to rank: the busiest candidate has ${most} trades, under the ` +
-        `${MEANINGFUL_TRADES} needed before a difference means anything. Let it run.`,
+        `${SHADOW_MEANINGFUL_TRADES} needed before a difference means anything. Let it run.`,
     );
   } else {
     console.log(
-      `${ranked.length} candidate(s) have cleared ${MEANINGFUL_TRADES} trades and can be compared.`,
+      `${ranked.length} candidate(s) have cleared ${SHADOW_MEANINGFUL_TRADES} trades and can be compared.`,
     );
   }
 }

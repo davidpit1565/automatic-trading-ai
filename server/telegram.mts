@@ -8,6 +8,7 @@
  */
 
 import type { CycleResult } from '../src/core/autopilot/paperAutoPilot';
+import { SHADOW_MEANINGFUL_TRADES, type ShadowStanding } from '../src/core/autopilot/shadowEvaluator';
 import type { ReadinessKey, RealMoneyReadiness } from '../src/core/feedback/realMoneyReadiness';
 
 export interface TelegramConfig {
@@ -67,6 +68,33 @@ export interface DailySummaryInput {
   readonly readiness?: RealMoneyReadiness | null;
   /** Optional first line, e.g. a morning/evening greeting. */
   readonly heading?: string;
+  /**
+   * Forward-test standings for the candidate strategies (see
+   * `shadowEvaluator.ts`). Optional — omit to leave the digest unchanged;
+   * the evening send is the only caller that passes it, so this section
+   * appears at most once a day rather than in every digest.
+   */
+  readonly shadows?: readonly ShadowStanding[];
+}
+
+/** One-line summary of the shadow strategy standings, or how far they are from meaning anything. */
+function shadowSummaryLines(standings: readonly ShadowStanding[]): string[] {
+  if (standings.length === 0) return [];
+  const ranked = standings.filter((s) => s.trades >= SHADOW_MEANINGFUL_TRADES);
+  if (ranked.length === 0) {
+    const most = Math.max(...standings.map((s) => s.trades));
+    return [
+      `🧪 אסטרטגיות בבדיקה: עדיין צוברות נתונים (המובילה: ${most}/` +
+        `${SHADOW_MEANINGFUL_TRADES} עסקאות) — מוקדם לדרג.`,
+    ];
+  }
+  const best = [...ranked].sort((a, b) => b.returnPct - a.returnPct)[0]!;
+  const sign = best.returnPct >= 0 ? '+' : '';
+  return [
+    `🧪 אסטרטגיה מובילה בבדיקה: ${best.label} — ${sign}${best.returnPct.toFixed(2)}% ` +
+      `(${best.trades} עסקאות, PF ${best.profitFactor === null ? 'n/a' : best.profitFactor.toFixed(2)}). ` +
+      `כסף מדומה, לא משפיע על החשבון האמיתי.`,
+  ];
 }
 
 /** Short Hebrew phrase for an unmet readiness criterion. */
@@ -132,6 +160,9 @@ export function buildDailySummary(input: DailySummaryInput): string {
   }
   if (input.readiness) {
     lines.push(readinessLineHe(input.readiness));
+  }
+  if (input.shadows) {
+    lines.push(...shadowSummaryLines(input.shadows));
   }
   return lines.join('\n');
 }
