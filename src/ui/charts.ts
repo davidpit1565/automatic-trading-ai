@@ -26,20 +26,22 @@ export function calculateSRLevels(
   };
 }
 
-export function calculateEMA(values: readonly number[], period: number): number[] {
-  if (values.length === 0) return [];
+/**
+ * Returns `undefined` for every index before there are `period` values to
+ * average — never a value computed from fewer inputs than the period calls
+ * for. (A prior version filled the last slot from a short window regardless,
+ * which fabricated a wrong average and placed it far outside the visible
+ * chart once there wasn't enough history.)
+ */
+export function calculateEMA(values: readonly number[], period: number): (number | undefined)[] {
+  const ema: (number | undefined)[] = new Array(values.length).fill(undefined);
+  if (values.length < period) return ema;
   const k = 2 / (period + 1);
-  const ema: number[] = [];
   let sum = 0;
-  for (let i = 0; i < Math.min(period, values.length); i++) {
-    sum += values[i]!;
-  }
+  for (let i = 0; i < period; i++) sum += values[i]!;
   ema[period - 1] = sum / period;
   for (let i = period; i < values.length; i++) {
     ema[i] = values[i]! * k + (ema[i - 1]! * (1 - k));
-  }
-  for (let i = 0; i < period - 1; i++) {
-    ema[i] = undefined as any;
   }
   return ema;
 }
@@ -221,7 +223,8 @@ export function priceChartSvg(
   const xTicks = Math.min(5, points.length);
   for (let k = 0; k < xTicks; k++) {
     const idx = Math.round((k * (points.length - 1)) / (xTicks - 1));
-    xlab += `<text class="paxis pxlab" x="${geo.x(idx).toFixed(1)}" y="${H - 8}">${opts.formatX(points[idx]!.timestamp)}</text>`;
+    const anchor = k === 0 ? 'start' : k === xTicks - 1 ? 'end' : 'middle';
+    xlab += `<text class="paxis pxlab" style="text-anchor:${anchor}" x="${geo.x(idx).toFixed(1)}" y="${H - 8}">${opts.formatX(points[idx]!.timestamp)}</text>`;
   }
 
   const lastX = geo.x(points.length - 1);
@@ -313,23 +316,6 @@ export function candleChartSvg(
   const volBarY = H - padB + 2;
   const maxVol = Math.max(...candles.map((c) => c.volume)) || 1;
 
-  // MACD area: below volume bars (not rendered in main view due to space, but calculation ready for expansion)
-  const macdBarHeight = 12;
-  const macdBaseY = H - padB + 18;
-
-  // RSI level bands (visual zones)
-  let rsiBands = '';
-  const rsiLevels = [
-    { lo: 0.0, hi: 0.3, color: 'rgba(234,57,67,0.04)' },
-    { lo: 0.3, hi: 0.7, color: 'rgba(255,255,255,0.01)' },
-    { lo: 0.7, hi: 1.0, color: 'rgba(22,199,132,0.04)' },
-  ];
-  for (const level of rsiLevels) {
-    const y1 = geo.y(geo.min + (geo.max - geo.min) * (1 - level.hi));
-    const y2 = geo.y(geo.min + (geo.max - geo.min) * (1 - level.lo));
-    rsiBands += `<rect x="${padL.toFixed(1)}" y="${y1.toFixed(1)}" width="${(W - padL - padR).toFixed(1)}" height="${(y2 - y1).toFixed(1)}" fill="${level.color}" pointer-events="none"/>`;
-  }
-
   let grid = '';
   const yTicks = 4;
   for (let k = 0; k <= yTicks; k++) {
@@ -342,14 +328,14 @@ export function candleChartSvg(
   const xTicks = Math.min(5, n);
   for (let k = 0; k < xTicks; k++) {
     const idx = Math.round((k * (n - 1)) / (xTicks - 1));
-    xlab += `<text class="paxis pxlab" x="${geo.x(idx).toFixed(1)}" y="${H - 8}">${opts.formatX(candles[idx]!.timestamp)}</text>`;
+    const anchor = k === 0 ? 'start' : k === xTicks - 1 ? 'end' : 'middle';
+    xlab += `<text class="paxis pxlab" style="text-anchor:${anchor}" x="${geo.x(idx).toFixed(1)}" y="${H - 8}">${opts.formatX(candles[idx]!.timestamp)}</text>`;
   }
 
-  // Calculate EMAs and MACD
+  // Calculate EMAs
   const closes = candles.map((c) => c.close);
   const ema20 = calculateEMA(closes, 20);
   const ema50 = calculateEMA(closes, 50);
-  const macd = calculateMACD(closes);
 
   let bodies = '';
   let volumes = '';
@@ -373,20 +359,10 @@ export function candleChartSvg(
     const vh = (c.volume / maxVol) * volBarHeight;
     const barColor = up ? 'var(--hot)' : 'var(--cold)';
     volumes += `<rect class="pvol-bar" x="${(cx - bodyW / 2).toFixed(1)}" y="${(volBarY - vh).toFixed(1)}" width="${bodyW.toFixed(1)}" height="${vh.toFixed(1)}" fill="${barColor}" opacity="0.6"/>`;
-
-    // MACD histogram bars (below volume bars)
-    const h = macd.histogram[i];
-    if (h !== undefined && macd.max !== macd.min) {
-      const hNorm = (h - macd.min) / (macd.max - macd.min);
-      const hPixels = hNorm * macdBarHeight;
-      const hColor = h > 0 ? 'var(--hot)' : 'var(--cold)';
-      const hY = h > 0 ? macdBaseY - hPixels : macdBaseY;
-      volumes += `<rect class="pmacd-bar" x="${(cx - bodyW / 2).toFixed(1)}" y="${hY.toFixed(1)}" width="${bodyW.toFixed(1)}" height="${Math.abs(hPixels).toFixed(1)}" fill="${hColor}" opacity="0.5"/>`;
-    }
   }
 
   // EMA lines as paths (not polylines, to avoid test confusion with line-chart detection)
-  function buildEmaPath(ema: number[]): string {
+  function buildEmaPath(ema: readonly (number | undefined)[]): string {
     let path = '';
     let started = false;
     for (let i = 0; i < ema.length; i++) {
@@ -445,7 +421,6 @@ export function candleChartSvg(
   </g>`;
 
   return `<svg class="pchart pcandle-chart ${up ? 'up' : 'down'}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="candlestick chart">
-    ${rsiBands}
     ${grid}
     ${bodies}
     ${emaLines}

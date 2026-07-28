@@ -5,6 +5,7 @@
 
 import type { ActiveDataSource } from '../dataSource';
 import { fetchCloudState } from '../cloudState';
+import { mountEquityChartPanel } from '../equityChartPanel';
 import { formatPrice } from '../format';
 import type { ViewHandle } from '../viewLifecycle';
 
@@ -14,15 +15,23 @@ export function renderHistoryView(container: HTMLElement, _data: ActiveDataSourc
   container.innerHTML = `
     <h2 class="view-title">History</h2>
     <p class="view-sub">Every simulated buy and sell, newest first.</p>
+    <div id="history-chart"></div>
     <div class="stack" id="history-list"><div class="empty">Loading…</div></div>`;
+  const chartSlot = container.querySelector<HTMLElement>('#history-chart')!;
   const list = container.querySelector<HTMLElement>('#history-list')!;
+  const chart = mountEquityChartPanel(chartSlot);
+  let loadedOnce = false;
 
   async function load(): Promise<void> {
     const state = await fetchCloudState();
     if (!state) {
-      list.innerHTML = '<div class="empty">Couldn\'t reach the cloud robot — retrying automatically.</div>';
+      if (!loadedOnce) {
+        list.innerHTML = '<div class="empty">Couldn\'t reach the cloud robot — retrying automatically.</div>';
+      }
       return;
     }
+    loadedOnce = true;
+    chart.setHistory(state.equityHistory);
     if (state.history.length === 0) {
       list.innerHTML = '<div class="empty">No trades yet — the robot is waiting for a qualified opportunity.</div>';
       return;
