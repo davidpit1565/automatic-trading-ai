@@ -4,8 +4,38 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildTestMessage, readinessLineHe, sendTelegramMessage } from '../../server/telegram.mts';
+import { buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, readinessLineHe, sendTelegramMessage } from '../../server/telegram.mts';
 import { assessRealMoneyReadiness, READINESS_THRESHOLDS } from '../../src/core/feedback/realMoneyReadiness';
+
+describe('buildStockCycleMessage', () => {
+  it('returns null when the cycle opened and closed nothing', () => {
+    expect(buildStockCycleMessage({ opened: [], closed: [], timestamp: 0 })).toBeNull();
+  });
+
+  it('describes a buy in dollars, distinct from the crypto (euro) message', () => {
+    const msg = buildStockCycleMessage({
+      timestamp: 0,
+      opened: [{ symbol: 'AAPL', quantity: 5, entry: 185.5 }],
+      closed: [],
+    });
+    expect(msg).not.toBeNull();
+    expect(msg).toContain('AAPL');
+    expect(msg).toContain('$185.5');
+    expect(msg).not.toContain('€');
+    expect(msg).toContain('מניות');
+  });
+
+  it('describes a sell with the translated exit reason', () => {
+    const msg = buildStockCycleMessage({
+      timestamp: 0,
+      opened: [],
+      closed: [{ symbol: 'TSLA', reason: 'stop-loss', price: 240, pnl: -20 }],
+    });
+    expect(msg).toContain('TSLA');
+    expect(msg).toContain('$240');
+    expect(msg).toContain('סטופ-לוס');
+  });
+});
 
 describe('buildPeriodReport', () => {
   const base = { title: 'שבועי', equity: 10_200, tradesCount: 0, wins: 0, losses: 0, bestPct: null, worstPct: null };

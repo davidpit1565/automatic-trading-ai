@@ -10,6 +10,8 @@
 
 const STATE_URL =
   'https://raw.githubusercontent.com/davidpit1565/automatic-trading-ai/main/state/autopilot-state.json';
+export const STOCKS_STATE_URL =
+  'https://raw.githubusercontent.com/davidpit1565/automatic-trading-ai/main/state/stocks-state.json';
 
 export interface CloudPosition {
   readonly symbol: string;
@@ -85,19 +87,27 @@ function parseTrade(timestamp: number, detail: string): CloudTrade | null {
 
 export async function fetchCloudState(
   fetchFn: typeof fetch = (input, init) => fetch(input, init),
+  stateUrl: string = STATE_URL,
 ): Promise<CloudState | null> {
   // One automatic retry: a single transient failure no longer flashes
   // "couldn't reach the cloud robot" on the value/history pages.
   for (let attempt = 0; attempt < 2; attempt++) {
-    const state = await fetchCloudStateOnce(fetchFn);
+    const state = await fetchCloudStateOnce(fetchFn, stateUrl);
     if (state) return state;
   }
   return null;
 }
 
-async function fetchCloudStateOnce(fetchFn: typeof fetch): Promise<CloudState | null> {
+/** Same shape, the separate stocks robot's state file. */
+export async function fetchStocksState(
+  fetchFn: typeof fetch = (input, init) => fetch(input, init),
+): Promise<CloudState | null> {
+  return fetchCloudState(fetchFn, STOCKS_STATE_URL);
+}
+
+async function fetchCloudStateOnce(fetchFn: typeof fetch, stateUrl: string): Promise<CloudState | null> {
   try {
-    const response = await fetchFn(`${STATE_URL}?t=${Date.now()}`, { cache: 'no-store' });
+    const response = await fetchFn(`${stateUrl}?t=${Date.now()}`, { cache: 'no-store' });
     if (!response.ok) return null;
     const raw = (await response.json()) as RawState;
 

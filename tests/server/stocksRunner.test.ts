@@ -1,0 +1,122 @@
+/**
+ * `server/stocksRunner.mts` — the stocks paper autopilot, fully isolated
+ * from the crypto runner (own state, own USD portfolio). Same testability
+ * guard as `autopilotRunner.mts`: `main()` only runs when invoked directly,
+ * so importing this module for its exported pieces never triggers a live
+ * cycle against real exchanges.
+ */
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FileStore } from '../../server/fileStore.mts';
+import { buildAlpacaSourceFromEnv, recordEquity, runStocksCycle } from '../../server/stocksRunner.mts';
+import { PaperAutoPilot } from '../../src/core/autopilot/paperAutoPilot';
+import { PersistedAuditLog } from '../../src/core/autopilot/auditLog';
+import { PersistedKillSwitch } from '../../src/core/autopilot/killSwitch';
+import { PortfolioEngine } from '../../src/core/position/portfolioEngine';
+import { PositionEngine } from '../../src/core/position/positionEngine';
+import { TradeJournal } from '../../src/core/position/tradeJournal';
+import { DailyLossTracker } from '../../src/core/risk/dailyLoss';
+import { DEFAULT_RISK_LIMITS } from '../../src/core/risk/riskEngine';
+import type { MarketDataSource } from '../../src/core/data/revolutClient';
+import type { Candle, Instrument } from '../../src/core/types';
+
+let dir: string;
+let store: FileStore;
+
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), 'stocks-runner-'));
+  store = new FileStore(join(dir, 'state.json'));
+});
+afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+describe('buildAlpacaSourceFromEnv', () => {
+  const ORIGINAL = { ...process.env };
+  afterEach(() => {
+    process.env = { ...ORIGINAL };
+  });
+
+  it('returns null when credentials are missing', () => {
+    delete process.env['ALPACA_API_KEY_ID'];
+    delete process.env['ALPACA_API_SECRET_KEY'];
+    expect(buildAlpacaSourceFromEnv()).toBeNull();
+  });
+
+  it('builds a source when both credentials are present', () => {
+    process.env['ALPACA_API_KEY_ID'] = 'key';
+    process.env['ALPACA_API_SECRET_KEY'] = 'secret';
+    expect(buildAlpacaSourceFromEnv()).not.toBeNull();
+  });
+});
+
+describe('recordEquity', () => {
+  it('appends a rounded equity point on every call', async () => {
+    const positions = new PositionEngine(store, new TradeJournal(store));
+    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
+    await recordEquity(store, portfolio, 1000, {});
+    await recordEquity(store, portfolio, 2000, {});
+    const history = store.get<Array<{ at: number; equity: number }>>('equity-history');
+    expect(history).toHaveLength(2);
+    expect(history![0]!.equity).toBe(10_000);
+  });
+});
+
+const AAPL: Instrument = { symbol: 'AAPL', base: 'AAPL', quote: 'USD' };
+const candle = (close: number): Candle => ({ timestamp: 0, open: close, high: close, low: close, close, volume: 1000 });
+
+function fakeSource(): MarketDataSource {
+  return {
+    name: 'fake stocks',
+    getInstruments: async () => ({ ok: true, value: [AAPL] }),
+    getCandles: async () => ({ ok: true, value: [candle(100), candle(101)] }),
+  };
+}
+
+function buildAutopilot(source: MarketDataSource): { autopilot: PaperAutoPilot; portfolio: PortfolioEngine } {
+  const journal = new TradeJournal(store);
+  const positions = new PositionEngine(store, journal);
+  const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
+  const autopilot = new PaperAutoPilot({
+    source,
+    symbols: ['AAPL'],
+    timeframe: '1h',
+    scheduler: { start() {}, stop() {}, isRunning: () => false, intervalMs: () => null },
+    portfolio,
+    positions,
+    killSwitch: new PersistedKillSwitch(store),
+    audit: new PersistedAuditLog(store),
+    getDailyLoss: () => new DailyLossTracker(store).lossToday(Date.now()),
+    riskLimits: DEFAULT_RISK_LIMITS,
+  });
+  return { autopilot, portfolio };
+}
+
+describe('runStocksCycle', () => {
+  it('runs a cycle, records a heartbeat, and records an equity point', async () => {
+    const source = fakeSource();
+    const { autopilot, portfolio } = buildAutopilot(source);
+    const telegram = { token: '', chatId: '' };
+    await runStocksCycle(store, source, autopilot, portfolio, telegram, ['AAPL'], 5_000_000);
+
+    const lastRun = store.get<{ at: number; source: string }>('autopilot-last-run');
+    expect(lastRun?.source).toBe('fake stocks');
+    const history = store.get<Array<{ at: number; equity: number }>>('equity-history');
+    expect(history).toHaveLength(1);
+  });
+
+  it('does not send a Telegram message when nothing traded', async () => {
+    const source = fakeSource();
+    const { autopilot, portfolio } = buildAutopilot(source);
+    const fetchFn = vi.fn();
+    const telegram = { token: 'T', chatId: 'C' };
+    const originalFetch = globalThis.fetch;
+    (globalThis as { fetch?: typeof fetch }).fetch = fetchFn as unknown as typeof fetch;
+    try {
+      await runStocksCycle(store, source, autopilot, portfolio, telegram, ['AAPL'], 5_000_000);
+      expect(fetchFn).not.toHaveBeenCalled();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
