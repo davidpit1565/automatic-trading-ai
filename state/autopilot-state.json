@@ -1126,7 +1126,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1785266990890,
+    "at": 1785268871253,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -9901,6 +9901,30 @@
     {
       "at": 1785266990890,
       "equity": 9553
+    },
+    {
+      "at": 1785267305197,
+      "equity": 9553
+    },
+    {
+      "at": 1785267617462,
+      "equity": 9553
+    },
+    {
+      "at": 1785267932065,
+      "equity": 9553
+    },
+    {
+      "at": 1785268243441,
+      "equity": 9553
+    },
+    {
+      "at": 1785268558466,
+      "equity": 9553
+    },
+    {
+      "at": 1785268871253,
+      "equity": 9553
     }
   ],
   "trade-journal": [
@@ -10524,7 +10548,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -3.63%"
+        "detail": "vs buy-and-hold BTC -3.89%"
       },
       {
         "key": "drawdown",
@@ -10537,7 +10561,7 @@
         "detail": "profit factor 0.34 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — 12 / 14 days of history; after-fee return -3.37%; vs buy-and-hold BTC -3.63%; profit factor 0.34 (needs ≥ 1.2).",
+    "summary": "NOT READY — 12 / 14 days of history; after-fee return -3.37%; vs buy-and-hold BTC -3.89%; profit factor 0.34 (needs ≥ 1.2).",
     "unmet": [
       "days",
       "profitable",
@@ -10617,7 +10641,7 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 10000,
+    "cash": 5989.2036,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 0,
@@ -10627,7 +10651,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1785266990890,
+    "at": 1785268871253,
     "standings": [
       {
         "key": "live-mirror",
@@ -10687,14 +10711,70 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10000,
-        "returnPct": 0,
+        "equity": 9990.281006685502,
+        "returnPct": -0.0971899331449822,
         "trades": 0,
         "winRatePct": null,
         "profitFactor": null,
-        "openPositions": 0,
+        "openPositions": 2,
         "startedAt": 1785254092443
       }
     ]
-  }
+  },
+  "shadow:breakout:open-positions": [
+    {
+      "id": "AVAXEUR:1785268558466:0",
+      "symbol": "AVAXEUR",
+      "openedAt": 1785268558466,
+      "entryPrice": 5.775,
+      "quantity": 346.3203463203463,
+      "initialQuantity": 346.3203463203463,
+      "stopLoss": 5.687891270839655,
+      "takeProfit": 5.949217458320691,
+      "feesPaid": 6,
+      "realizedPnl": 0,
+      "highestPrice": 5.786,
+      "lowestPrice": 5.775,
+      "confidence": 54.21207499583201,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "SOLEUR:1785268558466:1",
+      "symbol": "SOLEUR",
+      "openedAt": 1785268558466,
+      "entryPrice": 65.23,
+      "quantity": 30.64234248045378,
+      "initialQuantity": 30.64234248045378,
+      "stopLoss": 64.2556203529266,
+      "takeProfit": 67.1787592941468,
+      "feesPaid": 5.9964,
+      "realizedPnl": 0,
+      "highestPrice": 65.23,
+      "lowestPrice": 65.17,
+      "confidence": 56.86043946668958,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
+  "shadow:breakout:audit-log": [
+    {
+      "timestamp": 1785268558466,
+      "intentId": "AVAXEUR:1785268558466:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry AVAXEUR: 346.3203463203463 @ 5.775 (stop 5.687891270839655, target 5.949217458320691, confidence 54)"
+    },
+    {
+      "timestamp": 1785268558466,
+      "intentId": "SOLEUR:1785268558466:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry SOLEUR: 30.64234248045378 @ 65.23 (stop 64.2556203529266, target 67.1787592941468, confidence 57)"
+    }
+  ]
 }
