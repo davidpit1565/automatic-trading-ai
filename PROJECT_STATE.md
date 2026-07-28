@@ -517,6 +517,44 @@ The readiness gate correctly blocks real money on this record (requires PF ≥
 1.2 and a positive return; actual PF 0.24, negative). **The open question is no
 longer parameters — it is whether the signal itself has an edge.**
 
+## Shadow evaluation: forward-testing candidates for free (2026-07-28)
+The sweep established that no parameter setting of the current signal has an
+edge, and that hunting one across a 30-day window manufactures an illusion.
+The honest alternative is FORWARD testing, so that is what now runs.
+
+`src/core/autopilot/shadowEvaluator.ts` runs candidate strategies alongside the
+real account on every cloud cycle. Each gets a full `PaperAutoPilot` cycle with
+its **own** portfolio, positions, journal, audit log and kill switch, namespaced
+inside the same state file via `PrefixedStore`. Candidates decide on live bars
+as they arrive, building records they cannot have been fitted to.
+
+Two primitives make it safe and free:
+- **`PrefixedStore`** — namespaced view over a `KeyValueStore`. The engines all
+  persist under fixed keys, so without it two instances silently overwrite each
+  other. `keys()` returns unprefixed keys, so a candidate cannot reach a
+  sibling's data.
+- **`CachingSource`** — memoises `getCandles` for the duration of one cycle, so
+  N candidates cost the requests of one. Failures are never cached (a transient
+  error must not poison the cycle) and the cache is cleared per cycle, never
+  time-based — serving a stale price to a strategy about to decide is exactly
+  the bug this must not add.
+
+Guarantees covered by tests: the real account's state, positions and kill
+switch are provably untouched; a candidate with a blank or duplicate key is
+rejected loudly rather than silently sharing a record; one failing candidate
+never takes the run down.
+
+Current candidates deliberately differ in IDEA, not in nearby values of one
+knob (nearby values of a losing signal all lose): `live-mirror` (production
+baseline, always present for like-for-like), `no-confirm` (what the 4h gate
+contributes), `fixed-stop` (what trailing contributes), `high-conviction`
+(whether selectivity alone helps).
+
+Read the scoreboard with `npx tsx scripts/shadowStandings.mts`. It refuses to
+rank until a candidate clears 20 trades, so an early lead cannot be mistaken
+for a result. Verified end to end against live Kraken: 4 isolated namespaces,
+real account untouched, state file ~4 KB.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.

@@ -31,6 +31,8 @@ import { drawdownBreached } from '../src/core/risk/drawdownBreaker';
 import { DEFAULT_RISK_LIMITS } from '../src/core/risk/riskEngine';
 import { tradeAnalytics } from '../src/core/position/analytics';
 import { maxDrawdownPct } from '../src/core/backtest/metrics';
+import { CachingSource } from '../src/core/data/cachingSource';
+import { runShadowCycle, SHADOW_CANDIDATES } from '../src/core/autopilot/shadowEvaluator';
 import {
   assessRealMoneyReadiness,
   type RealMoneyReadiness,
@@ -266,7 +268,7 @@ async function main(): Promise<void> {
     if (i > 0) await sleep(LOOP_INTERVAL_MS);
     let traded = false;
     try {
-      traded = await runCycle(store, source, autopilot, portfolio, journal, telegram);
+      traded = await runCycle(store, source, autopilot, portfolio, journal, telegram, symbols);
     } catch (cause) {
       // Never let one bad cycle kill the whole run — log and keep looping.
       console.error('Cycle failed:', cause instanceof Error ? cause.message : cause);
@@ -293,6 +295,7 @@ async function runCycle(
   portfolio: PortfolioEngine,
   journal: TradeJournal,
   telegram: { token: string; chatId: string },
+  symbols: readonly string[],
 ): Promise<boolean> {
   const now = Date.now();
   const cycle = await autopilot.runCycleOnce(now);
@@ -385,12 +388,67 @@ async function runCycle(
   }
 
   await maybeSendMoveAlerts(store, source, portfolio, telegram);
-  await recordEquity(store, source, portfolio, journal, now);
+  // One price fetch per cycle, shared by the shadows and the equity record —
+  // each fetching its own would double the requests for identical data.
+  const cyclePrices = await latestPrices(source, symbols);
+  await runShadows(store, source, symbols, now, cyclePrices);
+  await recordEquity(store, source, portfolio, journal, now, cyclePrices);
   await maybeSendSummaries(store, source, portfolio, journal, telegram, now);
   await maybeSendPeriodicReports(store, source, portfolio, journal, telegram, now);
   await maybeSendAllClear(store, telegram, now);
 
   return cycle.opened.length > 0 || cycle.closed.length > 0;
+}
+
+const SHADOW_STANDINGS_KEY = 'shadow-standings';
+
+/**
+ * Forward-test the candidate strategies on this cycle's bars.
+ *
+ * Why forward and not another sweep: `scripts/sweepAutopilot.mts` showed no
+ * parameter setting of the current signal has a positive edge, and hunting one
+ * across a 30-day window is how you manufacture an illusion that dies on real
+ * money. Candidates here decide on data as it arrives, building a record they
+ * could not have been fitted to.
+ *
+ * Isolated by construction (own namespace, own portfolio, own kill switch) and
+ * free in requests (all candidates read through one `CachingSource`). Purely
+ * diagnostic: a failure here is logged and never allowed to affect the real
+ * cycle, which has already completed by this point.
+ */
+async function runShadows(
+  store: FileStore,
+  source: MarketDataSource,
+  symbols: readonly string[],
+  now: number,
+  prices: Readonly<Record<string, number>>,
+): Promise<void> {
+  try {
+    const caching = new CachingSource(source);
+    const { standings, failures } = await runShadowCycle(SHADOW_CANDIDATES, {
+      source: caching,
+      symbols,
+      timeframe: ENTRY_TF,
+      initialCash: INITIAL_CASH,
+      costRate: COST_RATE,
+      store,
+      now,
+      prices,
+    });
+    store.set(SHADOW_STANDINGS_KEY, { at: now, standings });
+    for (const failure of failures) {
+      console.error(`Shadow candidate '${failure.key}' failed: ${failure.reason}`);
+    }
+    const best = [...standings].sort((a, b) => b.returnPct - a.returnPct)[0];
+    if (best) {
+      console.log(
+        `Shadows: ${standings.length} candidates, best '${best.key}' ` +
+          `${best.returnPct >= 0 ? '+' : ''}${best.returnPct.toFixed(2)}% over ${best.trades} trades.`,
+      );
+    }
+  } catch (cause) {
+    console.error('Shadow evaluation skipped:', cause instanceof Error ? cause.message : cause);
+  }
 }
 
 const EQUITY_HISTORY_KEY = 'equity-history';
@@ -411,12 +469,8 @@ async function recordEquity(
   portfolio: PortfolioEngine,
   journal: TradeJournal,
   now: number,
+  prices: Readonly<Record<string, number>>,
 ): Promise<void> {
-  const open = portfolio.openPositions();
-  const prices = await latestPrices(
-    source,
-    open.map((p) => p.symbol),
-  );
   const equity = portfolio.snapshot(prices, now).equity;
   // Track the all-time equity peak for the drawdown circuit-breaker.
   const peak = store.get<number>(EQUITY_PEAK_KEY) ?? equity;
