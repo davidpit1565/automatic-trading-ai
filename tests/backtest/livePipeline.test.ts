@@ -180,4 +180,70 @@ describe('runLivePipelineBacktest', () => {
       expect(withUndefined.closedTrades.length).toBe(withoutOption.closedTrades.length);
     });
   });
+
+  describe('trendExit (hold-through-trend instead of a fixed target)', () => {
+    it('exits on a close below the trailing EMA rather than at the fixed take-profit', () => {
+      // A sustained uptrend followed by a hard reversal: with a fixed target the
+      // position books take-profit on the way up. With trendExit it should
+      // instead ride past that level and only leave once price closes back
+      // below its EMA — i.e. give a DIFFERENT, later exit reason.
+      const up = uptrend(300);
+      const down = generateSyntheticCandles({
+        seed: 11,
+        startPrice: up[up.length - 1]!.close,
+        count: 100,
+        timeframe: '1h',
+        startTimestamp: up[up.length - 1]!.timestamp + 3_600_000,
+        drift: -0.02,
+        volatility: 0.01,
+      });
+      const candles = [...up, ...down];
+
+      const fixed = runLivePipelineBacktest(candles, { symbol: 'UP', timeframe: '1h' });
+      const trendExit = runLivePipelineBacktest(candles, {
+        symbol: 'UP',
+        timeframe: '1h',
+        trendExit: { emaPeriod: 20 },
+      });
+
+      assertSane(trendExit, candles.length);
+      expect(fixed.closedTrades.some((t) => t.reason === 'take-profit')).toBe(true);
+      expect(trendExit.closedTrades.some((t) => t.reason === 'take-profit')).toBe(false);
+      expect(trendExit.closedTrades.some((t) => t.reason === 'trend-exit' || t.reason === 'liquidation')).toBe(true);
+    });
+
+    it('still honours the protective stop-loss intrabar — trend-exit does not override capital protection', () => {
+      // A shorter uptrend that leaves exactly one position open at its final
+      // bar (verified: entry ~221.5, still open — no further bars to hit its
+      // stop or target), then a gap down through that stop: it must fire even
+      // though trendExit is configured, and even though a slow EMA has not
+      // turned yet after a sudden gap.
+      const up = uptrend(200);
+      const crash = generateSyntheticCandles({
+        seed: 13,
+        startPrice: up[up.length - 1]!.close * 0.85, // gaps down well below the entry's stop
+        count: 60,
+        timeframe: '1h',
+        startTimestamp: up[up.length - 1]!.timestamp + 3_600_000,
+        drift: -0.005,
+        volatility: 0.005,
+      });
+      const candles = [...up, ...crash];
+
+      const result = runLivePipelineBacktest(candles, {
+        symbol: 'UP',
+        timeframe: '1h',
+        trendExit: { emaPeriod: 20 },
+      });
+
+      assertSane(result, candles.length);
+      expect(result.closedTrades.some((t) => t.reason === 'stop-loss')).toBe(true);
+    });
+
+    it('is ignored when omitted — the default path takes the fixed take-profit', () => {
+      const candles = uptrend();
+      const withDefault = runLivePipelineBacktest(candles, { symbol: 'UP', timeframe: '1h' });
+      expect(withDefault.closedTrades.some((t) => t.reason === 'take-profit')).toBe(true);
+    });
+  });
 });

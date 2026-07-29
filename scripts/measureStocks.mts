@@ -52,6 +52,7 @@ interface Cand {
   readonly criteria?: { maxRsiForLong?: number; atrTargetMultiple?: number; atrStopMultiple?: number };
   readonly evaluate?: (scan: ScanResult, floor: number) => SignalDecision;
   readonly trailing?: { activateR: number; trailR: number };
+  readonly trendExit?: { emaPeriod: number };
 }
 
 /**
@@ -68,6 +69,16 @@ const CANDIDATES: Cand[] = [
   { name: 'conf 40', minConfidence: 40 },
   { name: 'MEAN-REVERSION', minConfidence: 0, criteria: { maxRsiForLong: 100 }, evaluate: meanReversionSignal },
   { name: 'BREAKOUT', minConfidence: 0, criteria: { maxRsiForLong: 100 }, evaluate: breakoutSignal },
+  // Hold-through-trend: the live config's ~200 trades and 3.9% drawdown against
+  // a basket that tripled says it sits out or caps winners through most of a
+  // large uptrend (see PROJECT_STATE). These replace the fixed take-profit with
+  // a trend-following exit -- close below a trailing EMA -- same entries, same
+  // protective stop, only the "when do we take profit" question changes.
+  { name: 'trend-exit EMA10', minConfidence: 20, trendExit: { emaPeriod: 10 } },
+  { name: 'trend-exit EMA20', minConfidence: 20, trendExit: { emaPeriod: 20 } },
+  { name: 'trend-exit EMA50', minConfidence: 20, trendExit: { emaPeriod: 50 } },
+  { name: 'trend-exit EMA20 rsi65', minConfidence: 20, criteria: { maxRsiForLong: 65 }, trendExit: { emaPeriod: 20 } },
+  { name: 'trend-exit EMA20 conf40', minConfidence: 40, trendExit: { emaPeriod: 20 } },
 ];
 
 const data: { symbol: string; bars: Candle[] }[] = [];
@@ -128,6 +139,7 @@ function measure(c: Cand, from: number, to: number, cost: number): { pf: number;
       criteria: c.criteria,
       ...(c.trailing ? { trailing: c.trailing } : {}),
       ...(c.evaluate ? { evaluate: c.evaluate } : {}),
+      ...(c.trendExit ? { trendExit: c.trendExit } : {}),
     });
     retSum += res.totalReturnPct;
     ddSum += res.maxDrawdownPct;

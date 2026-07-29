@@ -40,6 +40,7 @@
  * Pure: no I/O, no clock, no randomness. Same candles in -> same result out.
  */
 
+import { ema } from '../indicators/ema';
 import { assessTrade, DEFAULT_RISK_LIMITS, type RiskLimits } from '../risk/riskEngine';
 import { trailingStopPrice } from '../risk/trailingStop';
 import { DEFAULT_SCANNER_CONFIG, scanCandles, type ScanResult } from '../scan/marketScanner';
@@ -103,11 +104,26 @@ export interface LivePipelineOptions {
    * use the production signal.
    */
   readonly evaluate?: (scan: ScanResult, minConfidence: number) => SignalDecision;
+  /**
+   * Exit on trend failure instead of a fixed take-profit: once the close drops
+   * below its trailing `emaPeriod`-bar EMA, the position is closed at that
+   * close (not intrabar — this is a signal read once per bar, like the entry,
+   * not a resting order). The protective stop-loss is unchanged and still
+   * checked intrabar first, so a bar that guts the stop is still a stop-loss.
+   *
+   * The measured motivation: every fixed target tried (this harness and the
+   * autopilot sweep) capped winners short of what a real trend can pay for on
+   * equities — see PROJECT_STATE's stocks measurement, where ~200 trades and a
+   * 3.9% drawdown sat out most of a basket that tripled. `takeProfit` is still
+   * computed (needed for the trailing-stop's risk unit) but ignored as an exit
+   * when this is set.
+   */
+  readonly trendExit?: { readonly emaPeriod: number };
 }
 
 /** A closed trade enriched with the exit reason (superset of ClosedTrade). */
 export interface LivePipelineTrade extends ClosedTrade {
-  readonly reason: 'stop-loss' | 'take-profit' | 'liquidation';
+  readonly reason: 'stop-loss' | 'take-profit' | 'trend-exit' | 'liquidation';
 }
 
 /** BacktestResult-compatible so `performanceReport(result, timeframe)` works. */
@@ -203,6 +219,13 @@ export function runLivePipelineBacktest(
     };
   }
 
+  // Computed once over the full series (not per-bar) so a trend-exit config is
+  // O(n) rather than O(n^2); EMA is well-defined incrementally so this carries
+  // no look-ahead — emaSeries[i] depends only on candles[0..i].
+  const trendExitEma = options.trendExit
+    ? ema(candles.map((c) => c.close), options.trendExit.emaPeriod)
+    : null;
+
   let cash = initialCash;
   let feesPaid = 0;
   let position: OpenPosition | null = null;
@@ -224,10 +247,16 @@ export function runLivePipelineBacktest(
 
       // --- Exit check: protect the open position (intrabar). -----------------
       let exitPrice: number | null = null;
-      let reason: 'stop-loss' | 'take-profit' | null = null;
+      let reason: 'stop-loss' | 'take-profit' | 'trend-exit' | null = null;
       if (bar.low <= position.stopLoss) {
         exitPrice = position.stopLoss;
         reason = 'stop-loss';
+      } else if (trendExitEma) {
+        const level = trendExitEma[i] ?? null;
+        if (level !== null && bar.close < level) {
+          exitPrice = bar.close;
+          reason = 'trend-exit';
+        }
       } else if (bar.high >= position.takeProfit) {
         exitPrice = position.takeProfit;
         reason = 'take-profit';
