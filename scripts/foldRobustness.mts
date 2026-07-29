@@ -15,18 +15,39 @@ import { runLivePipelineBacktest, type LivePipelineTrade } from '../src/core/bac
 import { meanReversionSignal, breakoutSignal } from '../src/core/signal/alternativeSignals';
 import type { ScanResult } from '../src/core/scan/marketScanner';
 import type { SignalDecision } from '../src/core/signal/signalEngine';
-import type { Candle } from '../src/core/types';
+import type { Candle, Timeframe } from '../src/core/types';
 
 const LIMIT = 720;
 const FOLDS = 3;
 /** Bars the scanner needs before it can emit a decision at all. */
 const WARMUP = 150;
-const COST = 0.003;
+const COST = Number(process.argv[4] ?? 0.003);
+
+/**
+ * Entry timeframe, and the higher timeframe used for confirmation.
+ *
+ * Worth varying because trading cost is fixed per round trip (~0.6%) while the
+ * size of a typical move is not: on 1h bars a move is ~1.7% so cost eats ~35%
+ * of the risk unit, on 1d bars a move is several percent and the same cost is a
+ * far smaller drag. A longer timeframe also buys a far longer history — 720
+ * daily bars is ~2 years across several market regimes, which is what makes a
+ * fold test meaningful rather than three views of one month.
+ *
+ *   npx tsx scripts/foldRobustness.mts          # 1h entry, 4h confirmation
+ *   npx tsx scripts/foldRobustness.mts 1d 1w    # 1d entry, 1w confirmation
+ *   npx tsx scripts/foldRobustness.mts 1d none  # 1d entry, no confirmation
+ *   npx tsx scripts/foldRobustness.mts 1h 4h 0   # frictionless, to separate
+ *                                                # "no edge" from "edge eaten
+ *                                                # by fees"
+ */
+const ENTRY_TF = (process.argv[2] ?? '1h') as Timeframe;
+const CONFIRM_ARG = process.argv[3] ?? '4h';
+const CONFIRM_TF = CONFIRM_ARG === 'none' ? null : (CONFIRM_ARG as Timeframe);
 
 interface Cand {
   readonly name: string;
   readonly minConfidence: number;
-  readonly criteria?: { maxRsiForLong?: number; atrTargetMultiple?: number };
+  readonly criteria?: { maxRsiForLong?: number; atrTargetMultiple?: number; atrStopMultiple?: number };
   readonly evaluate?: (scan: ScanResult, floor: number) => SignalDecision;
   readonly trailing?: { activateR: number; trailR: number };
 }
@@ -37,6 +58,13 @@ const CANDIDATES: Cand[] = [
   { name: 'MEAN-REVERSION', minConfidence: 0, criteria: { maxRsiForLong: 100 }, evaluate: meanReversionSignal, trailing: { activateR: 1.5, trailR: 1.5 } },
   { name: 'MEAN-REV fixed stop', minConfidence: 0, criteria: { maxRsiForLong: 100 }, evaluate: meanReversionSignal },
   { name: 'BREAKOUT', minConfidence: 0, criteria: { maxRsiForLong: 100 }, evaluate: breakoutSignal },
+  // Trend-following geometry: every trail tested so far armed EARLY (0.4-1.0R)
+  // and was whipsawed out. The classic shape is the opposite — ride far, and
+  // protect only after the move is already large.
+  { name: 'TF far target late trail', minConfidence: 20, criteria: { maxRsiForLong: 65, atrTargetMultiple: 12 }, trailing: { activateR: 2.5, trailR: 2 } },
+  { name: 'TF 20R trail 3/2', minConfidence: 20, criteria: { maxRsiForLong: 65, atrTargetMultiple: 20 }, trailing: { activateR: 3, trailR: 2 } },
+  { name: 'TF 12R trail 2/1.5', minConfidence: 20, criteria: { maxRsiForLong: 65, atrTargetMultiple: 12 }, trailing: { activateR: 2, trailR: 1.5 } },
+  { name: 'MEAN-REV far+late trail', minConfidence: 0, criteria: { maxRsiForLong: 100, atrTargetMultiple: 12 }, evaluate: meanReversionSignal, trailing: { activateR: 2.5, trailR: 2 } },
 ];
 
 const source = new KrakenPublicSource();
@@ -46,13 +74,13 @@ const symbols = inst.value.slice(0, 10).map((i) => i.symbol);
 
 const data: { symbol: string; h1: Candle[]; h4: Candle[] }[] = [];
 for (const symbol of symbols) {
-  const h1 = await source.getCandles(symbol, '1h', LIMIT);
-  const h4 = await source.getCandles(symbol, '4h', LIMIT);
-  if (!h1.ok || h1.value.length < WARMUP * 2) {
-    console.error(`skip ${symbol}`);
+  const entry = await source.getCandles(symbol, ENTRY_TF, LIMIT);
+  const higher = CONFIRM_TF ? await source.getCandles(symbol, CONFIRM_TF, LIMIT) : null;
+  if (!entry.ok || entry.value.length < WARMUP * 2) {
+    console.error(`skip ${symbol}: only ${entry.ok ? entry.value.length : 0} ${ENTRY_TF} bars`);
     continue;
   }
-  data.push({ symbol, h1: h1.value, h4: h4.ok ? h4.value : [] });
+  data.push({ symbol, h1: entry.value, h4: higher?.ok ? higher.value : [] });
 }
 console.error(`loaded ${data.length} symbols\n`);
 
@@ -73,12 +101,13 @@ function measure(cand: Cand, from: number, to: number): { pf: number; ret: numbe
     if (slice.length < WARMUP + 10) continue;
     const res = runLivePipelineBacktest(slice, {
       symbol: d.symbol,
-      timeframe: '1h',
+      timeframe: ENTRY_TF,
       costRate: COST,
       minConfidence: cand.minConfidence,
       criteria: cand.criteria,
-      higherCandles: d.h4,
-      confirmationTimeframe: '4h',
+      ...(CONFIRM_TF && d.h4.length > 0
+        ? { higherCandles: d.h4, confirmationTimeframe: CONFIRM_TF }
+        : {}),
       ...(cand.trailing ? { trailing: cand.trailing } : {}),
       ...(cand.evaluate ? { evaluate: cand.evaluate } : {}),
     });
@@ -104,7 +133,8 @@ function measure(cand: Cand, from: number, to: number): { pf: number; ret: numbe
 const foldSize = Math.floor(LIMIT / FOLDS);
 const num = (v: number, n = 2): string => (v === Infinity ? '999' : v.toFixed(n)).padStart(7);
 
-console.log(`Fold robustness — ${data.length} symbols, ${LIMIT} 1h bars split into ${FOLDS} folds of ~${foldSize} bars (~${Math.round(foldSize / 24)}d each)`);
+const barsPerDay = ENTRY_TF === '1d' ? 1 : ENTRY_TF === '4h' ? 6 : 24;
+console.log(`Fold robustness — ${data.length} symbols, ${LIMIT} ${ENTRY_TF} bars (confirmation: ${CONFIRM_TF ?? 'none'}) split into ${FOLDS} folds of ~${foldSize} bars (~${Math.round(foldSize / barsPerDay)}d each, ${WARMUP} warm-up)`);
 console.log(`after fees ${COST * 100}%/side. A candidate that only works in one fold is noise, not an edge.\n`);
 console.log('candidate'.padEnd(22) + ['fold1 PF', 'fold2 PF', 'fold3 PF', 'folds>1', 'all PF', 'all ret%', 'trades'].map((h) => h.padStart(9)).join(''));
 console.log('-'.repeat(22 + 9 * 7));
