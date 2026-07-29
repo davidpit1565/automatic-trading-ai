@@ -749,6 +749,84 @@ Directions that remain genuinely untested, in descending order of promise:
    disciplined hold with the existing drawdown breaker may be the best
    risk-adjusted option actually available.
 
+## Cross-sectional reversion: the first measured edge, but a lead not a finding (2026-07-29)
+Acting on the ranked list from the cost-sensitivity work above, direction #1.
+Every signal measured before this is ABSOLUTE and per-symbol ("is BTC strong?",
+answered from BTC's own bars). On ten highly-correlated majors that fires on all
+of them at once whenever the market moves — not selection, but leverage on beta,
+and precisely how ADA/LINK/LTC came to stop out together on 2026-07-20. A
+cross-sectional signal ranks the basket instead and holds the top K, so it is
+beta-neutral by construction and its return comes from dispersion.
+
+New harness `scripts/crossSectional.mts`. It is NOT the per-symbol pipeline —
+that evaluates one symbol at a time and cannot express a ranking — so this is a
+portfolio-level simulator: bars aligned across symbols onto common timestamps
+(so a ranking never compares a fresh bar against a stale one), holdings kept as
+quantities so they drift with price between rebalances, cost charged on the
+notional actually traded. The ranking window ends `skip` bars before the entry
+bar and never reads bar `i`, so it cannot see the move it predicts.
+
+**The benchmark is deliberately not profit factor.** PF suits discrete-trade
+strategies; this holds continuously. Since equal-weight buy & hold beat every
+strategy measured this session, the honest bar is **beat the equal-weight basket
+in every fold**.
+
+**On 1h bars: dead.** All 11 variants lose to the basket, by 3.45 to 22.86
+points, none better than 1/3 folds. Expected in hindsight — classic
+cross-sectional momentum is a months-long effect, and ranking on 24–168 *hours*
+with daily rebalancing measures something structurally different.
+
+**On 1d bars (~2 years): cross-sectional REVERSION works — buying the basket's
+laggards, not its leaders.** Best setting `lookback 72d / top 2 / rebalance 24d`:
+
+| | with cost (0.3%/side) | frictionless |
+|---|---|---|
+| return | **+10.07%** | **+20.44%** |
+| equal-weight basket | -30.97% | -30.98% |
+| **edge** | **+41.04 pts** | **+51.42 pts** |
+| folds beating basket | 2/3 | **3/3** |
+
+Every momentum variant got *worse* as the lookback lengthened (lb168 → -76%)
+while reversion got better — a coherent, interpretable direction rather than a
+lucky cell, and it is the first result all session with a positive absolute
+return alongside a large benchmark-relative edge.
+
+### Why it is NOT promoted
+A plateau scan across three axes separates a real effect from a fitted one:
+
+| lookback (top2) | 36 | 48 | 60 | **72** | **90** | 120 |
+|---|---|---|---|---|---|---|
+| edge vs basket | -5.6 | -16.3 | +7.3 | **+41.0** | **+39.5** | **-50.0** |
+
+| breadth (lb72) | top1 | top2 | top3 | top4 | top5 |
+|---|---|---|---|---|---|
+| edge | +31.4 | +41.0 | +22.9 | +24.1 | +10.7 |
+
+| rebalance (lb72/top2) | reb12 | reb24 | reb48 |
+|---|---|---|---|
+| edge | **-1.5** | +41.0 | +8.2 |
+
+- **Breadth is a genuine plateau** — every value positive, degrading smoothly.
+  That part looks like a real effect.
+- **Lookback and rebalance are knife-edge.** 120 days gives **-50**, and
+  rebalancing every 12 days gives **-1.5**. A 12-day change in lookback moves the
+  edge 34 points. That is the overfit signature, on two of three axes.
+- **Max drawdown is 61–83%** across every variant — **7× the 10% readiness
+  limit**, and disqualifying on its own regardless of return.
+- **Fold 3 is -42% to -62% for every variant** (basket -47.18%). The edge comes
+  entirely from folds 1 and 2; in a crash it offers no protection at all, which
+  is reversion's known failure mode — the laggards are falling knives.
+- Absolute return is +10% over two years while carrying 70% drawdown: a poor
+  risk-adjusted outcome even where the relative edge is real.
+
+**Status: the first direction worth pursuing further, explicitly not a
+shippable strategy.** What would raise or kill it: more history than 720 daily
+bars (2 years is 3 folds — too few to trust two knife-edge axes), a crash-regime
+filter to address fold 3, and volatility-scaled sizing to attack the drawdown.
+None of that is worth building until the parameter sensitivity is understood,
+because a 34-point swing per 12 days of lookback may simply mean the effect is
+not there.
+
 ## Learning analysis is display-only (2026-07-28)
 `confidenceCalibration`, `exitReasonBreakdown`, `efficiencyReport` and
 `strategyBreakdown` exist in `src/core/feedback/performanceFeedback.ts` and are
