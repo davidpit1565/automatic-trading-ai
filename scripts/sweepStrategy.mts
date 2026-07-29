@@ -11,7 +11,7 @@ import { runLivePipelineBacktest, type LivePipelineTrade } from '../src/core/bac
 import type { SignalCriteria } from '../src/core/signal/signalEngine';
 import type { Candle } from '../src/core/types';
 
-const BASES = ['BTC', 'ETH', 'SOL', 'XRP', 'ADA'];
+const BASES = ['BTC', 'ETH', 'SOL', 'XRP', 'ADA', 'DOGE', 'LTC', 'DOT', 'LINK', 'AVAX'];
 const LIMIT = 720;
 
 interface Config {
@@ -22,17 +22,43 @@ interface Config {
   readonly trailing?: { activateR: number; trailR: number };
 }
 
-// Baseline first, then candidates informed by the 3/3 stop-outs: stronger
-// trend/evidence, higher conviction, wider stops, don't-chase-RSI, combos.
-// Production baseline (rsi65) vs adding a trailing stop with various settings.
+/**
+ * Configs driven by the live journal's diagnosis (24 closed trades, PF 0.34):
+ *   - Realized R:R is 1.16:1 while a 21% win rate needs 3.80:1 to break even.
+ *   - Only 1 of 24 trades ever reached the trailing stop's 1.5R arming
+ *     threshold, so the trailing stop is effectively dead in production.
+ *   - The 4×ATR target is rarely reached while the 2×ATR stop is hit 19/24.
+ * So the grid attacks the EXIT side: when the trail arms, and how far the
+ * target sits — not more variants of the entry signal (the earlier sweep
+ * already showed nearby entry settings all lose).
+ */
 const PROD = { maxRsiForLong: 65 };
 const CONFIGS: Config[] = [
-  { name: 'PROD (rsi65, fixed stop)', criteria: PROD, minConfidence: 20, confirmation: true },
-  { name: 'PROD + trail 1.0/1.0', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 1, trailR: 1 } },
-  { name: 'PROD + trail 1.0/1.5', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 1, trailR: 1.5 } },
-  { name: 'PROD + trail 1.0/2.0', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 1, trailR: 2 } },
-  { name: 'PROD + trail 0.5/1.0', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 0.5, trailR: 1 } },
-  { name: 'PROD + trail 1.5/1.5', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 1.5, trailR: 1.5 } },
+  { name: 'PROD baseline (live today)', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 1.5, trailR: 1.5 } },
+  { name: 'PROD no trail (control)', criteria: PROD, minConfidence: 20, confirmation: true },
+  // H1: arm the trail where favourable excursions actually peak.
+  { name: 'trail 0.4/0.4', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 0.4, trailR: 0.4 } },
+  { name: 'trail 0.5/0.5', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 0.5, trailR: 0.5 } },
+  { name: 'trail 0.6/0.6', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 0.6, trailR: 0.6 } },
+  { name: 'trail 0.6/1.0', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 0.6, trailR: 1 } },
+  { name: 'trail 0.8/0.8', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 0.8, trailR: 0.8 } },
+  { name: 'trail 1.0/1.0', criteria: PROD, minConfidence: 20, confirmation: true, trailing: { activateR: 1, trailR: 1 } },
+  // H2: fix the payoff — a 21% win rate cannot pay for a 2:1 design.
+  { name: 'target 6R fixed stop', criteria: { ...PROD, atrTargetMultiple: 6 }, minConfidence: 20, confirmation: true },
+  { name: 'target 8R fixed stop', criteria: { ...PROD, atrTargetMultiple: 8 }, minConfidence: 20, confirmation: true },
+  { name: 'target 3R fixed stop', criteria: { ...PROD, atrTargetMultiple: 3 }, minConfidence: 20, confirmation: true },
+  // H3: let winners run AND protect them — the combination, not either alone.
+  { name: 'target 6R + trail 0.5/0.5', criteria: { ...PROD, atrTargetMultiple: 6 }, minConfidence: 20, confirmation: true, trailing: { activateR: 0.5, trailR: 0.5 } },
+  { name: 'target 6R + trail 0.6/1.0', criteria: { ...PROD, atrTargetMultiple: 6 }, minConfidence: 20, confirmation: true, trailing: { activateR: 0.6, trailR: 1 } },
+  { name: 'target 8R + trail 0.5/0.5', criteria: { ...PROD, atrTargetMultiple: 8 }, minConfidence: 20, confirmation: true, trailing: { activateR: 0.5, trailR: 0.5 } },
+  { name: 'target 8R + trail 0.6/1.0', criteria: { ...PROD, atrTargetMultiple: 8 }, minConfidence: 20, confirmation: true, trailing: { activateR: 0.6, trailR: 1 } },
+  // H4: tighter stop widens R:R for free — if it does not just stop out more.
+  { name: 'stop 1.5R target 6R', criteria: { ...PROD, atrStopMultiple: 1.5, atrTargetMultiple: 6 }, minConfidence: 20, confirmation: true },
+  { name: 'stop 2.5R target 8R', criteria: { ...PROD, atrStopMultiple: 2.5, atrTargetMultiple: 8 }, minConfidence: 20, confirmation: true },
+  // H5: costs are 71% of the live loss — does trading less help net of fees?
+  { name: 'conf 35 + trail 0.5/0.5', criteria: PROD, minConfidence: 35, confirmation: true, trailing: { activateR: 0.5, trailR: 0.5 } },
+  { name: 'conf 35 target 6R trail 0.5', criteria: { ...PROD, atrTargetMultiple: 6 }, minConfidence: 35, confirmation: true, trailing: { activateR: 0.5, trailR: 0.5 } },
+  { name: 'conf 50 target 6R trail 0.5', criteria: { ...PROD, atrTargetMultiple: 6 }, minConfidence: 50, confirmation: true, trailing: { activateR: 0.5, trailR: 0.5 } },
 ];
 
 async function main(): Promise<void> {

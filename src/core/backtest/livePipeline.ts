@@ -48,6 +48,7 @@ import {
   DEFAULT_SIGNAL_CRITERIA,
   evaluateScan,
   type SignalCriteria,
+  type SignalDecision,
 } from '../signal/signalEngine';
 import type { Candle, Timeframe } from '../types';
 import {
@@ -93,6 +94,15 @@ export interface LivePipelineOptions {
    * keep a fixed stop.
    */
   readonly trailing?: { readonly activateR: number; readonly trailR: number };
+  /**
+   * Replace the entry decision with a different signal FAMILY (see
+   * `src/core/signal/alternativeSignals.ts`), keeping every other stage —
+   * scan, higher-timeframe gate, risk sizing, exits, costs — identical, so two
+   * families are compared on genuinely equal terms. Receives the same
+   * `(scan, minConfidence)` arguments `evaluateScan` is called with. Omit to
+   * use the production signal.
+   */
+  readonly evaluate?: (scan: ScanResult, minConfidence: number) => SignalDecision;
 }
 
 /** A closed trade enriched with the exit reason (superset of ClosedTrade). */
@@ -243,7 +253,9 @@ export function runLivePipelineBacktest(
       const window = candles.slice(i - scanWindow + 1, i + 1);
       const scan = scanCandles(options.symbol, options.timeframe, window);
       if (scan.ok) {
-        let decision = evaluateScan(scan.value, criteria);
+        let decision = options.evaluate
+          ? options.evaluate(scan.value, minConfidence)
+          : evaluateScan(scan.value, criteria);
         if (decision.kind === 'opportunity' && options.higherCandles) {
           decision = applyHigherTimeframeGate(
             decision,
