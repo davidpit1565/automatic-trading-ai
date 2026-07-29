@@ -129,4 +129,55 @@ describe('runLivePipelineBacktest', () => {
     expect(result.totalReturnPct).toBe(0);
     expect(result.equityCurve.length).toBe(candles.length);
   });
+
+  describe('the evaluate override (comparing signal families)', () => {
+    it('replaces the entry decision and is called with the scan and confidence floor', () => {
+      const candles = uptrend();
+      const seen: { symbol: string; floor: number }[] = [];
+      const result = runLivePipelineBacktest(candles, {
+        symbol: 'UP',
+        timeframe: '1h',
+        minConfidence: 37,
+        evaluate: (scan, floor) => {
+          seen.push({ symbol: scan.symbol, floor });
+          return { kind: 'rejected', symbol: scan.symbol, timeframe: scan.timeframe, reasons: ['stub'] };
+        },
+      });
+
+      // Called on every decided bar, with the pipeline's own scan and floor.
+      expect(seen.length).toBeGreaterThan(0);
+      expect(seen.every((s) => s.symbol === 'UP')).toBe(true);
+      expect(seen.every((s) => s.floor === 37)).toBe(true);
+      // A signal that always rejects must produce a flat, still-valid run — the
+      // override cannot be bypassed by the production signal underneath it.
+      expect(result.closedTrades.length).toBe(0);
+      expect(result.finalEquity).toBe(result.initialCash);
+      assertSane(result, candles.length);
+    });
+
+    it('leaves every other stage intact, so an always-reject override still costs nothing', () => {
+      const candles = uptrend();
+      const overridden = runLivePipelineBacktest(candles, {
+        symbol: 'UP',
+        timeframe: '1h',
+        evaluate: (scan) => ({ kind: 'rejected', symbol: scan.symbol, timeframe: scan.timeframe, reasons: ['stub'] }),
+      });
+
+      expect(overridden.feesPaid).toBe(0);
+      expect(overridden.stats.tradeCount).toBe(0);
+    });
+
+    it('omitting it keeps the production signal — the default path is unchanged', () => {
+      const candles = uptrend();
+      const withoutOption = runLivePipelineBacktest(candles, { symbol: 'UP', timeframe: '1h' });
+      const withUndefined = runLivePipelineBacktest(candles, {
+        symbol: 'UP',
+        timeframe: '1h',
+        ...(undefined as unknown as { evaluate?: undefined }),
+      });
+
+      expect(withUndefined.finalEquity).toBe(withoutOption.finalEquity);
+      expect(withUndefined.closedTrades.length).toBe(withoutOption.closedTrades.length);
+    });
+  });
 });

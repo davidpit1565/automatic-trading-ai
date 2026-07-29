@@ -594,6 +594,89 @@ bars it cannot have been fitted to. If that record holds up over the coming
 weeks, it is the candidate to promote — and that decision will rest on
 out-of-sample evidence rather than on a backtest.
 
+## Fold robustness kills the mean-reversion edge (2026-07-29)
+Goal for the session was "make it ready for real money". The survey started
+from the live journal (24 closed trades, PF 0.34) rather than from a backtest,
+and the diagnosis was arithmetic: **realized R:R is 1.16:1 while a 20.8% win
+rate needs 3.80:1 just to break even.** Costs are **71% of the total loss**
+(238 of 336 EUR over 24 trades). Two more journal facts:
+
+- **The trailing stop is dead code in production.** It arms at 1.5R; the median
+  stop distance is 1.72%, so it needs a **+2.58%** excursion. Exactly **1 of 24**
+  trades ever got there.
+- **Confidence is not predictive.** The two highest-confidence entries (40.1,
+  39.8) both lost; the best trade scored 25. Raising the floor does not select
+  winners, it only shrinks the sample (floor 35 → 17 trades, PF 0.01; floor 50 →
+  0 trades).
+
+**A retrospective counterfactual said arming the trail at 0.6R would remove 84%
+of the loss and flip 8 losers. Measuring it refuted that.** Arithmetic on
+recorded MFE assumes the trade still reaches an excursion that a tight trail
+would have exited before. On 10 symbols × 720 1h bars:
+
+| Config | Return | MaxDD | Trades | Win% | PF | OOS-PF |
+|---|---|---|---|---|---|---|
+| **target 3R** | **-0.54%** | **0.92%** | 35 | **37.1%** | **0.40** | **0.49** |
+| PROD baseline (live) | -0.71% | 1.10% | 40 | 22.5% | 0.30 | 0.36 |
+| PROD no trail (control) | -0.86% | 1.25% | 40 | 22.5% | 0.31 | 0.30 |
+| trail 0.6/0.6 | -0.76% | 0.98% | 51 | 25.5% | 0.17 | 0.21 |
+| trail 0.5/0.5 | -0.92% | 1.01% | 57 | 15.8% | 0.04 | 0.06 |
+| target 6R / 8R | -1.11% / -1.22% | — | 38 | 10.5% / 7.9% | 0.18 / 0.13 | 0.28 / 0.08 |
+
+Early trailing is **worse**, not better: trade count rises (40 → 57) and win
+rate falls (22.5% → 15.8%) because the tight stop is whipsawed out before the
+move happens. Wider targets are also worse — the target simply is not reached.
+The only improvement was the **opposite** of the hypothesis: a *closer* target.
+All 20 configs stayed negative while buy & hold returned **+4.57%**.
+
+### The new gate: `scripts/foldRobustness.mts`
+A single full-window PF is cheap to manufacture. This splits history into
+consecutive non-overlapping folds (each with its own warm-up prefix, so a fold
+cannot borrow bars it is meant to exclude) and reports pooled PF **per fold**.
+
+| Candidate | fold1 | fold2 | fold3 | folds PF>1 | all PF |
+|---|---|---|---|---|---|
+| PROD (live today) | 0.00 | 0.49 | 0.27 | **0/3** | 0.30 |
+| PROD target 3R | 0.14 | 0.45 | 0.40 | **0/3** | 0.40 |
+| MEAN-REVERSION | 0.14 | 0.48 | 0.38 | **0/3** | 0.57 |
+| MEAN-REV fixed stop | 0.20 | 0.48 | 0.35 | **0/3** | 0.53 |
+| BREAKOUT | 0.00 | 0.78 | 0.35 | **0/3** | 0.45 |
+
+**Nothing clears PF 1 in any fold.** The mean-reversion result recorded above
+(PF 1.578, OOS-PF 2.012) does not survive: a single mid-point split can pass on
+one lucky stretch, three folds cannot. The decision not to promote it was
+right, and now rests on stronger evidence than the bar it was originally held
+to. Keep it as a shadow candidate; do not promote on backtest evidence.
+
+### Nothing shipped to the strategy, deliberately
+`target 3R` is better than live on **every** measured axis including
+out-of-sample — and was still **not** shipped, for two reasons. It fails the
+fold gate above (0/3), and `atrTargetMultiple: 3` over `atrStopMultiple: 2`
+gives rewardRisk of exactly **1.50**, sitting precisely on
+`DEFAULT_RISK_LIMITS.minRewardRisk` (1.5). The check is `rewardRisk <
+minRewardRisk`, so it passes today by zero margin: any later nudge to that limit
+would silently mute the entire robot. Shipping a losing config onto a rejection
+boundary is not capital protection.
+
+**What shipped is measurement capability, not strategy:**
+- `livePipeline` gained an optional `evaluate` hook, mirroring the one
+  `PaperAutoPilot` already had, so the FAST backtest rig can compare signal
+  families (previously only the slow autopilot rig could). Default path
+  unchanged; covered by three tests including a default-equivalence test.
+- `scripts/foldRobustness.mts` — the per-fold stability gate.
+- `scripts/sweepStrategy.mts` widened from 5 to all **10** traded symbols, and
+  its grid re-pointed at the exit side per the journal diagnosis.
+
+### Honest state of real-money readiness
+2 of 6 criteria met (`trades` 24/20, `drawdown` 5.2%/10%). Unmet: `days`
+(13/14), `profitable` (-3.37%), `benchmark` (-4.24% vs BTC), `consistency` (PF
+0.34, needs 1.2). **No configuration measured to date has a positive edge on
+real data**, so the gap to real money is a strategy-discovery problem, not a
+tuning or engineering one. The forward test is the only instrument that can
+settle it, and at 1–2 trades per candidate per two days it needs roughly 40 days
+to reach a 20-trade sample. Shadow records started **2026-07-28** (the main
+journal starts 2026-07-14; the shadows are newer, not reset).
+
 ## Learning analysis is display-only (2026-07-28)
 `confidenceCalibration`, `exitReasonBreakdown`, `efficiencyReport` and
 `strategyBreakdown` exist in `src/core/feedback/performanceFeedback.ts` and are
