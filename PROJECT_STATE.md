@@ -677,6 +677,78 @@ settle it, and at 1–2 trades per candidate per two days it needs roughly 40 da
 to reach a 20-trade sample. Shadow records started **2026-07-28** (the main
 journal starts 2026-07-14; the shadows are newer, not reset).
 
+## There is no raw edge — fees are not the cause (2026-07-29)
+Continuation of the fold-gate work above, extending the search along the two
+axes it had not covered: exit GEOMETRY beyond what was swept, and TIMEFRAME.
+Both were refuted, and then a third measurement made the first two moot.
+
+**Trend-following geometry — refuted.** Every trail tested previously armed
+EARLY (0.4–1.0R) and was whipsawed out, so the untested shape was the classic
+opposite: ride far, protect only after the move is already large. Far target
+(12R/20R) with a late trail (arm 2–3R, trail 1.5–2R) is the **worst** result
+recorded: PF 0.04–0.11, 0/3 folds. Trade count barely moves (38–39 vs 40), which
+locates the failure precisely — the entries are the same, only the exits differ,
+and no exit arrangement rescues them. Combined with the earlier sweep this now
+covers tight/wide stops, near/far targets, and early/late/absent trailing.
+
+**Daily bars — refuted.** Motivated by cost-to-move ratio: cost is fixed per
+round trip (~0.6%) while move size is not, so on 1h bars (~1.7% moves) cost eats
+~35% of the risk unit while on 1d bars it is a far smaller drag. 720 daily bars
+is also ~2 years across several regimes, which makes folds genuinely
+independent rather than three views of one month. `foldRobustness.mts` gained
+`ENTRY_TF`/`CONFIRM_TF` arguments for this. Result on 1d/1w: everything still
+fails. BREAKOUT scored **1/3** (fold2 PF 1.40, but 0.21 and 0.13 either side) —
+single-regime luck, exactly what the gate exists to catch.
+
+### The decisive measurement: cost sensitivity
+The remaining open question separated two very different worlds — is there a
+real edge that fees consume, or no edge at all? Same candidates, three cost
+levels, including **frictionless**:
+
+| Candidate | PF @ 0.3%/side | PF @ 0.15%/side | PF @ **zero cost** | folds>1 @ zero |
+|---|---|---|---|---|
+| MEAN-REVERSION | 0.57 | 0.79 | **1.11** (ret +0.06%) | 1/3 |
+| PROD (live) | 0.30 | 0.44 | **0.66** | 1/3 |
+| BREAKOUT | 0.45 | 0.63 | **0.89** | 1/3 |
+| PROD target 3R | 0.40 | 0.57 | **0.81** | 1/3 |
+| TF far + late trail | 0.10 | 0.15 | **0.21** | 0/3 |
+
+**At zero cost nothing clears the gate.** The best candidate returns +0.06% over
+30 days — indistinguishable from flat — and is still unstable at 1/3 folds.
+
+Halving cost lifts PF by roughly 50% (PROD 0.30 → 0.44 → 0.66), so the drag is
+real and worth quantifying. But it starts from 0.30 and cannot reach 1.2:
+**fees turn "no edge" into "clear loss"; they do not create the loss.** This
+rules out the entire class of cost-reduction fixes — maker/limit orders, lower
+frequency, a cheaper venue — as a *path to profitability*. They improve a losing
+system; they cannot make it a winning one.
+
+### Scope of what has now been refuted
+3 timeframes (1h, 4h, 1d) × 3 entry families (momentum, mean-reversion,
+breakout) × ~25 exit configurations, on the 10 traded majors, at 3 cost levels,
+every result fold-validated. Plus, separately measured and rejected the same
+week: 5 additional altcoins (BCH/ATOM/NEAR/UNI/ALGO — aggregate PF 0.31), and
+confidence floors 20/30/35/40/50.
+
+**Conclusion: the standard-TA signal vocabulary in `marketScanner` has no
+exploitable predictive content on long-only crypto majors, independent of
+execution cost.** Further tuning inside this framework is not a promising use of
+effort, and that is a measured statement rather than a guess.
+
+Directions that remain genuinely untested, in descending order of promise:
+1. **Cross-sectional relative strength** — rank the 10 majors against each other
+   and hold the strongest relative to the basket. Every signal tried so far is
+   absolute and per-symbol; this is a portfolio-level signal, a different kind of
+   input rather than a different threshold on the same input.
+2. **US equities** — the isolated Alpaca arm is built and has never been
+   measured. Momentum has a far better documented record on equities than on
+   crypto majors, and the arm is already isolated so it risks nothing here.
+3. **Long/short or market-neutral** — long-only is structurally handicapped in a
+   flat-to-down market. Architecturally significant, and raises real-money risk.
+4. **Accept buy & hold** — it beat every strategy tested, in every window. A
+   disciplined hold with the existing drawdown breaker may be the best
+   risk-adjusted option actually available.
+
 ## Learning analysis is display-only (2026-07-28)
 `confidenceCalibration`, `exitReasonBreakdown`, `efficiencyReport` and
 `strategyBreakdown` exist in `src/core/feedback/performanceFeedback.ts` and are
