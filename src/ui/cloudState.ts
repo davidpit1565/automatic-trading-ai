@@ -8,6 +8,8 @@
  * can show a friendly message instead of breaking.
  */
 
+import { formatPrice } from './format';
+
 const STATE_URL =
   'https://raw.githubusercontent.com/davidpit1565/automatic-trading-ai/main/state/autopilot-state.json';
 export const STOCKS_STATE_URL =
@@ -71,6 +73,21 @@ interface RawState {
   };
 }
 
+/**
+ * Round the raw numbers inside an audit note for display.
+ *
+ * The audit log is an immutable record and stores full float precision, so an
+ * entry note reads `stop 0.7205806407366144, target 0.7389387185267711` — 17
+ * digits of noise in a phone-sized list. Rounding belongs here, at the
+ * presentation layer, rather than in the record itself: it also cleans up notes
+ * already written. Non-numeric notes (`stop-loss`, `take-profit`) pass through
+ * untouched, and `formatPrice` keeps 4 significant digits below 1 so a
+ * sub-cent crypto level is not flattened to 0.00.
+ */
+export function tidyNoteNumbers(note: string): string {
+  return note.replace(/\d+\.\d{5,}/g, (n) => formatPrice(Number(n)));
+}
+
 /** Parse "paper entry/exit SYMBOL: qty @ price (note)" into a trade. */
 function parseTrade(timestamp: number, detail: string): CloudTrade | null {
   const match = /^paper (entry|exit) (\S+): ([\d.]+) @ ([\d.]+)(?:\s*\((.*)\))?/.exec(detail);
@@ -81,7 +98,7 @@ function parseTrade(timestamp: number, detail: string): CloudTrade | null {
     symbol: match[2]!,
     quantity: Number(match[3]),
     price: Number(match[4]),
-    note: match[5] ?? null,
+    note: match[5] ? tidyNoteNumbers(match[5]) : null,
   };
 }
 

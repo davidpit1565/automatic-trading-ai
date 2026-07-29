@@ -1,0 +1,106 @@
+/**
+ * Tests for the cloud-state reader — the layer that turns the robot's committed
+ * state file into what the app shows. Previously untested, which is how raw
+ * 17-digit floats reached the History list in production.
+ */
+
+import { describe, expect, it, vi } from 'vitest';
+import { fetchCloudState, fetchStocksState, tidyNoteNumbers, STOCKS_STATE_URL } from '../../src/ui/cloudState';
+
+/** A state file shaped exactly like the ones the runners commit. */
+function stateFile(auditDetails: string[]): string {
+  return JSON.stringify({
+    'portfolio-engine': { cash: 7998, initialCash: 10_000, baseCurrency: 'USD' },
+    'open-positions': [{ symbol: 'V', quantity: 5.373310765428119, entryPrice: 372.21, openedAt: 1785344321660 }],
+    'audit-log': auditDetails.map((detail, i) => ({ timestamp: 1785344321660 + i, event: 'filled', detail })),
+    'autopilot-last-run': { at: 1785344321660 },
+    'equity-history': [{ at: 1785344321660, equity: 9998 }],
+  });
+}
+
+const okFetch = (body: string): typeof fetch =>
+  vi.fn(async () => new Response(body, { status: 200 })) as unknown as typeof fetch;
+
+describe('tidyNoteNumbers', () => {
+  it('rounds the long floats an entry note carries', () => {
+    expect(tidyNoteNumbers('stop 365.69091538956104, target 385.24816922087786, confidence 31')).toBe(
+      'stop 365.69, target 385.25, confidence 31',
+    );
+  });
+
+  it('keeps significant digits on sub-1 crypto levels instead of flattening them', () => {
+    // 0.0635... must not become "0.06" — that loses the level entirely.
+    const tidied = tidyNoteNumbers('stop 0.06356005875727756, target 0.06592328248544485, confidence 40');
+    expect(tidied).toBe('stop 0.06356, target 0.06592, confidence 40');
+    expect(tidied).not.toContain('0.06,');
+  });
+
+  it('leaves non-numeric exit reasons untouched', () => {
+    expect(tidyNoteNumbers('stop-loss')).toBe('stop-loss');
+    expect(tidyNoteNumbers('take-profit')).toBe('take-profit');
+  });
+
+  it('leaves already-short numbers alone', () => {
+    expect(tidyNoteNumbers('confidence 31, adx 22.5')).toBe('confidence 31, adx 22.5');
+  });
+});
+
+describe('fetchCloudState', () => {
+  it('parses a stocks entry, including a one-character ticker', async () => {
+    const state = await fetchCloudState(
+      okFetch(stateFile(['paper entry V: 5.373310765428119 @ 372.21 (stop 365.69091538956104, target 385.24816922087786, confidence 31)'])),
+    );
+
+    expect(state).not.toBeNull();
+    expect(state!.baseCurrency).toBe('USD');
+    expect(state!.positions).toHaveLength(1);
+    expect(state!.positions[0]!.symbol).toBe('V');
+    const trade = state!.history[0]!;
+    expect(trade.kind).toBe('buy');
+    expect(trade.symbol).toBe('V');
+    expect(trade.price).toBe(372.21);
+    // The note reaching the UI is rounded, not raw float noise.
+    expect(trade.note).toBe('stop 365.69, target 385.25, confidence 31');
+  });
+
+  it('parses an exit and marks it a sell', async () => {
+    const state = await fetchCloudState(okFetch(stateFile(['paper exit DOTEUR: 2629.060537225495 @ 0.7202 (stop-loss)'])));
+    expect(state!.history[0]!.kind).toBe('sell');
+    expect(state!.history[0]!.note).toBe('stop-loss');
+  });
+
+  it('orders history newest-first', async () => {
+    const state = await fetchCloudState(
+      okFetch(stateFile([
+        'paper entry AAA: 1 @ 10 (stop-loss)',
+        'paper entry BBB: 1 @ 11 (stop-loss)',
+      ])),
+    );
+    expect(state!.history.map((t) => t.symbol)).toEqual(['BBB', 'AAA']);
+  });
+
+  it('drops audit lines it cannot parse rather than throwing', async () => {
+    const state = await fetchCloudState(okFetch(stateFile(['halted: daily loss limit reached'])));
+    expect(state!.history).toEqual([]);
+  });
+
+  it('returns null on a failed fetch instead of breaking the view', async () => {
+    const failing = vi.fn(async () => new Response('', { status: 404 })) as unknown as typeof fetch;
+    expect(await fetchCloudState(failing)).toBeNull();
+    // Two attempts: one transient failure must not flash an error at the user.
+    expect(failing).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('fetchStocksState', () => {
+  it('reads the separate stocks state file, not the crypto one', async () => {
+    const seen: string[] = [];
+    const spy: typeof fetch = async (input) => {
+      seen.push(String(input));
+      return new Response(stateFile(['paper entry V: 1 @ 372.21 (stop-loss)']), { status: 200 });
+    };
+    await fetchStocksState(spy);
+    expect(seen[0]).toContain(STOCKS_STATE_URL);
+    expect(seen[0]).toContain('stocks-state.json');
+  });
+});
