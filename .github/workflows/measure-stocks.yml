@@ -1,0 +1,38 @@
+# Measure the US-stocks arm on real Alpaca history.
+#
+# Manual only. The stocks arm's strategy constants are engine defaults rather
+# than measured values, and measuring them needs the Alpaca credentials, which
+# live as repo secrets — so the measurement runs here and prints its scoreboard
+# to the job log. It reads market data only: no state is written, nothing is
+# committed, and no trading decision is taken.
+
+name: Measure stocks arm (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      timeframe:
+        description: 'Entry timeframe to measure (1d gives ~5 years of history, 1h ~180 days)'
+        type: choice
+        default: '1d'
+        options: ['1d', '1h']
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Measure
+        env:
+          ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
+          ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
+        run: npx tsx scripts/measureStocks.mts "${{ inputs.timeframe }}"
