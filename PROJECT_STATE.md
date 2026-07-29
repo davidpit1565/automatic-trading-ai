@@ -827,6 +827,56 @@ None of that is worth building until the parameter sensitivity is understood,
 because a 34-point swing per 12 days of lookback may simply mean the effect is
 not there.
 
+## Stocks measured: positive expectancy, but far worse than holding (2026-07-29)
+First measurement of the stocks arm on real Alpaca history, closing the gap that
+its constants were engine DEFAULTS. Pre-stated bar, fixed before any number was
+seen: **PF > 1.2 in EVERY fold AND beat the equal-weight basket.**
+
+A first run was **void**: it requested `adjustment=raw`, and the basket of ten
+mega-caps returning only +16.55% over five years gave it away (AMZN/GOOGL 20-for-1
+and TSLA 3-for-1 in 2022, NVDA 10-for-1 in 2024 — a 20-for-1 split is a ~95%
+single-bar collapse on unadjusted prices). Fixed to `adjustment=all`; the basket
+went **+16.55% -> +173.98%**, which is the measure of how badly splits corrupted
+it. The live runner read the same series, so this was a production bug too.
+
+Clean result — 1251 1d bars (~5y), 10 symbols, live cost 0.10%/side:
+
+| Candidate | f1 PF | f2 PF | f3 PF | folds | all PF | ret% | basket | maxDD |
+|---|---|---|---|---|---|---|---|---|
+| **LIVE (trading today)** | 0.76 | 2.14 | 1.46 | **2/3** | **1.77** | **+7.33** | **+173.98** | 3.88 |
+| target 6R | 0.62 | 2.33 | 1.56 | 2/3 | 1.91 | +8.59 | +173.98 | 4.36 |
+| rsi ceiling 65 | 1.01 | 2.21 | 1.54 | 2/3 | 1.79 | +5.52 | +173.98 | 3.85 |
+| conf 40 | 0.55 | 2.35 | 3.50 | 2/3 | 2.49 | +3.42 | +173.98 | 1.99 |
+| MEAN-REVERSION | 0.97 | 3.59 | 2.47 | 2/3 | 2.02 | +2.93 | +173.98 | 2.32 |
+| BREAKOUT | 0.98 | 3.12 | 1.66 | 2/3 | 1.99 | +7.76 | +173.98 | 3.83 |
+
+Basket per fold: **-10.02%, +117.80%, +28.39%**.
+
+**The new fact: momentum has positive expectancy on US equities.** PF 1.60-2.49
+for every candidate, where nothing on crypto exceeded 0.57 — the first PF above
+1.2 measured all session. The asset class difference is real.
+
+**The hard fact: it fails the bar on both counts.**
+1. Every candidate is **2/3 folds**, all failing fold 1 (PF 0.55-1.01). Fold 1 is
+   where the basket lost 10% — so it fails in the down regime, exactly where
+   protection would be the point.
+2. **+7.33% against +173.98%.** The strategy captures ~4% of buy-and-hold on the
+   same ten names. Risk-adjusted does not rescue it: return/maxDD is ~1.9 for the
+   strategy against >=17 for the basket.
+
+Selection bias must be stated: these ten are today's mega-caps, chosen with
+hindsight, so +174% is inflated. But the same bias inflates the candidates' PF,
+so it is not a reason to discount the gap.
+
+**Conclusion: the arm as configured is strictly worse than holding the same ten
+stocks, and is not a path to real money.** Nothing promoted. The structural
+reason is visible in the numbers — ~200 trades and a 3.9% max drawdown against a
+basket that tripled: the strategy is out of the market or capping winners
+through most of a large uptrend. Anything worth trying next has to hold, not
+trade: no fixed target, exit only on trend failure. Note that far targets were
+already tested here (6R -> +8.59%) and on crypto (#31, worst result recorded), so
+widening the target alone is not it.
+
 ## Learning analysis is display-only (2026-07-28)
 `confidenceCalibration`, `exitReasonBreakdown`, `efficiencyReport` and
 `strategyBreakdown` exist in `src/core/feedback/performanceFeedback.ts` and are
