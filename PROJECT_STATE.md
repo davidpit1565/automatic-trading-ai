@@ -877,6 +877,55 @@ trade: no fixed target, exit only on trend failure. Note that far targets were
 already tested here (6R -> +8.59%) and on crypto (#31, worst result recorded), so
 widening the target alone is not it.
 
+## Trend-exit measured: the hypothesis was half right, and half wasn't (2026-07-29)
+Acted on the diagnosis from the stocks measurement above: ~200 trades and a
+3.9% drawdown against a basket that tripled reads as "sits out, or caps
+winners, through most of the uptrend." The proposed fix was to hold through
+trend instead of exiting at a fixed target — `livePipeline` gained an optional
+`trendExit` (close < trailing EMA, protective stop-loss unchanged and still
+checked intrabar first) and `measureStocks.mts` gained 5 candidates to test it.
+
+**Result at live cost (0.10%/side), same 1251 1d bars / 10 symbols / 3 folds:**
+
+| Candidate | f1 PF | f2 PF | f3 PF | folds | all PF | ret% | basket | maxDD | trades |
+|---|---|---|---|---|---|---|---|---|---|
+| LIVE (fixed target) | 0.76 | 2.14 | 1.45 | 2/3 | 1.76 | +7.31 | +174.03 | 3.88 | 203 |
+| trend-exit EMA10 | 0.99 | 1.66 | 1.54 | 2/3 | 1.51 | +4.08 | +174.03 | 4.13 | 300 |
+| trend-exit EMA20 | 1.04 | 2.55 | 1.49 | 2/3 | 1.94 | +6.47 | +174.03 | 4.27 | 170 |
+| **trend-exit EMA50** | 1.10 | 4.00 | 2.08 | 2/3 | 2.72 | **+8.76** | +174.03 | 4.91 | 110 |
+| trend-exit EMA20 rsi65 | 0.97 | 2.35 | 1.74 | 2/3 | 1.98 | +4.92 | +174.03 | 4.21 | 144 |
+| trend-exit EMA20 conf40 | 0.88 | 2.28 | 2.26 | 2/3 | 2.27 | +2.24 | +174.03 | 2.37 | 57 |
+
+**The hypothesis does not hold.** Even the best variant (EMA50) only reaches
++8.76% — captures ~5.0% of the basket, against LIVE's ~4.2%. A marginal gain,
+not a fix. EMA10 is outright worse (+4.08%, 300 trades — the tight EMA is
+whipsawed by ordinary pullbacks). Every variant still fails the fold gate on
+both counts: 2/3 folds (all fail fold 1, same as everything measured this
+session), and none within reach of the basket.
+
+**Why holding longer once IN a trade did not unlock the run: the entries are
+still the bottleneck, not the exits.** EMA20 still produces 170 trades over 5
+years — nowhere near "buy once and hold." The entry criteria (RSI ceiling,
+confidence floor, momentum signal) are still selective and still get exited on
+ordinary pullbacks below the EMA, so the strategy is still in and out through
+most of the run rather than continuously invested. Changing only the exit
+mechanism cannot fix a problem that is upstream of it.
+
+Drawdown also moved the wrong way for the best variant (3.88% -> 4.91%):
+holding longer per trade means give-backs are individually larger even though
+there are fewer of them, which is the expected trade-off and does not net out
+favourably here.
+
+**Conclusion: trend-exit is not the fix, and is not promoted.** The remaining
+untested lever, if this is pursued further, is entry frequency/selectivity
+itself — a mechanism that stays invested through ordinary pullbacks rather
+than one that exits and re-enters on every EMA cross. That is a different
+question from "when do we take profit" and has not been measured.
+
+`src/core/backtest/livePipeline.ts` keeps the `trendExit` option (tested,
+inert by default) as a capability for measuring that or related ideas later;
+nothing in production reads it.
+
 ## Learning analysis is display-only (2026-07-28)
 `confidenceCalibration`, `exitReasonBreakdown`, `efficiencyReport` and
 `strategyBreakdown` exist in `src/core/feedback/performanceFeedback.ts` and are
