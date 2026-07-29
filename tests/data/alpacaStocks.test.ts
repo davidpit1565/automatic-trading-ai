@@ -67,6 +67,33 @@ describe('getCandles', () => {
     expect(seen.url).toContain('sort=desc');
   });
 
+  it('requests split-and-dividend-adjusted bars by default', async () => {
+    // With adjustment=raw a 20-for-1 split (AMZN/GOOGL 2022, NVDA 10-for-1
+    // 2024) is a ~95% single-bar collapse: it corrupts every indicator reading
+    // across it, stops out a held position on an event where no value was lost,
+    // and makes a backtest spanning the split measure the artefact.
+    const seen: { headers?: Headers; url?: string } = {};
+    const source = makeSource(mockFetch({ bars: [alpacaBar('2023-11-14T14:00:00Z', 185, 1000)] }, 200, seen));
+    await source.getCandles('AAPL', '1d', 1);
+
+    expect(seen.url).toContain('adjustment=all');
+    expect(seen.url).not.toContain('adjustment=raw');
+  });
+
+  it('honours an explicit adjustment when the unadjusted print is wanted', async () => {
+    const seen: { headers?: Headers; url?: string } = {};
+    const source = new AlpacaStockSource({
+      apiKeyId: 'KEY',
+      apiSecretKey: 'SECRET',
+      fetchFn: mockFetch({ bars: [alpacaBar('2023-11-14T14:00:00Z', 185, 1000)] }, 200, seen),
+      now: () => NOW,
+      adjustment: 'raw',
+    });
+    await source.getCandles('AAPL', '1d', 1);
+
+    expect(seen.url).toContain('adjustment=raw');
+  });
+
   it('maps every supported timeframe to its Alpaca string', async () => {
     const cases: [string, string][] = [
       ['1m', '1Min'], ['5m', '5Min'], ['15m', '15Min'], ['30m', '30Min'],

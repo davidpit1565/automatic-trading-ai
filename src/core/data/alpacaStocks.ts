@@ -9,7 +9,7 @@
  * trading this project is meant to sit on top of.
  *
  * API: GET https://data.alpaca.markets/v2/stocks/{symbol}/bars
- *   ?timeframe=1Hour&start=...&sort=desc&limit=...&adjustment=raw&feed=iex
+ *   ?timeframe=1Hour&start=...&sort=desc&limit=...&adjustment=all&feed=iex
  * Headers: APCA-API-KEY-ID, APCA-API-SECRET-KEY
  * Response: { bars: [{t,o,h,l,c,v,n,vw}], symbol, next_page_token }
  *
@@ -83,6 +83,17 @@ export interface AlpacaStockSourceOptions {
   readonly timeoutMs?: number;
   /** 'iex' (free, delayed) or 'sip' (paid, real-time). Defaults to the free feed. */
   readonly feed?: 'iex' | 'sip';
+  /**
+   * Corporate-action adjustment. Defaults to `'all'` (splits + dividends),
+   * which is the only correct choice for any series an indicator reads.
+   *
+   * With `'raw'`, a 20-for-1 split (AMZN and GOOGL in 2022, NVDA 10-for-1 in
+   * 2024) appears as a ~95% single-bar collapse: EMAs and ATR are corrupted,
+   * a held position stops out on an event where no value was lost, and a
+   * backtest spanning the split measures the artefact rather than the market.
+   * Only pass `'raw'` when the unadjusted print is specifically what is wanted.
+   */
+  readonly adjustment?: 'raw' | 'split' | 'dividend' | 'all';
 }
 
 export class AlpacaStockSource implements MarketDataSource {
@@ -93,6 +104,7 @@ export class AlpacaStockSource implements MarketDataSource {
   private readonly now: () => number;
   private readonly timeoutMs: number;
   private readonly feed: 'iex' | 'sip';
+  private readonly adjustment: 'raw' | 'split' | 'dividend' | 'all';
 
   constructor(options: AlpacaStockSourceOptions) {
     if (!options.apiKeyId || !options.apiSecretKey) {
@@ -104,6 +116,7 @@ export class AlpacaStockSource implements MarketDataSource {
     this.now = options.now ?? (() => Date.now());
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.feed = options.feed ?? 'iex';
+    this.adjustment = options.adjustment ?? 'all';
   }
 
   async getInstruments(): Promise<Result<Instrument[]>> {
@@ -121,7 +134,7 @@ export class AlpacaStockSource implements MarketDataSource {
     const url =
       `${BASE_URL}/stocks/${encodeURIComponent(symbol)}/bars` +
       `?timeframe=${encodeURIComponent(alpacaTf)}&start=${encodeURIComponent(start)}` +
-      `&sort=desc&limit=${cappedLimit}&adjustment=raw&feed=${this.feed}`;
+      `&sort=desc&limit=${cappedLimit}&adjustment=${this.adjustment}&feed=${this.feed}`;
 
     const payload = await this.getJson(url);
     if (!payload.ok) return payload;
