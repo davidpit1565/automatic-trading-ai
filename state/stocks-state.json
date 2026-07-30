@@ -1,54 +1,15 @@
 {
   "portfolio-engine": {
-    "cash": 5996.653198151581,
+    "cash": 9868.571459663171,
     "initialCash": 10000,
     "baseCurrency": "USD",
-    "closedRealizedPnl": 0,
+    "closedRealizedPnl": -127.42919288243404,
     "dayAnchor": {
-      "day": "2026-07-29",
-      "equity": 10000
+      "day": "2026-07-30",
+      "equity": 9868.571459663171
     }
   },
-  "open-positions": [
-    {
-      "id": "V:1785344321660:0",
-      "symbol": "V",
-      "openedAt": 1785344321660,
-      "entryPrice": 372.21,
-      "quantity": 5.373310765428119,
-      "initialQuantity": 5.373310765428119,
-      "stopLoss": 365.69091538956104,
-      "takeProfit": 385.24816922087786,
-      "feesPaid": 2.0000000000000004,
-      "realizedPnl": 0,
-      "highestPrice": 372.21,
-      "lowestPrice": 368.76,
-      "confidence": 30.88711060170363,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "AAPL:1785345729273:1",
-      "symbol": "AAPL",
-      "openedAt": 1785345729273,
-      "entryPrice": 343.415,
-      "quantity": 5.821957265681537,
-      "initialQuantity": 5.821957265681537,
-      "stopLoss": 338.8365659893441,
-      "takeProfit": 352.57186802131184,
-      "feesPaid": 1.999347454394025,
-      "realizedPnl": 0,
-      "highestPrice": 343.415,
-      "lowestPrice": 341.985,
-      "confidence": 35.50825430342284,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "open-positions": [],
   "audit-log": [
     {
       "timestamp": 1785344321660,
@@ -63,18 +24,34 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry AAPL: 5.821957265681537 @ 343.415 (stop 338.8365659893441, target 352.57186802131184, confidence 36)"
+    },
+    {
+      "timestamp": 1785424117514,
+      "intentId": "V:1785344321660:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit V: 5.373310765428119 @ 361.4 (stop-loss)"
+    },
+    {
+      "timestamp": 1785424117514,
+      "intentId": "AAPL:1785345729273:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit AAPL: 5.821957265681537 @ 332.17 (stop-loss)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1785352233466,
+    "at": 1785424117514,
     "source": "Alpaca market data (US equities)",
     "opened": 0,
-    "closed": 0,
+    "closed": 2,
     "halted": false
   },
   "alerted-trade-ids": [
     "o:V:1785344321660:0",
-    "o:AAPL:1785345729273:1"
+    "o:AAPL:1785345729273:1",
+    "c:V:1785344321660:0",
+    "c:AAPL:1785345729273:1"
   ],
   "equity-history": [
     {
@@ -92,6 +69,62 @@
     {
       "at": 1785352233466,
       "equity": 9969.14
+    },
+    {
+      "at": 1785424117514,
+      "equity": 9868.57
     }
-  ]
+  ],
+  "trade-journal": [
+    {
+      "id": "V:1785344321660:0",
+      "symbol": "V",
+      "entryTimestamp": 1785344321660,
+      "exitTimestamp": 1785424117514,
+      "entryPrice": 372.21,
+      "exitPrice": 361.4,
+      "positionSize": 5.373310765428119,
+      "stopLoss": 365.69091538956104,
+      "takeProfit": 385.24816922087786,
+      "exitReason": "stop-loss",
+      "fees": 3.9419145106257227,
+      "slippage": 0,
+      "holdingDurationMs": 79795854,
+      "mfePct": 0,
+      "maePct": 2.904274468713899,
+      "realizedPnl": -60.027403884903705,
+      "returnPct": -3.001370194245185,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 30.88711060170363,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "AAPL:1785345729273:1",
+      "symbol": "AAPL",
+      "entryTimestamp": 1785345729273,
+      "exitTimestamp": 1785424117514,
+      "entryPrice": 343.415,
+      "exitPrice": 332.17,
+      "positionSize": 5.821957265681537,
+      "stopLoss": 338.8365659893441,
+      "takeProfit": 352.57186802131184,
+      "exitReason": "stop-loss",
+      "fees": 3.933226999335461,
+      "slippage": 0,
+      "holdingDurationMs": 78388241,
+      "mfePct": 0,
+      "maePct": 3.2744638411251707,
+      "realizedPnl": -67.40178899753033,
+      "returnPct": -3.371189377284045,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 35.50825430342284,
+      "notes": "opened autonomously by the paper autopilot"
+    }
+  ],
+  "daily-loss": {
+    "day": "2026-07-30",
+    "loss": 127.42919288243404
+  }
 }
