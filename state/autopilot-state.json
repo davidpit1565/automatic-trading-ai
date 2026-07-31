@@ -1154,7 +1154,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1785462573598,
+    "at": 1785464412229,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -12041,6 +12041,30 @@
     {
       "at": 1785462573598,
       "equity": 9567.16
+    },
+    {
+      "at": 1785462880769,
+      "equity": 9567.16
+    },
+    {
+      "at": 1785463187042,
+      "equity": 9567.16
+    },
+    {
+      "at": 1785463493317,
+      "equity": 9567.16
+    },
+    {
+      "at": 1785463799656,
+      "equity": 9567.16
+    },
+    {
+      "at": 1785464106014,
+      "equity": 9567.16
+    },
+    {
+      "at": 1785464412229,
+      "equity": 9567.16
     }
   ],
   "trade-journal": [
@@ -12714,7 +12738,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -3.75%"
+        "detail": "vs buy-and-hold BTC -3.43%"
       },
       {
         "key": "drawdown",
@@ -12727,7 +12751,7 @@
         "detail": "profit factor 0.44 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — after-fee return -3.11%; vs buy-and-hold BTC -3.75%; profit factor 0.44 (needs ≥ 1.2).",
+    "summary": "NOT READY — after-fee return -3.11%; vs buy-and-hold BTC -3.43%; profit factor 0.44 (needs ≥ 1.2).",
     "unmet": [
       "profitable",
       "benchmark",
@@ -12806,17 +12830,17 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 3919.4184135129035,
+    "cash": 5851.711833475594,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -149.004137573796,
+    "closedRealizedPnl": -174.7165134101977,
     "dayAnchor": {
       "day": "2026-07-31",
       "equity": 9742.475236648292
     }
   },
   "shadow-standings": {
-    "at": 1785462573598,
+    "at": 1785464412229,
     "standings": [
       {
         "key": "live-mirror",
@@ -12865,8 +12889,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 10010.136959048308,
-        "returnPct": 0.10136959048308199,
+        "equity": 9997.193506051102,
+        "returnPct": -0.02806493948897696,
         "trades": 1,
         "winRatePct": 0,
         "profitFactor": 0,
@@ -12876,36 +12900,17 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9737.733163173301,
-        "returnPct": -2.6226683682669862,
-        "trades": 9,
-        "winRatePct": 22.22222222222222,
-        "profitFactor": 0.4858205409049126,
-        "openPositions": 3,
+        "equity": 9722.386281508981,
+        "returnPct": -2.7761371849101852,
+        "trades": 10,
+        "winRatePct": 20,
+        "profitFactor": 0.4462278286468584,
+        "openPositions": 2,
         "startedAt": 1785254092443
       }
     ]
   },
   "shadow:breakout:open-positions": [
-    {
-      "id": "XBTEUR:1785416017090:0",
-      "symbol": "XBTEUR",
-      "openedAt": 1785416017090,
-      "entryPrice": 56512.2,
-      "quantity": 0.034647488432570185,
-      "initialQuantity": 0.034647488432570185,
-      "stopLoss": 55954.14242896074,
-      "takeProfit": 57628.31514207852,
-      "feesPaid": 5.874017387397278,
-      "realizedPnl": 0,
-      "highestPrice": 56574.6,
-      "lowestPrice": 56036.9,
-      "confidence": 56.01911986397613,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
     {
       "id": "SOLEUR:1785419410807:2",
       "symbol": "SOLEUR",
@@ -12918,7 +12923,7 @@
       "feesPaid": 5.8662870574630315,
       "realizedPnl": 0,
       "highestPrice": 65.21,
-      "lowestPrice": 64.46,
+      "lowestPrice": 64.42,
       "confidence": 58.252090895197455,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -13106,6 +13111,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ADAEUR: 13097.748895055314 @ 0.148657 (stop 0.1448738180530026, target 0.15622336389399488, confidence 54)"
+    },
+    {
+      "timestamp": 1785464106014,
+      "intentId": "XBTEUR:1785416017090:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit XBTEUR: 0.034647488432570185 @ 55937.9 (stop-loss)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -13314,6 +13326,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 70,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "XBTEUR:1785416017090:0",
+      "symbol": "XBTEUR",
+      "entryTimestamp": 1785416017090,
+      "exitTimestamp": 1785464106014,
+      "entryPrice": 56512.2,
+      "exitPrice": 55937.9,
+      "positionSize": 0.034647488432570185,
+      "stopLoss": 55954.14242896074,
+      "takeProfit": 57628.31514207852,
+      "exitReason": "stop-loss",
+      "fees": 11.68834061697408,
+      "slippage": 0,
+      "holdingDurationMs": 48088924,
+      "mfePct": 0.11041863526813937,
+      "maePct": 1.0162407409373475,
+      "realizedPnl": -25.71237583640171,
+      "returnPct": -1.3131920187145354,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 56.01911986397613,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
