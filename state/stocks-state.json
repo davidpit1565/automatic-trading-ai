@@ -1,15 +1,54 @@
 {
   "portfolio-engine": {
-    "cash": 9868.571459663171,
+    "cash": 5917.590584815283,
     "initialCash": 10000,
     "baseCurrency": "USD",
     "closedRealizedPnl": -127.42919288243404,
     "dayAnchor": {
-      "day": "2026-07-30",
+      "day": "2026-07-31",
       "equity": 9868.571459663171
     }
   },
-  "open-positions": [],
+  "open-positions": [
+    {
+      "id": "MSFT:1785511001075:0",
+      "symbol": "MSFT",
+      "openedAt": 1785511001075,
+      "entryPrice": 455.24,
+      "quantity": 4.335546726853163,
+      "initialQuantity": 4.335546726853163,
+      "stopLoss": 441.2839147335044,
+      "takeProfit": 483.1521705329912,
+      "feesPaid": 1.973714291932634,
+      "realizedPnl": 0,
+      "highestPrice": 455.24,
+      "lowestPrice": 455.24,
+      "confidence": 34.18890565080221,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "GOOGL:1785511001075:1",
+      "symbol": "GOOGL",
+      "openedAt": 1785511001075,
+      "entryPrice": 350.34,
+      "quantity": 5.632584201273756,
+      "initialQuantity": 5.632584201273756,
+      "stopLoss": 342.4881058613104,
+      "takeProfit": 366.04378827737924,
+      "feesPaid": 1.9733195490742477,
+      "realizedPnl": 0,
+      "highestPrice": 350.34,
+      "lowestPrice": 350.34,
+      "confidence": 5.627791490516632,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "audit-log": [
     {
       "timestamp": 1785344321660,
@@ -38,12 +77,26 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit AAPL: 5.821957265681537 @ 332.17 (stop-loss)"
+    },
+    {
+      "timestamp": 1785511001075,
+      "intentId": "MSFT:1785511001075:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry MSFT: 4.335546726853163 @ 455.24 (stop 441.2839147335044, target 483.1521705329912, confidence 34)"
+    },
+    {
+      "timestamp": 1785511001075,
+      "intentId": "GOOGL:1785511001075:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry GOOGL: 5.632584201273756 @ 350.34 (stop 342.4881058613104, target 366.04378827737924, confidence 6)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1785441244147,
+    "at": 1785511001075,
     "source": "Alpaca market data (US equities)",
-    "opened": 0,
+    "opened": 2,
     "closed": 0,
     "halted": false
   },
@@ -51,7 +104,9 @@
     "o:V:1785344321660:0",
     "o:AAPL:1785345729273:1",
     "c:V:1785344321660:0",
-    "c:AAPL:1785345729273:1"
+    "c:AAPL:1785345729273:1",
+    "o:MSFT:1785511001075:0",
+    "o:GOOGL:1785511001075:1"
   ],
   "equity-history": [
     {
@@ -85,6 +140,10 @@
     {
       "at": 1785441244147,
       "equity": 9868.57
+    },
+    {
+      "at": 1785511001075,
+      "equity": 9864.62
     }
   ],
   "trade-journal": [
