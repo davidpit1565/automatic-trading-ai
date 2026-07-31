@@ -1154,7 +1154,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1785506928609,
+    "at": 1785508770121,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -12401,6 +12401,30 @@
     {
       "at": 1785506928609,
       "equity": 9567.16
+    },
+    {
+      "at": 1785507236433,
+      "equity": 9567.16
+    },
+    {
+      "at": 1785507543237,
+      "equity": 9567.16
+    },
+    {
+      "at": 1785507850112,
+      "equity": 9567.16
+    },
+    {
+      "at": 1785508156753,
+      "equity": 9567.16
+    },
+    {
+      "at": 1785508463441,
+      "equity": 9567.16
+    },
+    {
+      "at": 1785508770121,
+      "equity": 9567.16
     }
   ],
   "trade-journal": [
@@ -13074,7 +13098,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -1.10%"
+        "detail": "vs buy-and-hold BTC -0.99%"
       },
       {
         "key": "drawdown",
@@ -13087,7 +13111,7 @@
         "detail": "profit factor 0.44 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — after-fee return -3.11%; vs buy-and-hold BTC -1.10%; profit factor 0.44 (needs ≥ 1.2).",
+    "summary": "NOT READY — after-fee return -3.11%; vs buy-and-hold BTC -0.99%; profit factor 0.44 (needs ≥ 1.2).",
     "unmet": [
       "profitable",
       "benchmark",
@@ -13155,7 +13179,7 @@
   },
   "shadow:mean-reversion:shadow-started-at": 1785254092443,
   "shadow:mean-reversion:portfolio-engine": {
-    "cash": 3920.6476734634225,
+    "cash": 3910.895389866347,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -116.31202987001548,
@@ -13176,7 +13200,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1785506928609,
+    "at": 1785508770121,
     "standings": [
       {
         "key": "live-mirror",
@@ -13225,19 +13249,19 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9863.082855817487,
-        "returnPct": -1.3691714418251284,
+        "equity": 9867.098747768943,
+        "returnPct": -1.3290125223105678,
         "trades": 4,
         "winRatePct": 0,
         "profitFactor": 0,
-        "openPositions": 4,
+        "openPositions": 5,
         "startedAt": 1785254092443
       },
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9679.561787648716,
-        "returnPct": -3.2043821235128416,
+        "equity": 9684.761593960053,
+        "returnPct": -3.152384060399472,
         "trades": 11,
         "winRatePct": 18.181818181818183,
         "profitFactor": 0.39855151136643274,
@@ -13749,7 +13773,7 @@
       "takeProfit": 0.6689204870665212,
       "feesPaid": 5.924928961732756,
       "realizedPnl": 0,
-      "highestPrice": 0.6535,
+      "highestPrice": 0.6559,
       "lowestPrice": 0.6535,
       "confidence": 33.484675561191295,
       "validationVerdict": null,
@@ -13768,9 +13792,28 @@
       "takeProfit": 1657.460614539379,
       "feesPaid": 5.873818108705351,
       "realizedPnl": 0,
-      "highestPrice": 1614.5,
+      "highestPrice": 1626.46,
       "lowestPrice": 1614.5,
       "confidence": 45.351479122103115,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "XBTEUR:1785507236433:4",
+      "symbol": "XBTEUR",
+      "openedAt": 1785507236433,
+      "entryPrice": 54553,
+      "quantity": 0.00017823243917497388,
+      "initialQuantity": 0.00017823243917497388,
+      "stopLoss": 53980.72351819536,
+      "takeProfit": 55697.55296360928,
+      "feesPaid": 0.02916934276293705,
+      "realizedPnl": 0,
+      "highestPrice": 54553,
+      "lowestPrice": 54466.2,
+      "confidence": 46.46328149576982,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -13945,6 +13988,76 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused LINKEUR: no exposure headroom: 5921.37 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1785507236433,
+      "intentId": "XBTEUR:1785507236433:4",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry XBTEUR: 0.00017823243917497388 @ 54553 (stop 53980.72351819536, target 55697.55296360928, confidence 46)"
+    },
+    {
+      "timestamp": 1785507236433,
+      "intentId": "LINKEUR:1785507236433",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LINKEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1785507543237,
+      "intentId": "LINKEUR:1785507543237",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LINKEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1785507850112,
+      "intentId": "LINKEUR:1785507850112",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LINKEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1785508156753,
+      "intentId": "XRPEUR:1785508156753",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused XRPEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1785508156753,
+      "intentId": "LINKEUR:1785508156753",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LINKEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1785508463441,
+      "intentId": "XRPEUR:1785508463441",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused XRPEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1785508463441,
+      "intentId": "LINKEUR:1785508463441",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LINKEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1785508770121,
+      "intentId": "XRPEUR:1785508770121",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused XRPEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1785508770121,
+      "intentId": "LINKEUR:1785508770121",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LINKEUR: maximum open positions reached (5/5)"
     }
   ],
   "shadow:live-mirror:open-positions": [],
