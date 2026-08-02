@@ -1168,7 +1168,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1785671309665,
+    "at": 1785673163284,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -14215,6 +14215,30 @@
     {
       "at": 1785671309665,
       "equity": 9641.93
+    },
+    {
+      "at": 1785671619809,
+      "equity": 9641.93
+    },
+    {
+      "at": 1785671928436,
+      "equity": 9641.93
+    },
+    {
+      "at": 1785672237202,
+      "equity": 9641.93
+    },
+    {
+      "at": 1785672545812,
+      "equity": 9641.93
+    },
+    {
+      "at": 1785672854338,
+      "equity": 9641.93
+    },
+    {
+      "at": 1785673163284,
+      "equity": 9641.93
     }
   ],
   "trade-journal": [
@@ -14913,7 +14937,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -0.67%"
+        "detail": "vs buy-and-hold BTC -0.69%"
       },
       {
         "key": "drawdown",
@@ -14926,7 +14950,7 @@
         "detail": "profit factor 0.58 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — after-fee return -2.30%; vs buy-and-hold BTC -0.67%; profit factor 0.58 (needs ≥ 1.2).",
+    "summary": "NOT READY — after-fee return -2.30%; vs buy-and-hold BTC -0.69%; profit factor 0.58 (needs ≥ 1.2).",
     "unmet": [
       "profitable",
       "benchmark",
@@ -15005,17 +15029,17 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 5819.542726314038,
+    "cash": 7859.220277438991,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -167.38197678171167,
+    "closedRealizedPnl": -82.4503313695923,
     "dayAnchor": {
       "day": "2026-08-02",
       "equity": 9710.97442035418
     }
   },
   "shadow-standings": {
-    "at": 1785671309665,
+    "at": 1785673163284,
     "standings": [
       {
         "key": "live-mirror",
@@ -15064,8 +15088,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9728.511713475355,
-        "returnPct": -2.7148828652464543,
+        "equity": 9728.511906750384,
+        "returnPct": -2.7148809324961625,
         "trades": 15,
         "winRatePct": 26.666666666666668,
         "profitFactor": 0.3456633283221012,
@@ -15075,12 +15099,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9825.138463020368,
-        "returnPct": -1.7486153697963163,
-        "trades": 14,
-        "winRatePct": 21.428571428571427,
-        "profitFactor": 0.5875544746965886,
-        "openPositions": 4,
+        "equity": 9832.254064154455,
+        "returnPct": -1.6774593584554531,
+        "trades": 15,
+        "winRatePct": 26.666666666666668,
+        "profitFactor": 0.7968343373222282,
+        "openPositions": 3,
         "startedAt": 1785254092443
       }
     ]
@@ -15099,25 +15123,6 @@
       "realizedPnl": 0,
       "highestPrice": 0.6926,
       "lowestPrice": 0.6835,
-      "confidence": 70,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "ADAEUR:1785639326205:2",
-      "symbol": "ADAEUR",
-      "openedAt": 1785639326205,
-      "entryPrice": 0.156583,
-      "quantity": 12483.768389370705,
-      "initialQuantity": 12483.768389370705,
-      "stopLoss": 0.15302380584260994,
-      "takeProfit": 0.16370138831478012,
-      "feesPaid": 5.864237717138499,
-      "realizedPnl": 0,
-      "highestPrice": 0.163585,
-      "lowestPrice": 0.155449,
       "confidence": 70,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -15583,6 +15588,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit XBTEUR: 0.03546145500780769 @ 54708.7 (stop-loss)"
+    },
+    {
+      "timestamp": 1785672237202,
+      "intentId": "ADAEUR:1785639326205:2",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ADAEUR: 12483.768389370705 @ 0.163878 (take-profit)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -15906,6 +15918,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 59.134773544119426,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "ADAEUR:1785639326205:2",
+      "symbol": "ADAEUR",
+      "entryTimestamp": 1785639326205,
+      "exitTimestamp": 1785672237202,
+      "entryPrice": 0.156583,
+      "exitPrice": 0.163878,
+      "positionSize": 12483.768389370705,
+      "stopLoss": 0.15302380584260994,
+      "takeProfit": 0.16370138831478012,
+      "exitReason": "take-profit",
+      "fees": 12.001682705478377,
+      "slippage": 0,
+      "holdingDurationMs": 32910997,
+      "mfePct": 4.658871014094759,
+      "maePct": 0.7242165496892996,
+      "realizedPnl": 84.93164541211937,
+      "returnPct": 4.344894401052475,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 70,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
