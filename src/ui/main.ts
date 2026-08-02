@@ -5,6 +5,7 @@
  * analysis lives in src/core.
  */
 
+import { inject } from '@vercel/analytics';
 import { initDataSource, type ActiveDataSource } from './dataSource';
 import { fetchSnapshot, findBtcSymbol } from './markets';
 import { formatPrice, formatPct } from './format';
@@ -85,6 +86,9 @@ function showBanner(data: ActiveDataSource): void {
 }
 
 async function bootstrap(): Promise<void> {
+  // Initialize Vercel Web Analytics
+  inject();
+
   // Setup global UI helpers
   window.toast = {
     show: showToast,
