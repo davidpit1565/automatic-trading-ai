@@ -1036,6 +1036,24 @@ history yet to measure against. Once the key is live, running the
 before trusting any specific number here — measure, don't guess applies to
 this asset class exactly as it does to crypto.
 
+## Stocks promoted to a primary nav tab (2026-08-03, PR #40)
+David reported he couldn't find the stocks robot in the app, even though it
+was live and trading (confirmed via Telegram notifications and the committed
+`state/stocks-state.json`). Root cause: pure discoverability, not a data bug
+— Stocks was one tile among eight in the Tools grid, while crypto gets three
+dedicated primary bottom-nav sections (Home, Markets, History). Moved Stocks
+to the primary bottom nav (5th icon after History) for the same visibility
+as crypto; removed the now-redundant Tools → Stocks tile/panel. Gave
+`renderStocksView` the same pause/resume lifecycle as `renderHistoryView`
+(stops its 60s poll when the tab isn't active) — it previously ran an
+uncleared `setInterval` since it was never treated as a paused-when-inactive
+primary view. Verified in a headless browser via `?demo=1` (this sandbox has
+no outbound network to Kraken/GitHub raw content, so real-data navigation
+couldn't be tested end-to-end directly — confirmed instead that ALL nav
+items, including pre-existing ones like Markets, hang identically without
+`?demo=1` here, isolating the blocker to this sandbox's network policy, not
+the change).
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
