@@ -6,7 +6,7 @@
  * every other data source in this project.
  */
 import { describe, expect, it } from 'vitest';
-import { AlpacaStockSource, CURATED_STOCK_INSTRUMENTS } from '../../src/core/data/alpacaStocks';
+import { AlpacaStockSource, CURATED_STOCK_INSTRUMENTS, BROWSABLE_STOCK_INSTRUMENTS } from '../../src/core/data/alpacaStocks';
 
 const NOW = 1_700_000_000_000;
 
@@ -34,13 +34,18 @@ describe('constructor', () => {
 });
 
 describe('getInstruments', () => {
-  it('returns the curated USD-quoted majors', async () => {
+  it('returns the broader browsable list (superset of the traded majors), all USD-quoted', async () => {
     const source = makeSource(mockFetch({}));
     const result = await source.getInstruments();
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value).toEqual(CURATED_STOCK_INSTRUMENTS);
+    expect(result.value).toEqual(BROWSABLE_STOCK_INSTRUMENTS);
     expect(result.value.every((i) => i.quote === 'USD')).toBe(true);
+    // The traded universe is a prefix — trading only ever reads
+    // CURATED_STOCK_INSTRUMENTS directly, never getInstruments(), but this
+    // pins the "curated majors first" ordering guarantee the doc comment
+    // promises.
+    expect(result.value.slice(0, CURATED_STOCK_INSTRUMENTS.length)).toEqual(CURATED_STOCK_INSTRUMENTS);
   });
 });
 

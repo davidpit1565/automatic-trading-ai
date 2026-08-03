@@ -75,6 +75,67 @@ export const CURATED_STOCK_INSTRUMENTS: Instrument[] = [
   { symbol: 'WMT', base: 'WMT', quote: 'USD' },
 ];
 
+/**
+ * BROWSABLE (display-only) superset of the curated majors above — mirrors
+ * `krakenPublic.ts`'s curated-vs-discovered split: broadening what a user can
+ * see the price of is safe and instant; broadening what the robot actually
+ * TRADES stays gated behind a real measurement (`scripts/measureStocks.mts`),
+ * exactly like the crypto majors. Nothing here is read by the autopilot —
+ * only `stocksRunner.mts`'s market-snapshot recorder and the browser's
+ * Markets/Home views use it.
+ */
+export const BROWSABLE_STOCK_INSTRUMENTS: Instrument[] = [
+  ...CURATED_STOCK_INSTRUMENTS,
+  // Technology
+  { symbol: 'AVGO', base: 'AVGO', quote: 'USD' },
+  { symbol: 'ORCL', base: 'ORCL', quote: 'USD' },
+  { symbol: 'ADBE', base: 'ADBE', quote: 'USD' },
+  { symbol: 'CRM', base: 'CRM', quote: 'USD' },
+  { symbol: 'CSCO', base: 'CSCO', quote: 'USD' },
+  { symbol: 'INTC', base: 'INTC', quote: 'USD' },
+  { symbol: 'AMD', base: 'AMD', quote: 'USD' },
+  { symbol: 'QCOM', base: 'QCOM', quote: 'USD' },
+  // Financials
+  { symbol: 'BAC', base: 'BAC', quote: 'USD' },
+  { symbol: 'WFC', base: 'WFC', quote: 'USD' },
+  { symbol: 'GS', base: 'GS', quote: 'USD' },
+  { symbol: 'MS', base: 'MS', quote: 'USD' },
+  { symbol: 'AXP', base: 'AXP', quote: 'USD' },
+  // Healthcare
+  { symbol: 'UNH', base: 'UNH', quote: 'USD' },
+  { symbol: 'JNJ', base: 'JNJ', quote: 'USD' },
+  { symbol: 'PFE', base: 'PFE', quote: 'USD' },
+  { symbol: 'ABBV', base: 'ABBV', quote: 'USD' },
+  { symbol: 'MRK', base: 'MRK', quote: 'USD' },
+  { symbol: 'LLY', base: 'LLY', quote: 'USD' },
+  // Consumer
+  { symbol: 'HD', base: 'HD', quote: 'USD' },
+  { symbol: 'MCD', base: 'MCD', quote: 'USD' },
+  { symbol: 'NKE', base: 'NKE', quote: 'USD' },
+  { symbol: 'SBUX', base: 'SBUX', quote: 'USD' },
+  { symbol: 'PG', base: 'PG', quote: 'USD' },
+  { symbol: 'KO', base: 'KO', quote: 'USD' },
+  { symbol: 'PEP', base: 'PEP', quote: 'USD' },
+  { symbol: 'COST', base: 'COST', quote: 'USD' },
+  { symbol: 'TGT', base: 'TGT', quote: 'USD' },
+  // Energy
+  { symbol: 'XOM', base: 'XOM', quote: 'USD' },
+  { symbol: 'CVX', base: 'CVX', quote: 'USD' },
+  // Industrials
+  { symbol: 'BA', base: 'BA', quote: 'USD' },
+  { symbol: 'CAT', base: 'CAT', quote: 'USD' },
+  { symbol: 'GE', base: 'GE', quote: 'USD' },
+  { symbol: 'HON', base: 'HON', quote: 'USD' },
+  { symbol: 'UPS', base: 'UPS', quote: 'USD' },
+  // Communication / media
+  { symbol: 'DIS', base: 'DIS', quote: 'USD' },
+  { symbol: 'NFLX', base: 'NFLX', quote: 'USD' },
+  { symbol: 'CMCSA', base: 'CMCSA', quote: 'USD' },
+  { symbol: 'VZ', base: 'VZ', quote: 'USD' },
+  // Other
+  { symbol: 'PYPL', base: 'PYPL', quote: 'USD' },
+];
+
 export interface AlpacaStockSourceOptions {
   readonly apiKeyId: string;
   readonly apiSecretKey: string;
@@ -120,7 +181,7 @@ export class AlpacaStockSource implements MarketDataSource {
   }
 
   async getInstruments(): Promise<Result<Instrument[]>> {
-    return ok([...CURATED_STOCK_INSTRUMENTS]);
+    return ok([...BROWSABLE_STOCK_INSTRUMENTS]);
   }
 
   async getCandles(symbol: string, timeframe: Timeframe, limit: number): Promise<Result<Candle[]>> {
