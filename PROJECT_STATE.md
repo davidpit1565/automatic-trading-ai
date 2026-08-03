@@ -1128,6 +1128,31 @@ the hero card. `theme-color`/manifest updated to match. Verified visually
 (headless browser, mocked state) across Home, Markets (list + detail chart),
 History, Stocks, and Tools.
 
+## Information architecture cleanup (2026-08-03)
+David asked for the app's *structure* (not just its look) to be genuinely
+organized rather than accreted ad hoc feature-by-feature. Audited the full
+nav graph (`PRIMARY_VIEWS`/`TOOL_VIEWS` in `main.ts`, every view under
+`src/ui/views/`) and found two concrete issues, both fixed:
+- **Dead code removed**: `src/ui/views/positionsView.ts` (a full "Stage 5"
+  position-tracking screen, 655 lines + its own 161-line integration test)
+  was imported in `main.ts` but never wired to any route — superseded long
+  ago by the Portfolio tool. Deleted both files and the stale import.
+- **Tools menu regrouped**: the 7 tool cards were flat, same-weight buttons
+  with no indication that several are the same concept split apart. Grouped
+  into labeled sections in `index.html` (pure markup/CSS, same `data-tab`
+  routing, zero behaviour change): **Scanning** (Market Scan, Monitoring),
+  **Strategy testing** (Backtesting, Validation, Grid Sim), **Account**
+  (Portfolio), **Help** (Guide).
+- Checked for more orphaned modules repo-wide (import-graph sweep across
+  `src`/`server`/`scripts`). Only other unwired module found is
+  `src/core/signal/regimeFilter.ts` — that one is a deliberate pending
+  feature (built to plug into `livePipeline`'s `regimeFilter` option, tied to
+  the July 2026 stop-out investigation), not IA clutter, so left untouched.
+- Crypto/stocks nav asymmetry (crypto has 3 primary tabs + a hidden
+  equity-detail drill-in; stocks has one combined tab) was flagged to David
+  and intentionally left as-is — stocks has less surface area, forcing
+  parity would add clutter for no benefit unless he asks for it later.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
