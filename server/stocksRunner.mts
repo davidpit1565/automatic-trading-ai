@@ -21,7 +21,7 @@
  */
 
 import { fileURLToPath } from 'node:url';
-import { AlpacaStockSource, CURATED_STOCK_INSTRUMENTS } from '../src/core/data/alpacaStocks';
+import { AlpacaStockSource, CURATED_STOCK_INSTRUMENTS, BROWSABLE_STOCK_INSTRUMENTS } from '../src/core/data/alpacaStocks';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import { isUsMarketOpen } from '../src/core/data/marketHours';
 import { PersistedAuditLog } from '../src/core/autopilot/auditLog';
@@ -45,6 +45,15 @@ const ALERTED_TRADES_KEY = 'alerted-trade-ids';
 const ALERTED_TRADES_CAP = 500;
 const MARKET_SNAPSHOT_KEY = 'market-snapshot';
 const MARKET_DAY_ANCHOR_KEY = 'market-day-anchor';
+/**
+ * Pause between the browsable list's extra (non-traded) price requests.
+ * Alpaca's free/IEX tier allows ~200 requests/min per key; this caps the
+ * snapshot sweep at a theoretical maximum of ~170/min, safely under that,
+ * without needing a full request-queue class for what is still a small,
+ * fixed-size sweep once per cycle.
+ */
+const SNAPSHOT_STAGGER_MS = Number(process.env['STOCKS_SNAPSHOT_STAGGER_MS']) || 350;
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 export interface MarketSnapshotEntry {
   readonly symbol: string;
@@ -121,6 +130,10 @@ export async function runStocksCycle(
   telegram: { token: string; chatId: string },
   symbols: readonly string[],
   now: number,
+  /** Pause between the browsable list's extra price requests (see
+   * `SNAPSHOT_STAGGER_MS`). Defaults to 0 (no pause) so tests stay fast;
+   * `main()` passes the real constant for actual cloud runs. */
+  snapshotStaggerMs = 0,
 ): Promise<boolean> {
   const cycle = await autopilot.runCycleOnce(now);
   console.log(
@@ -172,7 +185,23 @@ export async function runStocksCycle(
     }
   }
   await recordEquity(store, portfolio, now, symbolPrices);
-  updateMarketSnapshot(store, symbolPrices, now);
+
+  // Browsable-only symbols (BROWSABLE minus the traded set already priced
+  // above): display prices for the wider list without fetching anything
+  // twice. Staggered — this is 40 extra requests per cycle, not the 10 the
+  // trading loop above makes, so it needs to respect Alpaca's rate limit
+  // explicitly rather than relying on natural request spacing.
+  const tradedSet = new Set(symbols);
+  const browsableOnly = BROWSABLE_STOCK_INSTRUMENTS.map((i) => i.symbol).filter((s) => !tradedSet.has(s));
+  const snapshotPrices: Record<string, number> = { ...symbolPrices };
+  for (const symbol of browsableOnly) {
+    const candles = await source.getCandles(symbol, ENTRY_TF, 2);
+    if (candles.ok && candles.value.length > 0) {
+      snapshotPrices[symbol] = candles.value[candles.value.length - 1]!.close;
+    }
+    if (snapshotStaggerMs > 0) await sleep(snapshotStaggerMs);
+  }
+  updateMarketSnapshot(store, snapshotPrices, now);
 
   return cycle.opened.length > 0 || cycle.closed.length > 0;
 }
@@ -215,7 +244,7 @@ async function main(): Promise<void> {
   };
 
   try {
-    await runStocksCycle(store, source, autopilot, portfolio, telegram, symbols, now);
+    await runStocksCycle(store, source, autopilot, portfolio, telegram, symbols, now, SNAPSHOT_STAGGER_MS);
   } catch (cause) {
     console.error('Stocks cycle failed:', cause instanceof Error ? cause.message : cause);
   }

@@ -140,7 +140,23 @@ describe('runStocksCycle', () => {
     const history = store.get<Array<{ at: number; equity: number }>>('equity-history');
     expect(history).toHaveLength(1);
     const snap = store.get<{ at: number; symbols: MarketSnapshotEntry[] }>('market-snapshot');
-    expect(snap?.symbols).toEqual([{ symbol: 'AAPL', price: 101, changePct: 0, updatedAt: 5_000_000 }]);
+    // The traded symbol AAPL, priced from the trading loop's own fetch.
+    expect(snap?.symbols).toContainEqual({ symbol: 'AAPL', price: 101, changePct: 0, updatedAt: 5_000_000 });
+  });
+
+  it('also snapshots the wider browsable list (not just the traded symbols), without duplicating AAPL', async () => {
+    const source = fakeSource();
+    const { autopilot, portfolio } = buildAutopilot(source);
+    const telegram = { token: '', chatId: '' };
+    await runStocksCycle(store, source, autopilot, portfolio, telegram, ['AAPL'], 5_000_000);
+
+    const snap = store.get<{ at: number; symbols: MarketSnapshotEntry[] }>('market-snapshot');
+    const symbols = snap!.symbols.map((s) => s.symbol);
+    // Some browsable-only symbol (never in the traded list passed above) is present.
+    expect(symbols).toContain('MSFT');
+    // AAPL (traded) appears exactly once — the browsable sweep must skip
+    // symbols already priced by the trading loop, not refetch/duplicate them.
+    expect(symbols.filter((s) => s === 'AAPL')).toHaveLength(1);
   });
 
   it('does not send a Telegram message when nothing traded', async () => {
@@ -156,5 +172,18 @@ describe('runStocksCycle', () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  it('respects the stagger delay between the browsable-only price requests', async () => {
+    const source = fakeSource();
+    const { autopilot, portfolio } = buildAutopilot(source);
+    const telegram = { token: '', chatId: '' };
+    const start = Date.now();
+    await runStocksCycle(store, source, autopilot, portfolio, telegram, ['AAPL'], 5_000_000, 5);
+    const elapsed = Date.now() - start;
+    // ~39 browsable-only symbols (BROWSABLE minus the 1 traded symbol) at 5ms
+    // each is a real, if small, floor — proves the delay is actually awaited
+    // per iteration, not skipped or applied once.
+    expect(elapsed).toBeGreaterThanOrEqual(35 * 5);
   });
 });
