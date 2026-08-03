@@ -12,10 +12,11 @@ import type { ActiveDataSource } from '../dataSource';
 import { fetchStocksState } from '../cloudState';
 import { mountEquityChartPanel } from '../equityChartPanel';
 import { formatPrice } from '../format';
+import type { ViewHandle } from '../viewLifecycle';
 
 const dollar = (v: number): string => `$${formatPrice(v)}`;
 
-export function renderStocksView(container: HTMLElement, _data: ActiveDataSource): void {
+export function renderStocksView(container: HTMLElement, _data: ActiveDataSource): ViewHandle {
   container.innerHTML = `
     <h2 class="view-title">Stocks</h2>
     <p class="view-sub">Separate simulated US-stocks robot — its own portfolio, in dollars.</p>
@@ -79,6 +80,15 @@ export function renderStocksView(container: HTMLElement, _data: ActiveDataSource
     }
   }
 
+  let timer = 0;
   void load();
-  window.setInterval(() => void load(), 60_000);
+  timer = window.setInterval(() => void load(), 60_000);
+
+  return {
+    pause: () => window.clearInterval(timer),
+    resume: () => {
+      void load();
+      timer = window.setInterval(() => void load(), 60_000);
+    },
+  };
 }
