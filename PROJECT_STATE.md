@@ -1114,6 +1114,20 @@ promoted) — expanding the traded universe is not where the edge (if any)
 is going to come from; the underlying entry/exit framework is the
 bottleneck, on both asset classes, at any breadth tried so far.
 
+## Visual design elevated across the whole app (2026-08-03, PR #44)
+David asked for a much more professional, higher-quality look everywhere.
+Reworked the design system in `styles.css` only — every class name and DOM
+structure is unchanged, so nothing here touches app behaviour or any test
+selector. Added a proper design-token system (colour-tinted elevation scale,
+radius scale, a named ease-out-expo easing curve) and applied it consistently
+across every card/row/button (hero, market cards, tool cards, rows, toasts,
+modals), which previously had visibly inconsistent shadow/radius treatments.
+Richer dark palette, refined indigo-blue accent gradient (was a flat single
+blue), tabular numerals on every price, subtle glass-panel top-highlight on
+the hero card. `theme-color`/manifest updated to match. Verified visually
+(headless browser, mocked state) across Home, Markets (list + detail chart),
+History, Stocks, and Tools.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
