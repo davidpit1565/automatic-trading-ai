@@ -16,6 +16,11 @@ on:
         type: choice
         default: '1d'
         options: ['1d', '1h']
+      symbols:
+        description: 'traded = the 10 majors already live; candidates = the 40 browsable-only symbols (is there an edge to promote any to the traded list?)'
+        type: choice
+        default: 'traded'
+        options: ['traded', 'candidates']
 
 permissions:
   contents: read
@@ -23,7 +28,7 @@ permissions:
 jobs:
   measure:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45 # candidates mode fetches 4x the symbols of the default traded-majors run
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,4 +40,4 @@ jobs:
         env:
           ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
           ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
-        run: npx tsx scripts/measureStocks.mts "${{ inputs.timeframe }}"
+        run: npx tsx scripts/measureStocks.mts "${{ inputs.timeframe }}" "${{ inputs.symbols }}"
