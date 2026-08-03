@@ -44,6 +44,17 @@ export interface CloudReadiness {
   readonly criteria: CloudReadinessCriterion[];
 }
 
+/** One curated symbol's last-known price, as recorded by the cloud robot's
+ * own cycle — not a live tick. This is the read-only, no-keys way to show
+ * "what does the robot see right now" for a source (like Alpaca) that
+ * requires a secret per request and can never be called from the browser. */
+export interface MarketSnapshotEntry {
+  readonly symbol: string;
+  readonly price: number;
+  readonly changePct: number;
+  readonly updatedAt: number;
+}
+
 export interface CloudState {
   readonly cash: number;
   readonly initialCash: number;
@@ -57,6 +68,9 @@ export interface CloudState {
   readonly equityHistory: { at: number; equity: number }[];
   /** Honest real-money readiness verdict, or null if not computed yet. */
   readonly readiness: CloudReadiness | null;
+  /** Last-known price per curated symbol, or empty if the robot hasn't
+   * recorded one yet (e.g. the crypto state file, which has no such field). */
+  readonly marketSnapshot: MarketSnapshotEntry[];
 }
 
 interface RawState {
@@ -70,6 +84,9 @@ interface RawState {
     ready?: boolean;
     summary?: string;
     criteria?: Array<{ key?: string; ok?: boolean; detail?: string }>;
+  };
+  'market-snapshot'?: {
+    symbols?: Array<{ symbol?: string; price?: number; changePct?: number; updatedAt?: number }>;
   };
 }
 
@@ -166,6 +183,12 @@ async function fetchCloudStateOnce(fetchFn: typeof fetch, stateUrl: string): Pro
         anchor && anchor.btc && anchor.equity ? { btc: anchor.btc, equity: anchor.equity } : null,
       equityHistory: Array.isArray(raw['equity-history']) ? raw['equity-history'] : [],
       readiness,
+      marketSnapshot: (raw['market-snapshot']?.symbols ?? [])
+        .filter(
+          (s): s is { symbol: string; price: number; changePct: number; updatedAt: number } =>
+            typeof s.symbol === 'string' && typeof s.price === 'number' && typeof s.changePct === 'number' &&
+            typeof s.updatedAt === 'number',
+        ),
     };
   } catch {
     return null;

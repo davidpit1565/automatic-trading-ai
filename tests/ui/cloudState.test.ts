@@ -92,6 +92,26 @@ describe('fetchCloudState', () => {
   });
 });
 
+describe('market-snapshot parsing', () => {
+  it('parses a well-formed snapshot', async () => {
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'market-snapshot': { at: 1, symbols: [{ symbol: 'AAPL', price: 210.5, changePct: 1.2, updatedAt: 1 }] },
+    });
+    const state = await fetchCloudState(okFetch(body));
+    expect(state!.marketSnapshot).toEqual([{ symbol: 'AAPL', price: 210.5, changePct: 1.2, updatedAt: 1 }]);
+  });
+
+  it('drops malformed entries and defaults to empty when the field is absent', async () => {
+    const withMalformed = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'market-snapshot': { symbols: [{ symbol: 'AAPL', price: 'not a number' }] },
+    });
+    expect((await fetchCloudState(okFetch(withMalformed)))!.marketSnapshot).toEqual([]);
+    expect((await fetchCloudState(okFetch(stateFile([]))))!.marketSnapshot).toEqual([]);
+  });
+});
+
 describe('fetchStocksState', () => {
   it('reads the separate stocks state file, not the crypto one', async () => {
     const seen: string[] = [];

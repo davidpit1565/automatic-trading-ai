@@ -11,7 +11,7 @@
 import type { ActiveDataSource } from '../dataSource';
 import { fetchStocksState } from '../cloudState';
 import { mountEquityChartPanel } from '../equityChartPanel';
-import { formatPrice } from '../format';
+import { formatPrice, formatPct } from '../format';
 import type { ViewHandle } from '../viewLifecycle';
 
 const dollar = (v: number): string => `$${formatPrice(v)}`;
@@ -21,12 +21,15 @@ export function renderStocksView(container: HTMLElement, _data: ActiveDataSource
     <h2 class="view-title">Stocks</h2>
     <p class="view-sub">Separate simulated US-stocks robot — its own portfolio, in dollars.</p>
     <div id="stocks-chart"><div class="empty">Loading…</div></div>
+    <h3>Markets</h3>
+    <div class="markets-strip" id="stocks-markets"></div>
     <h3>Positions</h3>
     <div id="stocks-positions"></div>
     <h3>History</h3>
     <div class="stack" id="stocks-list"></div>`;
 
   const chartSlot = container.querySelector<HTMLElement>('#stocks-chart')!;
+  const marketsEl = container.querySelector<HTMLElement>('#stocks-markets')!;
   const positionsEl = container.querySelector<HTMLElement>('#stocks-positions')!;
   const list = container.querySelector<HTMLElement>('#stocks-list')!;
   const chart = mountEquityChartPanel(chartSlot, { currencySymbol: '$' });
@@ -44,6 +47,22 @@ export function renderStocksView(container: HTMLElement, _data: ActiveDataSource
     }
     loadedOnce = true;
     chart.setHistory(state.equityHistory);
+
+    if (state.marketSnapshot.length === 0) {
+      marketsEl.innerHTML = '<div class="empty">Waiting for the robot’s next cycle (market hours only).</div>';
+    } else {
+      marketsEl.innerHTML = '';
+      for (const s of state.marketSnapshot) {
+        const up = s.changePct >= 0;
+        const card = document.createElement('div');
+        card.className = 'market-card';
+        card.innerHTML = `
+          <div class="market-top"><span class="market-name">${s.symbol}</span>
+            <span class="chg ${up ? 'up' : 'down'}">${formatPct(s.changePct)}</span></div>
+          <div class="market-price">${dollar(s.price)}</div>`;
+        marketsEl.appendChild(card);
+      }
+    }
 
     if (state.positions.length === 0) {
       positionsEl.innerHTML = '<div class="empty">No open positions — holding cash.</div>';

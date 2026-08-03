@@ -10,7 +10,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileStore } from '../../server/fileStore.mts';
-import { buildAlpacaSourceFromEnv, recordEquity, runStocksCycle } from '../../server/stocksRunner.mts';
+import {
+  buildAlpacaSourceFromEnv,
+  recordEquity,
+  runStocksCycle,
+  updateMarketSnapshot,
+  type MarketSnapshotEntry,
+} from '../../server/stocksRunner.mts';
 import { PaperAutoPilot } from '../../src/core/autopilot/paperAutoPilot';
 import { PersistedAuditLog } from '../../src/core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../../src/core/autopilot/killSwitch';
@@ -92,6 +98,36 @@ function buildAutopilot(source: MarketDataSource): { autopilot: PaperAutoPilot; 
   return { autopilot, portfolio };
 }
 
+describe('updateMarketSnapshot', () => {
+  it('anchors each symbol to its first price of the UTC day and reports 0% change', () => {
+    const day1 = Date.UTC(2026, 0, 15, 10, 0, 0);
+    updateMarketSnapshot(store, { AAPL: 100, MSFT: 200 }, day1);
+    const snap = store.get<{ at: number; symbols: MarketSnapshotEntry[] }>('market-snapshot');
+    expect(snap?.symbols).toEqual([
+      { symbol: 'AAPL', price: 100, changePct: 0, updatedAt: day1 },
+      { symbol: 'MSFT', price: 200, changePct: 0, updatedAt: day1 },
+    ]);
+  });
+
+  it('computes changePct against the day anchor on later calls the same day', () => {
+    const morning = Date.UTC(2026, 0, 15, 10, 0, 0);
+    const afternoon = Date.UTC(2026, 0, 15, 18, 0, 0);
+    updateMarketSnapshot(store, { AAPL: 100 }, morning);
+    updateMarketSnapshot(store, { AAPL: 105 }, afternoon);
+    const snap = store.get<{ at: number; symbols: MarketSnapshotEntry[] }>('market-snapshot');
+    expect(snap?.symbols).toEqual([{ symbol: 'AAPL', price: 105, changePct: 5, updatedAt: afternoon }]);
+  });
+
+  it('resets the anchor on a new UTC day', () => {
+    const day1 = Date.UTC(2026, 0, 15, 20, 0, 0);
+    const day2 = Date.UTC(2026, 0, 16, 10, 0, 0);
+    updateMarketSnapshot(store, { AAPL: 100 }, day1);
+    updateMarketSnapshot(store, { AAPL: 110 }, day2);
+    const snap = store.get<{ at: number; symbols: MarketSnapshotEntry[] }>('market-snapshot');
+    expect(snap?.symbols).toEqual([{ symbol: 'AAPL', price: 110, changePct: 0, updatedAt: day2 }]);
+  });
+});
+
 describe('runStocksCycle', () => {
   it('runs a cycle, records a heartbeat, and records an equity point', async () => {
     const source = fakeSource();
@@ -103,6 +139,8 @@ describe('runStocksCycle', () => {
     expect(lastRun?.source).toBe('fake stocks');
     const history = store.get<Array<{ at: number; equity: number }>>('equity-history');
     expect(history).toHaveLength(1);
+    const snap = store.get<{ at: number; symbols: MarketSnapshotEntry[] }>('market-snapshot');
+    expect(snap?.symbols).toEqual([{ symbol: 'AAPL', price: 101, changePct: 0, updatedAt: 5_000_000 }]);
   });
 
   it('does not send a Telegram message when nothing traded', async () => {
