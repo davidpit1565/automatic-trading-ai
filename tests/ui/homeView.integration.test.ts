@@ -53,6 +53,38 @@ describe('Home view (DOM integration)', () => {
     expect(container.querySelector('#home-markets')!.children.length).toBeGreaterThan(0);
   });
 
+  it('renders a Stocks hero and markets strip alongside crypto, from the separate stocks state file', async () => {
+    const stocksRaw = {
+      'portfolio-engine': { cash: 8000, initialCash: 10_000, baseCurrency: 'USD' },
+      'open-positions': [{ symbol: 'AAPL', quantity: 2, entryPrice: 200, openedAt: 1 }],
+      'audit-log': [],
+      'market-snapshot': {
+        at: 1,
+        symbols: [
+          { symbol: 'AAPL', price: 210, changePct: 1.5, updatedAt: 1 },
+          { symbol: 'MSFT', price: 490, changePct: -0.4, updatedAt: 1 },
+        ],
+      },
+    };
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: true, json: () => Promise.resolve(stocksRaw) }));
+
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderHomeView(container, await makeData());
+
+    expect(container.querySelector('#stocks-hero')).not.toBeNull();
+    await waitFor(() => container.querySelector('#sh-equity')!.textContent !== '—');
+    // Equity = cash 8000 + 2 * entryPrice 200 = 8400, up from 10000 initial.
+    expect(container.querySelector('#sh-equity')!.textContent).toBe('$8,400');
+    expect(container.querySelector('#sh-change')!.textContent).toContain('-16.00%');
+
+    await waitFor(() => container.querySelectorAll('#home-stocks-markets .market-card').length === 2);
+    const cards = container.querySelectorAll('#home-stocks-markets .market-card');
+    expect(cards[0]!.textContent).toContain('AAPL');
+    expect(cards[0]!.textContent).toContain('$210');
+    expect(cards[1]!.textContent).toContain('MSFT');
+  });
+
   it('renders the real-money readiness card from cloud state', async () => {
     const raw = {
       'portfolio-engine': { cash: 5954, initialCash: 10000, baseCurrency: 'EUR' },

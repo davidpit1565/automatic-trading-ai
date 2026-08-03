@@ -43,12 +43,53 @@ const EQUITY_HISTORY_KEY = 'equity-history';
 const EQUITY_HISTORY_CAP = 5000;
 const ALERTED_TRADES_KEY = 'alerted-trade-ids';
 const ALERTED_TRADES_CAP = 500;
+const MARKET_SNAPSHOT_KEY = 'market-snapshot';
+const MARKET_DAY_ANCHOR_KEY = 'market-day-anchor';
+
+export interface MarketSnapshotEntry {
+  readonly symbol: string;
+  readonly price: number;
+  /** Change vs. this UTC day's first recorded price (a simplification — the
+   * exact previous close is not fetched separately — same trade-off already
+   * accepted by PortfolioEngine's own `dayAnchor`). */
+  readonly changePct: number;
+  readonly updatedAt: number;
+}
 
 export function buildAlpacaSourceFromEnv(): AlpacaStockSource | null {
   const apiKeyId = process.env['ALPACA_API_KEY_ID'] ?? '';
   const apiSecretKey = process.env['ALPACA_API_SECRET_KEY'] ?? '';
   if (!apiKeyId || !apiSecretKey) return null;
   return new AlpacaStockSource({ apiKeyId, apiSecretKey });
+}
+
+/**
+ * Records a per-symbol price snapshot for the curated stock universe (not
+ * just symbols with open positions), so the browser can show "what does the
+ * stocks robot see right now" without ever calling Alpaca directly — Alpaca
+ * requires a secret key per request, unlike Kraken's public API, so the
+ * browser can never call it safely. This is the read-only, no-keys
+ * equivalent: written here (server-side, where the key already lives) and
+ * read from the committed state file, same as every other cloud-state field.
+ */
+export function updateMarketSnapshot(
+  store: FileStore,
+  symbolPrices: Readonly<Record<string, number>>,
+  now: number,
+): void {
+  const day = new Date(now).toISOString().slice(0, 10);
+  const anchors = { ...(store.get<Record<string, { day: string; price: number }>>(MARKET_DAY_ANCHOR_KEY) ?? {}) };
+  const entries: MarketSnapshotEntry[] = [];
+  for (const [symbol, price] of Object.entries(symbolPrices)) {
+    if (anchors[symbol] === undefined || anchors[symbol].day !== day) {
+      anchors[symbol] = { day, price };
+    }
+    const anchorPrice = anchors[symbol].price;
+    const changePct = anchorPrice > 0 ? ((price - anchorPrice) / anchorPrice) * 100 : 0;
+    entries.push({ symbol, price, changePct, updatedAt: now });
+  }
+  store.set(MARKET_DAY_ANCHOR_KEY, anchors);
+  store.set(MARKET_SNAPSHOT_KEY, { at: now, symbols: entries });
 }
 
 export async function recordEquity(
@@ -131,6 +172,7 @@ export async function runStocksCycle(
     }
   }
   await recordEquity(store, portfolio, now, symbolPrices);
+  updateMarketSnapshot(store, symbolPrices, now);
 
   return cycle.opened.length > 0 || cycle.closed.length > 0;
 }
