@@ -17,7 +17,6 @@ import { renderGridView } from './views/gridView';
 import { renderMarketScanView } from './views/marketScanView';
 import { renderMonitoringView } from './views/monitoringView';
 import { renderPortfolioView } from './views/portfolioView';
-import { renderPositionsView } from './views/positionsView';
 import { renderValidationView } from './views/validationView';
 import { renderStocksView } from './views/stocksView';
 import type { ViewHandle } from './viewLifecycle';
