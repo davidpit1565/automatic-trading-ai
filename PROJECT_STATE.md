@@ -1083,6 +1083,37 @@ on the robot's own cycle cadence (~15-30 min during US market hours only).
 That is the safe ceiling without adding a secret-holding proxy; a real-time
 option was offered and explicitly not chosen.
 
+## Measured the 40 candidate stocks: none promoted to trading (2026-08-03)
+David approved a two-part plan for stocks: (A) broaden the browsable list to
+50 symbols for display (shipped, PR #42), (B) measure the 40 candidates
+before adding any to the actually-traded list (PR #43 built the harness; this
+entry records the real result from running it).
+
+`npx tsx scripts/measureStocks.mts 1d candidates` ran in GitHub Actions
+(where the Alpaca credentials live) against all 40 browsable-only symbols,
+~5 years of daily bars each, the same 14 configs and fold-robustness gate
+already used on the 10 traded majors. Full log: run 30849383535.
+
+At live cost (0.10%/side): two configs clear the per-fold PF gate —
+**MEAN-REVERSION (3/3 folds, PF 1.60)** and **BREAKOUT (3/3 folds, PF
+1.32)**. Everything else fails on folds alone (1/3 or 2/3), same pattern as
+the existing 10.
+
+**Both fold-passing configs still fail the bar's second half.** The 40-stock
+basket returned **+96.35%** buy-and-hold over the period; MEAN-REVERSION
+captured **+2.42%** and BREAKOUT **+3.07%** — roughly 2-3% of what simply
+holding the basket would have earned. This is the same shape already found
+on the current 10 traded majors (PF can clear 1.2 while absolute return stays
+a rounding error next to the benchmark) — not a new finding, a confirmation
+that it generalizes to more symbols too.
+
+**Conclusion: none of the 40 candidates are promoted.** `CURATED_STOCK_INSTRUMENTS`
+(the traded list) is unchanged, still the original 10. This mirrors the
+crypto side's own honest "no" from earlier (5 candidate altcoins, none
+promoted) — expanding the traded universe is not where the edge (if any)
+is going to come from; the underlying entry/exit framework is the
+bottleneck, on both asset classes, at any breadth tried so far.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
