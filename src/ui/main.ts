@@ -55,6 +55,7 @@ const PRIMARY_VIEWS: Record<string, ViewRenderer> = {
   value: renderValueView,
   markets: renderMarketsView,
   history: renderHistoryView,
+  stocks: renderStocksView,
 };
 
 const TOOL_VIEWS: Record<string, ViewRenderer | null> = {
@@ -64,7 +65,6 @@ const TOOL_VIEWS: Record<string, ViewRenderer | null> = {
   portfolio: renderPortfolioView,
   grid: renderGridView,
   monitoring: renderMonitoringView,
-  stocks: renderStocksView,
   learn: null,
 };
 
