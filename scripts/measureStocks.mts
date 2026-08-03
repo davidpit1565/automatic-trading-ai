@@ -19,11 +19,18 @@
  * Needs ALPACA_API_KEY_ID / ALPACA_API_SECRET_KEY, so it runs in GitHub Actions
  * (.github/workflows/measure-stocks.yml) where the secrets live.
  *
- *   npx tsx scripts/measureStocks.mts            # 1d bars (5y), default
- *   npx tsx scripts/measureStocks.mts 1h         # 1h bars (180d)
+ *   npx tsx scripts/measureStocks.mts                # 1d bars (5y), the 10 traded majors
+ *   npx tsx scripts/measureStocks.mts 1h             # 1h bars (180d), the 10 traded majors
+ *   npx tsx scripts/measureStocks.mts 1d candidates  # the 40 browsable-only symbols —
+ *                                                     # is there a real edge to promote any
+ *                                                     # of them to the TRADED list?
  */
 
-import { AlpacaStockSource, CURATED_STOCK_INSTRUMENTS } from '../src/core/data/alpacaStocks';
+import {
+  AlpacaStockSource,
+  CURATED_STOCK_INSTRUMENTS,
+  BROWSABLE_STOCK_INSTRUMENTS,
+} from '../src/core/data/alpacaStocks';
 import { runLivePipelineBacktest, type LivePipelineTrade } from '../src/core/backtest/livePipeline';
 import { meanReversionSignal, breakoutSignal } from '../src/core/signal/alternativeSignals';
 import type { ScanResult } from '../src/core/scan/marketScanner';
@@ -31,6 +38,15 @@ import type { SignalDecision } from '../src/core/signal/signalEngine';
 import type { Candle, Timeframe } from '../src/core/types';
 
 const TF = (process.argv[2] ?? '1d') as Timeframe;
+const MODE = process.argv[3] === 'candidates' ? 'candidates' : 'traded';
+/** The 40 browsable-only symbols (BROWSABLE minus the 10 already traded) —
+ * candidates for promotion to CURATED_STOCK_INSTRUMENTS, not yet traded by
+ * anything. Measuring them is what decides whether any of them should be. */
+const TRADED_SYMBOLS = new Set(CURATED_STOCK_INSTRUMENTS.map((i) => i.symbol));
+const INSTRUMENTS =
+  MODE === 'candidates'
+    ? BROWSABLE_STOCK_INSTRUMENTS.filter((i) => !TRADED_SYMBOLS.has(i.symbol))
+    : CURATED_STOCK_INSTRUMENTS;
 const LIMIT = TF === '1d' ? 1260 : 1000; // ~5y of trading days, or ~180d of hours
 const FOLDS = 3;
 const WARMUP = 150;
@@ -82,7 +98,7 @@ const CANDIDATES: Cand[] = [
 ];
 
 const data: { symbol: string; bars: Candle[] }[] = [];
-for (const inst of CURATED_STOCK_INSTRUMENTS) {
+for (const inst of INSTRUMENTS) {
   const res = await source.getCandles(inst.symbol, TF, LIMIT);
   if (!res.ok) {
     console.error(`skip ${inst.symbol}: ${res.error}`);
@@ -100,7 +116,7 @@ if (data.length === 0) {
   process.exit(1);
 }
 const N = Math.min(...data.map((d) => d.bars.length));
-console.error(`\n${data.length} symbols, min ${N} ${TF} bars each\n`);
+console.error(`\n[${MODE}] ${data.length} symbols, min ${N} ${TF} bars each\n`);
 
 /** Equal-weight buy & hold of the basket over a bar range — the honest benchmark. */
 function basket(from: number, to: number): number {
@@ -169,7 +185,7 @@ const num = (v: number, w = 8): string => (v === Infinity ? '999' : v.toFixed(2)
 for (const cost of COSTS) {
   const label = cost === LIVE_COST ? ' (LIVE)' : cost === 0 ? ' (frictionless)' : '';
   console.log(
-    `\n${'='.repeat(94)}\nUS stocks — ${data.length} symbols, ${N} ${TF} bars, ${FOLDS} folds of ~${foldSize}, cost ${(cost * 100).toFixed(2)}%/side${label}`,
+    `\n${'='.repeat(94)}\nUS stocks [${MODE}] — ${data.length} symbols, ${N} ${TF} bars, ${FOLDS} folds of ~${foldSize}, cost ${(cost * 100).toFixed(2)}%/side${label}`,
   );
   console.log(`Bar to clear: PF > 1.2 in EVERY fold AND beat the basket. ${'='.repeat(20)}`);
   console.log(
