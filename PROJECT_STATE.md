@@ -1054,8 +1054,39 @@ items, including pre-existing ones like Markets, hang identically without
 `?demo=1` here, isolating the blocker to this sandbox's network policy, not
 the change).
 
+## Stocks on Home + a Stocks Markets list (2026-08-03, PR #41)
+David asked for stocks to have the same visibility and market-price coverage
+crypto already has on Home — "really everything," including live prices for
+all markets. One hard constraint shapes the answer: Alpaca requires a secret
+key on every request (unlike Kraken's fully public API), so the browser can
+never call it directly without exposing that key to every site visitor —
+non-negotiable per this repo's own secrets rule. Asked David how to proceed;
+he deferred to "whatever's best," so this went with the safe, no-new-infra
+option over building a secret-holding proxy server.
+
+`stocksRunner.mts` now records a per-symbol price snapshot for all 10 curated
+stocks (not just symbols with open positions) into `state/stocks-state.json`
+as `market-snapshot`, each cycle — day-over-day change computed against a
+per-symbol UTC-day anchor, mirroring `PortfolioEngine`'s own `dayAnchor`
+pattern. This stays entirely inside the existing "committed state file,
+read-only, no keys" architecture already used for every other cloud-state
+field — no new server endpoint, no new attack surface.
+
+`cloudState.ts` parses the new field. Home gained a Stocks equity hero (cash +
+positions valued at entry price — no live per-symbol feed on Home, see below)
+and a Stocks markets strip, placed right after crypto's own Markets section.
+The Stocks tab itself gained a Markets section listing all 10 symbols with
+price + day change.
+
+**Honestly not tick-by-tick real-time** like Kraken's public feed — it updates
+on the robot's own cycle cadence (~15-30 min during US market hours only).
+That is the safe ceiling without adding a secret-holding proxy; a real-time
+option was offered and explicitly not chosen.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
 - Real money remains OFF until the readiness gate is green AND an approval flow
   exists. Measure-don't-guess for every strategy change.
+- Alpaca's secret key must never reach the browser — the stocks side only
+  ever exposes what the server already wrote to the committed state file.
