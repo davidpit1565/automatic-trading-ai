@@ -1158,5 +1158,14 @@ nav graph (`PRIMARY_VIEWS`/`TOOL_VIEWS` in `main.ts`, every view under
   David pre-approved changes — no approval prompts.
 - Real money remains OFF until the readiness gate is green AND an approval flow
   exists. Measure-don't-guess for every strategy change.
+- Crypto/stocks nav asymmetry (crypto: 3 primary tabs + hidden value drill-in;
+  stocks: 1 combined tab) is intentional, not IA debt — David asked to equalize
+  it (2026-08-03), evaluated and declined: forcing parity means either 2 more
+  bottom-nav slots (worse phone UX, 5→7 items) or per-symbol historical charts
+  for stocks, which needs either bloating the committed state file with candle
+  history for 50 symbols each cycle (more Alpaca calls, more rate-limit risk)
+  or a new secret-holding proxy — the exact infra the snapshot design was
+  built to avoid. David agreed to leave it. Revisit only if the traded stock
+  list itself grows enough (via measurement) to justify the split.
 - Alpaca's secret key must never reach the browser — the stocks side only
   ever exposes what the server already wrote to the committed state file.
