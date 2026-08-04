@@ -33,13 +33,15 @@ jobs:
             import { FileStore } from './server/fileStore.mts';
             import { monitorSystemChanges } from './server/systemMonitor.mts';
 
-            const store = new FileStore('./state');
-            await monitorSystemChanges(
-              store,
-              {
-                token: process.env.TELEGRAM_BOT_TOKEN || '',
-                chatId: process.env.TELEGRAM_CHAT_ID || '',
-              },
-              Date.now()
-            );
+            (async () => {
+              const store = new FileStore('./state');
+              await monitorSystemChanges(
+                store,
+                {
+                  token: process.env.TELEGRAM_BOT_TOKEN || '',
+                  chatId: process.env.TELEGRAM_CHAT_ID || '',
+                },
+                Date.now()
+              );
+            })();
           "
