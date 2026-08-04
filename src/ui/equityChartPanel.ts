@@ -11,8 +11,8 @@ import { priceChartSvg, candleChartSvg, chartGeometry, candleGeometry, type Char
 import { formatPrice, formatPct } from './format';
 import type { Candle } from '../core/types';
 
-const HOT = '#16c784';
-const COLD = '#ea3943';
+const HOT = 'var(--hot)';
+const COLD = 'var(--cold)';
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
 

@@ -20,8 +20,8 @@ const STOCKS_REFRESH_MS = 120_000;
 
 const euro = (v: number): string => `€${formatPrice(v)}`;
 const dollar = (v: number): string => `$${formatPrice(v)}`;
-const HOT = '#2fbf71';
-const COLD = '#e4574f';
+const HOT = 'var(--hot)';
+const COLD = 'var(--cold)';
 
 function el(tag: string, className?: string, text?: string): HTMLElement {
   const node = document.createElement(tag);
@@ -174,7 +174,14 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       ? `<span class="ready-badge go">READY</span>`
       : `<span class="ready-badge no">NOT READY</span>`;
     const items = r.criteria
-      .map((c) => `<li class="${c.ok ? 'ok' : 'no'}">${c.ok ? '✓' : '✗'} ${c.detail}</li>`)
+      .map(
+        (c) =>
+          `<li class="${c.ok ? 'ok' : 'no'}"><svg class="crit-icon" viewBox="0 0 24 24" aria-hidden="true">${
+            c.ok
+              ? '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>'
+              : '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v6"/><path d="M12 16.5h.01"/>'
+          }</svg><span>${c.detail}</span></li>`,
+      )
       .join('');
     readyWrap.innerHTML =
       `<div class="block-head"><h2>Real-money readiness</h2>${badge}</div>` +
