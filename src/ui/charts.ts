@@ -211,13 +211,19 @@ export function priceChartSvg(
   const line = points.map((p, i) => `${geo.x(i).toFixed(1)},${geo.y(p.value).toFixed(1)}`).join(' ');
   const area = `${padL.toFixed(1)},${(H - padB).toFixed(1)} ${line} ${geo.x(points.length - 1).toFixed(1)},${(H - padB).toFixed(1)}`;
 
+  const lastYForGrid = geo.y(points[points.length - 1]!.value);
   let grid = '';
   const yTicks = 4;
   for (let k = 0; k <= yTicks; k++) {
     const v = geo.min + ((geo.max - geo.min) * k) / yTicks;
     const y = geo.y(v);
     grid += `<line class="pgrid" x1="${padL}" y1="${y.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${y.toFixed(1)}"/>`;
-    grid += `<text class="paxis" x="${(W - padR + 5).toFixed(1)}" y="${(y + 3).toFixed(1)}">${opts.formatY(v)}</text>`;
+    // The pinned now-price tag already shows the exact current value — a
+    // gridline label landing right next to it would just repeat that number
+    // in a plainer style, crowding the one part of the axis that matters most.
+    if (Math.abs(y - lastYForGrid) > 11) {
+      grid += `<text class="paxis" x="${(W - padR + 5).toFixed(1)}" y="${(y + 3).toFixed(1)}">${opts.formatY(v)}</text>`;
+    }
   }
   let xlab = '';
   const xTicks = Math.min(5, points.length);
@@ -316,13 +322,19 @@ export function candleChartSvg(
   const volBarY = H - padB + 2;
   const maxVol = Math.max(...candles.map((c) => c.volume)) || 1;
 
+  const lastYForGrid = geo.y(candles[candles.length - 1]!.close);
   let grid = '';
   const yTicks = 4;
   for (let k = 0; k <= yTicks; k++) {
     const v = geo.min + ((geo.max - geo.min) * k) / yTicks;
     const y = geo.y(v);
     grid += `<line class="pgrid" x1="${padL}" y1="${y.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${y.toFixed(1)}"/>`;
-    grid += `<text class="paxis" x="${(W - padR + 5).toFixed(1)}" y="${(y + 3).toFixed(1)}">${opts.formatY(v)}</text>`;
+    // The pinned now-price tag already shows the exact current value — a
+    // gridline label landing right next to it would just repeat that number
+    // in a plainer style, crowding the one part of the axis that matters most.
+    if (Math.abs(y - lastYForGrid) > 11) {
+      grid += `<text class="paxis" x="${(W - padR + 5).toFixed(1)}" y="${(y + 3).toFixed(1)}">${opts.formatY(v)}</text>`;
+    }
   }
   let xlab = '';
   const xTicks = Math.min(5, n);
@@ -385,13 +397,17 @@ export function candleChartSvg(
     ${ema50Path ? `<path class="pema pema50" fill="none" stroke="#4c82f7" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" d="${ema50Path}"/>` : ''}
   `;
 
-  // Support/Resistance levels (last 20 candles)
+  // Support/Resistance levels (last 20 candles). Labelled "R"/"S" at the
+  // left edge so the dashed lines read as an intentional annotation, not a
+  // stray artifact.
   const sr = calculateSRLevels(candles, 20);
   const srResistanceY = geo.y(sr.resistance);
   const srSupportY = geo.y(sr.support);
   const srLines = `
     <line class="psr psr-resistance" x1="${padL.toFixed(1)}" y1="${srResistanceY.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${srResistanceY.toFixed(1)}" stroke="rgba(22, 199, 132, 0.3)" stroke-width="1" stroke-dasharray="3,2"/>
+    <text class="psr-label psr-label-resistance" x="${(padL + 2).toFixed(1)}" y="${(srResistanceY - 2.5).toFixed(1)}" font-size="7" fill="rgba(22, 199, 132, 0.85)">R</text>
     <line class="psr psr-support" x1="${padL.toFixed(1)}" y1="${srSupportY.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${srSupportY.toFixed(1)}" stroke="rgba(234, 57, 67, 0.3)" stroke-width="1" stroke-dasharray="3,2"/>
+    <text class="psr-label psr-label-support" x="${(padL + 2).toFixed(1)}" y="${(srSupportY - 2.5).toFixed(1)}" font-size="7" fill="rgba(234, 57, 67, 0.85)">S</text>
   `;
 
   const last = candles[n - 1]!;
@@ -412,12 +428,19 @@ export function candleChartSvg(
       <circle class="pchart-cross-dot" cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="4"/>
     </g>`;
 
-  // OHLC labels in top-left corner
-  const ohlc = `<g class="pohlc-labels" transform="translate(${(padL + 4).toFixed(1)}, ${(geo.padT + 10).toFixed(1)})">
-    <text class="pohlc-label pohlc-text" x="0" y="0" font-size="7.5" fill="currentColor" opacity="0.7">O ${opts.formatY(last.open)}</text>
-    <text class="pohlc-label pohlc-text" x="0" y="7" font-size="7.5" fill="currentColor" opacity="0.7">H ${opts.formatY(last.high)}</text>
-    <text class="pohlc-label pohlc-text" x="0" y="14" font-size="7.5" fill="currentColor" opacity="0.7">L ${opts.formatY(last.low)}</text>
-    <text class="pohlc-label pohlc-text" x="0" y="21" font-size="7.5" fill="currentColor" opacity="0.9" font-weight="600">C ${opts.formatY(last.close)}</text>
+  // OHLC readout: one compact row (not four stacked lines) with a scrim
+  // behind it so it stays legible over candles/gridlines at any size.
+  const ohlcParts = [
+    `O ${opts.formatY(last.open)}`,
+    `H ${opts.formatY(last.high)}`,
+    `L ${opts.formatY(last.low)}`,
+  ];
+  const ohlcClose = `C ${opts.formatY(last.close)}`;
+  const ohlcText = ohlcParts.join('   ');
+  const ohlcWidth = Math.max(60, (ohlcText.length + ohlcClose.length + 3) * 4.1);
+  const ohlc = `<g class="pohlc-labels" transform="translate(${padL.toFixed(1)}, ${geo.padT.toFixed(1)})">
+    <rect class="pohlc-scrim" x="0" y="0" width="${ohlcWidth.toFixed(1)}" height="13" rx="3"/>
+    <text class="pohlc-text" x="4" y="9.5" font-size="7.5">${ohlcText}<tspan dx="6" class="pohlc-close ${up ? 'up' : 'down'}">${ohlcClose}</tspan></text>
   </g>`;
 
   return `<svg class="pchart pcandle-chart ${up ? 'up' : 'down'}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="candlestick chart">
