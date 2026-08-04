@@ -419,7 +419,12 @@ export class PaperAutoPilot {
           equity: snapshot.equity,
           openPositions: this.options.positions
             .openPositions()
-            .map((p) => ({ symbol: p.symbol, quantity: p.quantity, entryPrice: p.entryPrice })),
+            .map((p) => ({
+              symbol: p.symbol,
+              quantity: p.quantity,
+              entryPrice: p.entryPrice,
+              currentPrice: marketPrices[p.symbol] ?? p.entryPrice,
+            })),
         },
         {
           limits: this.options.riskLimits ?? DEFAULT_RISK_LIMITS,

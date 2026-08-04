@@ -270,6 +270,30 @@ describe('assessTrade — portfolio exposure control', () => {
     // 1,000 existing + 2,000 new = 30% of 10,000.
     expect(assessment.portfolioExposure).toBeCloseTo(30, 10);
   });
+
+  it('values existing exposure at currentPrice, not the stale entryPrice, when supplied', () => {
+    // ETH was bought at 100 (1,000 notional) and has since run up to 400
+    // (4,000 notional) — equity is assumed already mark-to-market by the
+    // caller. Exposure caps must react to the real 4,000, not the 1,000 the
+    // position was worth at entry, or a winner running up would silently
+    // hide its own concentration from every cap that reads it.
+    const portfolio: PortfolioRiskState = {
+      equity: 10_000,
+      openPositions: [{ symbol: 'ETH/USD', quantity: 10, entryPrice: 100, currentPrice: 400 }],
+    };
+    const assessment = assessTrade(makeOpportunity({ symbol: 'BTC/USD' }), portfolio);
+    // 4,000 existing (at currentPrice) + 2,000 new = 60% of 10,000, not 30%.
+    expect(assessment.portfolioExposure).toBeCloseTo(60, 10);
+  });
+
+  it('falls back to entryPrice when currentPrice is omitted (backward compatible)', () => {
+    const portfolio: PortfolioRiskState = {
+      equity: 10_000,
+      openPositions: [{ symbol: 'ETH/USD', quantity: 10, entryPrice: 100 }],
+    };
+    const assessment = assessTrade(makeOpportunity({ symbol: 'BTC/USD' }), portfolio);
+    expect(assessment.portfolioExposure).toBeCloseTo(30, 10);
+  });
 });
 
 describe('assessTrade — correlated-cluster exposure cap (optional, off by default)', () => {
