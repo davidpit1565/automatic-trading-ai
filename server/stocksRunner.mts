@@ -9,15 +9,15 @@
  * paper autopilot) unchanged — they were already asset-agnostic. SIMULATED
  * money only, same as crypto: there is no live-order path anywhere in core.
  *
- * Strategy constants below are the engine's permissive defaults, NOT a
- * measured tuning — unlike the crypto side's `AUTOPILOT_MIN_CONFIDENCE` /
- * `AUTOPILOT_MAX_RSI_FOR_LONG` / `AUTOPILOT_TRAILING` (each backed by a real
- * sweep on Kraken history), there is no real Alpaca data to measure against
- * yet. Do not read these as "production-tuned for stocks" — they are a
- * deliberately conservative starting point pending `scripts/sweepStrategy.mts`
- * run against real stock history, once ALPACA_API_KEY_ID/
- * ALPACA_API_SECRET_KEY are live. This is a "measure, don't guess" gap, not
- * an oversight.
+ * Strategy constants below are the engine's permissive defaults (except
+ * `minConfidence`, see `INTERIM_MIN_CONFIDENCE`), NOT a measured tuning —
+ * unlike the crypto side's `AUTOPILOT_MIN_CONFIDENCE` / `AUTOPILOT_MAX_RSI_FOR_LONG`
+ * / `AUTOPILOT_TRAILING` (each backed by a real sweep on Kraken history),
+ * there is no real Alpaca data to measure against yet. Do not read these as
+ * "production-tuned for stocks" — they are a deliberately conservative
+ * starting point pending `scripts/sweepStrategy.mts` run against real stock
+ * history, once ALPACA_API_KEY_ID/ALPACA_API_SECRET_KEY are live. This is a
+ * "measure, don't guess" gap, not an oversight.
  */
 
 import { fileURLToPath } from 'node:url';
@@ -54,6 +54,12 @@ const MARKET_DAY_ANCHOR_KEY = 'market-day-anchor';
  */
 const SNAPSHOT_STAGGER_MS = Number(process.env['STOCKS_SNAPSHOT_STAGGER_MS']) || 350;
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+// No real Alpaca history exists yet to measure a stocks-specific floor via
+// sweepStrategy.mts (see the file-header note). Borrowing crypto's measured
+// AUTOPILOT_MIN_CONFIDENCE (40) as a conservative interim floor — capital
+// protection over waiting for enough stock data to measure properly. Revisit
+// once a real sweep can be run against Alpaca history.
+const INTERIM_MIN_CONFIDENCE = 40;
 
 export interface MarketSnapshotEntry {
   readonly symbol: string;
@@ -236,6 +242,7 @@ async function main(): Promise<void> {
     onRealizedPnl: (pnl, ts) => new DailyLossTracker(store).record(pnl, ts),
     costRate: COST_RATE,
     riskLimits: DEFAULT_RISK_LIMITS,
+    minConfidence: INTERIM_MIN_CONFIDENCE,
   });
 
   const telegram = {
