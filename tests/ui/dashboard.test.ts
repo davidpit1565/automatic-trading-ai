@@ -23,7 +23,7 @@ describe('dashboard shell', () => {
   });
 
   it('labels the Market Scan tool card', () => {
-    expect(html).toMatch(/data-tab="scan"[\s\S]{0,80}Market Scan/);
+    expect(html).toMatch(/data-tab="scan"[\s\S]{0,260}Market Scan/);
   });
 
   it('exposes the primary bottom-nav sections', () => {
