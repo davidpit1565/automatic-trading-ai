@@ -1153,6 +1153,40 @@ nav graph (`PRIMARY_VIEWS`/`TOOL_VIEWS` in `main.ts`, every view under
   and intentionally left as-is — stocks has less surface area, forcing
   parity would add clutter for no benefit unless he asks for it later.
 
+## Safety audit: exposure caps were sized off stale entry-price notional (2026-08-04, PR #48)
+David asked for a general safety/profitability/design pass. Profitability had
+already been exhaustively measured (nothing new to add — see the shadow
+standings below); design/IA had two PRs shipped days earlier (#44, #45). So
+this pass was a targeted correctness audit of the risk/execution path —
+exactly the kind of review that previously caught the DailyLossTracker-never-
+called and equity-not-marked-to-market bugs.
+
+Found a real one, same family as the equity fix but on the other side of the
+ratio: `riskEngine.ts`'s `notionalOf()` valued every open position at its
+`entryPrice` for the total/per-asset/correlated-cluster exposure caps, while
+the caps' denominator (`portfolio.equity`) is already mark-to-market. As a
+held position runs up, the caps kept reading its stale entry-price notional —
+understating true concentration and permitting MORE capital in exactly when
+a position is most concentrated. Concretely: a position sized to 50% of
+equity at entry that then runs up 3x reads back as 25% exposure (looks like
+headroom) when its real concentration is 75% (already over the default 60%
+total-exposure cap). Confirmed exploitable via the always-on total-exposure
+cap in the real `PaperAutoPilot` cycle (the per-asset cap can't currently
+fire live — the autopilot never re-enters an already-held symbol — but the
+fix covers it too, for correctness and for other callers).
+
+Fixed by adding an optional `currentPrice` to `OpenPosition` (defaults to
+`entryPrice`, so `marketScanView.ts`'s local demo path and the validation
+harness are unaffected) and wiring `paperAutoPilot.ts`'s already-fresh
+`marketPrices` map through to it. Verified red-without-the-fix,
+green-with-it by temporarily reverting the source change and re-running the
+new test. Gate: tsc clean, 683 vitest (680 + 3 new), vite build ok.
+
+Shadow standings checked as part of the same pass (2026-08-04): none of the
+candidates clear the promotion bar yet — mean-reversion (17 trades, PF 0.58)
+and breakout (21 trades, PF 0.98) are both losing; live-mirror/no-confirm/
+fixed-stop have only 4 trades each, too few to read. Nothing promoted.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
