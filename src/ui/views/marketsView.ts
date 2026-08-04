@@ -50,8 +50,8 @@ const MARKETS_LIST_CAP = 60;
 const PAGE_SIZE = 50;
 /** A row is stale (amber clock) once its data is older than this. */
 const STALE_AFTER_MS = 5 * 60_000;
-const HOT = '#16c784';
-const COLD = '#ea3943';
+const HOT = 'var(--hot)';
+const COLD = 'var(--cold)';
 /** Vite's deploy base — GitHub Pages serves from /<repo>/, so logo URLs need it. */
 const BASE_URL = import.meta.env.BASE_URL;
 
