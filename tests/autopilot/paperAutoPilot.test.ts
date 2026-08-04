@@ -246,6 +246,30 @@ describe('autonomous paper entries', () => {
     // during a drawdown, which is when undersizing matters most.
     expect(underwater).toBeLessThan(flat);
   });
+
+  it('refuses a new entry once a held position running up pushes total exposure over the cap', async () => {
+    // HOLD/USD is bought for 5,000 of the initial 10,000 cash (50% at entry —
+    // under the default 60% total-exposure cap, with headroom to spare).
+    // It then runs up 3x with no other trades. Equity is correctly
+    // mark-to-market (5,000 cash + 15,000 held = 20,000), but the total-
+    // exposure NUMERATOR must also be mark-to-market for the cap to mean
+    // anything: at the stale entry-price notional (5,000 / 20,000 = 25%)
+    // there looks like ample headroom for a new position; at the real
+    // current-price notional (15,000 / 20,000 = 75%) the cap is already
+    // breached and no new entry should open at all.
+    const { pilot, portfolio } = makePilot({
+      'QUAL/USD': { drift: 0.001 },
+      'HOLD/USD': { drift: 0, lastPrice: 300 },
+    });
+    const held = portfolio.open({
+      symbol: 'HOLD/USD', quantity: 50, entryPrice: 100, stopLoss: 50, takeProfit: 500, timestamp: T,
+    });
+    expect(held.ok).toBe(true);
+
+    const cycle = await pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(portfolio.openPositions()).toHaveLength(1); // still just HOLD/USD
+  });
 });
 
 describe('autonomous paper exits', () => {

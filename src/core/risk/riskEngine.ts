@@ -155,6 +155,14 @@ export interface OpenPosition {
   readonly symbol: string;
   readonly quantity: number;
   readonly entryPrice: number;
+  /**
+   * Latest mark price, if known. Exposure caps (total/per-asset/correlated-
+   * cluster) size a position by this, not `entryPrice` — equity is already
+   * mark-to-market, so a stale entry-price notional would understate a
+   * winning position's real concentration more with every tick it runs up.
+   * Falls back to `entryPrice` when the caller doesn't have a fresher price.
+   */
+  readonly currentPrice?: number;
 }
 
 export interface PortfolioRiskState {
@@ -201,7 +209,7 @@ export interface TradeRiskAssessment {
   readonly warnings: string[];
 }
 
-const notionalOf = (p: OpenPosition): number => p.quantity * p.entryPrice;
+const notionalOf = (p: OpenPosition): number => p.quantity * (p.currentPrice ?? p.entryPrice);
 
 export function assessTrade(
   opportunity: TradeOpportunity,
