@@ -1237,7 +1237,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1785951623362,
+    "at": 1785953463379,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -16852,6 +16852,30 @@
     {
       "at": 1785951623362,
       "equity": 9565
+    },
+    {
+      "at": 1785951931082,
+      "equity": 9563.57
+    },
+    {
+      "at": 1785952237472,
+      "equity": 9561.28
+    },
+    {
+      "at": 1785952543893,
+      "equity": 9560.11
+    },
+    {
+      "at": 1785952850591,
+      "equity": 9557.93
+    },
+    {
+      "at": 1785953156914,
+      "equity": 9558.16
+    },
+    {
+      "at": 1785953463379,
+      "equity": 9556.58
     }
   ],
   "trade-journal": [
@@ -17718,7 +17742,7 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 3922.197733977944,
+    "cash": 3922.1745997890803,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -41.56741887188792,
@@ -17728,13 +17752,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1785951623362,
+    "at": 1785953463379,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10013.105337259783,
-        "returnPct": 0.1310533725978348,
+        "equity": 10004.287491480802,
+        "returnPct": 0.04287491480801691,
         "trades": 6,
         "winRatePct": 50,
         "profitFactor": 1.7934958616816294,
@@ -17744,8 +17768,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10013.105337259783,
-        "returnPct": 0.1310533725978348,
+        "equity": 10004.287491480802,
+        "returnPct": 0.04287491480801691,
         "trades": 6,
         "winRatePct": 50,
         "profitFactor": 1.7934958616816294,
@@ -17755,8 +17779,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10013.105337259783,
-        "returnPct": 0.1310533725978348,
+        "equity": 10004.287491480802,
+        "returnPct": 0.04287491480801691,
         "trades": 6,
         "winRatePct": 50,
         "profitFactor": 1.7934958616816294,
@@ -17788,12 +17812,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9812.268656809363,
-        "returnPct": -1.8773134319063682,
+        "equity": 9798.005054113528,
+        "returnPct": -2.0199494588647213,
         "trades": 24,
         "winRatePct": 25,
         "profitFactor": 0.9154543202146159,
-        "openPositions": 4,
+        "openPositions": 5,
         "startedAt": 1785254092443
       }
     ]
@@ -17867,9 +17891,28 @@
       "takeProfit": 1679.2706713593607,
       "feesPaid": 0.018329292181896564,
       "realizedPnl": 0,
-      "highestPrice": 1649.58,
+      "highestPrice": 1658.71,
       "lowestPrice": 1635.66,
       "confidence": 64.96159684335643,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "LINKEUR:1785952543893:4",
+      "symbol": "LINKEUR",
+      "openedAt": 1785952543893,
+      "entryPrice": 7.12731,
+      "quantity": 0.003236142932206448,
+      "initialQuantity": 0.003236142932206448,
+      "stopLoss": 7.033881964642176,
+      "takeProfit": 7.314166070715647,
+      "feesPaid": 0.000069194981646433,
+      "realizedPnl": 0,
+      "highestPrice": 7.12809,
+      "lowestPrice": 7.12731,
+      "confidence": 70,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -18513,6 +18556,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ETHEUR: 0.0037268975646938688 @ 1639.37 (stop 1619.4196643203195, target 1679.2706713593607, confidence 65)"
+    },
+    {
+      "timestamp": 1785952237472,
+      "intentId": "LINKEUR:1785952237472",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LINKEUR: no exposure headroom: 5885.26 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1785952543893,
+      "intentId": "LINKEUR:1785952543893:4",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry LINKEUR: 0.003236142932206448 @ 7.12731 (stop 7.033881964642176, target 7.314166070715647, confidence 70)"
     }
   ],
   "shadow:breakout:trade-journal": [
