@@ -27,10 +27,10 @@ describe('dashboard shell', () => {
   });
 
   it('exposes the primary bottom-nav sections', () => {
-    for (const nav of ['home', 'markets', 'history', 'tools']) {
+    for (const nav of ['crypto', 'stocks', 'markets', 'history', 'tools']) {
       expect(html).toContain(`data-nav="${nav}"`);
     }
-    for (const view of ['view-home', 'view-markets', 'view-history', 'view-tools']) {
+    for (const view of ['view-crypto', 'view-stocks', 'view-markets', 'view-history', 'view-tools']) {
       expect(html).toContain(`id="${view}"`);
     }
   });
