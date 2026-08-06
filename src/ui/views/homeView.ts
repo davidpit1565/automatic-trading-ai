@@ -5,7 +5,7 @@
  */
 
 import type { ActiveDataSource } from '../dataSource';
-import { fetchCloudState, fetchStocksState, type CloudState } from '../cloudState';
+import { fetchCloudState, type CloudState } from '../cloudState';
 import { fetchTopMarkets, findBtcSymbol, type MarketSnapshot } from '../markets';
 import { sparklineSvg } from '../charts';
 import { formatPrice, formatPct } from '../format';
@@ -13,13 +13,8 @@ import type { ViewHandle } from '../viewLifecycle';
 
 const PRICE_REFRESH_MS = 15_000;
 const STATE_REFRESH_MS = 120_000;
-/** The stocks robot only cycles every ~15-30 min (market-hours cron), so
- * polling its state file faster than that would just refetch the same
- * numbers — matched to STATE_REFRESH_MS's cadence instead of PRICE_REFRESH_MS. */
-const STOCKS_REFRESH_MS = 120_000;
 
 const euro = (v: number): string => `€${formatPrice(v)}`;
-const dollar = (v: number): string => `$${formatPrice(v)}`;
 const HOT = 'var(--hot)';
 const COLD = 'var(--cold)';
 
@@ -62,21 +57,6 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   marketsStrip.id = 'home-markets';
   marketsWrap.appendChild(marketsStrip);
 
-  const stocksHero = el('section', 'hero tappable');
-  stocksHero.id = 'stocks-hero';
-  stocksHero.dataset['nav'] = 'stocks';
-  stocksHero.innerHTML = `
-    <div class="hero-label">Stocks <span class="tag-sim">SIMULATED</span><span class="hero-more">open ›</span></div>
-    <div class="hero-value" id="sh-equity">—</div>
-    <div class="hero-change" id="sh-change"></div>
-  `;
-
-  const stocksMarketsWrap = el('section', 'block');
-  stocksMarketsWrap.innerHTML = `<div class="block-head"><h2>Stocks markets</h2><button class="link-btn" data-nav="stocks">See all</button></div>`;
-  const stocksMarketsStrip = el('div', 'markets-strip');
-  stocksMarketsStrip.id = 'home-stocks-markets';
-  stocksMarketsWrap.appendChild(stocksMarketsStrip);
-
   const posWrap = el('section', 'block');
   posWrap.innerHTML = `<div class="block-head"><h2>Open positions</h2></div>`;
   const posList = el('div', 'stack');
@@ -92,10 +72,9 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   const status = el('p', 'muted-line', 'Loading the cloud robot…');
   status.id = 'home-status';
 
-  container.append(hero, readyWrap, marketsWrap, stocksHero, stocksMarketsWrap, posWrap, actWrap, status);
+  container.append(hero, readyWrap, marketsWrap, posWrap, actWrap, status);
 
   let state: CloudState | null = null;
-  let stocksState: CloudState | null = null;
 
   const setText = (id: string, text: string): void => {
     const node = container.querySelector<HTMLElement>(`#${id}`);
@@ -118,27 +97,6 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
         <div class="market-price">${euro(m.price)}</div>
         <div class="market-spark" style="color:${up ? HOT : COLD}">${sparklineSvg(m.closes, { stroke: up ? HOT : COLD, fill: true, width: 150, height: 44 })}</div>`;
       marketsStrip.appendChild(card);
-    }
-  }
-
-  /** No sparkline here — the robot records one price per cycle (~15-30 min
-   * apart), not a candle series, so there is no history to draw a line from. */
-  function renderStocksMarkets(): void {
-    stocksMarketsStrip.innerHTML = '';
-    const symbols = stocksState?.marketSnapshot ?? [];
-    if (symbols.length === 0) {
-      stocksMarketsStrip.appendChild(el('div', 'empty', 'Waiting for the stocks robot’s next cycle.'));
-      return;
-    }
-    for (const s of symbols) {
-      const up = s.changePct >= 0;
-      const card = el('div', 'market-card tappable');
-      card.dataset['nav'] = 'stocks';
-      card.innerHTML = `
-        <div class="market-top"><span class="market-name">${s.symbol}</span>
-          <span class="chg ${up ? 'up' : 'down'}">${formatPct(s.changePct)}</span></div>
-        <div class="market-price">${dollar(s.price)}</div>`;
-      stocksMarketsStrip.appendChild(card);
     }
   }
 
@@ -258,46 +216,19 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     renderMarkets(await fetchTopMarkets(data, 6));
   }
 
-  async function loadStocks(): Promise<void> {
-    const fresh = await fetchStocksState();
-    if (fresh) {
-      stocksState = fresh;
-      const totalReturn =
-        fresh.initialCash > 0 ? ((fresh.cash + investedValue(fresh) - fresh.initialCash) / fresh.initialCash) * 100 : 0;
-      setText('sh-equity', dollar(fresh.cash + investedValue(fresh)));
-      const change = container.querySelector<HTMLElement>('#sh-change')!;
-      change.textContent = `${formatPct(totalReturn)} all time`;
-      change.className = `hero-change ${totalReturn >= 0 ? 'up' : 'down'}`;
-    } else if (!stocksState) {
-      setText('sh-equity', 'Not set up yet');
-    }
-    renderStocksMarkets();
-  }
-
-  /** Positions are valued at their entry price here — the home page has no
-   * live per-symbol stock feed (see the module doc comment on why), so this
-   * matches the equity the stocks robot itself last recorded rather than
-   * drifting from it between cycles. */
-  function investedValue(s: CloudState): number {
-    return s.positions.reduce((sum, p) => sum + p.quantity * p.entryPrice, 0);
-  }
-
   let priceTimer = 0;
   let stateTimer = 0;
   let marketsTimer = 0;
-  let stocksTimer = 0;
 
   const start = (): void => {
     priceTimer = window.setInterval(() => void refreshPrices(), PRICE_REFRESH_MS);
     stateTimer = window.setInterval(() => void loadState(), STATE_REFRESH_MS);
     marketsTimer = window.setInterval(() => void loadMarkets(), PRICE_REFRESH_MS * 4);
-    stocksTimer = window.setInterval(() => void loadStocks(), STOCKS_REFRESH_MS);
   };
 
   renderReadiness();
   void loadState();
   void loadMarkets();
-  void loadStocks();
   start();
 
   return {
@@ -305,12 +236,10 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       window.clearInterval(priceTimer);
       window.clearInterval(stateTimer);
       window.clearInterval(marketsTimer);
-      window.clearInterval(stocksTimer);
     },
     resume: () => {
       void loadState();
       void loadMarkets();
-      void loadStocks();
       start();
     },
   };
