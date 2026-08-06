@@ -800,6 +800,16 @@ button.secondary:active {
      scroll", not a layout bug. */
   mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%); }
+
+.hub-tabs { display: flex; gap: 0.3rem; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 0.25rem; margin-bottom: 1.1rem; }
+.hub-tab { flex: 1; background: none; border: none; color: var(--text-dim); font-size: 0.8rem;
+  font-weight: 600; padding: 0.5rem 0.4rem; border-radius: var(--r-sm); cursor: pointer;
+  transition: all var(--dur-fast) var(--ease); }
+.hub-tab:hover { color: var(--text); }
+.hub-tab.active { background: var(--accent); color: #fff; }
+.hub-panel { display: none; }
+.hub-panel.active { display: block; animation: viewfade var(--dur-base) var(--ease); }
 .markets-strip::-webkit-scrollbar { display: none; }
 .market-card { min-width: 154px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
   padding: 0.75rem 0.85rem; box-shadow: var(--shadow-xs); transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }

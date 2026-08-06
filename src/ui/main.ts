@@ -8,7 +8,8 @@
 import { initDataSource, type ActiveDataSource } from './dataSource';
 import { fetchSnapshot, findBtcSymbol } from './markets';
 import { formatPrice, formatPct } from './format';
-import { renderHomeView } from './views/homeView';
+import { renderCryptoView } from './views/cryptoView';
+import { renderStocksView } from './views/stocksView';
 import { renderMarketsView } from './views/marketsView';
 import { renderHistoryView } from './views/historyView';
 import { renderValueView } from './views/valueView';
@@ -18,7 +19,6 @@ import { renderMarketScanView } from './views/marketScanView';
 import { renderMonitoringView } from './views/monitoringView';
 import { renderPortfolioView } from './views/portfolioView';
 import { renderValidationView } from './views/validationView';
-import { renderStocksView } from './views/stocksView';
 import type { ViewHandle } from './viewLifecycle';
 import { showToast, showSuccess, showError, showInfo, showWarning } from './toastNotifications';
 import {
@@ -50,11 +50,11 @@ declare global {
 type ViewRenderer = (container: HTMLElement, data: ActiveDataSource) => ViewHandle | void;
 
 const PRIMARY_VIEWS: Record<string, ViewRenderer> = {
-  home: renderHomeView,
+  crypto: renderCryptoView,
+  stocks: renderStocksView,
   value: renderValueView,
   markets: renderMarketsView,
   history: renderHistoryView,
-  stocks: renderStocksView,
 };
 
 const TOOL_VIEWS: Record<string, ViewRenderer | null> = {
@@ -178,7 +178,7 @@ async function bootstrap(): Promise<void> {
   // Set dark mode (always dark, no toggle)
   document.documentElement.setAttribute('data-theme', 'dark');
 
-  activateView('home');
+  activateView('crypto');
   void mountTopbarBtc(data);
 }
 
