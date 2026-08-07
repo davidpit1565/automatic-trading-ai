@@ -1,12 +1,12 @@
 {
   "portfolio-engine": {
-    "cash": 6228.150512522319,
+    "cash": 8180.5573306672395,
     "initialCash": 10000,
     "baseCurrency": "USD",
-    "closedRealizedPnl": 263.4268925120217,
+    "closedRealizedPnl": 224.52600075660646,
     "dayAnchor": {
-      "day": "2026-08-06",
-      "equity": 10261.62200498523
+      "day": "2026-08-07",
+      "equity": 10265.838277647974
     }
   },
   "open-positions": [
@@ -21,28 +21,9 @@
       "takeProfit": 514.0221382524029,
       "feesPaid": 2.029974235028189,
       "realizedPnl": 0,
-      "highestPrice": 498.46,
+      "highestPrice": 502.405,
       "lowestPrice": 488.89,
       "confidence": 39.16519591185356,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "JPM:1785856949931:2",
-      "symbol": "JPM",
-      "openedAt": 1785856949931,
-      "entryPrice": 361.11,
-      "quantity": 5.514407548670308,
-      "initialQuantity": 5.514407548670308,
-      "stopLoss": 356.11251863012325,
-      "takeProfit": 371.1049627397535,
-      "feesPaid": 1.991307709900335,
-      "realizedPnl": 0,
-      "highestPrice": 361.14,
-      "lowestPrice": 357.22,
-      "confidence": 12.660697922828856,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -133,13 +114,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit NVDA: 9.803718871249371 @ 219.36 (take-profit)"
+    },
+    {
+      "timestamp": 1786111885866,
+      "intentId": "JPM:1785856949931:2",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit JPM: 5.514407548670308 @ 354.41 (stop-loss)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1786029063179,
+    "at": 1786111885866,
     "source": "Alpaca market data (US equities)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "alerted-trade-ids": [
@@ -154,7 +142,8 @@
     "c:GOOGL:1785511001075:1",
     "o:MSFT:1785784065689:1",
     "o:JPM:1785856949931:2",
-    "c:NVDA:1785771705365:0"
+    "c:NVDA:1785771705365:0",
+    "c:JPM:1785856949931:2"
   ],
   "equity-history": [
     {
@@ -240,6 +229,10 @@
     {
       "at": 1786029063179,
       "equity": 10261.62
+    },
+    {
+      "at": 1786111885866,
+      "equity": 10265.84
     }
   ],
   "trade-journal": [
@@ -357,516 +350,539 @@
       "validationVerdict": null,
       "confidence": 21.863149552566718,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "JPM:1785856949931:2",
+      "symbol": "JPM",
+      "entryTimestamp": 1785856949931,
+      "exitTimestamp": 1786111885866,
+      "entryPrice": 361.11,
+      "exitPrice": 354.41,
+      "positionSize": 5.514407548670308,
+      "stopLoss": 356.11251863012325,
+      "takeProfit": 371.1049627397535,
+      "exitReason": "stop-loss",
+      "fees": 3.945668889224579,
+      "slippage": 0,
+      "holdingDurationMs": 254935935,
+      "mfePct": 0.008307717869893582,
+      "maePct": 1.8553903242779175,
+      "realizedPnl": -38.900891755415245,
+      "returnPct": -1.9535349339536399,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 12.660697922828856,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "daily-loss": {
-    "day": "2026-07-30",
-    "loss": 127.42919288243404
+    "day": "2026-08-07",
+    "loss": 38.900891755415245
   },
   "market-day-anchor": {
     "AAPL": {
-      "day": "2026-08-06",
-      "price": 312.595
+      "day": "2026-08-07",
+      "price": 312.43
     },
     "MSFT": {
-      "day": "2026-08-06",
-      "price": 497.185
+      "day": "2026-08-07",
+      "price": 502.405
     },
     "GOOGL": {
-      "day": "2026-08-06",
-      "price": 359.46
+      "day": "2026-08-07",
+      "price": 356.27
     },
     "AMZN": {
-      "day": "2026-08-06",
-      "price": 273.54
+      "day": "2026-08-07",
+      "price": 275.38
     },
     "NVDA": {
-      "day": "2026-08-06",
-      "price": 218.215
+      "day": "2026-08-07",
+      "price": 222.14
     },
     "META": {
-      "day": "2026-08-06",
-      "price": 590.87
+      "day": "2026-08-07",
+      "price": 590.04
     },
     "TSLA": {
-      "day": "2026-08-06",
-      "price": 322.79
+      "day": "2026-08-07",
+      "price": 324.72
     },
     "JPM": {
-      "day": "2026-08-06",
-      "price": 357.22
+      "day": "2026-08-07",
+      "price": 354.41
     },
     "V": {
-      "day": "2026-08-06",
-      "price": 367.84
+      "day": "2026-08-07",
+      "price": 368.08
     },
     "WMT": {
-      "day": "2026-08-06",
-      "price": 112.24
+      "day": "2026-08-07",
+      "price": 111.83
     },
     "AVGO": {
-      "day": "2026-08-06",
-      "price": 425.04
+      "day": "2026-08-07",
+      "price": 424
     },
     "ORCL": {
-      "day": "2026-08-06",
-      "price": 145.075
+      "day": "2026-08-07",
+      "price": 143.17
     },
     "ADBE": {
-      "day": "2026-08-06",
-      "price": 255.645
+      "day": "2026-08-07",
+      "price": 267.05
     },
     "CRM": {
-      "day": "2026-08-06",
-      "price": 185.5
+      "day": "2026-08-07",
+      "price": 192.88
     },
     "CSCO": {
-      "day": "2026-08-06",
-      "price": 121.49
+      "day": "2026-08-07",
+      "price": 121.1
     },
     "INTC": {
-      "day": "2026-08-06",
-      "price": 102.57
+      "day": "2026-08-07",
+      "price": 99.06
     },
     "AMD": {
-      "day": "2026-08-06",
-      "price": 494.83
+      "day": "2026-08-07",
+      "price": 484.26
     },
     "QCOM": {
-      "day": "2026-08-06",
-      "price": 161.35
+      "day": "2026-08-07",
+      "price": 164.39
     },
     "BAC": {
-      "day": "2026-08-06",
-      "price": 63.11
+      "day": "2026-08-07",
+      "price": 62.81
     },
     "WFC": {
-      "day": "2026-08-06",
-      "price": 87.9
+      "day": "2026-08-07",
+      "price": 86.79
     },
     "GS": {
-      "day": "2026-08-06",
-      "price": 1055.83
+      "day": "2026-08-07",
+      "price": 1036.07
     },
     "MS": {
-      "day": "2026-08-06",
-      "price": 217.08
+      "day": "2026-08-07",
+      "price": 213.6
     },
     "AXP": {
-      "day": "2026-08-06",
-      "price": 346.655
+      "day": "2026-08-07",
+      "price": 342.69
     },
     "UNH": {
-      "day": "2026-08-06",
-      "price": 405.84
+      "day": "2026-08-07",
+      "price": 406.42
     },
     "JNJ": {
-      "day": "2026-08-06",
-      "price": 256.82
+      "day": "2026-08-07",
+      "price": 256.7
     },
     "PFE": {
-      "day": "2026-08-06",
-      "price": 25.955
+      "day": "2026-08-07",
+      "price": 26.42
     },
     "ABBV": {
-      "day": "2026-08-06",
-      "price": 243.18
+      "day": "2026-08-07",
+      "price": 244.52
     },
     "MRK": {
-      "day": "2026-08-06",
-      "price": 128.83
+      "day": "2026-08-07",
+      "price": 127.44
     },
     "LLY": {
-      "day": "2026-08-06",
-      "price": 1184
+      "day": "2026-08-07",
+      "price": 1188.73
     },
     "HD": {
-      "day": "2026-08-06",
-      "price": 350.98
+      "day": "2026-08-07",
+      "price": 356.065
     },
     "MCD": {
-      "day": "2026-08-06",
-      "price": 274.2
+      "day": "2026-08-07",
+      "price": 275.75
     },
     "NKE": {
-      "day": "2026-08-06",
-      "price": 42.305
+      "day": "2026-08-07",
+      "price": 42.11
     },
     "SBUX": {
-      "day": "2026-08-06",
-      "price": 104.85
+      "day": "2026-08-07",
+      "price": 105.485
     },
     "PG": {
-      "day": "2026-08-06",
-      "price": 147.455
+      "day": "2026-08-07",
+      "price": 145.4
     },
     "KO": {
-      "day": "2026-08-06",
-      "price": 86.93
+      "day": "2026-08-07",
+      "price": 86.96
     },
     "PEP": {
-      "day": "2026-08-06",
-      "price": 137.88
+      "day": "2026-08-07",
+      "price": 138.15
     },
     "COST": {
-      "day": "2026-08-06",
-      "price": 946.46
+      "day": "2026-08-07",
+      "price": 945.1
     },
     "TGT": {
-      "day": "2026-08-06",
-      "price": 148.62
+      "day": "2026-08-07",
+      "price": 147.5
     },
     "XOM": {
-      "day": "2026-08-06",
-      "price": 152.145
+      "day": "2026-08-07",
+      "price": 152.44
     },
     "CVX": {
-      "day": "2026-08-06",
-      "price": 187.96
+      "day": "2026-08-07",
+      "price": 186.82
     },
     "BA": {
-      "day": "2026-08-06",
-      "price": 233.235
+      "day": "2026-08-07",
+      "price": 232.055
     },
     "CAT": {
-      "day": "2026-08-06",
-      "price": 871.595
+      "day": "2026-08-07",
+      "price": 842.52
     },
     "GE": {
-      "day": "2026-08-06",
-      "price": 376.25
+      "day": "2026-08-07",
+      "price": 371.465
     },
     "HON": {
-      "day": "2026-08-06",
-      "price": 243.35
+      "day": "2026-08-07",
+      "price": 241.985
     },
     "UPS": {
-      "day": "2026-08-06",
-      "price": 104.08
+      "day": "2026-08-07",
+      "price": 104.16
     },
     "DIS": {
-      "day": "2026-08-06",
-      "price": 103.475
+      "day": "2026-08-07",
+      "price": 104.3
     },
     "NFLX": {
-      "day": "2026-08-06",
-      "price": 73.775
+      "day": "2026-08-07",
+      "price": 73.88
     },
     "CMCSA": {
-      "day": "2026-08-06",
-      "price": 25.025
+      "day": "2026-08-07",
+      "price": 25.235
     },
     "VZ": {
-      "day": "2026-08-06",
-      "price": 46.87
+      "day": "2026-08-07",
+      "price": 46.52
     },
     "PYPL": {
-      "day": "2026-08-06",
-      "price": 58.89
+      "day": "2026-08-07",
+      "price": 59.97
     }
   },
   "market-snapshot": {
-    "at": 1786029063179,
+    "at": 1786111885866,
     "symbols": [
       {
         "symbol": "AAPL",
-        "price": 312.595,
+        "price": 312.43,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "MSFT",
-        "price": 497.185,
+        "price": 502.405,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "GOOGL",
-        "price": 359.46,
+        "price": 356.27,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "AMZN",
-        "price": 273.54,
+        "price": 275.38,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "NVDA",
-        "price": 218.215,
+        "price": 222.14,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "META",
-        "price": 590.87,
+        "price": 590.04,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "TSLA",
-        "price": 322.79,
+        "price": 324.72,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "JPM",
-        "price": 357.22,
+        "price": 354.41,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "V",
-        "price": 367.84,
+        "price": 368.08,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "WMT",
-        "price": 112.24,
+        "price": 111.83,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "AVGO",
-        "price": 425.04,
+        "price": 424,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "ORCL",
-        "price": 145.075,
+        "price": 143.17,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "ADBE",
-        "price": 255.645,
+        "price": 267.05,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "CRM",
-        "price": 185.5,
+        "price": 192.88,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "CSCO",
-        "price": 121.49,
+        "price": 121.1,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "INTC",
-        "price": 102.57,
+        "price": 99.06,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "AMD",
-        "price": 494.83,
+        "price": 484.26,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "QCOM",
-        "price": 161.35,
+        "price": 164.39,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "BAC",
-        "price": 63.11,
+        "price": 62.81,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "WFC",
-        "price": 87.9,
+        "price": 86.79,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "GS",
-        "price": 1055.83,
+        "price": 1036.07,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "MS",
-        "price": 217.08,
+        "price": 213.6,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "AXP",
-        "price": 346.655,
+        "price": 342.69,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "UNH",
-        "price": 405.84,
+        "price": 406.42,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "JNJ",
-        "price": 256.82,
+        "price": 256.7,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "PFE",
-        "price": 25.955,
+        "price": 26.42,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "ABBV",
-        "price": 243.18,
+        "price": 244.52,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "MRK",
-        "price": 128.83,
+        "price": 127.44,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "LLY",
-        "price": 1184,
+        "price": 1188.73,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "HD",
-        "price": 350.98,
+        "price": 356.065,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "MCD",
-        "price": 274.2,
+        "price": 275.75,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "NKE",
-        "price": 42.305,
+        "price": 42.11,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "SBUX",
-        "price": 104.85,
+        "price": 105.485,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "PG",
-        "price": 147.455,
+        "price": 145.4,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "KO",
-        "price": 86.93,
+        "price": 86.96,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "PEP",
-        "price": 137.88,
+        "price": 138.15,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "COST",
-        "price": 946.46,
+        "price": 945.1,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "TGT",
-        "price": 148.62,
+        "price": 147.5,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "XOM",
-        "price": 152.145,
+        "price": 152.44,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "CVX",
-        "price": 187.96,
+        "price": 186.82,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "BA",
-        "price": 233.235,
+        "price": 232.055,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "CAT",
-        "price": 871.595,
+        "price": 842.52,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "GE",
-        "price": 376.25,
+        "price": 371.465,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "HON",
-        "price": 243.35,
+        "price": 241.985,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "UPS",
-        "price": 104.08,
+        "price": 104.16,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "DIS",
-        "price": 103.475,
+        "price": 104.3,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "NFLX",
-        "price": 73.775,
+        "price": 73.88,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "CMCSA",
-        "price": 25.025,
+        "price": 25.235,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "VZ",
-        "price": 46.87,
+        "price": 46.52,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       },
       {
         "symbol": "PYPL",
-        "price": 58.89,
+        "price": 59.97,
         "changePct": 0,
-        "updatedAt": 1786029063179
+        "updatedAt": 1786111885866
       }
     ]
   }
