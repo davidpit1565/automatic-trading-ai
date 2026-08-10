@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 /**
  * Integration tests (real DOM via happy-dom) for the new primary views:
- * Home, Markets, History. They must mount without throwing and render their
+ * Home, Markets, Value. They must mount without throwing and render their
  * key structure against deterministic demo data, with the cloud-state fetch
  * stubbed offline (so they exercise the fail-soft path too).
  */
@@ -11,7 +11,6 @@ import { SyntheticDataSource } from '../../src/core/data/synthetic';
 import type { ActiveDataSource } from '../../src/ui/dataSource';
 import { renderHomeView } from '../../src/ui/views/homeView';
 import { renderMarketsView } from '../../src/ui/views/marketsView';
-import { renderHistoryView } from '../../src/ui/views/historyView';
 import { renderValueView } from '../../src/ui/views/valueView';
 import { err } from '../../src/core/types';
 
@@ -375,17 +374,5 @@ describe('Value view (DOM integration)', () => {
     await waitFor(() => container.querySelector('svg.pchart') !== null);
     // Stayed in candle mode (the default) — a real chart, not a 1-candle flat line.
     expect(container.querySelectorAll('.pcandle').length).toBeGreaterThan(15);
-  });
-});
-
-describe('History view (DOM integration)', () => {
-  it('mounts and shows the fail-soft message when the cloud is unreachable', async () => {
-    const container = document.createElement('section');
-    document.body.appendChild(container);
-    renderHistoryView(container, await makeData());
-
-    expect(container.querySelector('#history-list')).not.toBeNull();
-    await waitFor(() => (container.querySelector('#history-list')!.textContent ?? '').length > 0);
-    expect(container.querySelector('#history-list')!.textContent!.length).toBeGreaterThan(0);
   });
 });

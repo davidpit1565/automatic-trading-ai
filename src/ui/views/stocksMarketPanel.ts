@@ -19,7 +19,7 @@ import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 60_000;
 const STALE_AFTER_MS = 5 * 60_000;
-type SortKey = 'name' | 'price' | 'change';
+type SortKey = 'default' | 'name' | 'price' | 'change';
 type CategoryKey = 'popular' | 'all' | 'gainers' | 'losers';
 
 interface Row {
@@ -53,6 +53,13 @@ function applyCategory(rows: readonly Row[], cat: CategoryKey): Row[] {
   }
 }
 
+/**
+ * 'default' is a deliberate no-op — it preserves whatever order
+ * `applyCategory` already built (e.g. Gainers/Losers sorted by magnitude).
+ * Without it, the initial sort selection would silently re-sort those tabs
+ * back to alphabetical, hiding the biggest movers below smaller ones. Same
+ * pattern as the crypto Markets view (see `marketFilters.ts`'s `SortKey`).
+ */
 function sortRows(rows: readonly Row[], key: SortKey): Row[] {
   const copy = [...rows];
   switch (key) {
@@ -61,8 +68,10 @@ function sortRows(rows: readonly Row[], key: SortKey): Row[] {
     case 'change':
       return copy.sort((a, b) => (b.snapshot?.changePct ?? -Infinity) - (a.snapshot?.changePct ?? -Infinity));
     case 'name':
-    default:
       return copy.sort((a, b) => a.symbol.localeCompare(b.symbol));
+    case 'default':
+    default:
+      return copy;
   }
 }
 
@@ -98,6 +107,7 @@ export function renderStocksMarketPanel(container: HTMLElement): ViewHandle {
       <input id="sm-search" class="mk-search" type="search" inputmode="search"
         placeholder="Search stocks…" aria-label="Search stocks" autocomplete="off">
       <select id="sm-sort" class="mk-sort" aria-label="Sort stocks">
+        <option value="default">Default</option>
         <option value="name">Name</option>
         <option value="change">Change</option>
         <option value="price">Price</option>
@@ -113,7 +123,7 @@ export function renderStocksMarketPanel(container: HTMLElement): ViewHandle {
 
   const allRows: Row[] = BROWSABLE_STOCK_INSTRUMENTS.map((i) => ({ symbol: i.symbol, snapshot: null }));
   let query = '';
-  let sortKey: SortKey = 'name';
+  let sortKey: SortKey = 'default';
   let category: CategoryKey = 'popular';
 
   function render(): void {

@@ -197,9 +197,13 @@ function detailHeaderHtml(m: MarketRow, price: number, changePct: number, viewMo
       `<svg viewBox="0 0 24 24" aria-hidden="true">${t.icon}</svg></button>`,
   ).join('');
   return `
-    <button class="tool-back" id="mk-back">← All markets</button>
     <div class="detail-head">
-      <div class="detail-coin">${coinLogoHtml(m.base, BASE_URL)}<div><div class="detail-name">${m.label}</div><div class="row-sub">${m.symbol} · EUR</div></div></div>
+      <div class="detail-head-left">
+        <button class="icon-btn" id="mk-back" aria-label="Back to all markets">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <div class="detail-coin">${coinLogoHtml(m.base, BASE_URL)}<div><div class="detail-name">${m.label}</div><div class="row-sub">${m.symbol} · EUR</div></div></div>
+      </div>
       <button class="star-btn ${starred ? 'active' : ''}" id="mk-star" aria-label="Watch this market">★</button>
     </div>
     <div class="detail-price-row">

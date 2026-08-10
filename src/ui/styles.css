@@ -873,7 +873,6 @@ button.secondary:active {
 .logo-check { position: absolute; right: -2px; bottom: -2px; width: 15px; height: 15px;
   border-radius: 50%; background: var(--hot); border: 2px solid var(--surface);
   display: flex; align-items: center; justify-content: center; }
-.stack-card .logo-check { border-color: var(--surface); }
 .logo-check svg { width: 9px; height: 9px; fill: none; stroke: #07090d; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Search + sort. The star overlays the row, so the row itself stays one big
@@ -1056,8 +1055,19 @@ button.secondary:active {
 /* Market detail view (tap a coin) */
 .tappable { text-align: inherit; font: inherit; color: inherit; width: 100%; cursor: pointer; }
 .detail-head { display: flex; justify-content: space-between; align-items: center; margin: 0.5rem 0 0.9rem; }
+.detail-head-left { display: flex; align-items: center; gap: 0.7rem; }
 .detail-coin { display: flex; align-items: center; gap: 0.6rem; }
 .detail-coin .coin-logo { width: 30px; height: 30px; }
+/* Flat circular icon button — back arrows, bell, etc. Same shape as
+   .star-btn (borderless, raised-surface fill) for one consistent
+   icon-button language across the coin-detail header. */
+.icon-btn { background: var(--surface-raised); border: none; color: var(--text);
+  width: 38px; height: 38px; border-radius: 50%; cursor: pointer; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--dur-fast) var(--ease); }
+.icon-btn:hover { background: var(--surface-hover); }
+.icon-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; }
 .detail-name { font-size: 1.15rem; font-weight: 750; letter-spacing: -0.01em; }
 .detail-price { text-align: right; }
 .detail-price-row { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.7rem; }
