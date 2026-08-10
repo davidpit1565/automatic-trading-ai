@@ -8,7 +8,7 @@ import type { ActiveDataSource } from '../dataSource';
 import { fetchCloudState, type CloudState } from '../cloudState';
 import { fetchTopMarkets, findBtcSymbol, type MarketSnapshot } from '../markets';
 import { sparklineSvg } from '../charts';
-import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
+import { attachCoinLogoFallback, coinLogoHtml, completedLogoHtml } from '../coinLogo';
 import { formatPrice, formatPct } from '../format';
 import type { ViewHandle } from '../viewLifecycle';
 
@@ -67,13 +67,13 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
 
   const posWrap = el('section', 'block');
   posWrap.innerHTML = `<div class="block-head"><h2>Open positions</h2></div>`;
-  const posList = el('div', 'stack');
+  const posList = el('div', 'stack stack-card');
   posList.id = 'home-positions';
   posWrap.appendChild(posList);
 
   const actWrap = el('section', 'block');
   actWrap.innerHTML = `<div class="block-head"><h2>Recent activity</h2><button class="link-btn" data-hub="history">See all</button></div>`;
-  const actList = el('div', 'stack');
+  const actList = el('div', 'stack stack-card');
   actList.id = 'home-activity';
   actWrap.appendChild(actList);
 
@@ -144,11 +144,14 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     if (!spark) return;
     if (!state || state.equityHistory.length < 2) {
       spark.innerHTML = '';
+      hero.classList.remove('up', 'down');
       return;
     }
     const values = state.equityHistory.map((e) => e.equity);
     const up = values[values.length - 1]! >= values[0]!;
-    spark.innerHTML = sparklineSvg(values, { stroke: up ? HOT : COLD, fill: true, width: 320, height: 64 });
+    hero.classList.toggle('up', up);
+    hero.classList.toggle('down', !up);
+    spark.innerHTML = sparklineSvg(values, { stroke: 'var(--accent-text)', fill: false, width: 320, height: 64 });
   }
 
   function renderReadiness(): void {
@@ -188,10 +191,10 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       const buy = t.kind === 'buy';
       const row = el('div', `row trade ${t.kind}`);
       row.innerHTML = `
-        <div class="row-main"><span class="pill ${buy ? 'buy' : 'sell'}">${buy ? 'BUY' : 'SELL'}</span>
-          <span class="row-title">${t.symbol}</span></div>
-        <div class="row-side"><span class="row-sub">${t.quantity.toLocaleString('en-US', { maximumFractionDigits: 4 })} @ ${euro(t.price)}</span>
-          <span class="row-sub">${new Date(t.at).toLocaleDateString('en-GB')}</span></div>`;
+        <div class="row-main">${completedLogoHtml(baseFor(data, t.symbol))}
+          <div><div class="row-title"><span class="pill ${buy ? 'buy' : 'sell'}">${buy ? 'BUY' : 'SELL'}</span> ${t.symbol}</div>
+            <div class="row-sub">${t.quantity.toLocaleString('en-US', { maximumFractionDigits: 4 })} @ ${euro(t.price)}</div></div></div>
+        <div class="row-side"><span class="row-sub">${new Date(t.at).toLocaleDateString('en-GB')}</span></div>`;
       actList.appendChild(row);
     }
   }

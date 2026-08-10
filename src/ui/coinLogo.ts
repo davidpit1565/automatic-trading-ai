@@ -62,6 +62,38 @@ export function coinLogoHtml(base: string, baseUrl = ''): string {
   );
 }
 
+const QUOTE_SUFFIXES = ['EUR', 'USDT', 'USDC', 'USD'];
+
+/**
+ * Clean asset code from a traded pair symbol (XBTEUR -> BTC, ADAEUR -> ADA),
+ * for contexts with no `ActiveDataSource` instrument table to look up (e.g.
+ * the asset hub's History tab, which only reads `CloudState`). A stock
+ * ticker (AAPL) has no quote suffix to strip and passes through unchanged.
+ */
+export function baseCodeFromSymbol(symbol: string): string {
+  const upper = symbol.toUpperCase();
+  for (const quote of QUOTE_SUFFIXES) {
+    if (upper.length > quote.length && upper.endsWith(quote)) {
+      const base = upper.slice(0, -quote.length);
+      return base === 'XBT' ? 'BTC' : base;
+    }
+  }
+  return upper;
+}
+
+/**
+ * A coin logo with a small green "completed" checkmark badge overlaid on the
+ * corner — the Revolut X reference style for a filled trade row. Every trade
+ * in this simulated system is filled (there's no pending-order state), so
+ * this is unconditional wherever a trade row shows its own coin logo.
+ */
+export function completedLogoHtml(base: string, baseUrl = ''): string {
+  return (
+    `<span class="logo-wrap">${coinLogoHtml(base, baseUrl)}` +
+    `<span class="logo-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span></span>`
+  );
+}
+
 /**
  * Swap any logo that fails to load for its letter tile. Registered once on a
  * container: `error` events do not bubble, so this listens in the CAPTURE

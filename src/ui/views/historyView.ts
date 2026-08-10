@@ -16,7 +16,7 @@ export function renderHistoryView(container: HTMLElement, _data: ActiveDataSourc
     <h2 class="view-title">History</h2>
     <p class="view-sub">Every simulated buy and sell, newest first.</p>
     <div id="history-chart"></div>
-    <div class="stack" id="history-list"><div class="empty">Loading…</div></div>`;
+    <div class="stack stack-card" id="history-list"><div class="empty">Loading…</div></div>`;
   const chartSlot = container.querySelector<HTMLElement>('#history-chart')!;
   const list = container.querySelector<HTMLElement>('#history-list')!;
   const chart = mountEquityChartPanel(chartSlot);

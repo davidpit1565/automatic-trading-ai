@@ -10,6 +10,7 @@
  */
 
 import { mountEquityChartPanel } from '../equityChartPanel';
+import { attachCoinLogoFallback, baseCodeFromSymbol, completedLogoHtml } from '../coinLogo';
 import { formatPrice, formatPct } from '../format';
 import type { CloudState } from '../cloudState';
 import type { ViewHandle } from '../viewLifecycle';
@@ -51,7 +52,7 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     <div class="hub-panel active" data-hub-panel="overview"></div>
     <div class="hub-panel" data-hub-panel="history">
       <div id="hub-history-chart"></div>
-      <div class="stack" id="hub-history-list"><div class="empty">Loading…</div></div>
+      <div class="stack stack-card" id="hub-history-list"><div class="empty">Loading…</div></div>
     </div>
     <div class="hub-panel" data-hub-panel="market"></div>
     <div class="hub-panel" data-hub-panel="profit">
@@ -62,6 +63,7 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
       </section>
       <section class="block readiness" id="hub-readiness"></section>
     </div>`;
+  attachCoinLogoFallback(container);
 
   const overviewPanel = container.querySelector<HTMLElement>('[data-hub-panel="overview"]')!;
   const historyChartSlot = container.querySelector<HTMLElement>('#hub-history-chart')!;
@@ -88,8 +90,8 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
       const buy = t.kind === 'buy';
       const row = el('div', `row trade ${t.kind}`);
       row.innerHTML = `
-        <div class="row-main"><span class="pill ${buy ? 'buy' : 'sell'}">${buy ? 'BUY' : 'SELL'}</span>
-          <div><div class="row-title">${t.symbol}</div>
+        <div class="row-main">${completedLogoHtml(baseCodeFromSymbol(t.symbol))}
+          <div><div class="row-title"><span class="pill ${buy ? 'buy' : 'sell'}">${buy ? 'BUY' : 'SELL'}</span> ${t.symbol}</div>
             <div class="row-sub">${t.note ? t.note : buy ? 'opened' : 'closed'}</div></div></div>
         <div class="row-side"><span class="row-title">${money(t.price)}</span>
           <span class="row-sub">${t.quantity.toLocaleString('en-US', { maximumFractionDigits: 4 })}</span>

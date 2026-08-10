@@ -11,12 +11,19 @@
   --text-dim: #929bb0;
   --text-faint: #5d6579;
 
-  /* Accent: a refined indigo-blue rather than a flat primary blue */
-  --accent: #5b7fff;
-  --accent-2: #7c6cf0;
-  --accent-dim: #3f57b8;
-  --accent-glow: rgba(91, 127, 255, 0.38);
-  --accent-tint: rgba(91, 127, 255, 0.12);
+  /* Accent: neutral graphite, not a colour — Revolut X's own look uses no
+     blue anywhere; emphasis comes from brightness/weight and from --hot/
+     --cold, not a tinted primary. Used for active-pill/button BACKGROUNDS
+     (paired with white text, so it stays a medium-dark neutral). */
+  --accent: #454c5c;
+  --accent-2: #5c6474;
+  --accent-dim: #2e333d;
+  --accent-glow: rgba(255, 255, 255, 0.16);
+  --accent-tint: rgba(255, 255, 255, 0.08);
+  /* Bright neutral for TEXT-only emphasis (links, badges, chart markers) —
+     a separate token because it needs to read on a dark surface, unlike
+     --accent above which needs to host white text on top of it. */
+  --accent-text: #dbdfe8;
 
   /* Semantic colours, tuned for legibility on the deep background */
   --hot: #21d789;
@@ -37,10 +44,10 @@
 
   /* Radius scale, used consistently across every card/control */
   --r-xs: 8px;
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 18px;
-  --r-xl: 24px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 20px;
+  --r-xl: 26px;
   --r-pill: 999px;
 
   /* Motion: an "ease-out-expo" curve reads as noticeably more polished
@@ -129,8 +136,8 @@ body {
 }
 
 .tab-button.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  color: var(--accent-text);
+  border-bottom-color: var(--accent-text);
 }
 
 .tab-panel {
@@ -207,18 +214,18 @@ button.primary {
   letter-spacing: 0.005em;
   cursor: pointer;
   transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-base) var(--ease), filter var(--dur-fast) var(--ease);
-  box-shadow: 0 4px 14px rgba(91, 127, 255, 0.3);
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.3);
 }
 
 button.primary:hover {
   transform: translateY(-2px);
   filter: brightness(1.06);
-  box-shadow: 0 10px 26px rgba(91, 127, 255, 0.4), var(--shadow-glow);
+  box-shadow: 0 10px 26px rgba(255, 255, 255, 0.4), var(--shadow-glow);
 }
 
 button.primary:active {
   transform: translateY(0) scale(0.99);
-  box-shadow: 0 3px 10px rgba(91, 127, 255, 0.3);
+  box-shadow: 0 3px 10px rgba(255, 255, 255, 0.3);
 }
 
 button.primary:disabled {
@@ -459,7 +466,7 @@ button.secondary:active {
 
 .risk-approved {
   background: var(--accent-tint);
-  border: 1px solid rgba(91, 127, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .risk-refused {
@@ -724,7 +731,7 @@ button.secondary:active {
 .brand { font-weight: 750; letter-spacing: -0.01em; display: flex; align-items: center; gap: 0.65rem; font-size: 1.1rem; }
 .brand-dot {
   width: 11px; height: 11px; border-radius: 50%;
-  background: linear-gradient(155deg, var(--accent), var(--accent-2));
+  background: var(--accent-text);
   box-shadow: 0 0 0 3px var(--accent-tint), 0 0 18px var(--accent-glow);
 }
 .topbar-btc { display: flex; align-items: center; gap: 0.45rem; font-size: 0.82rem;
@@ -757,7 +764,7 @@ button.secondary:active {
   transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .nav-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .nav-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
-.nav-btn.active { background: var(--accent-tint); color: var(--accent); }
+.nav-btn.active { background: var(--accent-tint); color: var(--accent-text); }
 
 .hero {
   position: relative;
@@ -770,6 +777,18 @@ button.secondary:active {
   overflow: hidden;
 }
 .hero::before {
+  /* Ambient sentiment glow, bleeding down from the top edge — the Revolut X
+     reference's colour-blurred backdrop, scoped to the card. `::before`
+     paints behind the hero's real children (unlike `::after`), so the
+     numbers on top never fight this for legibility. Colourless until
+     `.up`/`.down` is set (once real equity history has loaded). */
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(130% 70% at 50% -25%, var(--glow-color, transparent) 0%, transparent 65%);
+}
+.hero.up { --glow-color: rgba(33, 215, 137, 0.16); }
+.hero.down { --glow-color: rgba(242, 73, 95, 0.16); }
+.hero::after {
   /* Subtle top-edge highlight — the kind of glass-panel detail premium
      fintech dashboards use to give a card a sense of light and depth. */
   content: '';
@@ -778,7 +797,7 @@ button.secondary:active {
 }
 .hero-label { color: var(--text-dim); font-size: 0.85rem; font-weight: 550; display: flex; align-items: center; gap: 0.5rem; }
 .tag-sim { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; background: var(--accent-tint);
-  color: var(--accent); border: 1px solid rgba(91, 127, 255, 0.4); padding: 0.12rem 0.45rem; border-radius: var(--r-xs); }
+  color: var(--accent-text); border: 1px solid rgba(255, 255, 255, 0.4); padding: 0.12rem 0.45rem; border-radius: var(--r-xs); }
 .hero-value { font-size: 2.7rem; font-weight: 750; letter-spacing: -0.02em; margin: 0.3rem 0 0.1rem;
   font-variant-numeric: tabular-nums; }
 .hero-change { font-weight: 650; font-size: 1rem; }
@@ -793,7 +812,7 @@ button.secondary:active {
 .block-head h2, .view-title { font-size: 1.08rem; margin: 0; letter-spacing: -0.01em; }
 .view-title { margin-bottom: 0.15rem; font-size: 1.35rem; }
 .view-sub { color: var(--text-dim); font-size: 0.85rem; margin: 0.1rem 0 1.1rem; }
-.link-btn { background: none; border: none; color: var(--accent); font-size: 0.82rem; font-weight: 600; cursor: pointer;
+.link-btn { background: none; border: none; color: var(--accent-text); font-size: 0.82rem; font-weight: 600; cursor: pointer;
   transition: opacity var(--dur-fast) var(--ease); }
 .link-btn:hover { opacity: 0.75; }
 
@@ -840,7 +859,7 @@ button.secondary:active {
   font-size: 0.86rem; font-weight: 650; cursor: pointer; transition: all var(--dur-fast) var(--ease); }
 .mk-tab:hover { color: var(--text); border-color: var(--border-strong); }
 .mk-tab.active { background: linear-gradient(155deg, var(--accent), var(--accent-2)); border-color: transparent; color: #fff;
-  box-shadow: 0 4px 14px rgba(91,127,255,0.3); }
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.3); }
 
 /* Coin logo, or a generated tile for the long tail with no bundled mark.
    Both share a size so rows never reflow when one falls back to the other. */
@@ -848,6 +867,14 @@ button.secondary:active {
 .coin-logo-tile { display: inline-flex; align-items: center; justify-content: center;
   font-size: 0.62rem; font-weight: 800; letter-spacing: -0.02em; color: #fff;
   background: hsl(var(--coin-hue, 210) 55% 42%); text-transform: uppercase; }
+
+/* Completed-trade checkmark badge, overlaid on a coin logo's corner. */
+.logo-wrap { position: relative; display: inline-flex; flex: 0 0 auto; }
+.logo-check { position: absolute; right: -2px; bottom: -2px; width: 15px; height: 15px;
+  border-radius: 50%; background: var(--hot); border: 2px solid var(--surface);
+  display: flex; align-items: center; justify-content: center; }
+.stack-card .logo-check { border-color: var(--surface); }
+.logo-check svg { width: 9px; height: 9px; fill: none; stroke: #07090d; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Search + sort. The star overlays the row, so the row itself stays one big
    tap target and the star is not nested inside it (a button inside a button is
@@ -921,6 +948,20 @@ button.secondary:active {
 .pill.loss { background: var(--cold-tint); color: var(--cold); }
 .empty { color: var(--text-dim); background: var(--surface); border: 1px dashed var(--border-strong);
   border-radius: var(--r-lg); padding: 1.15rem; text-align: center; font-size: 0.9rem; }
+
+/* Grouped-card lists — short lists (positions, activity, trade history) sit
+   as rows inside ONE continuous rounded card with hairline dividers, rather
+   than each row being its own separate bordered card. Long scrollable lists
+   (the full markets browser) keep the per-row card treatment instead — a
+   single giant card wrapping hundreds of rows would look wrong at that
+   scale, so this is deliberately opt-in via a second class on `.stack`. */
+.stack-card { gap: 0; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); overflow: hidden; }
+.stack-card .row { background: transparent; border: none; border-radius: 0;
+  border-bottom: 1px solid var(--border); }
+.stack-card .row:last-child { border-bottom: none; }
+.stack-card .row:hover { border-color: transparent; background: var(--surface-hover); }
+.stack-card .empty { border: none; background: transparent; border-radius: 0; }
 .muted-line { color: var(--text-dim); font-size: 0.75rem; text-align: center; margin-top: 1.1rem; }
 
 /* Tools grid - responsive columns */
@@ -938,7 +979,7 @@ button.secondary:active {
   box-shadow: var(--shadow-sm); }
 .tool-icon-badge { flex-shrink: 0; width: 40px; height: 40px; border-radius: var(--r-md); background: var(--accent-tint);
   display: flex; align-items: center; justify-content: center; }
-.tool-icon-badge svg { width: 20px; height: 20px; fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tool-icon-badge svg { width: 20px; height: 20px; fill: none; stroke: var(--accent-text); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tool-card-text { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
 .tool-card strong { font-size: 0.95rem; font-weight: 650; letter-spacing: -0.005em; }
 .tool-card small { color: var(--text-dim); font-size: 0.8rem; }
@@ -1020,10 +1061,11 @@ button.secondary:active {
 .detail-name { font-size: 1.15rem; font-weight: 750; letter-spacing: -0.01em; }
 .detail-price { text-align: right; }
 .detail-price-row { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.7rem; }
-.star-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+.star-btn { background: var(--surface-raised); border: none; color: var(--text-dim);
   width: 38px; height: 38px; border-radius: 50%; font-size: 1.1rem; cursor: pointer;
   transition: all var(--dur-fast) var(--ease); }
-.star-btn.active { color: var(--warn); border-color: var(--warn); }
+.star-btn:hover { background: var(--surface-hover); color: var(--text); }
+.star-btn.active { color: var(--warn); background: var(--warn-tint); }
 .detail-stats-row { display: flex; gap: 0.6rem; margin-bottom: 0.9rem; }
 .dstat { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
   padding: 0.5rem 0.6rem; display: flex; flex-direction: column; gap: 0.15rem; }
@@ -1072,7 +1114,7 @@ button.secondary:active {
   transition: all var(--dur-fast) var(--ease); }
 .range-btn:hover { color: var(--text); }
 .range-btn.active { background: linear-gradient(155deg, var(--accent), var(--accent-2)); color: #fff;
-  box-shadow: 0 3px 10px rgba(91,127,255,0.3); }
+  box-shadow: 0 3px 10px rgba(255, 255, 255, 0.3); }
 /* The price chart sizes by aspect-ratio, not height — a `height` rule on
    `.detail-chart svg` cannot reach it (this selector is more specific and
    sets height:auto). Widen the ratio as the viewport grows so the chart
@@ -1103,7 +1145,7 @@ button.secondary:active {
 .pcandle.down .pcandle-wick { stroke: var(--cold); }
 .pcandle.down .pcandle-body { stroke: var(--cold); fill: var(--cold); opacity: 0.8; }
 /* Neutral-accent live marker + crosshair dot in candle mode (bodies carry colour). */
-.pcandle-chart .pchart-now, .pcandle-chart .pchart-cross-dot { fill: var(--accent); }
+.pcandle-chart .pchart-now, .pcandle-chart .pchart-cross-dot { fill: var(--accent-text); }
 .pcandle-chart .pchart-now-tag rect { fill: var(--accent); border-radius: 3px; }
 .pchart-tip-ohlc { color: var(--text-dim); font-size: 0.65rem; }
 
@@ -1152,7 +1194,7 @@ button.secondary:active {
 .pchart-tip-price { font-weight: 750; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
 .pchart-tip-time { color: var(--text-dim); font-size: 0.7rem; }
 
-.hero-more { float: left; color: var(--accent); font-size: 0.8rem; font-weight: 650; }
+.hero-more { float: left; color: var(--accent-text); font-size: 0.8rem; font-weight: 650; }
 
 /* Real-money readiness card */
 .readiness .block-head { display: flex; align-items: center; justify-content: space-between; }
@@ -1179,7 +1221,7 @@ button.secondary:active {
   width: 20px;
   height: 20px;
   border: 2.5px solid var(--accent-tint);
-  border-top-color: var(--accent);
+  border-top-color: var(--accent-text);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -1265,8 +1307,8 @@ button.secondary:active {
 .toast.success .toast-icon { color: var(--hot); }
 .toast.error { border-color: rgba(242,73,95,0.4); background: var(--cold-tint); }
 .toast.error .toast-icon { color: var(--cold); }
-.toast.info { border-color: rgba(91,127,255,0.4); background: var(--accent-tint); }
-.toast.info .toast-icon { color: var(--accent); }
+.toast.info { border-color: rgba(255, 255, 255, 0.4); background: var(--accent-tint); }
+.toast.info .toast-icon { color: var(--accent-text); }
 .toast.warning { border-color: rgba(245,185,61,0.4); background: var(--warn-tint); }
 .toast.warning .toast-icon { color: var(--warn); }
 
