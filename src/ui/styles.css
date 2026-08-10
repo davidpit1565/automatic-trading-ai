@@ -785,6 +785,17 @@ button.secondary:active {
 .hero-split { display: flex; gap: 1.2rem; color: var(--text-dim); font-size: 0.85rem; margin-top: 0.5rem; }
 .hero-bench { margin-top: 0.8rem; font-size: 0.82rem; background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border); border-radius: var(--r-sm); padding: 0.48rem 0.75rem; }
+.hero-spark { margin-top: 0.6rem; }
+.hero-spark svg, .hero-spark .spark { width: 100%; height: 64px; display: block; }
+
+.action-row { display: flex; gap: 0.6rem; margin-bottom: 1.5rem; }
+.action-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  padding: 0.75rem 0.5rem; color: var(--text); font-size: 0.72rem; font-weight: 650; cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+.action-btn:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.action-btn svg { width: 20px; height: 20px; fill: none; stroke: var(--accent); stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round; }
 
 .block { margin-bottom: 1.5rem; }
 .block-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.7rem; }
@@ -814,7 +825,9 @@ button.secondary:active {
 .market-card { min-width: 154px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
   padding: 0.75rem 0.85rem; box-shadow: var(--shadow-xs); transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .market-top { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; }
-.market-name { color: var(--text-dim); font-weight: 550; }
+.market-id { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+.market-id .coin-logo { width: 20px; height: 20px; }
+.market-name { color: var(--text-dim); font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .market-price { font-weight: 750; margin: 0.28rem 0; font-variant-numeric: tabular-nums; }
 .market-spark svg, .spark { width: 100%; height: 44px; display: block; }
 

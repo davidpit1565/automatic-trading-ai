@@ -8,6 +8,7 @@ import type { ActiveDataSource } from '../dataSource';
 import { fetchCloudState, type CloudState } from '../cloudState';
 import { fetchTopMarkets, findBtcSymbol, type MarketSnapshot } from '../markets';
 import { sparklineSvg } from '../charts';
+import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
 import { formatPrice, formatPct } from '../format';
 import type { ViewHandle } from '../viewLifecycle';
 
@@ -23,6 +24,12 @@ function el(tag: string, className?: string, text?: string): HTMLElement {
   if (className) node.className = className;
   if (text !== undefined) node.textContent = text;
   return node;
+}
+
+/** Clean asset code for a traded pair (BTC, ETH) — for the coin logo, from the majors/instrument table. */
+function baseFor(data: ActiveDataSource, symbol: string): string {
+  const inst = data.instruments.find((i) => i.symbol === symbol);
+  return (inst?.base ?? symbol.replace(/EUR$|USD$/, '')).toUpperCase();
 }
 
 async function livePrices(data: ActiveDataSource, symbols: string[]): Promise<Record<string, number>> {
@@ -46,6 +53,14 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     <div class="hero-change" id="hv-change"></div>
     <div class="hero-split"><span id="hv-cash"></span><span id="hv-invested"></span></div>
     <div class="hero-bench" id="hv-bench" hidden></div>
+    <div class="hero-spark" id="hv-spark"></div>
+  `;
+
+  const actionRow = el('div', 'action-row');
+  actionRow.innerHTML = `
+    <button class="action-btn" data-hub="history"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</button>
+    <button class="action-btn" data-hub="market"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Market</button>
+    <button class="action-btn" data-hub="profit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Profit</button>
   `;
 
   const readyWrap = el('section', 'block readiness');
@@ -72,7 +87,8 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   const status = el('p', 'muted-line', 'Loading the cloud robot…');
   status.id = 'home-status';
 
-  container.append(hero, readyWrap, marketsWrap, posWrap, actWrap, status);
+  container.append(hero, actionRow, posWrap, marketsWrap, readyWrap, actWrap, status);
+  attachCoinLogoFallback(container);
 
   let state: CloudState | null = null;
 
@@ -89,10 +105,11 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     }
     for (const m of markets) {
       const up = m.changePct >= 0;
+      const base = baseFor(data, m.symbol);
       const card = el('div', 'market-card tappable');
       card.dataset['nav'] = 'markets';
       card.innerHTML = `
-        <div class="market-top"><span class="market-name">${m.label}</span>
+        <div class="market-top"><div class="market-id">${coinLogoHtml(base)}<span class="market-name">${m.label}</span></div>
           <span class="chg ${up ? 'up' : 'down'}">${formatPct(m.changePct)}</span></div>
         <div class="market-price">${euro(m.price)}</div>
         <div class="market-spark" style="color:${up ? HOT : COLD}">${sparklineSvg(m.closes, { stroke: up ? HOT : COLD, fill: true, width: 150, height: 44 })}</div>`;
@@ -102,8 +119,17 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
 
   function renderPositions(prices: Record<string, number>): void {
     posList.innerHTML = '';
-    if (!state || state.positions.length === 0) {
+    if (!state) {
       posList.appendChild(el('div', 'empty', 'No open positions — holding cash and waiting for a good setup.'));
+      return;
+    }
+    const cashRow = el('div', 'row');
+    cashRow.innerHTML = `
+      <div class="row-main">${coinLogoHtml('EUR')}<div><div class="row-title">Cash</div><div class="row-sub">Available balance</div></div></div>
+      <div class="row-side"><span class="row-title">${euro(state.cash)}</span></div>`;
+    posList.appendChild(cashRow);
+    if (state.positions.length === 0) {
+      posList.appendChild(el('div', 'empty', 'Holding cash and waiting for a good setup.'));
       return;
     }
     for (const p of state.positions) {
@@ -112,12 +138,24 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       const up = movePct >= 0;
       const row = el('div', 'row');
       row.innerHTML = `
-        <div class="row-main"><span class="row-title">${p.symbol}</span>
-          <span class="row-sub">entry ${euro(p.entryPrice)}</span></div>
+        <div class="row-main">${coinLogoHtml(baseFor(data, p.symbol))}<div><div class="row-title">${p.symbol}</div>
+          <div class="row-sub">entry ${euro(p.entryPrice)}</div></div></div>
         <div class="row-side"><span class="row-title">${euro(p.quantity * price)}</span>
           <span class="chg ${up ? 'up' : 'down'}">${formatPct(movePct)}</span></div>`;
       posList.appendChild(row);
     }
+  }
+
+  function renderHeroSpark(): void {
+    const spark = container.querySelector<HTMLElement>('#hv-spark');
+    if (!spark) return;
+    if (!state || state.equityHistory.length < 2) {
+      spark.innerHTML = '';
+      return;
+    }
+    const values = state.equityHistory.map((e) => e.equity);
+    const up = values[values.length - 1]! >= values[0]!;
+    spark.innerHTML = sparklineSvg(values, { stroke: up ? HOT : COLD, fill: true, width: 320, height: 64 });
   }
 
   function renderReadiness(): void {
@@ -206,6 +244,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       state = fresh;
       renderReadiness();
       renderActivity();
+      renderHeroSpark();
       await refreshPrices();
     } else if (!state) {
       setText('home-status', "Couldn't reach the cloud robot — retrying automatically.");
