@@ -1224,7 +1224,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1786373434088,
+    "at": 1786375284514,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -21063,6 +21063,30 @@
     {
       "at": 1786373434088,
       "equity": 9520.16
+    },
+    {
+      "at": 1786373744067,
+      "equity": 9520.16
+    },
+    {
+      "at": 1786374052086,
+      "equity": 9520.16
+    },
+    {
+      "at": 1786374360064,
+      "equity": 9520.16
+    },
+    {
+      "at": 1786374668440,
+      "equity": 9520.16
+    },
+    {
+      "at": 1786374976418,
+      "equity": 9520.16
+    },
+    {
+      "at": 1786375284514,
+      "equity": 9520.16
     }
   ],
   "trade-journal": [
@@ -21861,7 +21885,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -4.14%"
+        "detail": "vs buy-and-hold BTC -3.74%"
       },
       {
         "key": "drawdown",
@@ -21874,7 +21898,7 @@
         "detail": "profit factor 0.53 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — after-fee return -3.29%; vs buy-and-hold BTC -4.14%; profit factor 0.53 (needs ≥ 1.2).",
+    "summary": "NOT READY — after-fee return -3.29%; vs buy-and-hold BTC -3.74%; profit factor 0.53 (needs ≥ 1.2).",
     "unmet": [
       "profitable",
       "benchmark",
@@ -21953,17 +21977,17 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 7655.282582882027,
+    "cash": 9557.041510852174,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -212.75772274709598,
+    "closedRealizedPnl": -237.92353396053906,
     "dayAnchor": {
       "day": "2026-08-10",
       "equity": 9570.37276772086
     }
   },
   "shadow-standings": {
-    "at": 1786373434088,
+    "at": 1786375284514,
     "standings": [
       {
         "key": "live-mirror",
@@ -22012,8 +22036,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9728.361428494543,
-        "returnPct": -2.716385715054566,
+        "equity": 9698.617974567887,
+        "returnPct": -3.0138202543211263,
         "trades": 27,
         "winRatePct": 40.74074074074074,
         "profitFactor": 0.6365398540697489,
@@ -22023,37 +22047,17 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9574.37193532496,
-        "returnPct": -4.256280646750402,
-        "trades": 41,
-        "winRatePct": 24.390243902439025,
-        "profitFactor": 0.7453505298195988,
-        "openPositions": 1,
+        "equity": 9557.041510852174,
+        "returnPct": -4.429584891478262,
+        "trades": 42,
+        "winRatePct": 23.809523809523807,
+        "profitFactor": 0.7235563398922805,
+        "openPositions": 0,
         "startedAt": 1785254092443
       }
     ]
   },
-  "shadow:breakout:open-positions": [
-    {
-      "id": "SOLEUR:1786281402755:3",
-      "symbol": "SOLEUR",
-      "openedAt": 1786281402755,
-      "entryPrice": 66.4,
-      "quantity": 29.019950891319112,
-      "initialQuantity": 29.019950891319112,
-      "stopLoss": 65.86831149824425,
-      "takeProfit": 67.46337700351151,
-      "feesPaid": 5.780774217550768,
-      "realizedPnl": 0,
-      "highestPrice": 67.15,
-      "lowestPrice": 65.94,
-      "confidence": 55.88881113591267,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "shadow:breakout:open-positions": [],
   "shadow:breakout:audit-log": [
     {
       "timestamp": 1785268558466,
@@ -23258,6 +23262,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ETHEUR: 0.0037268975646938688 @ 1640.66 (stop-loss)"
+    },
+    {
+      "timestamp": 1786375284514,
+      "intentId": "SOLEUR:1786281402755:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit SOLEUR: 29.019950891319112 @ 65.73 (stop-loss)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -24203,6 +24214,29 @@
       "validationVerdict": null,
       "confidence": 64.96159684335643,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "SOLEUR:1786281402755:3",
+      "symbol": "SOLEUR",
+      "entryTimestamp": 1786281402755,
+      "exitTimestamp": 1786375284514,
+      "entryPrice": 66.4,
+      "exitPrice": 65.73,
+      "positionSize": 29.019950891319112,
+      "stopLoss": 65.86831149824425,
+      "takeProfit": 67.46337700351151,
+      "exitReason": "stop-loss",
+      "fees": 11.503218333809983,
+      "slippage": 0,
+      "holdingDurationMs": 93881759,
+      "mfePct": 1.1295180722891565,
+      "maePct": 1.0090361445783158,
+      "realizedPnl": -25.16581121344307,
+      "returnPct": -1.3060090361445806,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 55.88881113591267,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "shadow:mean-reversion:open-positions": [
@@ -24218,7 +24252,7 @@
       "feesPaid": 5.8248704817566015,
       "realizedPnl": 0,
       "highestPrice": 39.46,
-      "lowestPrice": 39.16,
+      "lowestPrice": 39.08,
       "confidence": 30.751055679812254,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -24873,6 +24907,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ADAEUR: 11540.027132953734 @ 0.167908 (stop 0.1656218706680894, target 0.1724802586638212, confidence 31)"
+    },
+    {
+      "timestamp": 1786374976418,
+      "intentId": "ETHEUR:1786374976418",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ETHEUR: no exposure headroom: 5829.93 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1786375284514,
+      "intentId": "ETHEUR:1786375284514",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ETHEUR: no exposure headroom: 5827.70 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:live-mirror:open-positions": [],
