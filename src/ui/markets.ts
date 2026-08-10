@@ -126,6 +126,8 @@ export interface MarketRow {
   /** Absolute daily change in the quote currency. */
   readonly change: number;
   readonly changePct: number;
+  readonly high: number;
+  readonly low: number;
   /** Liquidity, for sorting. */
   readonly quoteVolume: number;
   /** When this row was fetched — drives the freshness indicator. */
@@ -255,6 +257,8 @@ export async function fetchMarketRows(
         price: t.price,
         change: t.price - t.open,
         changePct: t.open > 0 ? ((t.price - t.open) / t.open) * 100 : 0,
+        high: t.high,
+        low: t.low,
         quoteVolume: t.quoteVolume,
         updatedAt: at,
       };
@@ -292,6 +296,8 @@ export async function fetchMarketRows(
       price: s.price,
       change: s.price - previous,
       changePct: s.changePct,
+      high: Math.max(...s.closes, s.price),
+      low: Math.min(...s.closes, s.price),
       quoteVolume: 0,
       updatedAt: at,
     };

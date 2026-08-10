@@ -11,7 +11,7 @@ import { searchRows, sortRows, matchesQuery, Watchlist } from '../../src/ui/mark
 import type { MarketRow } from '../../src/ui/markets';
 
 const row = (over: Partial<MarketRow> & { symbol: string }): MarketRow => ({
-  label: 'X', base: 'X', price: 1, change: 0, changePct: 0, quoteVolume: 0, updatedAt: 0, ...over,
+  label: 'X', base: 'X', price: 1, change: 0, changePct: 0, high: 1, low: 1, quoteVolume: 0, updatedAt: 0, ...over,
 });
 
 const ROWS: MarketRow[] = [

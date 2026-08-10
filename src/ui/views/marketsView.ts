@@ -8,6 +8,7 @@
 
 import type { ActiveDataSource } from '../dataSource';
 import type { Timeframe } from '../../core/types';
+import type { OrderBook, RecentTrade } from '../../core/data/krakenPublic';
 import {
   fetchMarketRows,
   fetchSeries,
@@ -26,9 +27,29 @@ import {
 import { startLivePrice } from '../liveTicker';
 import { escapeHtml, formatClock, formatMarketPrice, formatPct, formatPrice, formatSignedPrice } from '../format';
 import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
+import { fetchCloudState } from '../cloudState';
+import { fetchCoinStats } from '../coinStats';
 import { SORT_OPTIONS, searchRows, sortRows, Watchlist, type SortKey } from '../marketFilters';
 import { LocalStorageStore } from '../../core/data/storage';
 import type { ViewHandle } from '../viewLifecycle';
+
+/** Kraken-only capabilities (order book + recent trades) — not part of the
+ * shared `MarketDataSource` interface since a synthetic/demo/Alpaca source
+ * has nothing real to answer with. Detected at the call site instead. */
+interface OrderBookCapable {
+  getOrderBook(symbol: string, count?: number): Promise<{ ok: true; value: OrderBook } | { ok: false; error: string }>;
+  getRecentTrades(symbol: string, count?: number): Promise<{ ok: true; value: RecentTrade[] } | { ok: false; error: string }>;
+}
+
+/** Compact number for market cap / supply figures — 1.3T, 21M, 900K. */
+function compact(n: number): string {
+  const abs = Math.abs(n);
+  if (abs >= 1e12) return `${(n / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+  return n.toFixed(0);
+}
 
 const REFRESH_MS = 20_000;
 /**
@@ -157,6 +178,138 @@ function tipStamp(ts: number, tf: Timeframe): string {
     : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+type ViewMode = 'chart' | 'table' | 'depth' | 'trades';
+const VIEW_TABS: ReadonlyArray<{ readonly key: ViewMode; readonly label: string; readonly icon: string }> = [
+  { key: 'chart', label: 'Chart', icon: '<path d="M3 17l4-5 4 3 5-7 5 4"/>' },
+  { key: 'table', label: 'Order book', icon: '<rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 12h17M12 3.5v17"/>' },
+  { key: 'depth', label: 'Depth', icon: '<path d="M3 20V9l5-5 4 4 4-4 5 5v11z"/>' },
+  { key: 'trades', label: 'Trades', icon: '<path d="M4 6h16M4 12h16M4 18h10"/>' },
+];
+
+/** Shared across every view mode (chart/table/depth/trades): coin identity,
+ * live price + change, and 24h stats already carried by `MarketRow` — no
+ * extra fetch. */
+function detailHeaderHtml(m: MarketRow, price: number, changePct: number, viewMode: ViewMode, starred: boolean): string {
+  const up = changePct >= 0;
+  const tabs = VIEW_TABS.map(
+    (t) =>
+      `<button class="view-tab ${t.key === viewMode ? 'active' : ''}" data-view="${t.key}" aria-label="${t.label}">` +
+      `<svg viewBox="0 0 24 24" aria-hidden="true">${t.icon}</svg></button>`,
+  ).join('');
+  return `
+    <button class="tool-back" id="mk-back">← All markets</button>
+    <div class="detail-head">
+      <div class="detail-coin">${coinLogoHtml(m.base, BASE_URL)}<div><div class="detail-name">${m.label}</div><div class="row-sub">${m.symbol} · EUR</div></div></div>
+      <button class="star-btn ${starred ? 'active' : ''}" id="mk-star" aria-label="Watch this market">★</button>
+    </div>
+    <div class="detail-price-row">
+      <div class="row-title big" id="mk-price">€${formatPrice(price)}</div>
+      <div class="chg ${up ? 'up' : 'down'}" id="mk-change">${formatPct(changePct)}</div>
+    </div>
+    <div class="detail-stats-row">
+      <div class="dstat"><span class="dstat-label">24h High</span><span class="dstat-value">€${formatPrice(m.high)}</span></div>
+      <div class="dstat"><span class="dstat-label">24h Low</span><span class="dstat-value">€${formatPrice(m.low)}</span></div>
+      <div class="dstat"><span class="dstat-label">24h Volume</span><span class="dstat-value">€${compact(m.quoteVolume)}</span></div>
+    </div>
+    <div class="view-tabs" id="mk-view-tabs">${tabs}</div>`;
+}
+
+/** Closed-orders + Stats skeleton — identical markup regardless of view
+ * mode; `attachExtras` fills it in once per detail-open. */
+const EXTRAS_HTML = `
+    <div class="block"><div class="block-head"><h2>Closed orders</h2></div><div class="stack" id="mk-orders"><div class="empty">Loading…</div></div></div>
+    <div class="block" id="mk-stats"></div>`;
+
+/** One of the robot's own past trades on this market — same row shape as
+ * the History view, just filtered to one symbol. */
+function tradeRowHtml(m: MarketRow, t: { kind: 'buy' | 'sell'; price: number; quantity: number; at: number; note: string | null }): string {
+  const buy = t.kind === 'buy';
+  return (
+    `<div class="row trade ${t.kind}"><div class="row-main"><span class="pill ${buy ? 'buy' : 'sell'}">${buy ? 'BUY' : 'SELL'}</span>` +
+    `<div><div class="row-title">${m.label}</div><div class="row-sub">${t.note ? t.note : buy ? 'opened' : 'closed'}</div></div></div>` +
+    `<div class="row-side"><span class="row-title">€${formatPrice(t.price)}</span>` +
+    `<span class="row-sub">${t.quantity.toLocaleString('en-US', { maximumFractionDigits: 4 })}</span>` +
+    `<span class="row-sub">${new Date(t.at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></div></div>`
+  );
+}
+
+/** CoinGecko market-cap section, or an honest "not available" — never a
+ * fabricated number for a symbol this build doesn't have mapped. */
+function statsSectionHtml(stats: Awaited<ReturnType<typeof fetchCoinStats>>): string {
+  const head = '<div class="block-head"><h2>Stats</h2></div>';
+  if (!stats) return `${head}<div class="empty">Not available for this market.</div>`;
+  const rows = [
+    `<div class="row"><span class="row-sub">Market cap</span><span class="row-title">€${compact(stats.marketCap)}</span></div>`,
+    stats.marketCapRank !== null
+      ? `<div class="row"><span class="row-sub">Market cap rank</span><span class="row-title">#${stats.marketCapRank}</span></div>`
+      : '',
+    stats.circulatingSupply !== null
+      ? `<div class="row"><span class="row-sub">Circulating supply</span><span class="row-title">${compact(stats.circulatingSupply)}</span></div>`
+      : '',
+    `<div class="row"><span class="row-sub">Max supply</span><span class="row-title">${stats.maxSupply !== null ? compact(stats.maxSupply) : 'No max'}</span></div>`,
+  ];
+  return head + rows.join('');
+}
+
+/** Numeric bid/ask ladder — the Table view mode. */
+function orderBookTableHtml(book: OrderBook): string {
+  if (book.bids.length === 0 && book.asks.length === 0) return '<div class="empty">No order book depth right now.</div>';
+  const rows = Math.max(book.bids.length, book.asks.length);
+  let html = '<div class="orderbook-table"><div class="orderbook-head"><span>Bid</span><span>Ask</span></div>';
+  for (let i = 0; i < rows; i++) {
+    const bid = book.bids[i];
+    const ask = book.asks[i];
+    html +=
+      '<div class="orderbook-row">' +
+      `<span class="ob-bid">${bid ? `${bid.volume.toFixed(4)} @ €${formatPrice(bid.price)}` : ''}</span>` +
+      `<span class="ob-ask">${ask ? `€${formatPrice(ask.price)} @ ${ask.volume.toFixed(4)}` : ''}</span>` +
+      '</div>';
+  }
+  return `${html}</div>`;
+}
+
+/** Cumulative depth as a two-sided step chart — the Depth view mode. */
+function orderBookDepthHtml(book: OrderBook): string {
+  if (book.bids.length === 0 && book.asks.length === 0) return '<div class="empty">No order book depth right now.</div>';
+  const W = 320;
+  const H = 160;
+  const bids = [...book.bids].sort((a, b) => b.price - a.price);
+  const asks = [...book.asks].sort((a, b) => a.price - b.price);
+  let cumBid = 0;
+  const bidPoints = bids.map((l) => ({ price: l.price, cum: (cumBid += l.volume) }));
+  let cumAsk = 0;
+  const askPoints = asks.map((l) => ({ price: l.price, cum: (cumAsk += l.volume) }));
+  const maxCum = Math.max(cumBid, cumAsk, 1e-9);
+  const mid = W / 2;
+  const bidPath = bidPoints
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${(mid - (i / Math.max(bidPoints.length - 1, 1)) * mid).toFixed(1)} ${(H - (p.cum / maxCum) * H).toFixed(1)}`)
+    .join(' ');
+  const askPath = askPoints
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${(mid + (i / Math.max(askPoints.length - 1, 1)) * mid).toFixed(1)} ${(H - (p.cum / maxCum) * H).toFixed(1)}`)
+    .join(' ');
+  return (
+    `<svg class="orderbook-depth" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">` +
+    `<path d="${bidPath} L ${mid} ${H} Z" class="depth-bid"/>` +
+    `<path d="${askPath} L ${mid} ${H} Z" class="depth-ask"/>` +
+    `<line x1="${mid}" y1="0" x2="${mid}" y2="${H}" class="depth-mid"/>` +
+    `</svg>`
+  );
+}
+
+/** Recent public trades, newest first — the Trades (list) view mode. */
+function tradesListHtml(trades: RecentTrade[]): string {
+  if (trades.length === 0) return '<div class="empty">No recent trades.</div>';
+  return trades
+    .slice(0, 30)
+    .map(
+      (t) =>
+        `<div class="row"><span class="chg ${t.side === 'buy' ? 'up' : 'down'}">€${formatPrice(t.price)}</span>` +
+        `<span class="row-sub">${t.volume.toFixed(5)}</span>` +
+        `<span class="row-sub">${formatClock(t.time)}</span></div>`,
+    )
+    .join('');
+}
+
 export function renderMarketsView(container: HTMLElement, data: ActiveDataSource): ViewHandle {
   container.innerHTML = `
     <div id="mk-list-view">
@@ -233,6 +386,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   // still starts at the defaults, same as before.
   let savedRangeKey = '1D';
   let savedChartMode: 'candle' | 'line' = 'candle';
+  let savedViewMode: ViewMode = 'chart';
 
   const stopLivePrice = (): void => {
     if (stopLive) {
@@ -426,8 +580,10 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     // list always starts at the defaults.
     let rangeKey = opts.preserveRange ? savedRangeKey : '1D';
     let chartMode: 'candle' | 'line' = opts.preserveRange ? savedChartMode : 'candle';
+    let viewMode: ViewMode = opts.preserveRange ? savedViewMode : 'chart';
     savedRangeKey = rangeKey;
     savedChartMode = chartMode;
+    savedViewMode = viewMode;
     // Monotonic paint id: only the newest paint renders. Prevents an overlap
     // between the 20s auto-refresh and a slow fetch from freezing the chart.
     let paintSeq = 0;
@@ -436,11 +592,112 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     // only the currently open range, updating its cache entry.
     const seriesCache = new Map<string, CandleSeries | PriceSeries | null>();
 
+    /** Back/prev/next/star/view-tab wiring — identical regardless of which
+     * view mode just rendered, so every render path calls this once. */
+    const wireCommonControls = (m: MarketRow): void => {
+      detailView.querySelector('#mk-back')?.addEventListener('click', backToList);
+      detailView.querySelector('#mk-prev')?.addEventListener('click', () => {
+        if (coin > 0) {
+          coin--;
+          rangeKey = '1D';
+          savedRangeKey = rangeKey;
+          void paint();
+        }
+      });
+      detailView.querySelector('#mk-next')?.addEventListener('click', () => {
+        if (coin < detailRows.length - 1) {
+          coin++;
+          rangeKey = '1D';
+          savedRangeKey = rangeKey;
+          void paint();
+        }
+      });
+      detailView.querySelector('#mk-star')?.addEventListener('click', () => {
+        const nowStarred = getWatchlist().toggle(m.symbol);
+        detailView.querySelector('#mk-star')?.classList.toggle('active', nowStarred);
+      });
+      detailView.querySelectorAll<HTMLButtonElement>('.view-tab').forEach((b) => {
+        b.addEventListener('click', () => {
+          const next = b.dataset['view'] as ViewMode;
+          if (next === viewMode) return;
+          viewMode = next;
+          savedViewMode = next;
+          void paint();
+        });
+      });
+    };
+
+    /** Closed orders (our own trade history, filtered to this symbol) and
+     * Stats (CoinGecko market cap/supply) — identical across view modes and
+     * ranges, so this is the one thing every render path shares verbatim.
+     * Two independent, unrelated fetches: awaited separately so a slow or
+     * hung cloud-state lookup can never hold up the (unrelated) CoinGecko
+     * stats from rendering, or vice versa. */
+    const attachExtras = (m: MarketRow): void => {
+      const myGeneration = detailGeneration;
+      void fetchCloudState().then((state) => {
+        if (myGeneration !== detailGeneration) return; // left this coin/detail while fetching
+        const ordersEl = detailView.querySelector<HTMLElement>('#mk-orders');
+        if (!ordersEl) return;
+        const trades = (state?.history ?? []).filter((t) => t.symbol === m.symbol);
+        ordersEl.innerHTML =
+          trades.length === 0
+            ? '<div class="empty">No closed orders yet for this market.</div>'
+            : trades.slice(0, 10).map((t) => tradeRowHtml(m, t)).join('');
+      });
+      void fetchCoinStats(m.base).then((stats) => {
+        if (myGeneration !== detailGeneration) return;
+        const statsEl = detailView.querySelector<HTMLElement>('#mk-stats');
+        if (statsEl) statsEl.innerHTML = statsSectionHtml(stats);
+      });
+    };
+
+    /** Order book (table or depth chart) and recent-trades view modes —
+     * fully separate from the candle/line chart machinery below: no range
+     * bar, no crosshair, no live-price wiring, just a snapshot fetch. */
+    const paintNonChart = async (m: MarketRow, seq: number): Promise<void> => {
+      const src = data.source as unknown as Partial<OrderBookCapable>;
+      const supportsBook = typeof src.getOrderBook === 'function' && typeof src.getRecentTrades === 'function';
+      let body: string;
+      if (!supportsBook) {
+        body = '<div class="empty">Not available for this market data source.</div>';
+      } else if (viewMode === 'trades') {
+        const result = await src.getRecentTrades!(m.symbol, 30);
+        if (seq !== paintSeq || myGeneration !== detailGeneration) return;
+        body = result.ok ? tradesListHtml(result.value) : '<div class="empty">Recent trades unavailable — retrying…</div>';
+      } else {
+        const result = await src.getOrderBook!(m.symbol, 15);
+        if (seq !== paintSeq || myGeneration !== detailGeneration) return;
+        body = result.ok
+          ? viewMode === 'table'
+            ? orderBookTableHtml(result.value)
+            : orderBookDepthHtml(result.value)
+          : '<div class="empty">Order book unavailable — retrying…</div>';
+      }
+      if (seq !== paintSeq || myGeneration !== detailGeneration) return;
+
+      detailView.innerHTML =
+        detailHeaderHtml(m, m.price, m.changePct, viewMode, getWatchlist().has(m.symbol)) +
+        `<div class="detail-nonchart">${body}</div>` +
+        `<div class="detail-nav">` +
+        `<button class="pager" id="mk-prev" ${coin === 0 ? 'disabled' : ''}>‹ Prev</button>` +
+        `<span class="row-sub">${coin + 1} / ${detailRows.length}</span>` +
+        `<button class="pager" id="mk-next" ${coin === detailRows.length - 1 ? 'disabled' : ''}>Next ›</button>` +
+        `</div>${EXTRAS_HTML}`;
+
+      wireCommonControls(m);
+      attachExtras(m);
+    };
+
     const paint = async (opts: { force?: boolean } = {}): Promise<void> => {
       const seq = ++paintSeq;
       stopLivePrice();
       try {
       const m = detailRows[coin]!;
+      if (viewMode !== 'chart') {
+        await paintNonChart(m, seq);
+        return;
+      }
       const range = RANGES.find((r) => r.key === rangeKey)!;
       // Long ranges force a smooth line; short ranges honour the toggle.
       const mode: 'candle' | 'line' = range.long ? 'line' : chartMode;
@@ -531,14 +788,9 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         (r) => `<button class="range-btn ${r.key === rangeKey ? 'active' : ''}" data-range="${r.key}">${r.key}</button>`,
       ).join('');
 
-      detailView.innerHTML = `
-        <button class="tool-back" id="mk-back">← All markets</button>
-        <div class="detail-head">
-          <div><div class="detail-name">${m.label}</div><div class="row-sub">${m.symbol} · EUR</div></div>
-          <div class="detail-price"><div class="row-title big" id="mk-price">€${formatPrice(price)}</div>
-            <div class="chg ${up ? 'up' : 'down'}" id="mk-change">${formatPct(changePct)} · ${rangeKey}</div></div>
-        </div>
-        <div class="chart-controls">
+      detailView.innerHTML =
+        detailHeaderHtml(m, price, changePct, viewMode, getWatchlist().has(m.symbol)) +
+        `<div class="chart-controls">
           <div class="range-bar">${rangeBar}</div>
           <div class="chart-toggle">
             <button class="ctoggle-btn ${mode === 'candle' ? 'active' : ''}" data-mode="candle" ${range.long ? 'disabled' : ''}>Candles</button>
@@ -550,11 +802,11 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
           <button class="pager" id="mk-prev" ${coin === 0 ? 'disabled' : ''}>‹ Prev</button>
           <span class="row-sub">${coin + 1} / ${detailRows.length}</span>
           <button class="pager" id="mk-next" ${coin === detailRows.length - 1 ? 'disabled' : ''}>Next ›</button>
-        </div>`;
+        </div>` +
+        EXTRAS_HTML;
 
-      detailView.querySelector('#mk-back')!.addEventListener('click', backToList);
-      detailView.querySelector('#mk-prev')!.addEventListener('click', () => { if (coin > 0) { coin--; rangeKey = '1D'; savedRangeKey = rangeKey; void paint(); } });
-      detailView.querySelector('#mk-next')!.addEventListener('click', () => { if (coin < detailRows.length - 1) { coin++; rangeKey = '1D'; savedRangeKey = rangeKey; void paint(); } });
+      wireCommonControls(m);
+      attachExtras(m);
       detailView.querySelectorAll<HTMLButtonElement>('.range-btn').forEach((b) => {
         b.addEventListener('click', () => {
           const chart = detailView.querySelector<HTMLElement>('.detail-chart');
