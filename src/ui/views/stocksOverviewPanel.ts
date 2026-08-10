@@ -5,10 +5,14 @@
  */
 
 import { fetchStocksState } from '../cloudState';
+import { sparklineSvg } from '../charts';
+import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
 import { formatPrice, formatPct } from '../format';
 import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 60_000;
+const HOT = 'var(--hot)';
+const COLD = 'var(--cold)';
 const dollar = (v: number): string => `$${formatPrice(v)}`;
 
 export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
@@ -18,14 +22,22 @@ export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
       <div class="hero-value" id="stocks-ov-equity">—</div>
       <div class="hero-change" id="stocks-ov-change"></div>
       <div class="hero-split"><span id="stocks-ov-cash"></span><span id="stocks-ov-invested"></span></div>
+      <div class="hero-spark" id="stocks-ov-spark"></div>
     </section>
+    <div class="action-row">
+      <button class="action-btn" data-hub="history"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</button>
+      <button class="action-btn" data-hub="market"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Market</button>
+      <button class="action-btn" data-hub="profit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Profit</button>
+    </div>
     <section class="block"><div class="block-head"><h2>Open positions</h2></div><div class="stack" id="stocks-ov-positions"></div></section>
     <p class="muted-line" id="stocks-ov-status">Loading…</p>`;
+  attachCoinLogoFallback(container);
 
   const equityEl = container.querySelector<HTMLElement>('#stocks-ov-equity')!;
   const changeEl = container.querySelector<HTMLElement>('#stocks-ov-change')!;
   const cashEl = container.querySelector<HTMLElement>('#stocks-ov-cash')!;
   const investedEl = container.querySelector<HTMLElement>('#stocks-ov-invested')!;
+  const sparkEl = container.querySelector<HTMLElement>('#stocks-ov-spark')!;
   const positionsEl = container.querySelector<HTMLElement>('#stocks-ov-positions')!;
   const statusEl = container.querySelector<HTMLElement>('#stocks-ov-status')!;
   let loadedOnce = false;
@@ -47,16 +59,31 @@ export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
     const stamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     statusEl.textContent = `Live · updated ${stamp}`;
 
-    if (state.positions.length === 0) {
-      positionsEl.innerHTML = '<div class="empty">No open positions — holding cash.</div>';
+    if (state.equityHistory.length >= 2) {
+      const values = state.equityHistory.map((e) => e.equity);
+      const up = values[values.length - 1]! >= values[0]!;
+      sparkEl.innerHTML = sparklineSvg(values, { stroke: up ? HOT : COLD, fill: true, width: 320, height: 64 });
     } else {
-      positionsEl.innerHTML = '';
+      sparkEl.innerHTML = '';
+    }
+
+    positionsEl.innerHTML = '';
+    const cashRow = document.createElement('div');
+    cashRow.className = 'row';
+    cashRow.innerHTML = `
+      <div class="row-main">${coinLogoHtml('USD')}<div><div class="row-title">Cash</div><div class="row-sub">Available balance</div></div></div>
+      <div class="row-side"><span class="row-title">${dollar(state.cash)}</span></div>`;
+    positionsEl.appendChild(cashRow);
+
+    if (state.positions.length === 0) {
+      positionsEl.appendChild(Object.assign(document.createElement('div'), { className: 'empty', textContent: 'Holding cash — no open positions.' }));
+    } else {
       for (const p of state.positions) {
         const row = document.createElement('div');
         row.className = 'row';
         row.innerHTML = `
-          <div class="row-main"><span class="row-title">${p.symbol}</span>
-            <span class="row-sub">entry ${dollar(p.entryPrice)}</span></div>
+          <div class="row-main">${coinLogoHtml(p.symbol)}<div><div class="row-title">${p.symbol}</div>
+            <div class="row-sub">entry ${dollar(p.entryPrice)}</div></div></div>
           <div class="row-side"><span class="row-title">${p.quantity.toLocaleString('en-US', { maximumFractionDigits: 4 })} sh</span></div>`;
         positionsEl.appendChild(row);
       }
