@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 /**
- * Every primary view (Home, Value, Markets, History) polls the cloud state
+ * Every primary view (Home, Value, Markets) polls the cloud state
  * and/or live prices on an interval. Before the ViewHandle pattern, `main.ts`
  * mounted each view once and never stopped that polling when the user
  * navigated away — intervals accumulated forever in the background,
@@ -14,7 +14,6 @@ import { SyntheticDataSource } from '../../src/core/data/synthetic';
 import type { ActiveDataSource } from '../../src/ui/dataSource';
 import { renderHomeView } from '../../src/ui/views/homeView';
 import { renderMarketsView } from '../../src/ui/views/marketsView';
-import { renderHistoryView } from '../../src/ui/views/historyView';
 import { renderValueView } from '../../src/ui/views/valueView';
 
 const ANCHOR = 1_700_000_000_000;
@@ -39,26 +38,6 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('View lifecycle (pause/resume)', () => {
-  it('History view: pause() clears its poll and resume() restarts it', async () => {
-    const container = document.createElement('section');
-    document.body.appendChild(container);
-    const clearSpy = vi.spyOn(window, 'clearInterval');
-    const setSpy = vi.spyOn(window, 'setInterval');
-
-    const handle = renderHistoryView(container, await makeData());
-    const mountedSetCalls = setSpy.mock.calls.length;
-    expect(mountedSetCalls).toBeGreaterThan(0);
-
-    handle.pause();
-    expect(clearSpy).toHaveBeenCalledTimes(1);
-
-    handle.resume();
-    expect(setSpy.mock.calls.length).toBeGreaterThan(mountedSetCalls);
-
-    clearSpy.mockRestore();
-    setSpy.mockRestore();
-  });
-
   it('Value view: pause() clears its poll and resume() restarts it', async () => {
     const container = document.createElement('section');
     document.body.appendChild(container);
