@@ -1,9 +1,9 @@
 {
   "portfolio-engine": {
-    "cash": 6125.145389068714,
+    "cash": 8129.129731177927,
     "initialCash": 10000,
     "baseCurrency": "USD",
-    "closedRealizedPnl": 224.52600075660646,
+    "closedRealizedPnl": 175.1517598503092,
     "dayAnchor": {
       "day": "2026-08-10",
       "equity": 10276.289111151807
@@ -21,28 +21,9 @@
       "takeProfit": 514.0221382524029,
       "feesPaid": 2.029974235028189,
       "realizedPnl": 0,
-      "highestPrice": 509.575,
+      "highestPrice": 509.95,
       "lowestPrice": 488.89,
       "confidence": 39.16519591185356,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "NVDA:1786115345695:1",
-      "symbol": "NVDA",
-      "openedAt": 1786115345695,
-      "entryPrice": 223.68,
-      "quantity": 9.179893522065047,
-      "initialQuantity": 9.179893522065047,
-      "stopLoss": 219.06260321886785,
-      "takeProfit": 232.91479356226432,
-      "feesPaid": 2.05335858301551,
-      "realizedPnl": 0,
-      "highestPrice": 223.68,
-      "lowestPrice": 219.435,
-      "confidence": 42.60206422550105,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -147,13 +128,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry NVDA: 9.179893522065047 @ 223.68 (stop 219.06260321886785, target 232.91479356226432, confidence 43)"
+    },
+    {
+      "timestamp": 1786379474016,
+      "intentId": "NVDA:1786115345695:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit NVDA: 9.179893522065047 @ 218.52 (stop-loss)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1786375830605,
+    "at": 1786379474016,
     "source": "Alpaca market data (US equities)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "alerted-trade-ids": [
@@ -170,7 +158,8 @@
     "o:JPM:1785856949931:2",
     "c:NVDA:1785771705365:0",
     "c:JPM:1785856949931:2",
-    "o:NVDA:1786115345695:1"
+    "o:NVDA:1786115345695:1",
+    "c:NVDA:1786115345695:1"
   ],
   "equity-history": [
     {
@@ -288,6 +277,10 @@
     {
       "at": 1786375830605,
       "equity": 10254.58
+    },
+    {
+      "at": 1786379474016,
+      "equity": 10245.73
     }
   ],
   "trade-journal": [
@@ -428,11 +421,34 @@
       "validationVerdict": null,
       "confidence": 12.660697922828856,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "NVDA:1786115345695:1",
+      "symbol": "NVDA",
+      "entryTimestamp": 1786115345695,
+      "exitTimestamp": 1786379474016,
+      "entryPrice": 223.68,
+      "exitPrice": 218.52,
+      "positionSize": 9.179893522065047,
+      "stopLoss": 219.06260321886785,
+      "takeProfit": 232.91479356226432,
+      "exitReason": "stop-loss",
+      "fees": 4.059348915457164,
+      "slippage": 0,
+      "holdingDurationMs": 264128321,
+      "mfePct": 0,
+      "maePct": 2.306866952789698,
+      "realizedPnl": -49.37424090629727,
+      "returnPct": -2.4045600858369083,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 42.60206422550105,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "daily-loss": {
-    "day": "2026-08-07",
-    "loss": 38.900891755415245
+    "day": "2026-08-10",
+    "loss": 49.37424090629727
   },
   "market-day-anchor": {
     "AAPL": {
@@ -637,307 +653,307 @@
     }
   },
   "market-snapshot": {
-    "at": 1786375830605,
+    "at": 1786379474016,
     "symbols": [
       {
         "symbol": "AAPL",
-        "price": 306.535,
-        "changePct": -0.05705715496721807,
-        "updatedAt": 1786375830605
+        "price": 305.54,
+        "changePct": -0.38146783606662943,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "MSFT",
-        "price": 509.575,
-        "changePct": 0.13460669299848735,
-        "updatedAt": 1786375830605
+        "price": 509.95,
+        "changePct": 0.2082964884356152,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "GOOGL",
-        "price": 354.42,
-        "changePct": -0.2589069623459107,
-        "updatedAt": 1786375830605
+        "price": 354.45,
+        "changePct": -0.25046434400855133,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "AMZN",
-        "price": 279.83,
-        "changePct": 1.0326028089684647,
-        "updatedAt": 1786375830605
+        "price": 278.37,
+        "changePct": 0.5054699064880591,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "NVDA",
-        "price": 219.435,
-        "changePct": -1.2043582008914553,
-        "updatedAt": 1786375830605
+        "price": 218.52,
+        "changePct": -1.6163162397010506,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "META",
-        "price": 599.255,
-        "changePct": 0.2702295696405878,
-        "updatedAt": 1786375830605
+        "price": 597.04,
+        "changePct": -0.100394886553782,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "TSLA",
-        "price": 330.1,
-        "changePct": 0.0803432019039954,
-        "updatedAt": 1786375830605
+        "price": 330.49,
+        "changePct": 0.198584140555135,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "JPM",
-        "price": 359.51,
-        "changePct": 0.18950477942201233,
-        "updatedAt": 1786375830605
+        "price": 357.97,
+        "changePct": -0.23966780926900116,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "V",
-        "price": 361.42,
-        "changePct": 0.4223395387607776,
-        "updatedAt": 1786375830605
+        "price": 360.59,
+        "changePct": 0.19171992220061068,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "WMT",
-        "price": 111.23,
-        "changePct": 0.22526581366011894,
-        "updatedAt": 1786375830605
+        "price": 111.75,
+        "changePct": 0.6938187060731628,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "AVGO",
-        "price": 425.18,
-        "changePct": -1.5399578537850491,
-        "updatedAt": 1786375830605
+        "price": 425.155,
+        "changePct": -1.5457471690248505,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "ORCL",
-        "price": 149.43,
-        "changePct": 0.18101367658890472,
-        "updatedAt": 1786375830605
+        "price": 150.15,
+        "changePct": 0.6637168141592982,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "ADBE",
-        "price": 269.71,
-        "changePct": 1.204502814258904,
-        "updatedAt": 1786375830605
+        "price": 271.935,
+        "changePct": 2.0393996247654793,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "CRM",
-        "price": 195.34,
-        "changePct": 0.7634375322397554,
-        "updatedAt": 1786375830605
+        "price": 196.72,
+        "changePct": 1.4752914474362866,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "CSCO",
-        "price": 123.215,
-        "changePct": -0.9047772237413543,
-        "updatedAt": 1786375830605
+        "price": 123.705,
+        "changePct": -0.5106964774006797,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "INTC",
-        "price": 97.955,
-        "changePct": -0.07650719167602044,
-        "updatedAt": 1786375830605
+        "price": 98.45,
+        "changePct": 0.4284402733857,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "AMD",
-        "price": 475.86,
-        "changePct": -1.0192195690157204,
-        "updatedAt": 1786375830605
+        "price": 476.305,
+        "changePct": -0.9266577918295998,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "QCOM",
-        "price": 163.675,
-        "changePct": -1.266777258332073,
-        "updatedAt": 1786375830605
+        "price": 164.34,
+        "changePct": -0.8656311265269204,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "BAC",
-        "price": 63.94,
-        "changePct": 0.2823086574654952,
-        "updatedAt": 1786375830605
+        "price": 63.62,
+        "changePct": -0.21957340025094194,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "WFC",
-        "price": 87.76,
-        "changePct": 0.5614758794545767,
-        "updatedAt": 1786375830605
+        "price": 87.33,
+        "changePct": 0.06875214850464338,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "GS",
-        "price": 1041.14,
-        "changePct": -0.09835294794968777,
-        "updatedAt": 1786375830605
+        "price": 1033.555,
+        "changePct": -0.8261647627774777,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "MS",
-        "price": 217.115,
-        "changePct": 0.2215708449696578,
-        "updatedAt": 1786375830605
+        "price": 215.53,
+        "changePct": -0.5100745493572091,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "AXP",
-        "price": 338.99,
-        "changePct": 0.5994598925720336,
-        "updatedAt": 1786375830605
+        "price": 338.22,
+        "changePct": 0.37095290381933105,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "UNH",
-        "price": 411.205,
-        "changePct": 0.335504965473489,
-        "updatedAt": 1786375830605
+        "price": 409.945,
+        "changePct": 0.028060415294148575,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "JNJ",
-        "price": 259.985,
-        "changePct": 0.06928273127923128,
-        "updatedAt": 1786375830605
+        "price": 260.2,
+        "changePct": 0.15203710475163365,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "PFE",
-        "price": 27.045,
-        "changePct": 0.6512839598064782,
-        "updatedAt": 1786375830605
+        "price": 27.1,
+        "changePct": 0.8559732043170839,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "ABBV",
-        "price": 245.32,
-        "changePct": -0.06110726361673756,
-        "updatedAt": 1786375830605
+        "price": 244.93,
+        "changePct": -0.21998614902024363,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "MRK",
-        "price": 130.065,
-        "changePct": 0.5061432655899862,
-        "updatedAt": 1786375830605
+        "price": 130.5,
+        "changePct": 0.8422842129665431,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "LLY",
-        "price": 1213.5,
-        "changePct": 0.5068826715698364,
-        "updatedAt": 1786375830605
+        "price": 1215.18,
+        "changePct": 0.6460269343537207,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "HD",
-        "price": 349.71,
-        "changePct": 0.6171507487807983,
-        "updatedAt": 1786375830605
+        "price": 348.915,
+        "changePct": 0.38841655517673607,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "MCD",
-        "price": 273.62,
-        "changePct": 0.9667896678966806,
-        "updatedAt": 1786375830605
+        "price": 272.715,
+        "changePct": 0.6328413284132749,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "NKE",
-        "price": 41.75,
-        "changePct": 1.187590887057688,
-        "updatedAt": 1786375830605
+        "price": 41.93,
+        "changePct": 1.6238487639360195,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "SBUX",
-        "price": 105.25,
-        "changePct": 0.44855888528344995,
-        "updatedAt": 1786375830605
+        "price": 105.365,
+        "changePct": 0.5583126550868426,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "PG",
-        "price": 145.8,
-        "changePct": 0.5655952545178795,
-        "updatedAt": 1786375830605
+        "price": 145.93,
+        "changePct": 0.6552627948682695,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "KO",
-        "price": 87.39,
-        "changePct": 0.6043861163875044,
-        "updatedAt": 1786375830605
+        "price": 87.41,
+        "changePct": 0.6274103493927379,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "PEP",
-        "price": 137.97,
-        "changePct": 0.21791239921552363,
-        "updatedAt": 1786375830605
+        "price": 138.185,
+        "changePct": 0.3740829519866455,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "COST",
-        "price": 943.22,
-        "changePct": 0.16034660351912913,
-        "updatedAt": 1786375830605
+        "price": 945.865,
+        "changePct": 0.44121863418674245,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "TGT",
-        "price": 151.06,
-        "changePct": 1.3485407581348479,
-        "updatedAt": 1786375830605
+        "price": 152.57,
+        "changePct": 2.3616236162361504,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "XOM",
-        "price": 158.04,
-        "changePct": 0.0506457330969765,
-        "updatedAt": 1786375830605
+        "price": 158.115,
+        "changePct": 0.09812610787541222,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "CVX",
-        "price": 192.895,
-        "changePct": 0.1921828333982623,
-        "updatedAt": 1786375830605
+        "price": 192.87,
+        "changePct": 0.17919750681729585,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "BA",
-        "price": 235.535,
-        "changePct": 0.617283950617281,
-        "updatedAt": 1786375830605
+        "price": 235.38,
+        "changePct": 0.5510701012431082,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "CAT",
-        "price": 841.46,
-        "changePct": -0.447210259807862,
-        "updatedAt": 1786375830605
+        "price": 841.595,
+        "changePct": -0.431238464814725,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "GE",
-        "price": 367.35,
-        "changePct": -0.33776909616245593,
-        "updatedAt": 1786375830605
+        "price": 367.24,
+        "changePct": -0.36761214883544757,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "HON",
-        "price": 244.16,
-        "changePct": 0.7323060420405577,
-        "updatedAt": 1786375830605
+        "price": 243.33,
+        "changePct": 0.3898756111145581,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "UPS",
-        "price": 104.02,
-        "changePct": 0.06734006734006077,
-        "updatedAt": 1786375830605
+        "price": 104.39,
+        "changePct": 0.42328042328042104,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "DIS",
-        "price": 103.05,
-        "changePct": -0.0775719965092585,
-        "updatedAt": 1786375830605
+        "price": 103.33,
+        "changePct": 0.19392999127315316,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "NFLX",
-        "price": 74.97,
-        "changePct": 0.9289176090468467,
-        "updatedAt": 1786375830605
+        "price": 75.72,
+        "changePct": 1.9386106623586399,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "CMCSA",
-        "price": 24.905,
-        "changePct": 0.2616747181964625,
-        "updatedAt": 1786375830605
+        "price": 25.04,
+        "changePct": 0.8051529790660197,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "VZ",
-        "price": 46.71,
-        "changePct": 1.0601471224578147,
-        "updatedAt": 1786375830605
+        "price": 46.83,
+        "changePct": 1.319774989182171,
+        "updatedAt": 1786379474016
       },
       {
         "symbol": "PYPL",
-        "price": 58.585,
-        "changePct": 0.14529914529914675,
-        "updatedAt": 1786375830605
+        "price": 58.54,
+        "changePct": 0.06837606837606693,
+        "updatedAt": 1786379474016
       }
     ]
   },
@@ -947,7 +963,7 @@
       {
         "key": "trades",
         "ok": false,
-        "detail": "6 / 20 closed trades"
+        "detail": "7 / 20 closed trades"
       },
       {
         "key": "days",
@@ -957,7 +973,7 @@
       {
         "key": "profitable",
         "ok": true,
-        "detail": "after-fee return +2.25%"
+        "detail": "after-fee return +1.75%"
       },
       {
         "key": "benchmark",
@@ -972,10 +988,10 @@
       {
         "key": "consistency",
         "ok": true,
-        "detail": "profit factor 2.35 (needs ≥ 1.2)"
+        "detail": "profit factor 1.81 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — 6 / 20 closed trades; 11 / 14 days of history; vs buy-and-hold a market benchmark: not measured yet.",
+    "summary": "NOT READY — 7 / 20 closed trades; 11 / 14 days of history; vs buy-and-hold a market benchmark: not measured yet.",
     "unmet": [
       "trades",
       "days",
