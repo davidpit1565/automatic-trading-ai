@@ -217,7 +217,7 @@ function detailHeaderHtml(m: MarketRow, price: number, changePct: number, viewMo
 /** Closed-orders + Stats skeleton — identical markup regardless of view
  * mode; `attachExtras` fills it in once per detail-open. */
 const EXTRAS_HTML = `
-    <div class="block"><div class="block-head"><h2>Closed orders</h2></div><div class="stack" id="mk-orders"><div class="empty">Loading…</div></div></div>
+    <div class="block"><div class="block-head"><h2>Closed orders</h2></div><div class="stack stack-card" id="mk-orders"><div class="empty">Loading…</div></div></div>
     <div class="block" id="mk-stats"></div>`;
 
 /** One of the robot's own past trades on this market — same row shape as
