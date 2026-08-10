@@ -96,11 +96,15 @@ describe('instruments', () => {
     expect(calls).toBe(1);
   });
 
-  it('is read-only by construction (no order/trade methods)', () => {
+  it('is read-only by construction (no order-placing/trade-executing methods)', () => {
+    // Bare "order"/"trade" would also flag legitimate read-only lookups like
+    // getOrderBook/getRecentTrades (public market-structure data, same
+    // category as getCandles/getTickers) — the actual guard is against verbs
+    // that would place, execute, or move money.
     const source = new KrakenPublicSource({ fetchFn: mockFetch({}) });
     const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(source));
     for (const name of methods) {
-      expect(name).not.toMatch(/order|trade|buy|sell|withdraw|transfer/i);
+      expect(name).not.toMatch(/buy|sell|withdraw|transfer|place|submit|cancel|execute/i);
     }
   });
 });
@@ -247,6 +251,95 @@ describe('getCandles', () => {
     // background queue rather than running last.
     expect(order[0]).toBe('AAAEUR');
     expect(order[1]).toBe('XBTEUR');
+  });
+});
+
+describe('getOrderBook', () => {
+  it('parses bids and asks, closest-to-mid first', async () => {
+    const urls: string[] = [];
+    const source = new KrakenPublicSource({
+      fetchFn: mockFetch(
+        {
+          error: [],
+          result: {
+            XXBTZEUR: {
+              asks: [['56200.1', '0.5', 1_700_000_000], ['56210.0', '1.2', 1_700_000_000]],
+              bids: [['56190.0', '0.8', 1_700_000_000], ['56180.0', '2.0', 1_700_000_000]],
+            },
+          },
+        },
+        urls,
+      ),
+    });
+    const result = await source.getOrderBook('XBTEUR', 10);
+    expect(urls[0]).toContain('Depth?pair=XBTEUR');
+    expect(urls[0]).toContain('count=10');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.asks[0]).toEqual({ price: 56200.1, volume: 0.5 });
+    expect(result.value.bids[0]).toEqual({ price: 56190, volume: 0.8 });
+  });
+
+  it('drops zero/negative levels rather than showing a fake price', async () => {
+    const source = new KrakenPublicSource({
+      fetchFn: mockFetch({
+        error: [],
+        result: { XXBTZEUR: { asks: [['0', '1', 1]], bids: [['100', '0', 1]] } },
+      }),
+    });
+    const result = await source.getOrderBook('XBTEUR');
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.asks).toHaveLength(0);
+      expect(result.value.bids).toHaveLength(0);
+    }
+  });
+
+  it('surfaces Kraken error payloads as errors', async () => {
+    const source = new KrakenPublicSource({
+      fetchFn: mockFetch({ error: ['EGeneral:Too many requests'], result: {} }),
+    });
+    const result = await source.getOrderBook('XBTEUR');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('Too many requests');
+  });
+});
+
+describe('getRecentTrades', () => {
+  it('parses trades, newest first, mapping side and seconds to ms', async () => {
+    const urls: string[] = [];
+    const source = new KrakenPublicSource({
+      fetchFn: mockFetch(
+        {
+          error: [],
+          result: {
+            XXBTZEUR: [
+              ['56100.0', '0.1', 1_700_000_000, 'b', 'm', '', 1],
+              ['56105.0', '0.2', 1_700_000_060, 's', 'm', '', 2],
+            ],
+            last: '1700000060000000000',
+          },
+        },
+        urls,
+      ),
+    });
+    const result = await source.getRecentTrades('XBTEUR', 20);
+    expect(urls[0]).toContain('Trades?pair=XBTEUR');
+    expect(urls[0]).toContain('count=20');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value).toHaveLength(2);
+    expect(result.value[0]).toEqual({ price: 56105, volume: 0.2, time: 1_700_000_060_000, side: 'sell' });
+    expect(result.value[1]!.side).toBe('buy');
+  });
+
+  it('surfaces Kraken error payloads as errors', async () => {
+    const source = new KrakenPublicSource({
+      fetchFn: mockFetch({ error: ['EGeneral:Too many requests'], result: {} }),
+    });
+    const result = await source.getRecentTrades('XBTEUR');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('Too many requests');
   });
 });
 

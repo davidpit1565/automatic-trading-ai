@@ -64,7 +64,7 @@ describe('UI layer architecture', () => {
       /core\/backtest\/engine$/,
       /core\/strategies$/,
       /core\/portfolio\/paperPortfolio$/,
-      /core\/data\/(revolutClient|storage|synthetic|alpacaStocks)$/,
+      /core\/data\/(revolutClient|storage|synthetic|alpacaStocks|krakenPublic)$/,
       /core\/types$/,
     ];
     for (const { file, text } of uiSources) {

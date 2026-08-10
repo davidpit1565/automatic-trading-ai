@@ -1010,9 +1010,41 @@ button.secondary:active {
 
 /* Market detail view (tap a coin) */
 .tappable { text-align: inherit; font: inherit; color: inherit; width: 100%; cursor: pointer; }
-.detail-head { display: flex; justify-content: space-between; align-items: flex-start; margin: 0.5rem 0 1rem; }
-.detail-name { font-size: 1.3rem; font-weight: 750; letter-spacing: -0.01em; }
+.detail-head { display: flex; justify-content: space-between; align-items: center; margin: 0.5rem 0 0.9rem; }
+.detail-coin { display: flex; align-items: center; gap: 0.6rem; }
+.detail-coin .coin-logo { width: 30px; height: 30px; }
+.detail-name { font-size: 1.15rem; font-weight: 750; letter-spacing: -0.01em; }
 .detail-price { text-align: right; }
+.detail-price-row { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.7rem; }
+.star-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+  width: 38px; height: 38px; border-radius: 50%; font-size: 1.1rem; cursor: pointer;
+  transition: all var(--dur-fast) var(--ease); }
+.star-btn.active { color: var(--warn); border-color: var(--warn); }
+.detail-stats-row { display: flex; gap: 0.6rem; margin-bottom: 0.9rem; }
+.dstat { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: 0.5rem 0.6rem; display: flex; flex-direction: column; gap: 0.15rem; }
+.dstat-label { font-size: 0.68rem; color: var(--text-dim); }
+.dstat-value { font-size: 0.85rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.view-tabs { display: flex; gap: 0.2rem; margin-bottom: 0.9rem; padding: 0.22rem; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-md); }
+.view-tab { flex: 1; background: transparent; border: none; color: var(--text-dim); padding: 0.5rem 0;
+  border-radius: var(--r-sm); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all var(--dur-fast) var(--ease); }
+.view-tab svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.view-tab:hover { color: var(--text); }
+.view-tab.active { background: linear-gradient(155deg, var(--accent), var(--accent-2)); color: #fff; }
+.detail-nonchart { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  padding: 0.8rem; box-shadow: var(--shadow-xs); min-height: 160px; }
+.orderbook-table { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+.orderbook-head { display: flex; justify-content: space-between; color: var(--text-dim); font-size: 0.72rem;
+  padding: 0 0.2rem 0.3rem; }
+.orderbook-row { display: flex; justify-content: space-between; padding: 0.2rem; border-radius: var(--r-xs); }
+.ob-bid { color: var(--hot); }
+.ob-ask { color: var(--cold); }
+.orderbook-depth { width: 100%; height: 160px; display: block; }
+.depth-bid { fill: var(--hot-tint); stroke: var(--hot); stroke-width: 1.5; }
+.depth-ask { fill: var(--cold-tint); stroke: var(--cold); stroke-width: 1.5; }
+.depth-mid { stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 3 3; }
 .row-title.big { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
 /* Detail chart responsive sizing */
 .detail-chart {

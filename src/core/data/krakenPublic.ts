@@ -114,6 +114,22 @@ interface QueuedTask {
   readonly reject: (reason: unknown) => void;
 }
 
+/** One price level in an order book, closest-to-mid first. */
+export interface OrderBookLevel {
+  readonly price: number;
+  readonly volume: number;
+}
+export interface OrderBook {
+  readonly bids: OrderBookLevel[];
+  readonly asks: OrderBookLevel[];
+}
+export interface RecentTrade {
+  readonly price: number;
+  readonly volume: number;
+  readonly time: number;
+  readonly side: 'buy' | 'sell';
+}
+
 export class KrakenPublicSource implements MarketDataSource {
   readonly name = 'Kraken public market data (read-only)';
   private readonly fetchFn: typeof fetch;
@@ -299,6 +315,62 @@ export class KrakenPublicSource implements MarketDataSource {
       );
     }
     return ok(candles.slice(-limit));
+  }
+
+  /**
+   * Current order book (bid/ask ladder), closest-to-mid first on each side.
+   * Not part of `MarketDataSource` — only Kraken (a real public exchange)
+   * has a book to show; a synthetic/demo source has nothing meaningful here.
+   * Callers feature-detect with `'getOrderBook' in data.source`.
+   */
+  async getOrderBook(symbol: string, count = 15): Promise<Result<OrderBook>> {
+    const url = `${BASE_URL}/Depth?pair=${encodeURIComponent(symbol)}&count=${count}`;
+    const payload = await this.enqueue(() => this.getJson(url), true);
+    if (!payload.ok) return payload;
+    const raw = payload.value as { error?: unknown[]; result?: Record<string, unknown> };
+    if (Array.isArray(raw.error) && raw.error.length > 0) return err(`Kraken error: ${raw.error.join('; ')}`);
+    const result = raw.result;
+    if (typeof result !== 'object' || result === null) return err('unexpected Kraken payload: no result object');
+    const pairKey = Object.keys(result)[0];
+    const book = pairKey !== undefined ? (result[pairKey] as { asks?: unknown; bids?: unknown }) : undefined;
+    if (!book || !Array.isArray(book.asks) || !Array.isArray(book.bids)) {
+      return err('unexpected Kraken payload: no order book rows');
+    }
+    const levels = (rows: unknown[]): OrderBookLevel[] =>
+      rows
+        .filter((r): r is unknown[] => Array.isArray(r) && r.length >= 2)
+        .map((r) => ({ price: num(r[0]) ?? 0, volume: num(r[1]) ?? 0 }))
+        .filter((l) => l.price > 0 && l.volume > 0);
+    return ok({ bids: levels(book.bids), asks: levels(book.asks) });
+  }
+
+  /**
+   * Most recent public trades, newest first. Not part of `MarketDataSource`
+   * — see `getOrderBook`'s doc comment for why.
+   */
+  async getRecentTrades(symbol: string, count = 30): Promise<Result<RecentTrade[]>> {
+    const url = `${BASE_URL}/Trades?pair=${encodeURIComponent(symbol)}&count=${count}`;
+    const payload = await this.enqueue(() => this.getJson(url), true);
+    if (!payload.ok) return payload;
+    const raw = payload.value as { error?: unknown[]; result?: Record<string, unknown> };
+    if (Array.isArray(raw.error) && raw.error.length > 0) return err(`Kraken error: ${raw.error.join('; ')}`);
+    const result = raw.result;
+    if (typeof result !== 'object' || result === null) return err('unexpected Kraken payload: no result object');
+    const pairKey = Object.keys(result).find((key) => key !== 'last');
+    const rows = pairKey !== undefined ? result[pairKey] : undefined;
+    if (!Array.isArray(rows)) return err('unexpected Kraken payload: no trade rows');
+    const trades = rows
+      .filter((r): r is unknown[] => Array.isArray(r) && r.length >= 4)
+      .map((r): RecentTrade | null => {
+        const price = num(r[0]);
+        const volume = num(r[1]);
+        const time = num(r[2]);
+        if (price === null || volume === null || time === null) return null;
+        return { price, volume, time: Math.round(time * 1000), side: r[3] === 'b' ? 'buy' : 'sell' };
+      })
+      .filter((t): t is RecentTrade => t !== null)
+      .reverse();
+    return ok(trades);
   }
 
   /**
