@@ -12,7 +12,6 @@ import { formatPrice, formatPct } from './format';
 import { renderCryptoView } from './views/cryptoView';
 import { renderStocksView } from './views/stocksView';
 import { renderMarketsView } from './views/marketsView';
-import { renderHistoryView } from './views/historyView';
 import { renderValueView } from './views/valueView';
 import { renderBacktestView } from './views/backtestView';
 import { renderGridView } from './views/gridView';
@@ -55,7 +54,6 @@ const PRIMARY_VIEWS: Record<string, ViewRenderer> = {
   stocks: renderStocksView,
   value: renderValueView,
   markets: renderMarketsView,
-  history: renderHistoryView,
 };
 
 const TOOL_VIEWS: Record<string, ViewRenderer | null> = {

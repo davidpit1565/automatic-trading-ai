@@ -45,9 +45,11 @@ export interface RealMoneyReadinessInput {
   readonly realizedReturnPct: number;
   /** Peak-to-trough drawdown as a positive percent. */
   readonly maxDrawdownPct: number;
-  /** Portfolio return minus buy-and-hold BTC over the same window (%). */
+  /** Portfolio return minus buy-and-hold benchmark over the same window (%). */
   readonly vsBenchmarkPct: number | null;
   readonly daysRunning: number;
+  /** English label for the benchmark criterion's detail text. Defaults to "BTC" (the crypto side's benchmark). */
+  readonly benchmarkLabel?: string;
 }
 
 export interface RealMoneyReadiness {
@@ -64,6 +66,7 @@ const pct = (v: number): string => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
 /** Assess whether the paper record justifies risking real money. */
 export function assessRealMoneyReadiness(input: RealMoneyReadinessInput): RealMoneyReadiness {
   const t = READINESS_THRESHOLDS;
+  const benchmarkLabel = input.benchmarkLabel ?? 'BTC';
   const criteria: ReadinessCriterion[] = [
     {
       key: 'trades',
@@ -85,8 +88,8 @@ export function assessRealMoneyReadiness(input: RealMoneyReadinessInput): RealMo
       ok: input.vsBenchmarkPct !== null && input.vsBenchmarkPct >= 0,
       detail:
         input.vsBenchmarkPct === null
-          ? 'vs buy-and-hold BTC: not measured yet'
-          : `vs buy-and-hold BTC ${pct(input.vsBenchmarkPct)}`,
+          ? `vs buy-and-hold ${benchmarkLabel}: not measured yet`
+          : `vs buy-and-hold ${benchmarkLabel} ${pct(input.vsBenchmarkPct)}`,
     },
     {
       key: 'drawdown',

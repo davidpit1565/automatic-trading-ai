@@ -56,13 +56,6 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     <div class="hero-spark" id="hv-spark"></div>
   `;
 
-  const actionRow = el('div', 'action-row');
-  actionRow.innerHTML = `
-    <button class="action-btn" data-hub="history"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</button>
-    <button class="action-btn" data-hub="market"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Market</button>
-    <button class="action-btn" data-hub="profit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Profit</button>
-  `;
-
   const readyWrap = el('section', 'block readiness');
   readyWrap.id = 'home-readiness';
 
@@ -79,7 +72,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   posWrap.appendChild(posList);
 
   const actWrap = el('section', 'block');
-  actWrap.innerHTML = `<div class="block-head"><h2>Recent activity</h2><button class="link-btn" data-nav="history">See all</button></div>`;
+  actWrap.innerHTML = `<div class="block-head"><h2>Recent activity</h2><button class="link-btn" data-hub="history">See all</button></div>`;
   const actList = el('div', 'stack');
   actList.id = 'home-activity';
   actWrap.appendChild(actList);
@@ -87,7 +80,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   const status = el('p', 'muted-line', 'Loading the cloud robot…');
   status.id = 'home-status';
 
-  container.append(hero, actionRow, posWrap, marketsWrap, readyWrap, actWrap, status);
+  container.append(hero, posWrap, marketsWrap, readyWrap, actWrap, status);
   attachCoinLogoFallback(container);
 
   let state: CloudState | null = null;

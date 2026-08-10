@@ -27,12 +27,16 @@ describe('dashboard shell', () => {
   });
 
   it('exposes the primary bottom-nav sections', () => {
-    for (const nav of ['crypto', 'stocks', 'markets', 'history', 'tools']) {
+    // History has its own sub-tab inside both the Crypto and Stocks hubs
+    // (see assetHubView.ts) and is deliberately not a separate bottom-nav
+    // destination — that would be the same content twice.
+    for (const nav of ['crypto', 'stocks', 'markets', 'tools']) {
       expect(html).toContain(`data-nav="${nav}"`);
     }
-    for (const view of ['view-crypto', 'view-stocks', 'view-markets', 'view-history', 'view-tools']) {
+    for (const view of ['view-crypto', 'view-stocks', 'view-markets', 'view-tools']) {
       expect(html).toContain(`id="${view}"`);
     }
+    expect(html).not.toContain('data-nav="history"');
   });
 
   it('loads the UI entry module and stylesheet', () => {

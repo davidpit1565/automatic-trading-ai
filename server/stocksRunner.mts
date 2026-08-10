@@ -30,6 +30,9 @@ import { PaperAutoPilot } from '../src/core/autopilot/paperAutoPilot';
 import { PositionEngine } from '../src/core/position/positionEngine';
 import { PortfolioEngine } from '../src/core/position/portfolioEngine';
 import { TradeJournal } from '../src/core/position/tradeJournal';
+import { tradeAnalytics } from '../src/core/position/analytics';
+import { maxDrawdownPct } from '../src/core/backtest/metrics';
+import { assessRealMoneyReadiness } from '../src/core/feedback/realMoneyReadiness';
 import { DailyLossTracker } from '../src/core/risk/dailyLoss';
 import { DEFAULT_RISK_LIMITS } from '../src/core/risk/riskEngine';
 import { FileStore } from './fileStore.mts';
@@ -43,6 +46,9 @@ const EQUITY_HISTORY_KEY = 'equity-history';
 const EQUITY_HISTORY_CAP = 5000;
 const ALERTED_TRADES_KEY = 'alerted-trade-ids';
 const ALERTED_TRADES_CAP = 500;
+/** Stored real-money readiness verdict, mirroring the crypto runner (see `autopilotRunner.mts`). */
+const READINESS_KEY = 'real-money-readiness';
+const DAY_MS = 24 * 60 * 60 * 1000;
 const MARKET_SNAPSHOT_KEY = 'market-snapshot';
 const MARKET_DAY_ANCHOR_KEY = 'market-day-anchor';
 /**
@@ -107,19 +113,40 @@ export function updateMarketSnapshot(
   store.set(MARKET_SNAPSHOT_KEY, { at: now, symbols: entries });
 }
 
+/**
+ * Records an equity-history point and refreshes the real-money readiness
+ * verdict from the trade journal — same shape as the crypto runner's
+ * `recordEquity`, minus a benchmark (no stocks buy-and-hold comparison is
+ * measured yet, so that criterion honestly reports "not measured").
+ */
 export async function recordEquity(
   store: FileStore,
   portfolio: PortfolioEngine,
+  journal: TradeJournal,
   now: number,
   prices: Readonly<Record<string, number>>,
 ): Promise<void> {
   const equity = portfolio.snapshot(prices, now).equity;
   const history = store.get<Array<{ at: number; equity: number }>>(EQUITY_HISTORY_KEY) ?? [];
+  const firstAt = history[0]?.at ?? now;
   history.push({ at: now, equity: Math.round(equity * 100) / 100 });
   store.set(
     EQUITY_HISTORY_KEY,
     history.length > EQUITY_HISTORY_CAP ? history.slice(-EQUITY_HISTORY_CAP) : history,
   );
+
+  const analytics = tradeAnalytics(journal.entries(), { initialCash: INITIAL_CASH });
+  const liveDrawdownPct = maxDrawdownPct(history.map((point) => ({ timestamp: point.at, equity: point.equity })));
+  const readiness = assessRealMoneyReadiness({
+    closedTrades: analytics.tradeCount,
+    profitFactor: analytics.profitFactor,
+    realizedReturnPct: (analytics.totalPnl / INITIAL_CASH) * 100,
+    maxDrawdownPct: Math.max(analytics.maxDrawdownPct, liveDrawdownPct),
+    vsBenchmarkPct: null,
+    daysRunning: (now - firstAt) / DAY_MS,
+    benchmarkLabel: 'a market benchmark',
+  });
+  store.set(READINESS_KEY, readiness);
 }
 
 /**
@@ -133,6 +160,7 @@ export async function runStocksCycle(
   source: MarketDataSource,
   autopilot: PaperAutoPilot,
   portfolio: PortfolioEngine,
+  journal: TradeJournal,
   telegram: { token: string; chatId: string },
   symbols: readonly string[],
   now: number,
@@ -190,7 +218,7 @@ export async function runStocksCycle(
       symbolPrices[symbol] = candles.value[candles.value.length - 1]!.close;
     }
   }
-  await recordEquity(store, portfolio, now, symbolPrices);
+  await recordEquity(store, portfolio, journal, now, symbolPrices);
 
   // Browsable-only symbols (BROWSABLE minus the traded set already priced
   // above): display prices for the wider list without fetching anything
@@ -251,7 +279,7 @@ async function main(): Promise<void> {
   };
 
   try {
-    await runStocksCycle(store, source, autopilot, portfolio, telegram, symbols, now, SNAPSHOT_STAGGER_MS);
+    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, symbols, now, SNAPSHOT_STAGGER_MS);
   } catch (cause) {
     console.error('Stocks cycle failed:', cause instanceof Error ? cause.message : cause);
   }

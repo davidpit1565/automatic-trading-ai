@@ -58,13 +58,28 @@ describe('buildAlpacaSourceFromEnv', () => {
 
 describe('recordEquity', () => {
   it('appends a rounded equity point on every call', async () => {
-    const positions = new PositionEngine(store, new TradeJournal(store));
+    const journal = new TradeJournal(store);
+    const positions = new PositionEngine(store, journal);
     const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
-    await recordEquity(store, portfolio, 1000, {});
-    await recordEquity(store, portfolio, 2000, {});
+    await recordEquity(store, portfolio, journal, 1000, {});
+    await recordEquity(store, portfolio, journal, 2000, {});
     const history = store.get<Array<{ at: number; equity: number }>>('equity-history');
     expect(history).toHaveLength(2);
     expect(history![0]!.equity).toBe(10_000);
+  });
+
+  it('refreshes the real-money readiness verdict alongside the equity point', async () => {
+    const journal = new TradeJournal(store);
+    const positions = new PositionEngine(store, journal);
+    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
+    await recordEquity(store, portfolio, journal, 1000, {});
+    const readiness = store.get<{ ready: boolean; criteria: { key: string; detail: string }[] }>('real-money-readiness');
+    expect(readiness).not.toBeNull();
+    expect(readiness!.ready).toBe(false);
+    // Stocks has no measured buy-and-hold benchmark yet — must not claim BTC.
+    const benchmark = readiness!.criteria.find((c) => c.key === 'benchmark');
+    expect(benchmark?.detail).toContain('a market benchmark');
+    expect(benchmark?.detail).not.toContain('BTC');
   });
 });
 
@@ -79,7 +94,9 @@ function fakeSource(): MarketDataSource {
   };
 }
 
-function buildAutopilot(source: MarketDataSource): { autopilot: PaperAutoPilot; portfolio: PortfolioEngine } {
+function buildAutopilot(
+  source: MarketDataSource,
+): { autopilot: PaperAutoPilot; portfolio: PortfolioEngine; journal: TradeJournal } {
   const journal = new TradeJournal(store);
   const positions = new PositionEngine(store, journal);
   const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
@@ -95,7 +112,7 @@ function buildAutopilot(source: MarketDataSource): { autopilot: PaperAutoPilot; 
     getDailyLoss: () => new DailyLossTracker(store).lossToday(Date.now()),
     riskLimits: DEFAULT_RISK_LIMITS,
   });
-  return { autopilot, portfolio };
+  return { autopilot, portfolio, journal };
 }
 
 describe('updateMarketSnapshot', () => {
@@ -131,9 +148,9 @@ describe('updateMarketSnapshot', () => {
 describe('runStocksCycle', () => {
   it('runs a cycle, records a heartbeat, and records an equity point', async () => {
     const source = fakeSource();
-    const { autopilot, portfolio } = buildAutopilot(source);
+    const { autopilot, portfolio, journal } = buildAutopilot(source);
     const telegram = { token: '', chatId: '' };
-    await runStocksCycle(store, source, autopilot, portfolio, telegram, ['AAPL'], 5_000_000);
+    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], 5_000_000);
 
     const lastRun = store.get<{ at: number; source: string }>('autopilot-last-run');
     expect(lastRun?.source).toBe('fake stocks');
@@ -146,9 +163,9 @@ describe('runStocksCycle', () => {
 
   it('also snapshots the wider browsable list (not just the traded symbols), without duplicating AAPL', async () => {
     const source = fakeSource();
-    const { autopilot, portfolio } = buildAutopilot(source);
+    const { autopilot, portfolio, journal } = buildAutopilot(source);
     const telegram = { token: '', chatId: '' };
-    await runStocksCycle(store, source, autopilot, portfolio, telegram, ['AAPL'], 5_000_000);
+    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], 5_000_000);
 
     const snap = store.get<{ at: number; symbols: MarketSnapshotEntry[] }>('market-snapshot');
     const symbols = snap!.symbols.map((s) => s.symbol);
@@ -161,13 +178,13 @@ describe('runStocksCycle', () => {
 
   it('does not send a Telegram message when nothing traded', async () => {
     const source = fakeSource();
-    const { autopilot, portfolio } = buildAutopilot(source);
+    const { autopilot, portfolio, journal } = buildAutopilot(source);
     const fetchFn = vi.fn();
     const telegram = { token: 'T', chatId: 'C' };
     const originalFetch = globalThis.fetch;
     (globalThis as { fetch?: typeof fetch }).fetch = fetchFn as unknown as typeof fetch;
     try {
-      await runStocksCycle(store, source, autopilot, portfolio, telegram, ['AAPL'], 5_000_000);
+      await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], 5_000_000);
       expect(fetchFn).not.toHaveBeenCalled();
     } finally {
       globalThis.fetch = originalFetch;
@@ -176,10 +193,10 @@ describe('runStocksCycle', () => {
 
   it('respects the stagger delay between the browsable-only price requests', async () => {
     const source = fakeSource();
-    const { autopilot, portfolio } = buildAutopilot(source);
+    const { autopilot, portfolio, journal } = buildAutopilot(source);
     const telegram = { token: '', chatId: '' };
     const start = Date.now();
-    await runStocksCycle(store, source, autopilot, portfolio, telegram, ['AAPL'], 5_000_000, 5);
+    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], 5_000_000, 5);
     const elapsed = Date.now() - start;
     // ~39 browsable-only symbols (BROWSABLE minus the 1 traded symbol) at 5ms
     // each is a real, if small, floor — proves the delay is actually awaited
