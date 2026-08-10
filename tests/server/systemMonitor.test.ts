@@ -7,25 +7,29 @@ import { fetchSystemState, monitorSystemChanges } from '../../server/systemMonit
 
 describe('fetchSystemState', () => {
   it('returns a valid system state snapshot', async () => {
-    // Create a mock store
+    // Real bug: TradeJournal stores a plain JournalEntry[] directly at
+    // 'trade-journal' (position/tradeJournal.ts), not {entries: [...]}. The
+    // old code checked journalData.entries — always undefined on a real
+    // array — so closedTradeCount/realizedPnlTotal were stuck at 0 forever.
     const mockStore = {
       get: (key: string) => {
         if (key === 'trade-journal') {
-          return {
-            entries: [
-              {
-                symbol: 'BTC-EUR',
-                entryTimestamp: 1000,
-                entryPrice: 50000,
-                quantity: 0.01,
-                exitTimestamp: 2000,
-                exitPrice: 51000,
-                exitReason: 'take-profit',
-                fees: 10,
-              },
-            ],
-          };
+          return [
+            {
+              symbol: 'BTC-EUR',
+              entryTimestamp: 1000,
+              entryPrice: 50000,
+              quantity: 0.01,
+              exitTimestamp: 2000,
+              exitPrice: 51000,
+              exitReason: 'take-profit',
+              fees: 10,
+              realizedPnl: 490,
+            },
+          ];
         }
+        // Real bug: PositionEngine stores at 'open-positions', not 'positions'.
+        if (key === 'open-positions') return [{ symbol: 'ETH-EUR' }];
         return null;
       },
       set: () => {}, // mock set for store
@@ -33,9 +37,10 @@ describe('fetchSystemState', () => {
 
     const state = await fetchSystemState(mockStore as any, Date.now());
     expect(state).toHaveProperty('timestamp');
-    expect(state).toHaveProperty('equity');
-    expect(state).toHaveProperty('closedTradeCount');
-    expect(state.closedTradeCount).toBeGreaterThanOrEqual(0); // At least fetched without error
+    expect(state.closedTradeCount).toBe(1);
+    expect(state.realizedPnlTotal).toBe(490);
+    expect(state.equity).toBe(10_490); // 10_000 initial + realized P&L
+    expect(state.openPositionCount).toBe(1);
   });
 
   it('handles missing data gracefully', async () => {
@@ -47,6 +52,7 @@ describe('fetchSystemState', () => {
     const state = await fetchSystemState(mockStore as any, Date.now());
     expect(state.equity).toBe(10_000); // fallback
     expect(state.closedTradeCount).toBe(0);
+    expect(state.openPositionCount).toBe(0);
   });
 });
 
@@ -83,5 +89,49 @@ describe('monitorSystemChanges', () => {
       call[0]?.toString().includes('System monitor error'),
     );
     expect(calls.length).toBeGreaterThan(0);
+  });
+
+  it("labels the alert for the robot it's actually about, with the right currency symbol", async () => {
+    // Two robots share this same code path (see systemMonitorRunner.mts) —
+    // an alert must say which one it's about and never claim € for a USD
+    // portfolio (or vice versa).
+    const now = Date.now();
+    const data: Record<string, unknown> = {
+      'monitor-last-state': {
+        timestamp: now - 60_000,
+        autopilotLastRunAt: now - 60_000,
+        autopilotLastRunSuccess: true,
+        equity: 10_000,
+        realizedPnlTotal: 0,
+        closedTradeCount: 0,
+        openPositionCount: 0,
+        auditLogEntryCount: 0,
+        latestAuditLogEntry: null,
+        pagesLastDeployAt: null,
+      },
+      'autopilot-last-run': { at: now },
+      'trade-journal': [{ realizedPnl: 500 }],
+    };
+    const mockStore = {
+      get: (key: string) => data[key] ?? null,
+      set: (key: string, value: unknown) => {
+        data[key] = value;
+      },
+    };
+    let sentBody: string | null = null;
+    vi.stubGlobal('fetch', (_url: string, init: { body: string }) => {
+      sentBody = init.body;
+      return Promise.resolve({ ok: true } as Response);
+    });
+
+    await monitorSystemChanges(mockStore as any, { token: 'T', chatId: 'C' }, now, 'Stocks', '$');
+
+    expect(sentBody).not.toBeNull();
+    const text = (JSON.parse(sentBody!) as { text: string }).text;
+    expect(text).toContain('Stocks');
+    expect(text).toContain('$10500.00');
+    expect(text).not.toContain('€');
+
+    vi.unstubAllGlobals();
   });
 });
