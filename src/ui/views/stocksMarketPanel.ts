@@ -11,6 +11,7 @@
 
 import { fetchStocksState, type MarketSnapshotEntry } from '../cloudState';
 import { BROWSABLE_STOCK_INSTRUMENTS } from '../../core/data/alpacaStocks';
+import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
 import { formatPrice, formatPct } from '../format';
 import type { ViewHandle } from '../viewLifecycle';
 
@@ -53,6 +54,7 @@ export function renderStocksMarketPanel(container: HTMLElement): ViewHandle {
       </select>
     </div>
     <div class="markets-strip" id="stocks-market-list"><div class="empty">Loading…</div></div>`;
+  attachCoinLogoFallback(container);
 
   const searchEl = container.querySelector<HTMLInputElement>('#sm-search')!;
   const sortEl = container.querySelector<HTMLSelectElement>('#sm-sort')!;
@@ -75,12 +77,12 @@ export function renderStocksMarketPanel(container: HTMLElement): ViewHandle {
       card.className = 'market-card';
       if (!r.snapshot) {
         card.innerHTML = `
-          <div class="market-top"><span class="market-name">${r.symbol}</span></div>
+          <div class="market-top"><div class="market-id">${coinLogoHtml(r.symbol)}<span class="market-name">${r.symbol}</span></div></div>
           <div class="market-price">—</div>`;
       } else {
         const up = r.snapshot.changePct >= 0;
         card.innerHTML = `
-          <div class="market-top"><span class="market-name">${r.symbol}</span>
+          <div class="market-top"><div class="market-id">${coinLogoHtml(r.symbol)}<span class="market-name">${r.symbol}</span></div>
             <span class="chg ${up ? 'up' : 'down'}">${formatPct(r.snapshot.changePct)}</span></div>
           <div class="market-price">$${formatPrice(r.snapshot.price)}</div>`;
       }
