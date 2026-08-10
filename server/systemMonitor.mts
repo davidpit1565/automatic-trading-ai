@@ -57,29 +57,29 @@ export async function fetchSystemState(store: FileStore, now: number): Promise<S
     // File doesn't exist or is unparseable
   }
 
-  // Load portfolio snapshot to compute equity
+  // Load portfolio snapshot to compute equity. TradeJournal (see
+  // position/tradeJournal.ts) stores a plain JournalEntry[] directly at this
+  // key — not wrapped in an `entries` property, and every entry already has
+  // both an entry and an exit (the journal only records completed trades).
   let equity = 10_000; // fallback
   let realizedPnlTotal = 0;
   let closedTradeCount = 0;
 
   try {
-    const journalData = store.get<any>('trade-journal');
-    if (journalData && journalData.entries && Array.isArray(journalData.entries)) {
-      const closed = journalData.entries.filter((e: any) => e.exitTimestamp);
-      closedTradeCount = closed.length;
-      realizedPnlTotal = closed.reduce((sum: number, e: any) => {
-        const pnl = (e.exitPrice - e.entryPrice) * e.quantity - (e.fees || 0);
-        return sum + pnl;
-      }, 0);
+    const journal = store.get<any[]>('trade-journal');
+    if (Array.isArray(journal)) {
+      closedTradeCount = journal.length;
+      realizedPnlTotal = journal.reduce((sum: number, e: any) => sum + (e.realizedPnl ?? 0), 0);
     }
   } catch (e) {
     // Fallback
   }
 
-  // Get positions count
+  // Get positions count — PositionEngine (see position/positionEngine.ts)
+  // stores open positions at 'open-positions', not 'positions'.
   let openPositionCount = 0;
   try {
-    const positions = store.get<any>('positions');
+    const positions = store.get<any>('open-positions');
     if (positions && Array.isArray(positions)) {
       openPositionCount = positions.length;
     }
@@ -142,6 +142,8 @@ function buildChangeAlert(
   current: SystemState,
   previous: SystemState | null,
   now: number,
+  label: string,
+  currencySymbol: string,
 ): string | null {
   if (!previous) return null; // First run, no baseline
 
@@ -156,9 +158,9 @@ function buildChangeAlert(
       current.autopilotLastRunAt > previous.autopilotLastRunAt)
   ) {
     if (current.autopilotLastRunSuccess) {
-      changes.push(`✅ Cloud autopilot: RUN PASSED`);
+      changes.push(`✅ ${label} autopilot: RUN PASSED`);
     } else if (current.autopilotLastRunSuccess === false) {
-      changes.push(`❌ Cloud autopilot: RUN FAILED or STALLED`);
+      changes.push(`❌ ${label} autopilot: RUN FAILED or STALLED`);
     }
   }
 
@@ -166,10 +168,10 @@ function buildChangeAlert(
   const equityDiff = current.equity - previous.equity;
   const equityPctChange = ((equityDiff / previous.equity) * 100).toFixed(2);
   if (Math.abs(equityDiff) > 1) {
-    // Only alert if change > €1
+    // Only alert if change > 1 unit of currency
     const direction = equityDiff > 0 ? '⬆️' : '⬇️';
     const sign = equityDiff > 0 ? '+' : '';
-    changes.push(`${direction} Equity: €${current.equity.toFixed(2)} (${sign}${equityPctChange}%)`);
+    changes.push(`${direction} Equity: ${currencySymbol}${current.equity.toFixed(2)} (${sign}${equityPctChange}%)`);
   }
 
   // 3. New closed trade
@@ -178,7 +180,7 @@ function buildChangeAlert(
     const pnlChange = current.realizedPnlTotal - previous.realizedPnlTotal;
     const sentiment = pnlChange > 0 ? '📈' : '📉';
     changes.push(
-      `${sentiment} ${newTrades} trade(s) closed: €${pnlChange > 0 ? '+' : ''}${pnlChange.toFixed(2)}`,
+      `${sentiment} ${newTrades} trade(s) closed: ${currencySymbol}${pnlChange > 0 ? '+' : ''}${pnlChange.toFixed(2)}`,
     );
   }
 
@@ -201,7 +203,7 @@ function buildChangeAlert(
     now - current.autopilotLastRunAt > STALE_ACTIVITY_THRESHOLD_MS
   ) {
     const hoursStale = Math.floor((now - current.autopilotLastRunAt) / (60 * 60 * 1000));
-    changes.push(`⚠️ WARNING: No autopilot activity for ${hoursStale} hours`);
+    changes.push(`⚠️ WARNING: No ${label} activity for ${hoursStale} hours`);
   }
 
   if (changes.length === 0) return null;
@@ -215,7 +217,7 @@ function buildChangeAlert(
     second: '2-digit',
   });
 
-  return `📊 System Update — ${time} UTC\n\n${changes.join('\n')}\n\nTrades: ${current.closedTradeCount} | Equity: €${current.equity.toFixed(2)} | P&L: €${current.realizedPnlTotal.toFixed(2)}`;
+  return `📊 ${label} System Update — ${time} UTC\n\n${changes.join('\n')}\n\nTrades: ${current.closedTradeCount} | Equity: ${currencySymbol}${current.equity.toFixed(2)} | P&L: ${currencySymbol}${current.realizedPnlTotal.toFixed(2)}`;
 }
 
 /**
@@ -225,6 +227,9 @@ export async function monitorSystemChanges(
   store: FileStore,
   telegram: { token: string; chatId: string },
   now: number,
+  /** Distinguishes which robot an alert is about, e.g. "Crypto" or "Stocks". */
+  label = 'Crypto',
+  currencySymbol = '€',
 ): Promise<void> {
   if (!telegram.token || !telegram.chatId) {
     console.log('Telegram not configured; skipping system monitor.');
@@ -247,7 +252,7 @@ export async function monitorSystemChanges(
     }
 
     // Build alert if there are changes
-    const message = buildChangeAlert(current, previous, now);
+    const message = buildChangeAlert(current, previous, now, label, currencySymbol);
 
     // Store current state for next comparison
     store.set('monitor-last-state', current);

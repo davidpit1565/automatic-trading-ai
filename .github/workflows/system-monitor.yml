@@ -28,20 +28,4 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          npx tsx --eval "
-            import { FileStore } from './server/fileStore.mts';
-            import { monitorSystemChanges } from './server/systemMonitor.mts';
-
-            (async () => {
-              const store = new FileStore('./state');
-              await monitorSystemChanges(
-                store,
-                {
-                  token: process.env.TELEGRAM_BOT_TOKEN || '',
-                  chatId: process.env.TELEGRAM_CHAT_ID || '',
-                },
-                Date.now()
-              );
-            })();
-          "
+        run: npx tsx server/systemMonitorRunner.mts

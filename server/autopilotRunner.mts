@@ -21,9 +21,11 @@ import { PersistedKillSwitch } from '../src/core/autopilot/killSwitch';
 import {
   AUTOPILOT_MAX_RSI_FOR_LONG,
   AUTOPILOT_MIN_CONFIDENCE,
+  AUTOPILOT_REGIME_PERIOD,
   AUTOPILOT_TRAILING,
   PaperAutoPilot,
 } from '../src/core/autopilot/paperAutoPilot';
+import { buildDailyRegimeFilter } from '../src/core/signal/regimeFilter';
 import { PositionEngine } from '../src/core/position/positionEngine';
 import { PortfolioEngine } from '../src/core/position/portfolioEngine';
 import { TradeJournal } from '../src/core/position/tradeJournal';
@@ -185,6 +187,27 @@ async function pickSource(): Promise<MarketDataSource | null> {
   return null;
 }
 
+/**
+ * Builds the daily regime gate (see `AUTOPILOT_REGIME_PERIOD`'s measurement
+ * comment): fetches daily candles once per symbol and returns a check
+ * function. Fails OPEN (allows the entry) for a symbol whose daily fetch
+ * failed — a transient daily-candle outage must not silently block every
+ * entry-timeframe opportunity for that symbol.
+ */
+async function buildRegimeCheck(
+  source: MarketDataSource,
+  symbols: readonly string[],
+): Promise<(symbol: string, timestamp: number) => Promise<boolean>> {
+  const filters = new Map<string, (atTimestamp: number) => boolean>();
+  for (const symbol of symbols) {
+    const daily = await source.getCandles(symbol, '1d', 400);
+    if (daily.ok) {
+      filters.set(symbol, buildDailyRegimeFilter(daily.value, { period: AUTOPILOT_REGIME_PERIOD }));
+    }
+  }
+  return async (symbol, timestamp) => filters.get(symbol)?.(timestamp) ?? true;
+}
+
 /** Latest close per symbol, for an accurate portfolio snapshot. */
 async function latestPrices(
   source: MarketDataSource,
@@ -226,11 +249,16 @@ async function main(): Promise<void> {
     initialCash: INITIAL_CASH,
     baseCurrency: 'EUR',
   });
+  const regimeCheck = await buildRegimeCheck(source, symbols);
   const autopilot = new PaperAutoPilot({
     source,
     symbols,
     timeframe: ENTRY_TF,
     confirmationTimeframe: CONFIRMATION_TF,
+    // Never open a long while the larger daily trend is down, even when the
+    // entry-timeframe setup and the 4h confirmation above both pass —
+    // measured to help most in exactly that scenario. See AUTOPILOT_REGIME_PERIOD.
+    regimeCheck,
     scheduler: { start() {}, stop() {}, isRunning: () => false, intervalMs: () => null },
     portfolio,
     positions,

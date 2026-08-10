@@ -29,6 +29,7 @@ import { tradeAnalytics } from '../src/core/position/analytics';
 import { drawdownBreached } from '../src/core/risk/drawdownBreaker';
 import { DEFAULT_RISK_LIMITS } from '../src/core/risk/riskEngine';
 import { meanReversionSignal, breakoutSignal } from '../src/core/signal/alternativeSignals';
+import { buildDailyRegimeFilter } from '../src/core/signal/regimeFilter';
 import type { ScanResult } from '../src/core/scan/marketScanner';
 import type { SignalDecision } from '../src/core/signal/signalEngine';
 import type { Candle, Timeframe } from '../src/core/types';
@@ -42,6 +43,8 @@ interface Cfg {
   trailing?: { activateR: number; trailR: number };
   /** A different signal FAMILY, not a different setting of the same one. */
   evaluate?: (scan: ScanResult, floor: number) => SignalDecision;
+  /** Daily-EMA period for the regime gate (regimeFilter.ts) — omit to leave it off. */
+  regimePeriod?: number;
 }
 const CONFIGS: Cfg[] = [
   { name: 'PROD (40/65/1.5-1.5)', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 } },
@@ -58,6 +61,13 @@ const CONFIGS: Cfg[] = [
   { name: 'BREAKOUT            ', minConfidence: 0, maxRsiForLong: 100, trailing: { activateR: 1.5, trailR: 1.5 }, evaluate: breakoutSignal },
   { name: 'MEAN-REV fixed stop ', minConfidence: 0, maxRsiForLong: 100, evaluate: meanReversionSignal },
   { name: 'BREAKOUT fixed stop ', minConfidence: 0, maxRsiForLong: 100, evaluate: breakoutSignal },
+  // Daily regime gate (regimeFilter.ts) layered on PROD — built but never
+  // wired into the live autopilot until measured. Two EMA periods, both on
+  // top of the exact production config, so a comparison against the first
+  // row is a clean one-variable test.
+  { name: 'PROD + regime EMA50 ', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 50 },
+  { name: 'PROD + regime EMA100', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 100 },
+  { name: 'PROD + regime EMA200', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 200 },
 ];
 
 const source = new KrakenPublicSource();
@@ -78,7 +88,26 @@ async function load(entryTf: Timeframe, confirmTf: Timeframe) {
   return { e, c };
 }
 
-async function replay(cfg: Cfg, e: Map<string, Candle[]>, c: Map<string, Candle[]>, stamps: number[], entryTf: Timeframe, confirmTf: Timeframe) {
+/** Daily candles per symbol, fetched once — every regime period reuses these. */
+async function loadDaily(): Promise<Map<string, Candle[]>> {
+  const d = new Map<string, Candle[]>();
+  for (const s of symbols) {
+    const res = await source.getCandles(s, '1d', 400);
+    if (res.ok) d.set(s, res.value);
+    else console.error(`  fetch failed ${s} 1d: ${res.error}`);
+  }
+  return d;
+}
+
+async function replay(
+  cfg: Cfg,
+  e: Map<string, Candle[]>,
+  c: Map<string, Candle[]>,
+  stamps: number[],
+  entryTf: Timeframe,
+  confirmTf: Timeframe,
+  daily: Map<string, Candle[]>,
+) {
   let clock = 0;
   const src: MarketDataSource = {
     name: 'r',
@@ -89,6 +118,11 @@ async function replay(cfg: Cfg, e: Map<string, Candle[]>, c: Map<string, Candle[
   const positions = new PositionEngine(store, journal);
   const portfolio = new PortfolioEngine(store, positions, { initialCash: CASH, baseCurrency: 'EUR' });
   let peak = CASH, equity = CASH;
+  const regimeFilters = cfg.regimePeriod
+    ? new Map(
+        [...daily.entries()].map(([s, candles]) => [s, buildDailyRegimeFilter(candles, { period: cfg.regimePeriod! })]),
+      )
+    : null;
   const pilot = new PaperAutoPilot({
     source: src, symbols, timeframe: entryTf, confirmationTimeframe: confirmTf,
     scheduler: { start() {}, stop() {}, isRunning: () => false, intervalMs: () => null },
@@ -96,6 +130,7 @@ async function replay(cfg: Cfg, e: Map<string, Candle[]>, c: Map<string, Candle[
     getDailyLoss: () => 0, costRate: COST, minConfidence: cfg.minConfidence,
     maxRsiForLong: cfg.maxRsiForLong, trailing: cfg.trailing, riskLimits: DEFAULT_RISK_LIMITS,
     ...(cfg.evaluate ? { evaluate: cfg.evaluate } : {}),
+    ...(regimeFilters ? { regimeCheck: async (s: string, ts: number) => regimeFilters.get(s)?.(ts) ?? true } : {}),
     haltNewEntries: () => drawdownBreached({ peakEquity: peak, currentEquity: equity, maxDrawdownPct: DD }),
   });
   for (const t of stamps) {
@@ -112,6 +147,8 @@ async function replay(cfg: Cfg, e: Map<string, Candle[]>, c: Map<string, Candle[
   const a = tradeAnalytics(journal.entries(), { initialCash: CASH });
   return { ret: ((equity - CASH) / CASH) * 100, dd: a.maxDrawdownPct, pf: a.profitFactor, n: a.tradeCount };
 }
+
+const daily = await loadDaily();
 
 for (const [entryTf, confirmTf, label] of [['1h', '4h', '1h entry / 30 days'], ['4h', '1d', '4h entry / 120 days']] as const) {
   const { e, c } = await load(entryTf, confirmTf);
@@ -136,8 +173,8 @@ for (const [entryTf, confirmTf, label] of [['1h', '4h', '1h entry / 30 days'], [
   console.log(`buy & hold over the same window: ${(bhSum / bhN).toFixed(2)}% (mean of ${bhN} majors)`);
   console.log('config                  |   full ret |  full PF | trades |  OOS ret | OOS PF');
   for (const cfg of CONFIGS) {
-    const full = await replay(cfg, e, c, usable, entryTf, confirmTf);
-    const oos = await replay(cfg, e, c, usable.slice(mid), entryTf, confirmTf);
+    const full = await replay(cfg, e, c, usable, entryTf, confirmTf, daily);
+    const oos = await replay(cfg, e, c, usable.slice(mid), entryTf, confirmTf, daily);
     console.log(
       `${cfg.name} | ${full.ret.toFixed(3).padStart(9)}% | ${(full.pf ?? 0).toFixed(3).padStart(8)} | ${String(full.n).padStart(6)} | ${oos.ret.toFixed(3).padStart(7)}% | ${(oos.pf ?? 0).toFixed(3)}`,
     );
