@@ -31,6 +31,17 @@ describe('constructor', () => {
     expect(() => new AlpacaStockSource({ apiKeyId: '', apiSecretKey: 'x' })).toThrow();
     expect(() => new AlpacaStockSource({ apiKeyId: 'x', apiSecretKey: '' })).toThrow();
   });
+
+  // Same capital-protection guarantee already asserted for RevolutXClient and
+  // KrakenPublicSource — this source holds real Alpaca secret keys server-side,
+  // so it must never grow an order-placing method either.
+  it('is read-only by construction (no order/trade methods)', () => {
+    const client = makeSource(mockFetch({}));
+    const methodNames = Object.getOwnPropertyNames(Object.getPrototypeOf(client));
+    for (const name of methodNames) {
+      expect(name).not.toMatch(/buy|sell|withdraw|transfer|place|submit|cancel|execute/i);
+    }
+  });
 });
 
 describe('getInstruments', () => {
