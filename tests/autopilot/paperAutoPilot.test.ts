@@ -64,6 +64,7 @@ function makePilot(
     riskLimits?: import('../../src/core/risk/riskEngine').RiskLimits;
     correlationBetween?: (a: string, b: string) => number;
     onRealizedPnl?: (pnl: number, timestamp: number) => void;
+    regimeCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
   } = {},
 ) {
   const store = new MemoryStore();
@@ -90,6 +91,7 @@ function makePilot(
     riskLimits: opts.riskLimits,
     correlationBetween: opts.correlationBetween,
     onRealizedPnl: opts.onRealizedPnl,
+    regimeCheck: opts.regimeCheck,
   });
   return { pilot, portfolio, positions, journal, killSwitch, audit };
 }
@@ -405,6 +407,53 @@ describe('multi-timeframe confirmation', () => {
     const { pilot, portfolio } = makeConfirmingPilot(0.001);
     await pilot.runCycleOnce(T);
     expect(portfolio.openPositions()).toHaveLength(1);
+  });
+});
+
+describe('daily regime gate', () => {
+  it('refuses a qualifying entry when the regime check reports a downtrend, and audits why', async () => {
+    const { pilot, portfolio, audit } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { regimeCheck: async () => false },
+    );
+    const cycle = await pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(cycle.skipped.some((s) => s.reason.includes('regime'))).toBe(true);
+    expect(audit.entries().some((e) => e.event === 'rejected' && e.detail.includes('regime'))).toBe(true);
+  });
+
+  it('opens normally when the regime check confirms an uptrend', async () => {
+    const { pilot, portfolio } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { regimeCheck: async () => true },
+    );
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
+  });
+
+  it('never blocks an exit, even while the regime check refuses new entries', async () => {
+    // The gate always returns false, yet the position opened before it ever
+    // engaged must still close normally on a stop-loss — proving the gate is
+    // consulted for new entries only, never for exits.
+    const market = { 'QUAL/USD': { drift: 0.001 } } as Record<string, { drift: number; lastPrice?: number }>;
+    let allowEntries = true;
+    const { pilot, portfolio, journal } = makePilot(market, {
+      regimeCheck: async () => allowEntries,
+    });
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
+    const position = portfolio.openPositions()[0]!;
+
+    allowEntries = false; // the gate now refuses any NEW entry...
+    market['QUAL/USD'] = { drift: 0.001, lastPrice: position.stopLoss * 0.99 };
+    const cycle = await pilot.runCycleOnce(T + 3_600_000);
+
+    // ...but the already-open position still exits at its stop.
+    expect(cycle.closed).toHaveLength(1);
+    expect(cycle.closed[0]!.reason).toBe('stop-loss');
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(journal.entries()[0]!.exitReason).toBe('stop-loss');
   });
 });
 

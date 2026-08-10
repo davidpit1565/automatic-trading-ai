@@ -138,6 +138,14 @@ export interface AutoPilotOptions {
    * omit if nothing needs to observe realized results.
    */
   readonly onRealizedPnl?: (pnl: number, timestamp: number) => void;
+  /**
+   * Daily trend regime gate (see `signal/regimeFilter.ts`'s
+   * `buildDailyRegimeFilter`): returns false to block a new long entry when
+   * the larger daily trend is down, regardless of the entry-timeframe setup.
+   * Checked at entry time only — never blocks an exit. Omit to leave this
+   * check off (the pre-existing behaviour).
+   */
+  readonly regimeCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
   readonly clock?: () => number;
   /** Persists the desired running state so the autopilot survives reloads. */
   readonly store?: KeyValueStore;
@@ -409,6 +417,22 @@ export class PaperAutoPilot {
           });
           continue;
         }
+      }
+
+      // Daily regime gate: never open a long while the larger daily trend is
+      // down, even if the entry-timeframe setup and higher-timeframe gate
+      // above both passed — this targets a distinct failure mode (choppy
+      // entries inside a downtrend), not entry quality. See regimeFilter.ts.
+      if (this.options.regimeCheck && !(await this.options.regimeCheck(scanResult.symbol, timestamp))) {
+        skipped.push({ symbol: scanResult.symbol, reason: 'daily regime filter: larger trend is down' });
+        audit.append({
+          timestamp,
+          intentId: `${scanResult.symbol}:${timestamp}`,
+          event: 'rejected',
+          mode: this.mode,
+          detail: `daily regime filter refused ${scanResult.symbol}: larger trend is down`,
+        });
+        continue;
       }
 
       const snapshot = this.options.portfolio.snapshot(marketPrices, timestamp);
