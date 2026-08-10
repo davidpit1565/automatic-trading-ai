@@ -24,11 +24,6 @@ export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
       <div class="hero-split"><span id="stocks-ov-cash"></span><span id="stocks-ov-invested"></span></div>
       <div class="hero-spark" id="stocks-ov-spark"></div>
     </section>
-    <div class="action-row">
-      <button class="action-btn" data-hub="history"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</button>
-      <button class="action-btn" data-hub="market"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Market</button>
-      <button class="action-btn" data-hub="profit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Profit</button>
-    </div>
     <section class="block"><div class="block-head"><h2>Open positions</h2></div><div class="stack" id="stocks-ov-positions"></div></section>
     <p class="muted-line" id="stocks-ov-status">Loading…</p>`;
   attachCoinLogoFallback(container);
