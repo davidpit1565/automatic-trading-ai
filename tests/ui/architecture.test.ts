@@ -66,6 +66,7 @@ describe('UI layer architecture', () => {
       /core\/portfolio\/paperPortfolio$/,
       /core\/data\/(revolutClient|storage|synthetic|alpacaStocks|krakenPublic)$/,
       /core\/types$/,
+      /^@vercel\/analytics$/, // Vercel Web Analytics integration
     ];
     for (const { file, text } of uiSources) {
       for (const match of text.matchAll(importPattern)) {
