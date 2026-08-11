@@ -32,12 +32,22 @@ const DAY_MS = 86_400_000;
 
 let dir: string;
 let store: FileStore;
+const ORIGINAL_SUMMARY_TIMEZONE = process.env['SUMMARY_TIMEZONE'];
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'autopilot-runner-'));
   store = new FileStore(join(dir, 'state.json'));
+  // getSummaryTimezone() is read fresh on every call (not a frozen
+  // module-level default), specifically so this can pin these tests to a
+  // fixed timezone regardless of whatever the hardcoded fallback in
+  // autopilotRunner.mts currently is (it moves around as the user travels).
+  process.env['SUMMARY_TIMEZONE'] = 'Asia/Jerusalem';
 });
-afterEach(() => rmSync(dir, { recursive: true, force: true }));
+afterEach(() => {
+  rmSync(dir, { recursive: true, force: true });
+  if (ORIGINAL_SUMMARY_TIMEZONE === undefined) delete process.env['SUMMARY_TIMEZONE'];
+  else process.env['SUMMARY_TIMEZONE'] = ORIGINAL_SUMMARY_TIMEZONE;
+});
 
 describe('localDayAndHour', () => {
   it('reads the local day, hour and weekday in the given timezone', () => {
