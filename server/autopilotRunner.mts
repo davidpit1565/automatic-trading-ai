@@ -146,11 +146,19 @@ const MAX_OPEN_POSITIONS = DEFAULT_RISK_LIMITS.maxOpenPositions;
 const ALLCLEAR_KEY = 'allclear-last-at';
 const ALLCLEAR_INTERVAL_MS = 14 * 24 * 60 * 60 * 1000;
 /**
- * Timezone the evening digest is scheduled in. Follows the user when they
- * travel by setting the SUMMARY_TIMEZONE repo variable (e.g. Europe/Brussels);
- * defaults to Israel. DST is handled automatically by Intl.
+ * Timezone the digests are scheduled in. Overridable via the SUMMARY_TIMEZONE
+ * repo variable without a code change; DST is handled automatically by Intl.
+ * Read fresh on every call (not a frozen module-level const) so an override
+ * takes effect immediately and tests can pin their own expected timezone
+ * regardless of what the hardcoded fallback below currently is.
+ *
+ * TEMPORARY: fallback set to Europe/Brussels for a trip (2026-08-10) — revert
+ * to 'Asia/Jerusalem' once back home, or set SUMMARY_TIMEZONE instead so this
+ * fallback never has to move again.
  */
-const SUMMARY_TIMEZONE = process.env['SUMMARY_TIMEZONE'] || 'Asia/Jerusalem';
+function getSummaryTimezone(): string {
+  return process.env['SUMMARY_TIMEZONE'] || 'Europe/Brussels';
+}
 
 /** Local date parts (in the given timezone) used to schedule digests. */
 export function localDayAndHour(
@@ -381,7 +389,7 @@ async function runCycle(
   // Circuit-breaker alert: tell the user (once per day) that new buying is
   // paused while the portfolio recovers toward its peak.
   if (telegram.token && telegram.chatId && breakerEngaged(store)) {
-    const { day } = localDayAndHour(now, SUMMARY_TIMEZONE);
+    const { day } = localDayAndHour(now, getSummaryTimezone());
     if (store.get<string>('dd-halt-alert-day') !== day) {
       const a = await sendTelegramMessage(buildDrawdownHaltAlert(DD_BREAKER_PCT), telegram);
       if (a.sent) store.set('dd-halt-alert-day', day);
@@ -390,7 +398,7 @@ async function runCycle(
 
   // Tell the user (once per day) when a safety limit pauses new buying.
   if (telegram.token && telegram.chatId && cycle.skipped.some((s) => /daily loss limit/i.test(s.reason))) {
-    const { day } = localDayAndHour(now, SUMMARY_TIMEZONE);
+    const { day } = localDayAndHour(now, getSummaryTimezone());
     if (store.get<string>('risk-halt-alert-day') !== day) {
       const halt = await sendTelegramMessage(buildRiskHaltAlert(), telegram);
       if (halt.sent) {
@@ -408,7 +416,7 @@ async function runCycle(
       problems.push(`יותר מדי פוזיציות פתוחות (${portfolio.openPositions().length})`);
     }
     if (problems.length > 0) {
-      const { day } = localDayAndHour(now, SUMMARY_TIMEZONE);
+      const { day } = localDayAndHour(now, getSummaryTimezone());
       if (store.get<string>('safety-alert-day') !== day) {
         const a = await sendTelegramMessage(buildSafetyAlert(problems.join(', ')), telegram);
         if (a.sent) store.set('safety-alert-day', day);
@@ -589,7 +597,7 @@ export async function maybeSendSummaries(
 ): Promise<void> {
   if (!telegram.token || !telegram.chatId) return;
 
-  const { day: today, hour } = localDayAndHour(now, SUMMARY_TIMEZONE);
+  const { day: today, hour } = localDayAndHour(now, getSummaryTimezone());
   // No upper bound: a coverage gap (the free GitHub scheduler is unreliable)
   // must never cause a digest to be silently skipped for the whole day — late
   // is far better than missing. Once-per-day is still enforced by slot.key.
@@ -677,7 +685,7 @@ export async function maybeSendPeriodicReports(
   now: number,
 ): Promise<void> {
   if (!telegram.token || !telegram.chatId) return;
-  const { day, hour } = localDayAndHour(now, SUMMARY_TIMEZONE);
+  const { day, hour } = localDayAndHour(now, getSummaryTimezone());
   if (hour < 22) return; // evening only
   // Elapsed-time-since-last-send (reusing the anchor already stored by
   // sendPeriodReport), not an exact weekday/day-of-month match: a coverage
