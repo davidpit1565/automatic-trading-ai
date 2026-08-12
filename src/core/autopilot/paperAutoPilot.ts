@@ -176,6 +176,18 @@ export interface AutoPilotOptions {
    */
   readonly regimeCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
   /**
+   * Market-wide daily trend regime gate, e.g. built from BTC's own daily
+   * trend (see `signal/regimeFilter.ts`'s `buildDailyRegimeFilter`): returns
+   * false to block a new long entry in ANY symbol — including BTC itself —
+   * while the broader market's daily trend is down, regardless of that
+   * symbol's own trend or setup. Distinct from `regimeCheck` (per-symbol
+   * trend): a coin can look fine on its own chart while the market it trades
+   * inside is rolling over. Checked alongside `regimeCheck`, not instead of
+   * it. Checked at entry time only — never blocks an exit. Omit to leave
+   * this check off (the pre-existing behaviour).
+   */
+  readonly marketRegimeCheck?: (timestamp: number) => Promise<boolean>;
+  /**
    * Ties position size to signal conviction instead of every qualifying trade
    * risking the same fixed %: the weakest setup that still clears
    * `minConfidence` gets `floorPct`, a max-confidence setup gets `ceilingPct`,
@@ -469,6 +481,21 @@ export class PaperAutoPilot {
           event: 'rejected',
           mode: this.mode,
           detail: `daily regime filter refused ${scanResult.symbol}: larger trend is down`,
+        });
+        continue;
+      }
+
+      // Market-wide regime gate: a coin's own chart can look fine while the
+      // broader market it trades inside is rolling over. Same fail-open
+      // contract as regimeCheck, applied to every symbol including BTC.
+      if (this.options.marketRegimeCheck && !(await this.options.marketRegimeCheck(timestamp))) {
+        skipped.push({ symbol: scanResult.symbol, reason: 'market regime filter: broader market trend is down' });
+        audit.append({
+          timestamp,
+          intentId: `${scanResult.symbol}:${timestamp}`,
+          event: 'rejected',
+          mode: this.mode,
+          detail: `market regime filter refused ${scanResult.symbol}: broader market trend is down`,
         });
         continue;
       }

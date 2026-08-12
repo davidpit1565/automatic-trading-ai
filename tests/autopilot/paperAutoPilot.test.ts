@@ -65,6 +65,7 @@ function makePilot(
     correlationBetween?: (a: string, b: string) => number;
     onRealizedPnl?: (pnl: number, timestamp: number) => void;
     regimeCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+    marketRegimeCheck?: (timestamp: number) => Promise<boolean>;
     confidenceRisk?: { floorPct: number; ceilingPct: number };
   } = {},
 ) {
@@ -93,6 +94,7 @@ function makePilot(
     correlationBetween: opts.correlationBetween,
     onRealizedPnl: opts.onRealizedPnl,
     regimeCheck: opts.regimeCheck,
+    marketRegimeCheck: opts.marketRegimeCheck,
     confidenceRisk: opts.confidenceRisk,
   });
   return { pilot, portfolio, positions, journal, killSwitch, audit };
@@ -481,6 +483,50 @@ describe('daily regime gate', () => {
     const position = portfolio.openPositions()[0]!;
 
     allowEntries = false; // the gate now refuses any NEW entry...
+    market['QUAL/USD'] = { drift: 0.001, lastPrice: position.stopLoss * 0.99 };
+    const cycle = await pilot.runCycleOnce(T + 3_600_000);
+
+    // ...but the already-open position still exits at its stop.
+    expect(cycle.closed).toHaveLength(1);
+    expect(cycle.closed[0]!.reason).toBe('stop-loss');
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(journal.entries()[0]!.exitReason).toBe('stop-loss');
+  });
+});
+
+describe('market-wide regime gate', () => {
+  it('refuses a qualifying entry when the broader market is in a downtrend, and audits why', async () => {
+    const { pilot, portfolio, audit } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { marketRegimeCheck: async () => false },
+    );
+    const cycle = await pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(cycle.skipped.some((s) => s.reason.includes('market regime'))).toBe(true);
+    expect(audit.entries().some((e) => e.event === 'rejected' && e.detail.includes('market regime'))).toBe(true);
+  });
+
+  it('opens normally when the market regime check confirms an uptrend', async () => {
+    const { pilot, portfolio } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { marketRegimeCheck: async () => true },
+    );
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
+  });
+
+  it('never blocks an exit, even while the market regime check refuses new entries', async () => {
+    const market = { 'QUAL/USD': { drift: 0.001 } } as Record<string, { drift: number; lastPrice?: number }>;
+    let marketUp = true;
+    const { pilot, portfolio, journal } = makePilot(market, {
+      marketRegimeCheck: async () => marketUp,
+    });
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
+    const position = portfolio.openPositions()[0]!;
+
+    marketUp = false; // the gate now refuses any NEW entry...
     market['QUAL/USD'] = { drift: 0.001, lastPrice: position.stopLoss * 0.99 };
     const cycle = await pilot.runCycleOnce(T + 3_600_000);
 
