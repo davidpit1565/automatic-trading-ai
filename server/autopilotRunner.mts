@@ -20,6 +20,7 @@ import { PersistedAuditLog } from '../src/core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../src/core/autopilot/killSwitch';
 import {
   AUTOPILOT_CONFIDENCE_RISK,
+  AUTOPILOT_MARKET_REGIME_PERIOD,
   AUTOPILOT_MAX_RSI_FOR_LONG,
   AUTOPILOT_MIN_CONFIDENCE,
   AUTOPILOT_REGIME_PERIOD,
@@ -217,6 +218,25 @@ async function buildRegimeCheck(
   return async (symbol, timestamp) => filters.get(symbol)?.(timestamp) ?? true;
 }
 
+/**
+ * Builds the market-wide regime gate (see `AUTOPILOT_MARKET_REGIME_PERIOD`'s
+ * measurement comment): fetches BTC's own daily candles once and returns a
+ * check applied to every symbol's entry, including BTC's. Fails OPEN (allows
+ * entries) when the BTC instrument or its daily candles aren't available —
+ * a fetch outage must not silently block the whole universe.
+ */
+async function buildMarketRegimeCheck(
+  source: MarketDataSource,
+  instruments: readonly { symbol: string }[],
+): Promise<(timestamp: number) => Promise<boolean>> {
+  const btc = instruments.find((i) => /XBT|BTC/i.test(i.symbol) && /EUR/i.test(i.symbol));
+  if (!btc) return async () => true;
+  const daily = await source.getCandles(btc.symbol, '1d', 400);
+  if (!daily.ok) return async () => true;
+  const filter = buildDailyRegimeFilter(daily.value, { period: AUTOPILOT_MARKET_REGIME_PERIOD });
+  return async (timestamp) => filter(timestamp);
+}
+
 /** Latest close per symbol, for an accurate portfolio snapshot. */
 async function latestPrices(
   source: MarketDataSource,
@@ -259,6 +279,7 @@ async function main(): Promise<void> {
     baseCurrency: 'EUR',
   });
   const regimeCheck = await buildRegimeCheck(source, symbols);
+  const marketRegimeCheck = await buildMarketRegimeCheck(source, instruments.value);
   const autopilot = new PaperAutoPilot({
     source,
     symbols,
@@ -268,6 +289,11 @@ async function main(): Promise<void> {
     // entry-timeframe setup and the 4h confirmation above both pass —
     // measured to help most in exactly that scenario. See AUTOPILOT_REGIME_PERIOD.
     regimeCheck,
+    // A coin can look fine on its own chart while the broader crypto market
+    // (tracked via BTC) is rolling over — capital protection first even
+    // though it costs some good trades in calmer windows. See
+    // AUTOPILOT_MARKET_REGIME_PERIOD.
+    marketRegimeCheck,
     scheduler: { start() {}, stop() {}, isRunning: () => false, intervalMs: () => null },
     portfolio,
     positions,

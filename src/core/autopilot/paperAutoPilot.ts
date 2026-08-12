@@ -97,6 +97,22 @@ export const AUTOPILOT_REGIME_PERIOD = 50;
  */
 export const AUTOPILOT_CONFIDENCE_RISK = { floorPct: 0.5, ceilingPct: 1 };
 
+/**
+ * Daily-EMA period for the market-wide regime gate, built from BTC's own
+ * daily trend and applied to every symbol's entry (see `marketRegimeCheck`).
+ * Measured 2026-08-12 (`scripts/sweepAutopilot.mts`, real Kraken data, both
+ * the 30-day and 120-day windows, in-sample + out-of-sample) as a mixed
+ * result, not a clean win: it protected capital significantly in the
+ * deep-downtrend 120-day window (return -5.32%→-3.04%, out-of-sample
+ * -2.96%→-0.63%) but cost performance in the calmer 30-day window by
+ * blocking otherwise-good trades (0.49%→-0.80%). Enabled anyway per an
+ * explicit decision (2026-08-12) to prioritize capital protection during
+ * real market-wide downturns over squeezing out every good trade in calm
+ * periods — consistent with CLAUDE.md's priority order (capital protection
+ * above raw profit).
+ */
+export const AUTOPILOT_MARKET_REGIME_PERIOD = 50;
+
 export interface AutoPilotOptions {
   readonly source: MarketDataSource;
   readonly symbols: readonly string[];
