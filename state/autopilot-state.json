@@ -1,35 +1,15 @@
 {
   "portfolio-engine": {
-    "cash": 7610.416375344751,
+    "cash": 9568.524716966698,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -329.12915981756686,
+    "closedRealizedPnl": -275.05293612025173,
     "dayAnchor": {
       "day": "2026-08-12",
       "equity": 9562.062935838063
     }
   },
-  "open-positions": [
-    {
-      "id": "LINKEUR:1786469253067:0",
-      "symbol": "LINKEUR",
-      "openedAt": 1786469253067,
-      "entryPrice": 7.43347,
-      "quantity": 256.14310919727006,
-      "initialQuantity": 256.14310919727006,
-      "stopLoss": 7.31680058577875,
-      "takeProfit": 7.6668088284425,
-      "feesPaid": 5.712096353773894,
-      "realizedPnl": 0,
-      "highestPrice": 7.63,
-      "lowestPrice": 7.41014,
-      "confidence": 48.586723965250165,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "open-positions": [],
   "audit-log": [
     {
       "timestamp": 1784042069348,
@@ -1248,13 +1228,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry LINKEUR: 256.14310919727006 @ 7.43347 (stop 7.31680058577875, target 7.6668088284425, confidence 49)"
+    },
+    {
+      "timestamp": 1786531441274,
+      "intentId": "LINKEUR:1786469253067:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit LINKEUR: 256.14310919727006 @ 7.66759 (take-profit)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1786529586125,
+    "at": 1786531441274,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "daily-summary-last-day": "2026-07-14",
@@ -1267,30 +1254,6 @@
   "daily-summary-evening": "2026-08-11",
   "allclear-last-at": 1785344179381,
   "equity-history": [
-    {
-      "at": 1784500937570,
-      "equity": 9878.4
-    },
-    {
-      "at": 1784501242492,
-      "equity": 9882.32
-    },
-    {
-      "at": 1784501547625,
-      "equity": 9883.04
-    },
-    {
-      "at": 1784501852686,
-      "equity": 9880.83
-    },
-    {
-      "at": 1784502157756,
-      "equity": 9871.49
-    },
-    {
-      "at": 1784502462900,
-      "equity": 9856.58
-    },
     {
       "at": 1784502768975,
       "equity": 9865.69
@@ -21266,6 +21229,30 @@
     {
       "at": 1786529586125,
       "equity": 9562.29
+    },
+    {
+      "at": 1786529896427,
+      "equity": 9561.63
+    },
+    {
+      "at": 1786530205172,
+      "equity": 9563.23
+    },
+    {
+      "at": 1786530514052,
+      "equity": 9563.11
+    },
+    {
+      "at": 1786530823128,
+      "equity": 9564.79
+    },
+    {
+      "at": 1786531132228,
+      "equity": 9568.7
+    },
+    {
+      "at": 1786531441274,
+      "equity": 9568.52
     }
   ],
   "trade-journal": [
@@ -21981,6 +21968,29 @@
       "validationVerdict": null,
       "confidence": 49.792025526361435,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "LINKEUR:1786469253067:0",
+      "symbol": "LINKEUR",
+      "entryTimestamp": 1786469253067,
+      "exitTimestamp": 1786531441274,
+      "entryPrice": 7.43347,
+      "exitPrice": 7.66759,
+      "positionSize": 256.14310919727006,
+      "stopLoss": 7.31680058577875,
+      "takeProfit": 7.6668088284425,
+      "exitReason": "take-profit",
+      "fees": 11.60409738172358,
+      "slippage": 0,
+      "holdingDurationMs": 62188207,
+      "mfePct": 3.1495385062427093,
+      "maePct": 0.3138507318923683,
+      "realizedPnl": 54.07622369731515,
+      "returnPct": 2.8400898907239807,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 48.586723965250165,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "alerted-trade-ids": [
@@ -22042,7 +22052,8 @@
     "o:DOTEUR:1785861844771:1",
     "c:DOTEUR:1785861844771:1",
     "c:ADAEUR:1785771978956:0",
-    "o:LINKEUR:1786469253067:0"
+    "o:LINKEUR:1786469253067:0",
+    "c:LINKEUR:1786469253067:0"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -22050,7 +22061,7 @@
       {
         "key": "trades",
         "ok": true,
-        "detail": "31 / 20 closed trades"
+        "detail": "32 / 20 closed trades"
       },
       {
         "key": "days",
@@ -22060,12 +22071,12 @@
       {
         "key": "profitable",
         "ok": false,
-        "detail": "after-fee return -3.29%"
+        "detail": "after-fee return -2.75%"
       },
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -2.87%"
+        "detail": "vs buy-and-hold BTC -2.81%"
       },
       {
         "key": "drawdown",
@@ -22075,10 +22086,10 @@
       {
         "key": "consistency",
         "ok": false,
-        "detail": "profit factor 0.53 (needs ≥ 1.2)"
+        "detail": "profit factor 0.61 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — after-fee return -3.29%; vs buy-and-hold BTC -2.87%; profit factor 0.53 (needs ≥ 1.2).",
+    "summary": "NOT READY — after-fee return -2.75%; vs buy-and-hold BTC -2.81%; profit factor 0.61 (needs ≥ 1.2).",
     "unmet": [
       "profitable",
       "benchmark",
@@ -22102,10 +22113,10 @@
   },
   "shadow:live-mirror:shadow-started-at": 1785254092443,
   "shadow:live-mirror:portfolio-engine": {
-    "cash": 7966.951187237082,
+    "cash": 10016.793509605037,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 8.255693207715012,
+    "closedRealizedPnl": 64.86529422538689,
     "dayAnchor": {
       "day": "2026-08-12",
       "equity": 10010.02900523426
@@ -22113,10 +22124,10 @@
   },
   "shadow:no-confirm:shadow-started-at": 1785254092443,
   "shadow:no-confirm:portfolio-engine": {
-    "cash": 7966.951187237082,
+    "cash": 10016.793509605037,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 8.255693207715012,
+    "closedRealizedPnl": 64.86529422538689,
     "dayAnchor": {
       "day": "2026-08-12",
       "equity": 10010.02900523426
@@ -22124,10 +22135,10 @@
   },
   "shadow:fixed-stop:shadow-started-at": 1785254092443,
   "shadow:fixed-stop:portfolio-engine": {
-    "cash": 7966.951187237082,
+    "cash": 10016.793509605037,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 8.255693207715012,
+    "closedRealizedPnl": 64.86529422538689,
     "dayAnchor": {
       "day": "2026-08-12",
       "equity": 10010.02900523426
@@ -22167,39 +22178,39 @@
     }
   },
   "shadow-standings": {
-    "at": 1786529586125,
+    "at": 1786531441274,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10010.262289617944,
-        "returnPct": 0.1026228961794368,
-        "trades": 7,
-        "winRatePct": 42.857142857142854,
-        "profitFactor": 1.0413236663598822,
-        "openPositions": 1,
+        "equity": 10016.793509605037,
+        "returnPct": 0.16793509605036888,
+        "trades": 8,
+        "winRatePct": 50,
+        "profitFactor": 1.3246816117634497,
+        "openPositions": 0,
         "startedAt": 1785254092443
       },
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10010.262289617944,
-        "returnPct": 0.1026228961794368,
-        "trades": 7,
-        "winRatePct": 42.857142857142854,
-        "profitFactor": 1.0413236663598822,
-        "openPositions": 1,
+        "equity": 10016.793509605037,
+        "returnPct": 0.16793509605036888,
+        "trades": 8,
+        "winRatePct": 50,
+        "profitFactor": 1.3246816117634497,
+        "openPositions": 0,
         "startedAt": 1785254092443
       },
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10010.262289617944,
-        "returnPct": 0.1026228961794368,
-        "trades": 7,
-        "winRatePct": 42.857142857142854,
-        "profitFactor": 1.0413236663598822,
-        "openPositions": 1,
+        "equity": 10016.793509605037,
+        "returnPct": 0.16793509605036888,
+        "trades": 8,
+        "winRatePct": 50,
+        "profitFactor": 1.3246816117634497,
+        "openPositions": 0,
         "startedAt": 1785254092443
       },
       {
@@ -22216,8 +22227,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9602.736600520819,
-        "returnPct": -3.9726339947918134,
+        "equity": 9605.928876335644,
+        "returnPct": -3.9407112366435646,
         "trades": 33,
         "winRatePct": 36.36363636363637,
         "profitFactor": 0.5518524311277081,
@@ -22227,8 +22238,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9615.338173259117,
-        "returnPct": -3.846618267408831,
+        "equity": 9623.968339569039,
+        "returnPct": -3.7603166043096095,
         "trades": 46,
         "winRatePct": 26.08695652173913,
         "profitFactor": 0.7864633660432605,
@@ -22249,7 +22260,7 @@
       "takeProfit": 7.685521973070945,
       "feesPaid": 5.758533816777039,
       "realizedPnl": 0,
-      "highestPrice": 7.63,
+      "highestPrice": 7.66759,
       "lowestPrice": 7.37026,
       "confidence": 70,
       "validationVerdict": null,
@@ -22307,7 +22318,7 @@
       "feesPaid": 0.017062806413719954,
       "realizedPnl": 0,
       "highestPrice": 55599.9,
-      "lowestPrice": 55490,
+      "lowestPrice": 55478,
       "confidence": 55.206437466414876,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -25608,27 +25619,7 @@
       "detail": "paper exit ETHEUR: 1.1882046939310713 @ 1608.66 (stop-loss)"
     }
   ],
-  "shadow:live-mirror:open-positions": [
-    {
-      "id": "LINKEUR:1786469253067:0",
-      "symbol": "LINKEUR",
-      "openedAt": 1786469253067,
-      "entryPrice": 7.43347,
-      "quantity": 268.14296975037,
-      "initialQuantity": 268.14296975037,
-      "stopLoss": 7.31680058577875,
-      "takeProfit": 7.6668088284425,
-      "feesPaid": 5.979698164050848,
-      "realizedPnl": 0,
-      "highestPrice": 7.63,
-      "lowestPrice": 7.41014,
-      "confidence": 48.586723965250165,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "shadow:live-mirror:open-positions": [],
   "shadow:live-mirror:audit-log": [
     {
       "timestamp": 1785347897947,
@@ -25734,29 +25725,16 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry LINKEUR: 268.14296975037 @ 7.43347 (stop 7.31680058577875, target 7.6668088284425, confidence 49)"
-    }
-  ],
-  "shadow:no-confirm:open-positions": [
+    },
     {
-      "id": "LINKEUR:1786469253067:0",
-      "symbol": "LINKEUR",
-      "openedAt": 1786469253067,
-      "entryPrice": 7.43347,
-      "quantity": 268.14296975037,
-      "initialQuantity": 268.14296975037,
-      "stopLoss": 7.31680058577875,
-      "takeProfit": 7.6668088284425,
-      "feesPaid": 5.979698164050848,
-      "realizedPnl": 0,
-      "highestPrice": 7.63,
-      "lowestPrice": 7.41014,
-      "confidence": 40.586723965250165,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
+      "timestamp": 1786531441274,
+      "intentId": "LINKEUR:1786469253067:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit LINKEUR: 268.14296975037 @ 7.66759 (take-profit)"
     }
   ],
+  "shadow:no-confirm:open-positions": [],
   "shadow:no-confirm:audit-log": [
     {
       "timestamp": 1785347897947,
@@ -25862,29 +25840,16 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry LINKEUR: 268.14296975037 @ 7.43347 (stop 7.31680058577875, target 7.6668088284425, confidence 41)"
-    }
-  ],
-  "shadow:fixed-stop:open-positions": [
+    },
     {
-      "id": "LINKEUR:1786469253067:0",
-      "symbol": "LINKEUR",
-      "openedAt": 1786469253067,
-      "entryPrice": 7.43347,
-      "quantity": 268.14296975037,
-      "initialQuantity": 268.14296975037,
-      "stopLoss": 7.31680058577875,
-      "takeProfit": 7.6668088284425,
-      "feesPaid": 5.979698164050848,
-      "realizedPnl": 0,
-      "highestPrice": 7.63,
-      "lowestPrice": 7.41014,
-      "confidence": 48.586723965250165,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
+      "timestamp": 1786531441274,
+      "intentId": "LINKEUR:1786469253067:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit LINKEUR: 268.14296975037 @ 7.66759 (take-profit)"
     }
   ],
+  "shadow:fixed-stop:open-positions": [],
   "shadow:fixed-stop:audit-log": [
     {
       "timestamp": 1785347897947,
@@ -25990,6 +25955,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry LINKEUR: 268.14296975037 @ 7.43347 (stop 7.31680058577875, target 7.6668088284425, confidence 49)"
+    },
+    {
+      "timestamp": 1786531441274,
+      "intentId": "LINKEUR:1786469253067:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit LINKEUR: 268.14296975037 @ 7.66759 (take-profit)"
     }
   ],
   "shadow:live-mirror:trade-journal": [
@@ -26152,6 +26124,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 49.792025526361435,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "LINKEUR:1786469253067:0",
+      "symbol": "LINKEUR",
+      "entryTimestamp": 1786469253067,
+      "exitTimestamp": 1786531441274,
+      "entryPrice": 7.43347,
+      "exitPrice": 7.667589999999999,
+      "positionSize": 268.14296975037,
+      "stopLoss": 7.31680058577875,
+      "takeProfit": 7.6668088284425,
+      "exitReason": "take-profit",
+      "fees": 12.147729224335567,
+      "slippage": 0,
+      "holdingDurationMs": 62188207,
+      "mfePct": 3.1495385062427093,
+      "maePct": 0.3138507318923683,
+      "realizedPnl": 56.60960101767188,
+      "returnPct": 2.8400898907239807,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 48.586723965250165,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
@@ -26316,6 +26311,29 @@
       "validationVerdict": null,
       "confidence": 41.792025526361435,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "LINKEUR:1786469253067:0",
+      "symbol": "LINKEUR",
+      "entryTimestamp": 1786469253067,
+      "exitTimestamp": 1786531441274,
+      "entryPrice": 7.43347,
+      "exitPrice": 7.667589999999999,
+      "positionSize": 268.14296975037,
+      "stopLoss": 7.31680058577875,
+      "takeProfit": 7.6668088284425,
+      "exitReason": "take-profit",
+      "fees": 12.147729224335567,
+      "slippage": 0,
+      "holdingDurationMs": 62188207,
+      "mfePct": 3.1495385062427093,
+      "maePct": 0.3138507318923683,
+      "realizedPnl": 56.60960101767188,
+      "returnPct": 2.8400898907239807,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 40.586723965250165,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "shadow:fixed-stop:trade-journal": [
@@ -26478,6 +26496,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 49.792025526361435,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "LINKEUR:1786469253067:0",
+      "symbol": "LINKEUR",
+      "entryTimestamp": 1786469253067,
+      "exitTimestamp": 1786531441274,
+      "entryPrice": 7.43347,
+      "exitPrice": 7.667589999999999,
+      "positionSize": 268.14296975037,
+      "stopLoss": 7.31680058577875,
+      "takeProfit": 7.6668088284425,
+      "exitReason": "take-profit",
+      "fees": 12.147729224335567,
+      "slippage": 0,
+      "holdingDurationMs": 62188207,
+      "mfePct": 3.1495385062427093,
+      "maePct": 0.3138507318923683,
+      "realizedPnl": 56.60960101767188,
+      "returnPct": 2.8400898907239807,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 48.586723965250165,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
@@ -27241,8 +27282,5 @@
       "confidence": 38.27157804202918,
       "notes": "opened autonomously by the paper autopilot"
     }
-  ],
-  "move-alert-buckets": {
-    "LINKEUR:1786469253067:0": 0
-  }
+  ]
 }
