@@ -24,11 +24,11 @@ import { MONITOR_INTERVALS, type MonitorInterval, type Scheduler } from '../moni
 import type { PortfolioEngine } from '../position/portfolioEngine';
 import type { PositionEngine } from '../position/positionEngine';
 import type { ExitReason } from '../position/tradeJournal';
-import { assessTrade, DEFAULT_RISK_LIMITS, type RiskLimits } from '../risk/riskEngine';
+import { assessTrade, confidenceScaledRiskPct, DEFAULT_RISK_LIMITS, type RiskLimits } from '../risk/riskEngine';
 import { trailingStopPrice, type TrailingConfig } from '../risk/trailingStop';
 import { scanCandles, scanMarket, type ScanResult } from '../scan/marketScanner';
 import { applyHigherTimeframeGate } from '../signal/multiTimeframe';
-import { DEFAULT_SIGNAL_CRITERIA, evaluateScan, type SignalDecision } from '../signal/signalEngine';
+import { DEFAULT_SIGNAL_CRITERIA, evaluateScan, MAX_CONFIDENCE, type SignalDecision } from '../signal/signalEngine';
 import type { Timeframe } from '../types';
 import type { PersistedAuditLog } from './auditLog';
 import type { PersistedKillSwitch } from './killSwitch';
@@ -81,6 +81,21 @@ export const AUTOPILOT_TRAILING: TrailingConfig = { activateR: 1.5, trailR: 1.5 
  * the two candidates that actually traded enough to judge.
  */
 export const AUTOPILOT_REGIME_PERIOD = 50;
+
+/**
+ * Confidence-scaled risk range for entries (see `confidenceScaledRiskPct`).
+ * Stays entirely within the existing 1% per-trade risk ceiling — it only
+ * reallocates risk from weak setups to strong ones, never raises the
+ * ceiling itself. Measured 2026-08-12 (`scripts/sweepAutopilot.mts`, 10
+ * majors, real Kraken data, layered on the actual current production config
+ * — regime EMA50 + everything else — in-sample + out-of-sample, both the
+ * 30-day and 120-day windows): never worse than the fixed-1%-per-trade
+ * baseline in any split tested, and meaningfully better in the 120-day
+ * window that had enough trades to judge (full return -4.24%→-3.84%,
+ * out-of-sample -1.81%→-1.44%). The 30-day window was too trade-sparse
+ * (3 trades) to move either way.
+ */
+export const AUTOPILOT_CONFIDENCE_RISK = { floorPct: 0.5, ceilingPct: 1 };
 
 export interface AutoPilotOptions {
   readonly source: MarketDataSource;
@@ -160,6 +175,15 @@ export interface AutoPilotOptions {
    * check off (the pre-existing behaviour).
    */
   readonly regimeCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+  /**
+   * Ties position size to signal conviction instead of every qualifying trade
+   * risking the same fixed %: the weakest setup that still clears
+   * `minConfidence` gets `floorPct`, a max-confidence setup gets `ceilingPct`,
+   * everything between is interpolated (see `confidenceScaledRiskPct`). Omit
+   * to leave the pre-existing behaviour (every trade risks
+   * `riskLimits.maxRiskPerTradePct`).
+   */
+  readonly confidenceRisk?: { readonly floorPct: number; readonly ceilingPct: number };
   readonly clock?: () => number;
   /** Persists the desired running state so the autopilot survives reloads. */
   readonly store?: KeyValueStore;
@@ -451,6 +475,7 @@ export class PaperAutoPilot {
 
       const snapshot = this.options.portfolio.snapshot(marketPrices, timestamp);
       const correlateWith = this.options.correlationBetween;
+      const confidenceRisk = this.options.confidenceRisk;
       const assessment = assessTrade(
         decision.opportunity,
         {
@@ -469,6 +494,15 @@ export class PaperAutoPilot {
           dailyLossSoFar: this.options.getDailyLoss(),
           correlationTo: correlateWith
             ? (other: string) => correlateWith(scanResult.symbol, other)
+            : undefined,
+          riskPerTradePct: confidenceRisk
+            ? confidenceScaledRiskPct(
+                decision.opportunity.confidence,
+                floor,
+                MAX_CONFIDENCE,
+                confidenceRisk.floorPct,
+                confidenceRisk.ceilingPct,
+              )
             : undefined,
         },
       );

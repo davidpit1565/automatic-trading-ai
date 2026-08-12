@@ -45,6 +45,8 @@ interface Cfg {
   evaluate?: (scan: ScanResult, floor: number) => SignalDecision;
   /** Daily-EMA period for the regime gate (regimeFilter.ts) — omit to leave it off. */
   regimePeriod?: number;
+  /** Scales risk-per-trade with signal confidence (riskEngine.ts) — omit to leave it off. */
+  confidenceRisk?: { floorPct: number; ceilingPct: number };
 }
 const CONFIGS: Cfg[] = [
   { name: 'PROD (40/65/1.5-1.5)', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 } },
@@ -68,6 +70,14 @@ const CONFIGS: Cfg[] = [
   { name: 'PROD + regime EMA50 ', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 50 },
   { name: 'PROD + regime EMA100', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 100 },
   { name: 'PROD + regime EMA200', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 200 },
+  // Confidence-scaled position sizing (riskEngine.ts's confidenceScaledRiskPct)
+  // layered on top of the actual current production config (regime EMA50 is
+  // already live). Stays within the existing 1% risk ceiling — a weak
+  // (just-above-floor) setup risks 0.5%, a max-confidence setup risks the
+  // full 1% it already got before; nothing above today's ceiling is ever
+  // risked. Built but not yet wired into production until measured here.
+  { name: 'PROD+regime50+confRisk .5-1', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 } },
+  { name: 'PROD+confRisk .5-1  ', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 } },
 ];
 
 const source = new KrakenPublicSource();
@@ -131,6 +141,7 @@ async function replay(
     maxRsiForLong: cfg.maxRsiForLong, trailing: cfg.trailing, riskLimits: DEFAULT_RISK_LIMITS,
     ...(cfg.evaluate ? { evaluate: cfg.evaluate } : {}),
     ...(regimeFilters ? { regimeCheck: async (s: string, ts: number) => regimeFilters.get(s)?.(ts) ?? true } : {}),
+    ...(cfg.confidenceRisk ? { confidenceRisk: cfg.confidenceRisk } : {}),
     haltNewEntries: () => drawdownBreached({ peakEquity: peak, currentEquity: equity, maxDrawdownPct: DD }),
   });
   for (const t of stamps) {

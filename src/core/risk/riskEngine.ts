@@ -85,6 +85,28 @@ export interface PositionSizeBreakdown {
   readonly constraintsApplied: string[];
 }
 
+/**
+ * Scales requested risk-per-trade linearly with signal confidence: the
+ * weakest setup that still clears the conviction floor gets `minRiskPct`,
+ * the maximum possible confidence gets `maxRiskPct`, everything between is
+ * interpolated. Ties position size to actual conviction instead of every
+ * qualifying trade risking the same fixed % regardless of how strong the
+ * evidence was. Pure — callers still pass the result through
+ * `calculatePositionSize`/`assessTrade`'s existing caps unchanged.
+ */
+export function confidenceScaledRiskPct(
+  confidence: number,
+  confidenceFloor: number,
+  maxConfidence: number,
+  minRiskPct: number,
+  maxRiskPct: number,
+): number {
+  if (maxConfidence <= confidenceFloor) return maxRiskPct;
+  const t = (confidence - confidenceFloor) / (maxConfidence - confidenceFloor);
+  const clampedT = Math.min(1, Math.max(0, t));
+  return minRiskPct + clampedT * (maxRiskPct - minRiskPct);
+}
+
 export function calculatePositionSize(input: PositionSizeInput): Result<PositionSizeBreakdown> {
   const limits = input.limits ?? DEFAULT_RISK_LIMITS;
   const { accountEquity, entry, stopLoss, currentExposure } = input;

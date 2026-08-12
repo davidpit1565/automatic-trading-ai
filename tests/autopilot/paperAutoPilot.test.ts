@@ -65,6 +65,7 @@ function makePilot(
     correlationBetween?: (a: string, b: string) => number;
     onRealizedPnl?: (pnl: number, timestamp: number) => void;
     regimeCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+    confidenceRisk?: { floorPct: number; ceilingPct: number };
   } = {},
 ) {
   const store = new MemoryStore();
@@ -92,6 +93,7 @@ function makePilot(
     correlationBetween: opts.correlationBetween,
     onRealizedPnl: opts.onRealizedPnl,
     regimeCheck: opts.regimeCheck,
+    confidenceRisk: opts.confidenceRisk,
   });
   return { pilot, portfolio, positions, journal, killSwitch, audit };
 }
@@ -134,6 +136,39 @@ describe('autonomous paper entries', () => {
     const cycle = await gated.pilot.runCycleOnce(T);
     expect(cycle.opened).toHaveLength(0);
     expect(gated.portfolio.openPositions()).toHaveLength(0);
+  });
+
+  it('scales position risk with signal confidence when confidenceRisk is set (opt-in)', async () => {
+    // Position-size caps set high so they never bind — this test isolates the
+    // risk-per-trade effect, not the (separately tested) size caps.
+    const riskLimits = {
+      ...DEFAULT_RISK_LIMITS,
+      maxPositionPct: 100,
+      maxTotalExposurePct: 100,
+      maxExposurePerAssetPct: 100,
+    };
+
+    // Without confidenceRisk, every qualifying trade risks the same fixed %
+    // (the DEFAULT_RISK_LIMITS.maxRiskPerTradePct ceiling).
+    const fixed = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { riskLimits });
+    await fixed.pilot.runCycleOnce(T);
+    const fixedPos = fixed.portfolio.openPositions()[0]!;
+    const fixedRiskPct =
+      ((fixedPos.entryPrice - fixedPos.stopLoss) * fixedPos.initialQuantity / 10_000) * 100;
+    expect(fixedRiskPct).toBeCloseTo(DEFAULT_RISK_LIMITS.maxRiskPerTradePct, 5);
+
+    // With confidenceRisk set, the same (sub-max-confidence) setup risks less
+    // than the fixed ceiling — scaled down toward floorPct.
+    const scaled = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { riskLimits, confidenceRisk: { floorPct: 0.3, ceilingPct: 1 } },
+    );
+    await scaled.pilot.runCycleOnce(T);
+    const scaledPos = scaled.portfolio.openPositions()[0]!;
+    const scaledRiskPct =
+      ((scaledPos.entryPrice - scaledPos.stopLoss) * scaledPos.initialQuantity / 10_000) * 100;
+    expect(scaledRiskPct).toBeLessThan(fixedRiskPct);
+    expect(scaledRiskPct).toBeGreaterThanOrEqual(0.3 - 1e-6);
   });
 
   it('circuit-breaker halts NEW entries while never engaging the kill switch', async () => {

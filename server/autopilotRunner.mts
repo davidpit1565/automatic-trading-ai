@@ -19,6 +19,7 @@ import type { MarketDataSource } from '../src/core/data/revolutClient';
 import { PersistedAuditLog } from '../src/core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../src/core/autopilot/killSwitch';
 import {
+  AUTOPILOT_CONFIDENCE_RISK,
   AUTOPILOT_MAX_RSI_FOR_LONG,
   AUTOPILOT_MIN_CONFIDENCE,
   AUTOPILOT_REGIME_PERIOD,
@@ -284,6 +285,9 @@ async function main(): Promise<void> {
     maxRsiForLong: AUTOPILOT_MAX_RSI_FOR_LONG,
     // Ratchet the stop up as trades run in profit (higher PF, lower drawdown).
     trailing: AUTOPILOT_TRAILING,
+    // Weak (just-above-floor) setups risk less, strong setups risk up to the
+    // same ceiling as before — never more. See AUTOPILOT_CONFIDENCE_RISK.
+    confidenceRisk: AUTOPILOT_CONFIDENCE_RISK,
     // Portfolio circuit-breaker: pause new buying while equity is more than
     // DD_BREAKER_PCT below its peak. Exits/stops keep protecting open trades.
     haltNewEntries: () => breakerEngaged(store),

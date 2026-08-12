@@ -13,6 +13,7 @@ import { evaluateScan, type TradeOpportunity } from '../../src/core/signal/signa
 import {
   assessTrade,
   calculatePositionSize,
+  confidenceScaledRiskPct,
   DEFAULT_RISK_LIMITS,
   type PortfolioRiskState,
 } from '../../src/core/risk/riskEngine';
@@ -54,6 +55,32 @@ function emptyPortfolio(equity = 10_000): PortfolioRiskState {
 // ---------------------------------------------------------------------------
 // 1. Position sizing
 // ---------------------------------------------------------------------------
+
+describe('confidenceScaledRiskPct', () => {
+  it('gives the minimum risk at the confidence floor', () => {
+    expect(confidenceScaledRiskPct(40, 40, 90, 0.5, 1.5)).toBeCloseTo(0.5, 10);
+  });
+
+  it('gives the maximum risk at max confidence', () => {
+    expect(confidenceScaledRiskPct(90, 40, 90, 0.5, 1.5)).toBeCloseTo(1.5, 10);
+  });
+
+  it('interpolates linearly at the midpoint', () => {
+    expect(confidenceScaledRiskPct(65, 40, 90, 0.5, 1.5)).toBeCloseTo(1.0, 10);
+  });
+
+  it('clamps below the floor to the minimum risk', () => {
+    expect(confidenceScaledRiskPct(10, 40, 90, 0.5, 1.5)).toBeCloseTo(0.5, 10);
+  });
+
+  it('clamps above max confidence to the maximum risk', () => {
+    expect(confidenceScaledRiskPct(200, 40, 90, 0.5, 1.5)).toBeCloseTo(1.5, 10);
+  });
+
+  it('returns the max risk when the confidence range is degenerate (max <= floor)', () => {
+    expect(confidenceScaledRiskPct(50, 90, 90, 0.5, 1.5)).toBeCloseTo(1.5, 10);
+  });
+});
 
 describe('calculatePositionSize', () => {
   it('sizes so the stop-loss loss equals the risked fraction of equity', () => {
