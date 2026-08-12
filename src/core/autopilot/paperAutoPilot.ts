@@ -24,11 +24,11 @@ import { MONITOR_INTERVALS, type MonitorInterval, type Scheduler } from '../moni
 import type { PortfolioEngine } from '../position/portfolioEngine';
 import type { PositionEngine } from '../position/positionEngine';
 import type { ExitReason } from '../position/tradeJournal';
-import { assessTrade, DEFAULT_RISK_LIMITS, type RiskLimits } from '../risk/riskEngine';
+import { assessTrade, confidenceScaledRiskPct, DEFAULT_RISK_LIMITS, type RiskLimits } from '../risk/riskEngine';
 import { trailingStopPrice, type TrailingConfig } from '../risk/trailingStop';
 import { scanCandles, scanMarket, type ScanResult } from '../scan/marketScanner';
 import { applyHigherTimeframeGate } from '../signal/multiTimeframe';
-import { DEFAULT_SIGNAL_CRITERIA, evaluateScan, type SignalDecision } from '../signal/signalEngine';
+import { DEFAULT_SIGNAL_CRITERIA, evaluateScan, MAX_CONFIDENCE, type SignalDecision } from '../signal/signalEngine';
 import type { Timeframe } from '../types';
 import type { PersistedAuditLog } from './auditLog';
 import type { PersistedKillSwitch } from './killSwitch';
@@ -81,6 +81,37 @@ export const AUTOPILOT_TRAILING: TrailingConfig = { activateR: 1.5, trailR: 1.5 
  * the two candidates that actually traded enough to judge.
  */
 export const AUTOPILOT_REGIME_PERIOD = 50;
+
+/**
+ * Confidence-scaled risk range for entries (see `confidenceScaledRiskPct`).
+ * Stays entirely within the existing 1% per-trade risk ceiling — it only
+ * reallocates risk from weak setups to strong ones, never raises the
+ * ceiling itself. Measured 2026-08-12 (`scripts/sweepAutopilot.mts`, 10
+ * majors, real Kraken data, layered on the actual current production config
+ * — regime EMA50 + everything else — in-sample + out-of-sample, both the
+ * 30-day and 120-day windows): never worse than the fixed-1%-per-trade
+ * baseline in any split tested, and meaningfully better in the 120-day
+ * window that had enough trades to judge (full return -4.24%→-3.84%,
+ * out-of-sample -1.81%→-1.44%). The 30-day window was too trade-sparse
+ * (3 trades) to move either way.
+ */
+export const AUTOPILOT_CONFIDENCE_RISK = { floorPct: 0.5, ceilingPct: 1 };
+
+/**
+ * Daily-EMA period for the market-wide regime gate, built from BTC's own
+ * daily trend and applied to every symbol's entry (see `marketRegimeCheck`).
+ * Measured 2026-08-12 (`scripts/sweepAutopilot.mts`, real Kraken data, both
+ * the 30-day and 120-day windows, in-sample + out-of-sample) as a mixed
+ * result, not a clean win: it protected capital significantly in the
+ * deep-downtrend 120-day window (return -5.32%→-3.04%, out-of-sample
+ * -2.96%→-0.63%) but cost performance in the calmer 30-day window by
+ * blocking otherwise-good trades (0.49%→-0.80%). Enabled anyway per an
+ * explicit decision (2026-08-12) to prioritize capital protection during
+ * real market-wide downturns over squeezing out every good trade in calm
+ * periods — consistent with CLAUDE.md's priority order (capital protection
+ * above raw profit).
+ */
+export const AUTOPILOT_MARKET_REGIME_PERIOD = 50;
 
 export interface AutoPilotOptions {
   readonly source: MarketDataSource;
@@ -160,6 +191,38 @@ export interface AutoPilotOptions {
    * check off (the pre-existing behaviour).
    */
   readonly regimeCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+  /**
+   * Market-wide daily trend regime gate, e.g. built from BTC's own daily
+   * trend (see `signal/regimeFilter.ts`'s `buildDailyRegimeFilter`): returns
+   * false to block a new long entry in ANY symbol — including BTC itself —
+   * while the broader market's daily trend is down, regardless of that
+   * symbol's own trend or setup. Distinct from `regimeCheck` (per-symbol
+   * trend): a coin can look fine on its own chart while the market it trades
+   * inside is rolling over. Checked alongside `regimeCheck`, not instead of
+   * it. Checked at entry time only — never blocks an exit. Omit to leave
+   * this check off (the pre-existing behaviour).
+   */
+  readonly marketRegimeCheck?: (timestamp: number) => Promise<boolean>;
+  /**
+   * Large-trade ("whale") flow gate (see `signal/whaleFlow.ts`): returns
+   * false to block a new long entry when the largest recent trades in that
+   * symbol show heavy net selling. UNLIKE the regime gates above, this has
+   * no historical validation — Kraken's public API exposes no historical
+   * order-book/trade-tape depth to backtest against — so it belongs in a
+   * shadow candidate (see `shadowEvaluator.ts`) accumulating a genuine
+   * forward record, not in production, until proven. Checked at entry time
+   * only — never blocks an exit. Omit to leave this check off.
+   */
+  readonly whaleFlowCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+  /**
+   * Ties position size to signal conviction instead of every qualifying trade
+   * risking the same fixed %: the weakest setup that still clears
+   * `minConfidence` gets `floorPct`, a max-confidence setup gets `ceilingPct`,
+   * everything between is interpolated (see `confidenceScaledRiskPct`). Omit
+   * to leave the pre-existing behaviour (every trade risks
+   * `riskLimits.maxRiskPerTradePct`).
+   */
+  readonly confidenceRisk?: { readonly floorPct: number; readonly ceilingPct: number };
   readonly clock?: () => number;
   /** Persists the desired running state so the autopilot survives reloads. */
   readonly store?: KeyValueStore;
@@ -449,8 +512,37 @@ export class PaperAutoPilot {
         continue;
       }
 
+      // Market-wide regime gate: a coin's own chart can look fine while the
+      // broader market it trades inside is rolling over. Same fail-open
+      // contract as regimeCheck, applied to every symbol including BTC.
+      if (this.options.marketRegimeCheck && !(await this.options.marketRegimeCheck(timestamp))) {
+        skipped.push({ symbol: scanResult.symbol, reason: 'market regime filter: broader market trend is down' });
+        audit.append({
+          timestamp,
+          intentId: `${scanResult.symbol}:${timestamp}`,
+          event: 'rejected',
+          mode: this.mode,
+          detail: `market regime filter refused ${scanResult.symbol}: broader market trend is down`,
+        });
+        continue;
+      }
+
+      // Whale-flow gate: forward-test-only, see the option's doc comment.
+      if (this.options.whaleFlowCheck && !(await this.options.whaleFlowCheck(scanResult.symbol, timestamp))) {
+        skipped.push({ symbol: scanResult.symbol, reason: 'whale flow filter: large trades show heavy net selling' });
+        audit.append({
+          timestamp,
+          intentId: `${scanResult.symbol}:${timestamp}`,
+          event: 'rejected',
+          mode: this.mode,
+          detail: `whale flow filter refused ${scanResult.symbol}: large trades show heavy net selling`,
+        });
+        continue;
+      }
+
       const snapshot = this.options.portfolio.snapshot(marketPrices, timestamp);
       const correlateWith = this.options.correlationBetween;
+      const confidenceRisk = this.options.confidenceRisk;
       const assessment = assessTrade(
         decision.opportunity,
         {
@@ -469,6 +561,15 @@ export class PaperAutoPilot {
           dailyLossSoFar: this.options.getDailyLoss(),
           correlationTo: correlateWith
             ? (other: string) => correlateWith(scanResult.symbol, other)
+            : undefined,
+          riskPerTradePct: confidenceRisk
+            ? confidenceScaledRiskPct(
+                decision.opportunity.confidence,
+                floor,
+                MAX_CONFIDENCE,
+                confidenceRisk.floorPct,
+                confidenceRisk.ceilingPct,
+              )
             : undefined,
         },
       );

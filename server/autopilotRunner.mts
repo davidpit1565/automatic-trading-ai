@@ -19,6 +19,8 @@ import type { MarketDataSource } from '../src/core/data/revolutClient';
 import { PersistedAuditLog } from '../src/core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../src/core/autopilot/killSwitch';
 import {
+  AUTOPILOT_CONFIDENCE_RISK,
+  AUTOPILOT_MARKET_REGIME_PERIOD,
   AUTOPILOT_MAX_RSI_FOR_LONG,
   AUTOPILOT_MIN_CONFIDENCE,
   AUTOPILOT_REGIME_PERIOD,
@@ -26,6 +28,9 @@ import {
   PaperAutoPilot,
 } from '../src/core/autopilot/paperAutoPilot';
 import { buildDailyRegimeFilter } from '../src/core/signal/regimeFilter';
+import { isWhaleFlowBearish } from '../src/core/signal/whaleFlow';
+import type { RecentTrade } from '../src/core/data/krakenPublic';
+import type { Result } from '../src/core/types';
 import { PositionEngine } from '../src/core/position/positionEngine';
 import { PortfolioEngine } from '../src/core/position/portfolioEngine';
 import { TradeJournal } from '../src/core/position/tradeJournal';
@@ -216,6 +221,47 @@ async function buildRegimeCheck(
   return async (symbol, timestamp) => filters.get(symbol)?.(timestamp) ?? true;
 }
 
+/**
+ * Builds the market-wide regime gate (see `AUTOPILOT_MARKET_REGIME_PERIOD`'s
+ * measurement comment): fetches BTC's own daily candles once and returns a
+ * check applied to every symbol's entry, including BTC's. Fails OPEN (allows
+ * entries) when the BTC instrument or its daily candles aren't available —
+ * a fetch outage must not silently block the whole universe.
+ */
+async function buildMarketRegimeCheck(
+  source: MarketDataSource,
+  instruments: readonly { symbol: string }[],
+): Promise<(timestamp: number) => Promise<boolean>> {
+  const btc = instruments.find((i) => /XBT|BTC/i.test(i.symbol) && /EUR/i.test(i.symbol));
+  if (!btc) return async () => true;
+  const daily = await source.getCandles(btc.symbol, '1d', 400);
+  if (!daily.ok) return async () => true;
+  const filter = buildDailyRegimeFilter(daily.value, { period: AUTOPILOT_MARKET_REGIME_PERIOD });
+  return async (timestamp) => filter(timestamp);
+}
+
+/**
+ * Builds the whale-flow gate for shadow evaluation ONLY (see `whaleFlow.ts`'s
+ * doc comment for why this has no historical validation and must not reach
+ * production). Feature-detects `getRecentTrades` on the real source — absent
+ * on sources without a real trade tape (e.g. a future non-Kraken fallback) —
+ * and fetches fresh on every check since recent trades change fast, unlike a
+ * daily regime. Fails OPEN (allows the entry) on any fetch failure.
+ */
+function buildWhaleFlowCheck(
+  source: MarketDataSource,
+): ((symbol: string, timestamp: number) => Promise<boolean>) | null {
+  const withTrades = source as MarketDataSource & {
+    getRecentTrades?: (symbol: string, count?: number) => Promise<Result<RecentTrade[]>>;
+  };
+  if (typeof withTrades.getRecentTrades !== 'function') return null;
+  return async (symbol: string) => {
+    const trades = await withTrades.getRecentTrades!(symbol, 50);
+    if (!trades.ok) return true;
+    return !isWhaleFlowBearish(trades.value);
+  };
+}
+
 /** Latest close per symbol, for an accurate portfolio snapshot. */
 async function latestPrices(
   source: MarketDataSource,
@@ -258,6 +304,7 @@ async function main(): Promise<void> {
     baseCurrency: 'EUR',
   });
   const regimeCheck = await buildRegimeCheck(source, symbols);
+  const marketRegimeCheck = await buildMarketRegimeCheck(source, instruments.value);
   const autopilot = new PaperAutoPilot({
     source,
     symbols,
@@ -267,6 +314,11 @@ async function main(): Promise<void> {
     // entry-timeframe setup and the 4h confirmation above both pass —
     // measured to help most in exactly that scenario. See AUTOPILOT_REGIME_PERIOD.
     regimeCheck,
+    // A coin can look fine on its own chart while the broader crypto market
+    // (tracked via BTC) is rolling over — capital protection first even
+    // though it costs some good trades in calmer windows. See
+    // AUTOPILOT_MARKET_REGIME_PERIOD.
+    marketRegimeCheck,
     scheduler: { start() {}, stop() {}, isRunning: () => false, intervalMs: () => null },
     portfolio,
     positions,
@@ -284,6 +336,9 @@ async function main(): Promise<void> {
     maxRsiForLong: AUTOPILOT_MAX_RSI_FOR_LONG,
     // Ratchet the stop up as trades run in profit (higher PF, lower drawdown).
     trailing: AUTOPILOT_TRAILING,
+    // Weak (just-above-floor) setups risk less, strong setups risk up to the
+    // same ceiling as before — never more. See AUTOPILOT_CONFIDENCE_RISK.
+    confidenceRisk: AUTOPILOT_CONFIDENCE_RISK,
     // Portfolio circuit-breaker: pause new buying while equity is more than
     // DD_BREAKER_PCT below its peak. Exits/stops keep protecting open trades.
     haltNewEntries: () => breakerEngaged(store),
@@ -462,6 +517,10 @@ async function runShadows(
 ): Promise<void> {
   try {
     const caching = new CachingSource(source);
+    // Built from the REAL source (not the caching wrapper — CachingSource
+    // only proxies candles/instruments), so only the 'whale-flow' candidate
+    // ever calls it.
+    const whaleFlowCheck = buildWhaleFlowCheck(source) ?? undefined;
     const { standings, failures } = await runShadowCycle(SHADOW_CANDIDATES, {
       source: caching,
       symbols,
@@ -471,6 +530,7 @@ async function runShadows(
       store,
       now,
       prices,
+      whaleFlowCheck,
     });
     store.set(SHADOW_STANDINGS_KEY, { at: now, standings });
     for (const failure of failures) {

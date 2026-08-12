@@ -53,6 +53,12 @@ export interface ShadowCandidate {
    * beside the incumbent, on the same bars, judged on the same risk terms.
    */
   readonly evaluate?: (scan: ScanResult, floor: number) => SignalDecision;
+  /**
+   * Opts into `ShadowRunOptions.whaleFlowCheck` for this candidate only —
+   * exactly the isolation pattern `no-confirm`/`fixed-stop` already use to
+   * test what ONE gate contributes, holding everything else constant.
+   */
+  readonly useWhaleFlowCheck?: boolean;
 }
 
 export interface ShadowStanding {
@@ -87,6 +93,13 @@ export interface ShadowRunOptions {
   readonly now: number;
   /** Latest close per symbol, so equity is marked to market like the real runner. */
   readonly prices: Readonly<Record<string, number>>;
+  /**
+   * Built from the REAL market data source (see `whaleFlow.ts`'s doc
+   * comment for why this is forward-only, not historically validated).
+   * Only candidates with `useWhaleFlowCheck: true` get it wired in. Omit
+   * when the real source has no trade-tape access to build it from.
+   */
+  readonly whaleFlowCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
 }
 
 /**
@@ -161,6 +174,9 @@ async function runOne(
     maxRsiForLong: candidate.maxRsiForLong,
     ...(candidate.evaluate ? { evaluate: candidate.evaluate } : {}),
     ...(candidate.trailing ? { trailing: candidate.trailing } : {}),
+    ...(candidate.useWhaleFlowCheck && options.whaleFlowCheck
+      ? { whaleFlowCheck: options.whaleFlowCheck }
+      : {}),
     riskLimits: DEFAULT_RISK_LIMITS,
   });
 
@@ -238,5 +254,18 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     maxRsiForLong: 100,
     trailing: { activateR: 1.5, trailR: 1.5 },
     evaluate: breakoutSignal,
+  },
+  // Otherwise identical to live-mirror — isolates exactly what refusing to
+  // buy into heavy net selling among large trades contributes. No historical
+  // validation exists for this idea (see whaleFlow.ts); it earns production
+  // only by accumulating SHADOW_MEANINGFUL_TRADES+ of real forward record.
+  {
+    key: 'whale-flow',
+    label: 'Refuses entries during heavy net selling by large traders',
+    minConfidence: 40,
+    maxRsiForLong: 65,
+    trailing: { activateR: 1.5, trailR: 1.5 },
+    confirmationTimeframe: '4h',
+    useWhaleFlowCheck: true,
   },
 ];

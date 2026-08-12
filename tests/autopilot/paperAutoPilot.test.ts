@@ -65,6 +65,9 @@ function makePilot(
     correlationBetween?: (a: string, b: string) => number;
     onRealizedPnl?: (pnl: number, timestamp: number) => void;
     regimeCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+    marketRegimeCheck?: (timestamp: number) => Promise<boolean>;
+    whaleFlowCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+    confidenceRisk?: { floorPct: number; ceilingPct: number };
   } = {},
 ) {
   const store = new MemoryStore();
@@ -92,6 +95,9 @@ function makePilot(
     correlationBetween: opts.correlationBetween,
     onRealizedPnl: opts.onRealizedPnl,
     regimeCheck: opts.regimeCheck,
+    marketRegimeCheck: opts.marketRegimeCheck,
+    whaleFlowCheck: opts.whaleFlowCheck,
+    confidenceRisk: opts.confidenceRisk,
   });
   return { pilot, portfolio, positions, journal, killSwitch, audit };
 }
@@ -134,6 +140,39 @@ describe('autonomous paper entries', () => {
     const cycle = await gated.pilot.runCycleOnce(T);
     expect(cycle.opened).toHaveLength(0);
     expect(gated.portfolio.openPositions()).toHaveLength(0);
+  });
+
+  it('scales position risk with signal confidence when confidenceRisk is set (opt-in)', async () => {
+    // Position-size caps set high so they never bind — this test isolates the
+    // risk-per-trade effect, not the (separately tested) size caps.
+    const riskLimits = {
+      ...DEFAULT_RISK_LIMITS,
+      maxPositionPct: 100,
+      maxTotalExposurePct: 100,
+      maxExposurePerAssetPct: 100,
+    };
+
+    // Without confidenceRisk, every qualifying trade risks the same fixed %
+    // (the DEFAULT_RISK_LIMITS.maxRiskPerTradePct ceiling).
+    const fixed = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { riskLimits });
+    await fixed.pilot.runCycleOnce(T);
+    const fixedPos = fixed.portfolio.openPositions()[0]!;
+    const fixedRiskPct =
+      ((fixedPos.entryPrice - fixedPos.stopLoss) * fixedPos.initialQuantity / 10_000) * 100;
+    expect(fixedRiskPct).toBeCloseTo(DEFAULT_RISK_LIMITS.maxRiskPerTradePct, 5);
+
+    // With confidenceRisk set, the same (sub-max-confidence) setup risks less
+    // than the fixed ceiling — scaled down toward floorPct.
+    const scaled = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { riskLimits, confidenceRisk: { floorPct: 0.3, ceilingPct: 1 } },
+    );
+    await scaled.pilot.runCycleOnce(T);
+    const scaledPos = scaled.portfolio.openPositions()[0]!;
+    const scaledRiskPct =
+      ((scaledPos.entryPrice - scaledPos.stopLoss) * scaledPos.initialQuantity / 10_000) * 100;
+    expect(scaledRiskPct).toBeLessThan(fixedRiskPct);
+    expect(scaledRiskPct).toBeGreaterThanOrEqual(0.3 - 1e-6);
   });
 
   it('circuit-breaker halts NEW entries while never engaging the kill switch', async () => {
@@ -446,6 +485,94 @@ describe('daily regime gate', () => {
     const position = portfolio.openPositions()[0]!;
 
     allowEntries = false; // the gate now refuses any NEW entry...
+    market['QUAL/USD'] = { drift: 0.001, lastPrice: position.stopLoss * 0.99 };
+    const cycle = await pilot.runCycleOnce(T + 3_600_000);
+
+    // ...but the already-open position still exits at its stop.
+    expect(cycle.closed).toHaveLength(1);
+    expect(cycle.closed[0]!.reason).toBe('stop-loss');
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(journal.entries()[0]!.exitReason).toBe('stop-loss');
+  });
+});
+
+describe('market-wide regime gate', () => {
+  it('refuses a qualifying entry when the broader market is in a downtrend, and audits why', async () => {
+    const { pilot, portfolio, audit } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { marketRegimeCheck: async () => false },
+    );
+    const cycle = await pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(cycle.skipped.some((s) => s.reason.includes('market regime'))).toBe(true);
+    expect(audit.entries().some((e) => e.event === 'rejected' && e.detail.includes('market regime'))).toBe(true);
+  });
+
+  it('opens normally when the market regime check confirms an uptrend', async () => {
+    const { pilot, portfolio } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { marketRegimeCheck: async () => true },
+    );
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
+  });
+
+  it('never blocks an exit, even while the market regime check refuses new entries', async () => {
+    const market = { 'QUAL/USD': { drift: 0.001 } } as Record<string, { drift: number; lastPrice?: number }>;
+    let marketUp = true;
+    const { pilot, portfolio, journal } = makePilot(market, {
+      marketRegimeCheck: async () => marketUp,
+    });
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
+    const position = portfolio.openPositions()[0]!;
+
+    marketUp = false; // the gate now refuses any NEW entry...
+    market['QUAL/USD'] = { drift: 0.001, lastPrice: position.stopLoss * 0.99 };
+    const cycle = await pilot.runCycleOnce(T + 3_600_000);
+
+    // ...but the already-open position still exits at its stop.
+    expect(cycle.closed).toHaveLength(1);
+    expect(cycle.closed[0]!.reason).toBe('stop-loss');
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(journal.entries()[0]!.exitReason).toBe('stop-loss');
+  });
+});
+
+describe('whale-flow gate', () => {
+  it('refuses a qualifying entry when the whale-flow check reports heavy net selling, and audits why', async () => {
+    const { pilot, portfolio, audit } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { whaleFlowCheck: async () => false },
+    );
+    const cycle = await pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(cycle.skipped.some((s) => s.reason.includes('whale flow'))).toBe(true);
+    expect(audit.entries().some((e) => e.event === 'rejected' && e.detail.includes('whale flow'))).toBe(true);
+  });
+
+  it('opens normally when the whale-flow check reports no heavy selling', async () => {
+    const { pilot, portfolio } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { whaleFlowCheck: async () => true },
+    );
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
+  });
+
+  it('never blocks an exit, even while the whale-flow check refuses new entries', async () => {
+    const market = { 'QUAL/USD': { drift: 0.001 } } as Record<string, { drift: number; lastPrice?: number }>;
+    let noHeavySelling = true;
+    const { pilot, portfolio, journal } = makePilot(market, {
+      whaleFlowCheck: async () => noHeavySelling,
+    });
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
+    const position = portfolio.openPositions()[0]!;
+
+    noHeavySelling = false; // the gate now refuses any NEW entry...
     market['QUAL/USD'] = { drift: 0.001, lastPrice: position.stopLoss * 0.99 };
     const cycle = await pilot.runCycleOnce(T + 3_600_000);
 
