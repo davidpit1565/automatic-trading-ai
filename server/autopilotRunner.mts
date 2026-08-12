@@ -28,6 +28,9 @@ import {
   PaperAutoPilot,
 } from '../src/core/autopilot/paperAutoPilot';
 import { buildDailyRegimeFilter } from '../src/core/signal/regimeFilter';
+import { isWhaleFlowBearish } from '../src/core/signal/whaleFlow';
+import type { RecentTrade } from '../src/core/data/krakenPublic';
+import type { Result } from '../src/core/types';
 import { PositionEngine } from '../src/core/position/positionEngine';
 import { PortfolioEngine } from '../src/core/position/portfolioEngine';
 import { TradeJournal } from '../src/core/position/tradeJournal';
@@ -235,6 +238,28 @@ async function buildMarketRegimeCheck(
   if (!daily.ok) return async () => true;
   const filter = buildDailyRegimeFilter(daily.value, { period: AUTOPILOT_MARKET_REGIME_PERIOD });
   return async (timestamp) => filter(timestamp);
+}
+
+/**
+ * Builds the whale-flow gate for shadow evaluation ONLY (see `whaleFlow.ts`'s
+ * doc comment for why this has no historical validation and must not reach
+ * production). Feature-detects `getRecentTrades` on the real source — absent
+ * on sources without a real trade tape (e.g. a future non-Kraken fallback) —
+ * and fetches fresh on every check since recent trades change fast, unlike a
+ * daily regime. Fails OPEN (allows the entry) on any fetch failure.
+ */
+function buildWhaleFlowCheck(
+  source: MarketDataSource,
+): ((symbol: string, timestamp: number) => Promise<boolean>) | null {
+  const withTrades = source as MarketDataSource & {
+    getRecentTrades?: (symbol: string, count?: number) => Promise<Result<RecentTrade[]>>;
+  };
+  if (typeof withTrades.getRecentTrades !== 'function') return null;
+  return async (symbol: string) => {
+    const trades = await withTrades.getRecentTrades!(symbol, 50);
+    if (!trades.ok) return true;
+    return !isWhaleFlowBearish(trades.value);
+  };
 }
 
 /** Latest close per symbol, for an accurate portfolio snapshot. */
@@ -492,6 +517,10 @@ async function runShadows(
 ): Promise<void> {
   try {
     const caching = new CachingSource(source);
+    // Built from the REAL source (not the caching wrapper — CachingSource
+    // only proxies candles/instruments), so only the 'whale-flow' candidate
+    // ever calls it.
+    const whaleFlowCheck = buildWhaleFlowCheck(source) ?? undefined;
     const { standings, failures } = await runShadowCycle(SHADOW_CANDIDATES, {
       source: caching,
       symbols,
@@ -501,6 +530,7 @@ async function runShadows(
       store,
       now,
       prices,
+      whaleFlowCheck,
     });
     store.set(SHADOW_STANDINGS_KEY, { at: now, standings });
     for (const failure of failures) {

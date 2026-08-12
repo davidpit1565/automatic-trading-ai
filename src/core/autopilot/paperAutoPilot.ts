@@ -204,6 +204,17 @@ export interface AutoPilotOptions {
    */
   readonly marketRegimeCheck?: (timestamp: number) => Promise<boolean>;
   /**
+   * Large-trade ("whale") flow gate (see `signal/whaleFlow.ts`): returns
+   * false to block a new long entry when the largest recent trades in that
+   * symbol show heavy net selling. UNLIKE the regime gates above, this has
+   * no historical validation — Kraken's public API exposes no historical
+   * order-book/trade-tape depth to backtest against — so it belongs in a
+   * shadow candidate (see `shadowEvaluator.ts`) accumulating a genuine
+   * forward record, not in production, until proven. Checked at entry time
+   * only — never blocks an exit. Omit to leave this check off.
+   */
+  readonly whaleFlowCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+  /**
    * Ties position size to signal conviction instead of every qualifying trade
    * risking the same fixed %: the weakest setup that still clears
    * `minConfidence` gets `floorPct`, a max-confidence setup gets `ceilingPct`,
@@ -512,6 +523,19 @@ export class PaperAutoPilot {
           event: 'rejected',
           mode: this.mode,
           detail: `market regime filter refused ${scanResult.symbol}: broader market trend is down`,
+        });
+        continue;
+      }
+
+      // Whale-flow gate: forward-test-only, see the option's doc comment.
+      if (this.options.whaleFlowCheck && !(await this.options.whaleFlowCheck(scanResult.symbol, timestamp))) {
+        skipped.push({ symbol: scanResult.symbol, reason: 'whale flow filter: large trades show heavy net selling' });
+        audit.append({
+          timestamp,
+          intentId: `${scanResult.symbol}:${timestamp}`,
+          event: 'rejected',
+          mode: this.mode,
+          detail: `whale flow filter refused ${scanResult.symbol}: large trades show heavy net selling`,
         });
         continue;
       }
