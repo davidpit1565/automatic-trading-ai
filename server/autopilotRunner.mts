@@ -124,7 +124,7 @@ function persistStateToGit(label: string): void {
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Scheduled digests: each fires once per local day, at or after its hour. */
 const SUMMARY_SLOTS = [
-  { hour: 8, key: 'daily-summary-morning', heading: '☀️ סיכום בוקר — רובוט מסחר (כסף מדומה)' },
+  { hour: 10, key: 'daily-summary-morning', heading: '☀️ סיכום בוקר — רובוט מסחר (כסף מדומה)' },
   { hour: 22, key: 'daily-summary-evening', heading: '🌙 סיכום ערב — רובוט מסחר (כסף מדומה)' },
 ];
 /** Alert when an open position moves by at least this % (each new step). */

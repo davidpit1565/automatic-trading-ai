@@ -111,8 +111,8 @@ describe('maybeSendSummaries (the exact bug class already found once)', () => {
     const telegram = { token: 'T', chatId: 'C', fetchFn };
     const { portfolio, journal } = buildPortfolio();
 
-    // 08:30 local time in Asia/Jerusalem -> morning slot is due.
-    const morning = Date.parse('2026-07-28T05:30:00Z');
+    // 10:30 local time in Asia/Jerusalem -> morning slot is due.
+    const morning = Date.parse('2026-07-28T07:30:00Z');
     await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, morning);
     expect(sent).toHaveLength(1);
 
@@ -125,7 +125,7 @@ describe('maybeSendSummaries (the exact bug class already found once)', () => {
     const fetchFn = vi.fn();
     const telegram = { token: '', chatId: '', fetchFn: fetchFn as unknown as typeof fetch };
     const { portfolio, journal } = buildPortfolio();
-    await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, Date.parse('2026-07-28T05:30:00Z'));
+    await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, Date.parse('2026-07-28T07:30:00Z'));
     expect(fetchFn).not.toHaveBeenCalled();
   });
 });
