@@ -1245,7 +1245,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1786985088872,
+    "at": 1786985399872,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1261,10 +1261,6 @@
   "daily-summary-evening": "2026-08-16",
   "allclear-last-at": 1786553925696,
   "equity-history": [
-    {
-      "at": 1785042717950,
-      "equity": 9597.55
-    },
     {
       "at": 1785043021904,
       "equity": 9601.48
@@ -21260,6 +21256,10 @@
     {
       "at": 1786985088872,
       "equity": 9568.52
+    },
+    {
+      "at": 1786985399872,
+      "equity": 9568.52
     }
   ],
   "trade-journal": [
@@ -22083,7 +22083,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -2.26%"
+        "detail": "vs buy-and-hold BTC -2.34%"
       },
       {
         "key": "drawdown",
@@ -22096,7 +22096,7 @@
         "detail": "profit factor 0.61 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — after-fee return -2.75%; vs buy-and-hold BTC -2.26%; profit factor 0.61 (needs ≥ 1.2).",
+    "summary": "NOT READY — after-fee return -2.75%; vs buy-and-hold BTC -2.34%; profit factor 0.61 (needs ≥ 1.2).",
     "unmet": [
       "profitable",
       "benchmark",
@@ -22185,13 +22185,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1786985088872,
+    "at": 1786985399872,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10009.75229620966,
-        "returnPct": 0.09752296209659107,
+        "equity": 10011.284410578663,
+        "returnPct": 0.11284410578662574,
         "trades": 8,
         "winRatePct": 50,
         "profitFactor": 1.3246816117634497,
@@ -22201,8 +22201,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10009.75229620966,
-        "returnPct": 0.09752296209659107,
+        "equity": 10011.284410578663,
+        "returnPct": 0.11284410578662574,
         "trades": 8,
         "winRatePct": 50,
         "profitFactor": 1.3246816117634497,
@@ -22212,8 +22212,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10009.75229620966,
-        "returnPct": 0.09752296209659107,
+        "equity": 10011.284410578663,
+        "returnPct": 0.11284410578662574,
         "trades": 8,
         "winRatePct": 50,
         "profitFactor": 1.3246816117634497,
@@ -22245,8 +22245,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9291.157389990289,
-        "returnPct": -7.088426100097113,
+        "equity": 9295.621908943362,
+        "returnPct": -7.043780910566384,
         "trades": 65,
         "winRatePct": 26.153846153846157,
         "profitFactor": 0.7055482545341799,
@@ -22256,19 +22256,19 @@
       {
         "key": "whale-flow",
         "label": "Refuses entries during heavy net selling by large traders",
-        "equity": 10000,
-        "returnPct": 0,
+        "equity": 9993.347284619089,
+        "returnPct": -0.06652715380911105,
         "trades": 0,
         "winRatePct": null,
         "profitFactor": null,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1786561343790
       },
       {
         "key": "top-trader",
         "label": "Refuses entries while OKX top traders are net-short",
-        "equity": 9992.970591448626,
-        "returnPct": -0.07029408551374218,
+        "equity": 9994.500137173545,
+        "returnPct": -0.05499862826454774,
         "trades": 0,
         "winRatePct": null,
         "profitFactor": null,
@@ -29083,7 +29083,7 @@
   ],
   "shadow:whale-flow:shadow-started-at": 1786561343790,
   "shadow:whale-flow:portfolio-engine": {
-    "cash": 10000,
+    "cash": 7994,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 0,
@@ -29110,6 +29110,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused LINKEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1786985399872,
+      "intentId": "LINKEUR:1786985399872:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry LINKEUR: 242.64512301501125 @ 8.24249 (stop 8.117323766172024, target 8.492822467655952, confidence 40)"
     }
   ],
   "shadow:top-trader:open-positions": [
@@ -29140,6 +29147,27 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry LINKEUR: 242.7850357015395 @ 8.23774 (stop 8.114752000147252, target 8.483715999705497, confidence 42)"
+    }
+  ],
+  "shadow:whale-flow:open-positions": [
+    {
+      "id": "LINKEUR:1786985399872:0",
+      "symbol": "LINKEUR",
+      "openedAt": 1786985399872,
+      "entryPrice": 8.24249,
+      "quantity": 242.64512301501125,
+      "initialQuantity": 242.64512301501125,
+      "stopLoss": 8.117323766172024,
+      "takeProfit": 8.492822467655952,
+      "feesPaid": 6,
+      "realizedPnl": 0,
+      "highestPrice": 8.24249,
+      "lowestPrice": 8.24249,
+      "confidence": 40.40023072077139,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
     }
   ]
 }
