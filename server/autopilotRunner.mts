@@ -29,6 +29,8 @@ import {
 } from '../src/core/autopilot/paperAutoPilot';
 import { buildDailyRegimeFilter } from '../src/core/signal/regimeFilter';
 import { isWhaleFlowBearish } from '../src/core/signal/whaleFlow';
+import { buildTopTraderGate } from '../src/core/signal/topTraderGate';
+import { getTopTraderPositionRatio, toOkxSwapInstId } from '../src/core/data/okxPositioning';
 import type { RecentTrade } from '../src/core/data/krakenPublic';
 import type { Result } from '../src/core/types';
 import { PositionEngine } from '../src/core/position/positionEngine';
@@ -260,6 +262,26 @@ function buildWhaleFlowCheck(
     if (!trades.ok) return true;
     return !isWhaleFlowBearish(trades.value);
   };
+}
+
+/**
+ * Builds the top-trader positioning gate for shadow evaluation ONLY (see
+ * `topTraderGate.ts`'s doc comment: real history exists, but the available
+ * window was too sparse to trust a backtest verdict yet). Fetches OKX's
+ * ratio series once per symbol; fails OPEN for a symbol whose fetch failed
+ * or has no recognizable OKX instrument.
+ */
+async function buildTopTraderCheck(
+  symbols: readonly string[],
+): Promise<(symbol: string, timestamp: number) => Promise<boolean>> {
+  const gates = new Map<string, (atTimestamp: number) => boolean>();
+  for (const symbol of symbols) {
+    const instId = toOkxSwapInstId(symbol);
+    if (!instId) continue;
+    const ratios = await getTopTraderPositionRatio(instId, '1D', 100);
+    if (ratios.ok) gates.set(symbol, buildTopTraderGate(ratios.value));
+  }
+  return async (symbol, timestamp) => gates.get(symbol)?.(timestamp) ?? true;
 }
 
 /** Latest close per symbol, for an accurate portfolio snapshot. */
@@ -521,6 +543,7 @@ async function runShadows(
     // only proxies candles/instruments), so only the 'whale-flow' candidate
     // ever calls it.
     const whaleFlowCheck = buildWhaleFlowCheck(source) ?? undefined;
+    const topTraderCheck = await buildTopTraderCheck(symbols);
     const { standings, failures } = await runShadowCycle(SHADOW_CANDIDATES, {
       source: caching,
       symbols,
@@ -531,6 +554,7 @@ async function runShadows(
       now,
       prices,
       whaleFlowCheck,
+      topTraderCheck,
     });
     store.set(SHADOW_STANDINGS_KEY, { at: now, standings });
     for (const failure of failures) {

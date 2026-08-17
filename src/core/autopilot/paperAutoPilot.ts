@@ -215,6 +215,18 @@ export interface AutoPilotOptions {
    */
   readonly whaleFlowCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
   /**
+   * Top-trader positioning gate (see `signal/topTraderGate.ts` /
+   * `data/okxPositioning.ts`): returns false to block a new long entry when
+   * OKX's own top traders (aggregate, anonymous) are net-short that asset.
+   * UNLIKE `whaleFlowCheck`, this one DOES have real historical data (~100
+   * daily points, verified 2026-08-17) and can be measured against real
+   * history like the regime gates — see `AUTOPILOT_TOP_TRADER_BEARISH_RATIO`
+   * for the measured rationale before this was enabled in production.
+   * Checked at entry time only — never blocks an exit. Omit to leave this
+   * check off.
+   */
+  readonly topTraderCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+  /**
    * Ties position size to signal conviction instead of every qualifying trade
    * risking the same fixed %: the weakest setup that still clears
    * `minConfidence` gets `floorPct`, a max-confidence setup gets `ceilingPct`,
@@ -536,6 +548,19 @@ export class PaperAutoPilot {
           event: 'rejected',
           mode: this.mode,
           detail: `whale flow filter refused ${scanResult.symbol}: large trades show heavy net selling`,
+        });
+        continue;
+      }
+
+      // Top-trader positioning gate: see the option's doc comment.
+      if (this.options.topTraderCheck && !(await this.options.topTraderCheck(scanResult.symbol, timestamp))) {
+        skipped.push({ symbol: scanResult.symbol, reason: 'top-trader positioning: OKX top traders are net-short' });
+        audit.append({
+          timestamp,
+          intentId: `${scanResult.symbol}:${timestamp}`,
+          event: 'rejected',
+          mode: this.mode,
+          detail: `top-trader positioning refused ${scanResult.symbol}: OKX top traders are net-short`,
         });
         continue;
       }

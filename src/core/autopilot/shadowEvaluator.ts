@@ -59,6 +59,15 @@ export interface ShadowCandidate {
    * test what ONE gate contributes, holding everything else constant.
    */
   readonly useWhaleFlowCheck?: boolean;
+  /**
+   * Opts into `ShadowRunOptions.topTraderCheck` for this candidate only.
+   * Unlike whale-flow, OKX's top-trader ratio DOES have real history — but
+   * the available ~100-day window was too sparse (0-1 trades) in the current
+   * bearish stretch to responsibly judge from a backtest alone, so this
+   * accumulates a genuine forward record instead of guessing from one thin
+   * sample. See `signal/topTraderGate.ts`.
+   */
+  readonly useTopTraderCheck?: boolean;
 }
 
 export interface ShadowStanding {
@@ -100,6 +109,12 @@ export interface ShadowRunOptions {
    * when the real source has no trade-tape access to build it from.
    */
   readonly whaleFlowCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+  /**
+   * Built from OKX's public top-trader position ratio (see
+   * `data/okxPositioning.ts`). Only candidates with `useTopTraderCheck: true`
+   * get it wired in. Omit when unavailable (e.g. a fetch failure).
+   */
+  readonly topTraderCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
 }
 
 /**
@@ -176,6 +191,9 @@ async function runOne(
     ...(candidate.trailing ? { trailing: candidate.trailing } : {}),
     ...(candidate.useWhaleFlowCheck && options.whaleFlowCheck
       ? { whaleFlowCheck: options.whaleFlowCheck }
+      : {}),
+    ...(candidate.useTopTraderCheck && options.topTraderCheck
+      ? { topTraderCheck: options.topTraderCheck }
       : {}),
     riskLimits: DEFAULT_RISK_LIMITS,
   });
@@ -267,5 +285,19 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     trailing: { activateR: 1.5, trailR: 1.5 },
     confirmationTimeframe: '4h',
     useWhaleFlowCheck: true,
+  },
+  // Otherwise identical to live-mirror — isolates what refusing to buy while
+  // OKX's own top traders are net-short contributes. Real history DOES
+  // exist here (unlike whale-flow), but the available ~100-day window was
+  // too sparse (0-1 trades) in the current bearish stretch to trust a
+  // backtest verdict from it — a forward record is the honest next step.
+  {
+    key: 'top-trader',
+    label: 'Refuses entries while OKX top traders are net-short',
+    minConfidence: 40,
+    maxRsiForLong: 65,
+    trailing: { activateR: 1.5, trailR: 1.5 },
+    confirmationTimeframe: '4h',
+    useTopTraderCheck: true,
   },
 ];
