@@ -67,6 +67,7 @@ function makePilot(
     regimeCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     marketRegimeCheck?: (timestamp: number) => Promise<boolean>;
     whaleFlowCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+    topTraderCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     confidenceRisk?: { floorPct: number; ceilingPct: number };
   } = {},
 ) {
@@ -97,6 +98,7 @@ function makePilot(
     regimeCheck: opts.regimeCheck,
     marketRegimeCheck: opts.marketRegimeCheck,
     whaleFlowCheck: opts.whaleFlowCheck,
+    topTraderCheck: opts.topTraderCheck,
     confidenceRisk: opts.confidenceRisk,
   });
   return { pilot, portfolio, positions, journal, killSwitch, audit };
@@ -573,6 +575,50 @@ describe('whale-flow gate', () => {
     const position = portfolio.openPositions()[0]!;
 
     noHeavySelling = false; // the gate now refuses any NEW entry...
+    market['QUAL/USD'] = { drift: 0.001, lastPrice: position.stopLoss * 0.99 };
+    const cycle = await pilot.runCycleOnce(T + 3_600_000);
+
+    // ...but the already-open position still exits at its stop.
+    expect(cycle.closed).toHaveLength(1);
+    expect(cycle.closed[0]!.reason).toBe('stop-loss');
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(journal.entries()[0]!.exitReason).toBe('stop-loss');
+  });
+});
+
+describe('top-trader positioning gate', () => {
+  it('refuses a qualifying entry when top traders are net-short, and audits why', async () => {
+    const { pilot, portfolio, audit } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { topTraderCheck: async () => false },
+    );
+    const cycle = await pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(cycle.skipped.some((s) => s.reason.includes('top-trader'))).toBe(true);
+    expect(audit.entries().some((e) => e.event === 'rejected' && e.detail.includes('top-trader'))).toBe(true);
+  });
+
+  it('opens normally when top traders are not net-short', async () => {
+    const { pilot, portfolio } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { topTraderCheck: async () => true },
+    );
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
+  });
+
+  it('never blocks an exit, even while the top-trader check refuses new entries', async () => {
+    const market = { 'QUAL/USD': { drift: 0.001 } } as Record<string, { drift: number; lastPrice?: number }>;
+    let notNetShort = true;
+    const { pilot, portfolio, journal } = makePilot(market, {
+      topTraderCheck: async () => notNetShort,
+    });
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
+    const position = portfolio.openPositions()[0]!;
+
+    notNetShort = false; // the gate now refuses any NEW entry...
     market['QUAL/USD'] = { drift: 0.001, lastPrice: position.stopLoss * 0.99 };
     const cycle = await pilot.runCycleOnce(T + 3_600_000);
 

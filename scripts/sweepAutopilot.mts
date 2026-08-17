@@ -30,6 +30,8 @@ import { drawdownBreached } from '../src/core/risk/drawdownBreaker';
 import { DEFAULT_RISK_LIMITS } from '../src/core/risk/riskEngine';
 import { meanReversionSignal, breakoutSignal } from '../src/core/signal/alternativeSignals';
 import { buildDailyRegimeFilter } from '../src/core/signal/regimeFilter';
+import { buildTopTraderGate } from '../src/core/signal/topTraderGate';
+import { getTopTraderPositionRatio, toOkxSwapInstId, type TopTraderRatioPoint } from '../src/core/data/okxPositioning';
 import type { ScanResult } from '../src/core/scan/marketScanner';
 import type { SignalDecision } from '../src/core/signal/signalEngine';
 import type { Candle, Timeframe } from '../src/core/types';
@@ -54,6 +56,8 @@ interface Cfg {
    * leave it off.
    */
   marketRegimePeriod?: number;
+  /** Blocks entries when OKX's top traders are net-short that asset (topTraderGate.ts) — omit to leave it off. */
+  topTraderGate?: boolean;
 }
 const CONFIGS: Cfg[] = [
   { name: 'PROD (40/65/1.5-1.5)', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 } },
@@ -94,6 +98,15 @@ const CONFIGS: Cfg[] = [
   { name: 'PROD+regime50+confRisk+BTCregime50', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 }, marketRegimePeriod: 50 },
   { name: 'PROD+regime50+confRisk+BTCregime100', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 }, marketRegimePeriod: 100 },
   { name: 'PROD+confRisk+BTCregime50 (no sym regime)', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 }, marketRegimePeriod: 50 },
+  // Top-trader positioning gate (OKX top traders' aggregate long/short
+  // ratio, topTraderGate.ts) layered on the ACTUAL current production
+  // config (regime EMA50 + confidence-scaled sizing + BTC market regime,
+  // all three already live). Unlike whale-flow (Kraken trade-tape proxy,
+  // no history available), OKX keeps real daily history, so this can be
+  // measured here instead of shipping shadow-only. Built but not yet wired
+  // into production until measured.
+  { name: 'PROD+regime50+confRisk+BTCregime50+topTrader', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 }, marketRegimePeriod: 50, topTraderGate: true },
+  { name: 'PROD+topTrader only (isolates its own contribution)', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, topTraderGate: true },
 ];
 
 const source = new KrakenPublicSource();
@@ -127,6 +140,19 @@ async function loadDaily(): Promise<Map<string, Candle[]>> {
   return d;
 }
 
+/** OKX top-trader position ratio per symbol, fetched once (~100 real daily points). */
+async function loadTopTraderRatios(): Promise<Map<string, TopTraderRatioPoint[]>> {
+  const r = new Map<string, TopTraderRatioPoint[]>();
+  for (const s of symbols) {
+    const instId = toOkxSwapInstId(s);
+    if (!instId) continue;
+    const res = await getTopTraderPositionRatio(instId, '1D', 100);
+    if (res.ok) r.set(s, res.value);
+    else console.error(`  fetch failed OKX top-trader ratio ${s} (${instId}): ${res.error}`);
+  }
+  return r;
+}
+
 async function replay(
   cfg: Cfg,
   e: Map<string, Candle[]>,
@@ -135,6 +161,7 @@ async function replay(
   entryTf: Timeframe,
   confirmTf: Timeframe,
   daily: Map<string, Candle[]>,
+  topTraderRatios: Map<string, TopTraderRatioPoint[]>,
 ) {
   let clock = 0;
   const src: MarketDataSource = {
@@ -156,6 +183,9 @@ async function replay(
     cfg.marketRegimePeriod && btcDaily
       ? buildDailyRegimeFilter(btcDaily, { period: cfg.marketRegimePeriod })
       : null;
+  const topTraderGates = cfg.topTraderGate
+    ? new Map([...topTraderRatios.entries()].map(([s, points]) => [s, buildTopTraderGate(points)]))
+    : null;
   const pilot = new PaperAutoPilot({
     source: src, symbols, timeframe: entryTf, confirmationTimeframe: confirmTf,
     scheduler: { start() {}, stop() {}, isRunning: () => false, intervalMs: () => null },
@@ -165,6 +195,7 @@ async function replay(
     ...(cfg.evaluate ? { evaluate: cfg.evaluate } : {}),
     ...(regimeFilters ? { regimeCheck: async (s: string, ts: number) => regimeFilters.get(s)?.(ts) ?? true } : {}),
     ...(marketRegimeFilter ? { marketRegimeCheck: async (ts: number) => marketRegimeFilter(ts) } : {}),
+    ...(topTraderGates ? { topTraderCheck: async (s: string, ts: number) => topTraderGates.get(s)?.(ts) ?? true } : {}),
     ...(cfg.confidenceRisk ? { confidenceRisk: cfg.confidenceRisk } : {}),
     haltNewEntries: () => drawdownBreached({ peakEquity: peak, currentEquity: equity, maxDrawdownPct: DD }),
   });
@@ -184,6 +215,7 @@ async function replay(
 }
 
 const daily = await loadDaily();
+const topTraderRatios = await loadTopTraderRatios();
 
 for (const [entryTf, confirmTf, label] of [['1h', '4h', '1h entry / 30 days'], ['4h', '1d', '4h entry / 120 days']] as const) {
   const { e, c } = await load(entryTf, confirmTf);
@@ -208,8 +240,8 @@ for (const [entryTf, confirmTf, label] of [['1h', '4h', '1h entry / 30 days'], [
   console.log(`buy & hold over the same window: ${(bhSum / bhN).toFixed(2)}% (mean of ${bhN} majors)`);
   console.log('config                  |   full ret |  full PF | trades |  OOS ret | OOS PF');
   for (const cfg of CONFIGS) {
-    const full = await replay(cfg, e, c, usable, entryTf, confirmTf, daily);
-    const oos = await replay(cfg, e, c, usable.slice(mid), entryTf, confirmTf, daily);
+    const full = await replay(cfg, e, c, usable, entryTf, confirmTf, daily, topTraderRatios);
+    const oos = await replay(cfg, e, c, usable.slice(mid), entryTf, confirmTf, daily, topTraderRatios);
     console.log(
       `${cfg.name} | ${full.ret.toFixed(3).padStart(9)}% | ${(full.pf ?? 0).toFixed(3).padStart(8)} | ${String(full.n).padStart(6)} | ${oos.ret.toFixed(3).padStart(7)}% | ${(oos.pf ?? 0).toFixed(3)}`,
     );

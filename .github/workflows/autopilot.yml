@@ -61,14 +61,25 @@ jobs:
           SUMMARY_TIMEZONE: ${{ vars.SUMMARY_TIMEZONE }}
           # ~70 cycles × 5 min ≈ 5h50m of coverage per triggered run, so one
           # sparse GitHub trigger bridges the gap to the next (the free
-          # scheduler often fires only every 5–7h). The runner ALSO persists
-          # state every ~30 min mid-run (STATE_COMMIT_EVERY), so trades show up
-          # promptly and survive a cancelled run — reliable even without the
-          # external clock. See docs/cloud-autopilot.he.md.
+          # scheduler often fires only every 5–7h). See docs/cloud-autopilot.he.md.
           LOOP_CYCLES: '70'
-          # Persist state to git mid-run every N cycles (≈30 min at 5-min
-          # cycles), not just at the end of the ~6h run.
-          STATE_COMMIT_EVERY: '6'
+          # Persist state to git after EVERY cycle, not every 6. Measured
+          # 2026-08-17: the cron actually fires reliably every ~30 min (not
+          # the sparse 5-7h the comment above describes), and concurrency
+          # (below) then reports "a higher priority waiting request for
+          # autopilot exists" and cancels the still-running job almost every
+          # single time — a run almost never survives past ~26 minutes (~5-6
+          # cycles). With commits every 6 cycles (~30 min), that meant the
+          # run was very often cancelled just BEFORE its first checkpoint —
+          # up to 22+ straight hours with zero state commits landing, a real
+          # multi-day gap where the bot silently stopped scanning for
+          # opportunities. Individual trades were always safe (committed
+          # immediately on fill, see the `traded` check below), but
+          # everything else (equity history, audit log, shadow standings)
+          # could be lost wholesale on every cancellation. Committing every
+          # cycle makes that loss window under 5 minutes regardless of when
+          # the next trigger preempts this run.
+          STATE_COMMIT_EVERY: '1'
         run: npx tsx server/autopilotRunner.mts
       - name: Commit updated state
         run: |
