@@ -1252,7 +1252,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1787021117844,
+    "at": 1787021427438,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1268,10 +1268,6 @@
   "daily-summary-evening": "2026-08-17",
   "allclear-last-at": 1786553925696,
   "equity-history": [
-    {
-      "at": 1785088160487,
-      "equity": 9598.17
-    },
     {
       "at": 1785088464369,
       "equity": 9598.97
@@ -21267,6 +21263,10 @@
     {
       "at": 1787021117844,
       "equity": 9568.52
+    },
+    {
+      "at": 1787021427438,
+      "equity": 9568.52
     }
   ],
   "trade-journal": [
@@ -22090,7 +22090,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -2.42%"
+        "detail": "vs buy-and-hold BTC -2.40%"
       },
       {
         "key": "drawdown",
@@ -22103,7 +22103,7 @@
         "detail": "profit factor 0.61 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — after-fee return -2.75%; vs buy-and-hold BTC -2.42%; profit factor 0.61 (needs ≥ 1.2).",
+    "summary": "NOT READY — after-fee return -2.75%; vs buy-and-hold BTC -2.40%; profit factor 0.61 (needs ≥ 1.2).",
     "unmet": [
       "profitable",
       "benchmark",
@@ -22171,7 +22171,7 @@
   },
   "shadow:mean-reversion:shadow-started-at": 1785254092443,
   "shadow:mean-reversion:portfolio-engine": {
-    "cash": 9489.915422347853,
+    "cash": 7586.238388624874,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -254.9971265291883,
@@ -22192,7 +22192,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1787021117844,
+    "at": 1787021427438,
     "standings": [
       {
         "key": "live-mirror",
@@ -22241,19 +22241,19 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9489.915422347853,
-        "returnPct": -5.100845776521473,
+        "equity": 9484.221473094443,
+        "returnPct": -5.157785269055566,
         "trades": 53,
         "winRatePct": 41.509433962264154,
         "profitFactor": 0.6472681511041763,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1785254092443
       },
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9234.418802270726,
-        "returnPct": -7.655811977292743,
+        "equity": 9233.998237719792,
+        "returnPct": -7.660017622802079,
         "trades": 68,
         "winRatePct": 26.47058823529412,
         "profitFactor": 0.6867313639731265,
@@ -25546,7 +25546,27 @@
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
-  "shadow:mean-reversion:open-positions": [],
+  "shadow:mean-reversion:open-positions": [
+    {
+      "id": "DOTEUR:1787021427438:0",
+      "symbol": "DOTEUR",
+      "openedAt": 1787021427438,
+      "entryPrice": 0.6346,
+      "quantity": 2990.8337290727554,
+      "initialQuantity": 2990.8337290727554,
+      "stopLoss": 0.6259375787456459,
+      "takeProfit": 0.6519248425087083,
+      "feesPaid": 5.693949253408713,
+      "realizedPnl": 0,
+      "highestPrice": 0.6346,
+      "lowestPrice": 0.6346,
+      "confidence": 37.899713464031464,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:mean-reversion:audit-log": [
     {
       "timestamp": 1785298718729,
@@ -26954,6 +26974,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit SOLEUR: 28.82291372797359 @ 65.5 (take-profit)"
+    },
+    {
+      "timestamp": 1787021427438,
+      "intentId": "DOTEUR:1787021427438:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry DOTEUR: 2990.8337290727554 @ 0.6346 (stop 0.6259375787456459, target 0.6519248425087083, confidence 38)"
     }
   ],
   "shadow:live-mirror:open-positions": [],
