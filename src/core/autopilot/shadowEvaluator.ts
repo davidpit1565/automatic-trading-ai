@@ -68,6 +68,13 @@ export interface ShadowCandidate {
    * sample. See `signal/topTraderGate.ts`.
    */
   readonly useTopTraderCheck?: boolean;
+  /**
+   * Opts into `ShadowRunOptions.aiJudgmentCheck` for this candidate only.
+   * An LLM's read of the technical snapshot can NEVER be backtested (it may
+   * carry hindsight of what a real historical chart actually did next), so
+   * this is forward-only by construction — see `signal/aiJudgment.ts`.
+   */
+  readonly useAiJudgmentCheck?: boolean;
 }
 
 export interface ShadowStanding {
@@ -115,6 +122,12 @@ export interface ShadowRunOptions {
    * get it wired in. Omit when unavailable (e.g. a fetch failure).
    */
   readonly topTraderCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+  /**
+   * Built from an LLM call (see `signal/aiJudgment.ts`). Only candidates
+   * with `useAiJudgmentCheck: true` get it wired in. Omit when no model API
+   * key is configured — this stays a no-op (always allows) until then.
+   */
+  readonly aiJudgmentCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
 }
 
 /**
@@ -194,6 +207,9 @@ async function runOne(
       : {}),
     ...(candidate.useTopTraderCheck && options.topTraderCheck
       ? { topTraderCheck: options.topTraderCheck }
+      : {}),
+    ...(candidate.useAiJudgmentCheck && options.aiJudgmentCheck
+      ? { aiJudgmentCheck: options.aiJudgmentCheck }
       : {}),
     riskLimits: DEFAULT_RISK_LIMITS,
   });
@@ -299,5 +315,18 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     trailing: { activateR: 1.5, trailR: 1.5 },
     confirmationTimeframe: '4h',
     useTopTraderCheck: true,
+  },
+  // Otherwise identical to live-mirror — isolates what an LLM's read of the
+  // technical snapshot contributes as a second opinion. Cannot be backtested
+  // (see aiJudgment.ts); a no-op (always allows) until ANTHROPIC_API_KEY is
+  // configured, so this candidate simply mirrors live-mirror until then.
+  {
+    key: 'ai-judgment',
+    label: 'Refuses entries an AI second opinion reads as bearish',
+    minConfidence: 40,
+    maxRsiForLong: 65,
+    trailing: { activateR: 1.5, trailR: 1.5 },
+    confirmationTimeframe: '4h',
+    useAiJudgmentCheck: true,
   },
 ];

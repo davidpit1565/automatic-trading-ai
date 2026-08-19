@@ -31,6 +31,9 @@ import { buildDailyRegimeFilter } from '../src/core/signal/regimeFilter';
 import { isWhaleFlowBearish } from '../src/core/signal/whaleFlow';
 import { buildTopTraderGate } from '../src/core/signal/topTraderGate';
 import { getTopTraderPositionRatio, toOkxSwapInstId } from '../src/core/data/okxPositioning';
+import { isAiJudgmentBearish, type AiJudgmentInput } from '../src/core/signal/aiJudgment';
+import { scanCandles } from '../src/core/scan/marketScanner';
+import type { Timeframe } from '../src/core/types';
 import type { RecentTrade } from '../src/core/data/krakenPublic';
 import type { Result } from '../src/core/types';
 import { PositionEngine } from '../src/core/position/positionEngine';
@@ -282,6 +285,63 @@ async function buildTopTraderCheck(
     if (ratios.ok) gates.set(symbol, buildTopTraderGate(ratios.value));
   }
   return async (symbol, timestamp) => gates.get(symbol)?.(timestamp) ?? true;
+}
+
+/**
+ * Calls the Anthropic Messages API for one AI-second-opinion judgment. Kept
+ * as a small, isolated function so `aiJudgment.ts` itself never needs a
+ * network dependency (see that file's doc comment).
+ */
+async function callClaude(prompt: string, apiKey: string): Promise<string> {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  if (!response.ok) throw new Error(`Anthropic API HTTP ${response.status}`);
+  const payload = (await response.json()) as { content?: { type: string; text?: string }[] };
+  const text = payload.content?.find((block) => block.type === 'text')?.text;
+  if (!text) throw new Error('no text content in Anthropic response');
+  return text;
+}
+
+/**
+ * Builds the AI second-opinion gate for shadow evaluation ONLY (see
+ * `aiJudgment.ts`'s doc comment: this can never be backtested, so it must
+ * never reach production). A no-op (always allows) when `ANTHROPIC_API_KEY`
+ * isn't configured — this feature costs real API calls, so it stays off
+ * until that secret is deliberately added.
+ */
+function buildAiJudgmentCheck(
+  source: MarketDataSource,
+  timeframe: Timeframe,
+): ((symbol: string, timestamp: number) => Promise<boolean>) | null {
+  const apiKey = process.env['ANTHROPIC_API_KEY'];
+  if (!apiKey) return null;
+  return async (symbol: string) => {
+    // 150 candles: the same warm-up window the entry-signal scanner itself
+    // needs (see paperAutoPilot.ts's SCAN_CANDLES) for its indicators to be
+    // meaningful (long EMAs, ADX, etc.).
+    const candles = await source.getCandles(symbol, timeframe, 150);
+    if (!candles.ok) return true;
+    const scan = scanCandles(symbol, timeframe, candles.value);
+    if (!scan.ok) return true;
+    const input: AiJudgmentInput = {
+      symbol,
+      snapshot: scan.value.snapshot,
+      score: scan.value.score,
+      warnings: scan.value.warnings,
+    };
+    return !(await isAiJudgmentBearish(input, (prompt) => callClaude(prompt, apiKey)));
+  };
 }
 
 /** Latest close per symbol, for an accurate portfolio snapshot. */
@@ -544,6 +604,9 @@ async function runShadows(
     // ever calls it.
     const whaleFlowCheck = buildWhaleFlowCheck(source) ?? undefined;
     const topTraderCheck = await buildTopTraderCheck(symbols);
+    // Reads through the shared CachingSource — the AI check's candle fetch
+    // costs nothing extra beyond what the other shadow candidates already do.
+    const aiJudgmentCheck = buildAiJudgmentCheck(caching, ENTRY_TF) ?? undefined;
     const { standings, failures } = await runShadowCycle(SHADOW_CANDIDATES, {
       source: caching,
       symbols,
@@ -555,6 +618,7 @@ async function runShadows(
       prices,
       whaleFlowCheck,
       topTraderCheck,
+      aiJudgmentCheck,
     });
     store.set(SHADOW_STANDINGS_KEY, { at: now, standings });
     for (const failure of failures) {
