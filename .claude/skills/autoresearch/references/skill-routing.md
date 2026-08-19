@@ -175,7 +175,7 @@ When you encounter a domain-specific task during research, search the skills lib
 | Task | Skill | Location |
 |---|---|---|
 | Generate research ideas | Research Ideation | `brainstorming-research-ideas`, `creative-thinking-for-research` |
-| Write publication-ready paper | ML Paper Writing | `systems-paper-writing`, `academic-plotting`, `ml-paper-writing`, `presenting-conference-talks` |
+| Write publication-ready paper | ML Paper Writing | `academic-plotting`, `ml-paper-writing`, `presenting-conference-talks`, `systems-paper-writing` |
 
 ## Common Research Workflows
 

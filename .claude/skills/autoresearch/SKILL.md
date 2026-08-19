@@ -155,15 +155,15 @@ When you need domain-specific execution, search the skills library:
 
 | Research Activity | Look In |
 |---|---|
-| Data preparation | `ray-data`, `nemo-curator` |
-| Model training / fine-tuning | `mamba-architecture`, `nanogpt`, `rwkv-architecture`, `distributed-llm-pretraining-torchtitan`, `implementing-llms-litgpt`, `llama-factory`, `axolotl`, `unsloth`, `peft-fine-tuning`, `grpo-rl-training`, `verl-rl-training`, `fine-tuning-with-trl`, `miles-rl-training`, `openrlhf-training`, `slime-rl-training`, `torchforge-rl-training`, `simpo-training` |
-| Distributed training | `huggingface-accelerate`, `ray-train`, `deepspeed`, `pytorch-fsdp2`, `pytorch-lightning`, `training-llms-megatron` |
-| Optimization (quantization, attention) | `gguf-quantization`, `ml-training-recipes`, `hqq-quantization`, `optimizing-attention-flash`, `awq-quantization`, `gptq`, `quantizing-models-bitsandbytes` |
-| Evaluation / benchmarks | `evaluating-llms-harness`, `nemo-evaluator-sdk`, `evaluating-code-models` |
-| Inference / serving | `tensorrt-llm`, `llama-cpp`, `sglang`, `serving-llms-vllm` |
-| Interpretability analysis | `transformer-lens-interpretability`, `pyvene-interventions`, `sparse-autoencoder-training`, `nnsight-remote-interpretability` |
-| Experiment tracking (W&B, MLflow) | `mlflow`, `tensorboard`, `weights-and-biases`, `experiment-tracking-swanlab` |
-| Cloud compute | `lambda-labs-gpu-cloud`, `skypilot-multi-cloud-orchestration`, `modal-serverless-gpu` |
+| Data preparation | `nemo-curator`, `ray-data` |
+| Model training / fine-tuning | `implementing-llms-litgpt`, `mamba-architecture`, `nanogpt`, `rwkv-architecture`, `distributed-llm-pretraining-torchtitan`, `axolotl`, `llama-factory`, `peft-fine-tuning`, `unsloth`, `grpo-rl-training`, `miles-rl-training`, `openrlhf-training`, `simpo-training`, `slime-rl-training`, `torchforge-rl-training`, `fine-tuning-with-trl`, `verl-rl-training` |
+| Distributed training | `huggingface-accelerate`, `deepspeed`, `training-llms-megatron`, `pytorch-fsdp2`, `pytorch-lightning`, `ray-train` |
+| Optimization (quantization, attention) | `awq-quantization`, `quantizing-models-bitsandbytes`, `optimizing-attention-flash`, `gguf-quantization`, `gptq`, `hqq-quantization`, `ml-training-recipes` |
+| Evaluation / benchmarks | `evaluating-code-models`, `evaluating-llms-harness`, `nemo-evaluator-sdk` |
+| Inference / serving | `llama-cpp`, `sglang`, `tensorrt-llm`, `serving-llms-vllm` |
+| Interpretability analysis | `nnsight-remote-interpretability`, `pyvene-interventions`, `sparse-autoencoder-training`, `transformer-lens-interpretability` |
+| Experiment tracking (W&B, MLflow) | `mlflow`, `experiment-tracking-swanlab`, `tensorboard`, `weights-and-biases` |
+| Cloud compute | `lambda-labs-gpu-cloud`, `modal-serverless-gpu`, `skypilot-multi-cloud-orchestration` |
 
 Read the relevant SKILL.md before starting — it has workflows, common issues, and code examples. See [references/skill-routing.md](references/skill-routing.md) for a complete guide.
 
