@@ -8,6 +8,7 @@ one by name (e.g. `/cro`, `/autoresearch`).
 |---|---|---|---|---|
 | Marketing | 49 | [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) | `7868cb9` | MIT |
 | Research | 98 | [orchestra-research/ai-research-skills](https://github.com/orchestra-research/ai-research-skills) | `773a529` | MIT |
+| Postiz | 1 | [gitroomhq/postiz-agent](https://github.com/gitroomhq/postiz-agent) | `885e1b0` | AGPL-3.0 |
 
 ## Layout
 
@@ -23,6 +24,21 @@ table, and rows naming skills the library does not actually ship).
 
 Upstream `evals/` fixtures are omitted from the marketing library — they are
 that repo's CI fixtures and no `SKILL.md` reads them.
+
+The Postiz library ships as a single repo-root skill rather than a directory
+of many, so only what its `SKILL.md` links to (its sibling `*.md` docs and
+`examples/`) is vendored — not its own CLI source (`src/`, `server/`) or
+build config, which are for building and publishing that npm package, not
+for Claude to read.
+
+## Postiz is operational, not just reference
+
+Unlike the other two libraries, this skill documents a real CLI (`postiz`)
+that can publish live content to real social accounts. Installing the skill
+does nothing by itself: every `postiz` command hard-fails without
+credentials (`postiz auth:login` or `export POSTIZ_API_KEY=...`), which the
+skill never sets up on its own — that is a separate, explicit step for
+whoever wants Claude to actually post on their behalf.
 
 ## Do not hand-edit
 
