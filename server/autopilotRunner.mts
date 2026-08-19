@@ -288,9 +288,36 @@ async function buildTopTraderCheck(
 }
 
 /**
- * Calls the Anthropic Messages API for one AI-second-opinion judgment. Kept
- * as a small, isolated function so `aiJudgment.ts` itself never needs a
- * network dependency (see that file's doc comment).
+ * Calls the Gemini API (free tier: Flash/Flash-Lite, ~10 requests/min, hundreds
+ * per day as of 2026-08 — plenty for this gate's call volume, which is already
+ * filtered down by every earlier gate before it's ever reached) for one
+ * AI-second-opinion judgment. The DEFAULT provider (see `buildAiJudgmentCheck`)
+ * specifically because it costs nothing at this call volume. Kept as a small,
+ * isolated function so `aiJudgment.ts` itself never needs a network
+ * dependency (see that file's doc comment).
+ */
+async function callGemini(prompt: string, apiKey: string): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+  });
+  if (!response.ok) throw new Error(`Gemini API HTTP ${response.status}`);
+  const payload = (await response.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  };
+  const text = payload.candidates?.[0]?.content?.parts?.find((part) => part.text)?.text;
+  if (!text) throw new Error('no text content in Gemini response');
+  return text;
+}
+
+/**
+ * Calls the Anthropic Messages API for one AI-second-opinion judgment. A paid
+ * FALLBACK provider (see `buildAiJudgmentCheck`) for when Gemini's free tier
+ * isn't configured or preferred. Kept as a small, isolated function so
+ * `aiJudgment.ts` itself never needs a network dependency (see that file's
+ * doc comment).
  */
 async function callClaude(prompt: string, apiKey: string): Promise<string> {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -316,16 +343,24 @@ async function callClaude(prompt: string, apiKey: string): Promise<string> {
 /**
  * Builds the AI second-opinion gate for shadow evaluation ONLY (see
  * `aiJudgment.ts`'s doc comment: this can never be backtested, so it must
- * never reach production). A no-op (always allows) when `ANTHROPIC_API_KEY`
- * isn't configured — this feature costs real API calls, so it stays off
- * until that secret is deliberately added.
+ * never reach production). Prefers the free `GEMINI_API_KEY` (Gemini 2.5
+ * Flash's free tier easily covers this gate's call volume); falls back to
+ * the paid `ANTHROPIC_API_KEY` if that's what's configured instead. A no-op
+ * (always allows) when NEITHER secret is set — this stays off until one is
+ * deliberately added.
  */
 function buildAiJudgmentCheck(
   source: MarketDataSource,
   timeframe: Timeframe,
 ): ((symbol: string, timestamp: number) => Promise<boolean>) | null {
-  const apiKey = process.env['ANTHROPIC_API_KEY'];
-  if (!apiKey) return null;
+  const geminiKey = process.env['GEMINI_API_KEY'];
+  const anthropicKey = process.env['ANTHROPIC_API_KEY'];
+  const callModel = geminiKey
+    ? (prompt: string) => callGemini(prompt, geminiKey)
+    : anthropicKey
+      ? (prompt: string) => callClaude(prompt, anthropicKey)
+      : null;
+  if (!callModel) return null;
   return async (symbol: string) => {
     // 150 candles: the same warm-up window the entry-signal scanner itself
     // needs (see paperAutoPilot.ts's SCAN_CANDLES) for its indicators to be
@@ -340,7 +375,7 @@ function buildAiJudgmentCheck(
       score: scan.value.score,
       warnings: scan.value.warnings,
     };
-    return !(await isAiJudgmentBearish(input, (prompt) => callClaude(prompt, apiKey)));
+    return !(await isAiJudgmentBearish(input, callModel));
   };
 }
 

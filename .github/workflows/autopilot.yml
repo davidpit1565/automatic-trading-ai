@@ -55,6 +55,13 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           SEND_TEST_MESSAGE: ${{ inputs.test_message }}
+          # Powers the 'ai-judgment' SHADOW candidate only (never production —
+          # see aiJudgment.ts). Optional: without either secret set, that
+          # candidate is a no-op. Gemini's free tier (GEMINI_API_KEY) is
+          # preferred and costs nothing at this call volume; ANTHROPIC_API_KEY
+          # is a paid fallback if that's what's configured instead.
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           # Timezone for the 08:00 & 22:00 daily digests. Set this repo
           # Variable to follow you when you travel (e.g. Europe/Brussels).
           # Defaults to Asia/Jerusalem when unset.

@@ -318,8 +318,9 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
   },
   // Otherwise identical to live-mirror — isolates what an LLM's read of the
   // technical snapshot contributes as a second opinion. Cannot be backtested
-  // (see aiJudgment.ts); a no-op (always allows) until ANTHROPIC_API_KEY is
-  // configured, so this candidate simply mirrors live-mirror until then.
+  // (see aiJudgment.ts); a no-op (always allows) until GEMINI_API_KEY (free
+  // tier, preferred) or ANTHROPIC_API_KEY (paid fallback) is configured, so
+  // this candidate simply mirrors live-mirror until then.
   {
     key: 'ai-judgment',
     label: 'Refuses entries an AI second opinion reads as bearish',
