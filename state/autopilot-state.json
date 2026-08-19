@@ -1259,7 +1259,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1787172295396,
+    "at": 1787172606588,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1275,10 +1275,6 @@
   "daily-summary-evening": "2026-08-19",
   "allclear-last-at": 1786553925696,
   "equity-history": [
-    {
-      "at": 1785303312260,
-      "equity": 9553
-    },
     {
       "at": 1785303618317,
       "equity": 9553
@@ -21274,6 +21270,10 @@
     {
       "at": 1787172295396,
       "equity": 9568.52
+    },
+    {
+      "at": 1787172606588,
+      "equity": 9568.52
     }
   ],
   "trade-journal": [
@@ -22097,7 +22097,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -8.53%"
+        "detail": "vs buy-and-hold BTC -8.68%"
       },
       {
         "key": "drawdown",
@@ -22110,7 +22110,7 @@
         "detail": "profit factor 0.61 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — after-fee return -2.75%; vs buy-and-hold BTC -8.53%; profit factor 0.61 (needs ≥ 1.2).",
+    "summary": "NOT READY — after-fee return -2.75%; vs buy-and-hold BTC -8.68%; profit factor 0.61 (needs ≥ 1.2).",
     "unmet": [
       "profitable",
       "benchmark",
@@ -22189,17 +22189,17 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 3710.6870595336663,
+    "cash": 3721.6188523155924,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -326.1130165322924,
+    "closedRealizedPnl": -325.8199302415469,
     "dayAnchor": {
       "day": "2026-08-19",
       "equity": 9222.310110768529
     }
   },
   "shadow-standings": {
-    "at": 1787172295396,
+    "at": 1787172606588,
     "standings": [
       {
         "key": "live-mirror",
@@ -22259,12 +22259,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9350.488309957682,
-        "returnPct": -6.495116900423181,
-        "trades": 80,
-        "winRatePct": 32.5,
-        "profitFactor": 0.7688134165814882,
-        "openPositions": 4,
+        "equity": 9356.910383609005,
+        "returnPct": -6.430896163909947,
+        "trades": 81,
+        "winRatePct": 33.33333333333333,
+        "profitFactor": 0.7690211900059432,
+        "openPositions": 3,
         "startedAt": 1785254092443
       },
       {
@@ -22322,28 +22322,9 @@
       "takeProfit": 0.15684116864861947,
       "feesPaid": 5.534624661610164,
       "realizedPnl": 0,
-      "highestPrice": 0.155955,
+      "highestPrice": 0.156349,
       "lowestPrice": 0.151839,
       "confidence": 69.36523325206758,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "XRPEUR:1787159873166:4",
-      "symbol": "XRPEUR",
-      "openedAt": 1787159873166,
-      "entryPrice": 0.90565,
-      "quantity": 11.74703968550823,
-      "initialQuantity": 11.74703968550823,
-      "stopLoss": 0.8921860146169506,
-      "takeProfit": 0.9325779707660988,
-      "feesPaid": 0.03191611947354159,
-      "realizedPnl": 0,
-      "highestPrice": 0.93005,
-      "lowestPrice": 0.90185,
-      "confidence": 70,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -24560,6 +24541,20 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused LINKEUR: no exposure headroom: 5640.06 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1787172606588,
+      "intentId": "XRPEUR:1787159873166:4",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit XRPEUR: 11.74703968550823 @ 0.9334 (take-profit)"
+    },
+    {
+      "timestamp": 1787172606588,
+      "intentId": "LINKEUR:1787172606588",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LINKEUR: no exposure headroom: 5638.44 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -26401,6 +26396,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 63.38248692884177,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "XRPEUR:1787159873166:4",
+      "symbol": "XRPEUR",
+      "entryTimestamp": 1787159873166,
+      "exitTimestamp": 1787172606588,
+      "entryPrice": 0.90565,
+      "exitPrice": 0.9334,
+      "positionSize": 11.74703968550823,
+      "stopLoss": 0.8921860146169506,
+      "takeProfit": 0.9325779707660988,
+      "exitReason": "take-profit",
+      "fees": 0.06481018000090173,
+      "slippage": 0,
+      "holdingDurationMs": 12733422,
+      "mfePct": 3.064097609451781,
+      "maePct": 0.4195881411141075,
+      "realizedPnl": 0.29308629074549386,
+      "returnPct": 2.7549053166234256,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 70,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
