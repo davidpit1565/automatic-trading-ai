@@ -1270,10 +1270,17 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "market regime filter refused LINKEUR: broader market trend is down"
+    },
+    {
+      "timestamp": 1787154479534,
+      "intentId": "LINKEUR:1787154479534",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "market regime filter refused LINKEUR: broader market trend is down"
     }
   ],
   "autopilot-last-run": {
-    "at": 1787154166880,
+    "at": 1787154479534,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1289,10 +1296,6 @@
   "daily-summary-evening": "2026-08-18",
   "allclear-last-at": 1786553925696,
   "equity-history": [
-    {
-      "at": 1785270758516,
-      "equity": 9553
-    },
     {
       "at": 1785275414918,
       "equity": 9553
@@ -21288,6 +21291,10 @@
     {
       "at": 1787154166880,
       "equity": 9568.52
+    },
+    {
+      "at": 1787154479534,
+      "equity": 9568.52
     }
   ],
   "trade-journal": [
@@ -22111,7 +22118,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -8.69%"
+        "detail": "vs buy-and-hold BTC -8.31%"
       },
       {
         "key": "drawdown",
@@ -22124,7 +22131,7 @@
         "detail": "profit factor 0.61 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — after-fee return -2.75%; vs buy-and-hold BTC -8.69%; profit factor 0.61 (needs ≥ 1.2).",
+    "summary": "NOT READY — after-fee return -2.75%; vs buy-and-hold BTC -8.31%; profit factor 0.61 (needs ≥ 1.2).",
     "unmet": [
       "profitable",
       "benchmark",
@@ -22203,7 +22210,7 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 3747.851494021097,
+    "cash": 3743.449118727473,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -258.9946698378832,
@@ -22213,13 +22220,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1787154166880,
+    "at": 1787154479534,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 9980.555642580242,
-        "returnPct": -0.1944435741975758,
+        "equity": 9976.862837287088,
+        "returnPct": -0.2313716271291196,
         "trades": 9,
         "winRatePct": 44.44444444444444,
         "profitFactor": 1.1208433304773258,
@@ -22229,8 +22236,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 9980.555642580242,
-        "returnPct": -0.1944435741975758,
+        "equity": 9976.862837287088,
+        "returnPct": -0.2313716271291196,
         "trades": 9,
         "winRatePct": 44.44444444444444,
         "profitFactor": 1.1208433304773258,
@@ -22240,8 +22247,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 9980.555642580242,
-        "returnPct": -0.1944435741975758,
+        "equity": 9976.862837287088,
+        "returnPct": -0.2313716271291196,
         "trades": 9,
         "winRatePct": 44.44444444444444,
         "profitFactor": 1.1208433304773258,
@@ -22273,19 +22280,19 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9399.8203098854,
-        "returnPct": -6.001796901146008,
+        "equity": 9358.6425482532,
+        "returnPct": -6.413574517468006,
         "trades": 79,
         "winRatePct": 32.91139240506329,
         "profitFactor": 0.8129699078556846,
-        "openPositions": 3,
+        "openPositions": 4,
         "startedAt": 1785254092443
       },
       {
         "key": "whale-flow",
         "label": "Refuses entries during heavy net selling by large traders",
-        "equity": 9963.312640465032,
-        "returnPct": -0.36687359534967984,
+        "equity": 9959.62621508215,
+        "returnPct": -0.40373784917850575,
         "trades": 1,
         "winRatePct": 0,
         "profitFactor": 0,
@@ -22295,8 +22302,8 @@
       {
         "key": "top-trader",
         "label": "Refuses entries while OKX top traders are net-short",
-        "equity": 9963.822887044595,
-        "returnPct": -0.3617711295540539,
+        "equity": 9960.136272870493,
+        "returnPct": -0.3986372712950652,
         "trades": 1,
         "winRatePct": 0,
         "profitFactor": 0,
@@ -22357,6 +22364,25 @@
       "realizedPnl": 0,
       "highestPrice": 39.52,
       "lowestPrice": 39.23,
+      "confidence": 70,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "LINKEUR:1787154479534:3",
+      "symbol": "LINKEUR",
+      "openedAt": 1787154479534,
+      "entryPrice": 8.50072,
+      "quantity": 0.5163336365169597,
+      "initialQuantity": 0.5163336365169597,
+      "stopLoss": 8.322474618532693,
+      "takeProfit": 8.857210762934612,
+      "feesPaid": 0.01316762301183735,
+      "realizedPnl": 0,
+      "highestPrice": 8.50072,
+      "lowestPrice": 8.50072,
       "confidence": 70,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -24562,6 +24588,20 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused AVAXEUR: no exposure headroom: 5651.02 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1787154479534,
+      "intentId": "LINKEUR:1787154479534:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry LINKEUR: 0.5163336365169597 @ 8.50072 (stop 8.322474618532693, target 8.857210762934612, confidence 70)"
+    },
+    {
+      "timestamp": 1787154479534,
+      "intentId": "AVAXEUR:1787154479534",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AVAXEUR: no exposure headroom: 5615.19 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:breakout:trade-journal": [
