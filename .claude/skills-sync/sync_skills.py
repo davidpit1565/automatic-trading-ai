@@ -17,12 +17,17 @@ LIBS = {
     "marketing": {
         "url": "https://github.com/coreyhaines31/marketingskills",
         "pin": None, "subdir": "skills", "layout": "flat",
-        "exclude_dirs": {"evals"},
+        "exclude_dirs": {"evals"}, "license": "MIT",
     },
     "research": {
         "url": "https://github.com/orchestra-research/ai-research-skills",
         "pin": None, "subdir": "", "layout": "nested",
-        "exclude_dirs": set(),
+        "exclude_dirs": set(), "license": "MIT",
+    },
+    "postiz": {
+        "url": "https://github.com/gitroomhq/postiz-agent",
+        "pin": None, "subdir": "", "layout": "single",
+        "exclude_dirs": set(), "license": "AGPL-3.0",
     },
 }
 
@@ -77,6 +82,37 @@ def collect_flat(root):
     return out, None, None
 
 
+def collect_single(root):
+    """Upstream repo root IS one skill (no per-skill subdirectory).
+
+    Vendors only what SKILL.md's own "Supporting Resources" section links to
+    -- its sibling *.md docs and examples/ -- not the CLI's own source (src/,
+    server/), build config, or plugin manifest. Those are for building and
+    publishing the npm package this skill documents, not for Claude reading it.
+    """
+    name = frontmatter_name(root / "SKILL.md")
+    if not name:
+        raise SystemExit(f"no name: frontmatter in {root}/SKILL.md")
+    curated = root.parent / f"_single_{name}"
+    if curated.exists():
+        shutil.rmtree(curated)
+    curated.mkdir()
+    for md in root.glob("*.md"):
+        shutil.copy2(md, curated / md.name)
+    if (root / "examples").is_dir():
+        shutil.copytree(root / "examples", curated / "examples")
+    if (root / "LICENSE").is_file():
+        shutil.copy2(root / "LICENSE", curated / "LICENSE")
+    # Upstream's own SKILL.md links ./COMMAND_LINE_GUIDE.md, but the file it
+    # means actually lives at examples/COMMAND_LINE_GUIDE.md.
+    skill_md = curated / "SKILL.md"
+    text = orig = skill_md.read_text(encoding="utf-8")
+    text = text.replace("(./COMMAND_LINE_GUIDE.md)", "(./examples/COMMAND_LINE_GUIDE.md)")
+    if text != orig:
+        skill_md.write_text(text, encoding="utf-8")
+    return {name: curated}, None, None
+
+
 def collect_nested(root):
     """Upstream ships NN-category/<skill>/. Flatten by frontmatter name.
 
@@ -97,6 +133,9 @@ def collect_nested(root):
             dirmap[sm.parent.name] = n
             bycat.setdefault(c.name, []).append(n)
     return out, bycat, dirmap
+
+
+COLLECTORS = {"flat": collect_flat, "nested": collect_nested, "single": collect_single}
 
 
 def fix_routing(staged, bycat, dirmap):
@@ -155,6 +194,21 @@ table, and rows naming skills the library does not actually ship).
 Upstream `evals/` fixtures are omitted from the marketing library — they are
 that repo's CI fixtures and no `SKILL.md` reads them.
 
+The Postiz library ships as a single repo-root skill rather than a directory
+of many, so only what its `SKILL.md` links to (its sibling `*.md` docs and
+`examples/`) is vendored — not its own CLI source (`src/`, `server/`) or
+build config, which are for building and publishing that npm package, not
+for Claude to read.
+
+## Postiz is operational, not just reference
+
+Unlike the other two libraries, this skill documents a real CLI (`postiz`)
+that can publish live content to real social accounts. Installing the skill
+does nothing by itself: every `postiz` command hard-fails without
+credentials (`postiz auth:login` or `export POSTIZ_API_KEY=...`), which the
+skill never sets up on its own — that is a separate, explicit step for
+whoever wants Claude to actually post on their behalf.
+
 ## Do not hand-edit
 
 This directory is generated. Edits are overwritten on the next sync. The
@@ -189,7 +243,7 @@ def build(workdir):
         head = clone(lib["url"], lib["pin"], src)
         root = src / lib["subdir"] if lib["subdir"] else src
         prune_excluded(root, lib["exclude_dirs"])
-        collect = collect_flat if lib["layout"] == "flat" else collect_nested
+        collect = COLLECTORS[lib["layout"]]
         skills, bycat, dirmap = collect(root)
         if not skills:
             raise SystemExit(f"upstream {key} produced no skills — refusing to write")
@@ -200,11 +254,12 @@ def build(workdir):
             managed.add(name)
         if bycat:
             fix_routing(staged, bycat, dirmap)
-        upstreams[key] = {"url": lib["url"], "commit": head, "skills": len(skills)}
+        upstreams[key] = {"url": lib["url"], "commit": head, "skills": len(skills),
+                          "license": lib["license"]}
 
     rows = "\n".join(
         f"| {k.capitalize()} | {v['skills']} | "
-        f"[{v['url'].split('github.com/')[1]}]({v['url']}) | `{v['commit']}` | MIT |"
+        f"[{v['url'].split('github.com/')[1]}]({v['url']}) | `{v['commit']}` | {v['license']} |"
         for k, v in upstreams.items())
     (staged / "README.md").write_text(README.format(rows=rows), encoding="utf-8")
     return staged, managed, upstreams
