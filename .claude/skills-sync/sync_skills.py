@@ -29,6 +29,11 @@ LIBS = {
         "pin": None, "subdir": "", "layout": "single",
         "exclude_dirs": set(), "license": "AGPL-3.0",
     },
+    "zernio": {
+        "url": "https://github.com/zernio-dev/zernio-api",
+        "pin": None, "subdir": "", "layout": "single",
+        "exclude_dirs": set(), "license": "MIT",
+    },
 }
 
 # Rows in the research library's routing table naming skills it does not ship.
@@ -99,8 +104,9 @@ def collect_single(root):
     curated.mkdir()
     for md in root.glob("*.md"):
         shutil.copy2(md, curated / md.name)
-    if (root / "examples").is_dir():
-        shutil.copytree(root / "examples", curated / "examples")
+    for sub in ("examples", "rules"):
+        if (root / sub).is_dir():
+            shutil.copytree(root / sub, curated / sub)
     if (root / "LICENSE").is_file():
         shutil.copy2(root / "LICENSE", curated / "LICENSE")
     # Upstream's own SKILL.md links ./COMMAND_LINE_GUIDE.md, but the file it
