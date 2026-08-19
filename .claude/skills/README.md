@@ -30,6 +30,18 @@ This directory is generated. Edits are overwritten on the next sync. The
 generator lives at `.claude/skills-sync/sync_skills.py`:
 
 ```bash
-python3 .claude/skills-sync/sync_skills.py .          # rewrite in place
-python3 .claude/skills-sync/sync_skills.py . --check   # exit 1 if out of date
+python3 .claude/skills-sync/sync_skills.py .            # sync in place
+python3 .claude/skills-sync/sync_skills.py . --check     # exit 1 if out of date
+python3 .claude/skills-sync/sync_skills.py . --rebuild   # drop all, re-vendor
 ```
+
+## What gets deleted
+
+`.claude/skills-sync/manifest.json` records which skills the generator owns.
+Only those are ever removed — so a skill you write yourself is safe, while a
+skill an upstream renames or drops is pruned instead of lingering as a stale
+near-duplicate that competes with its replacement for routing.
+
+Nothing here expires or degrades on its own; these are plain markdown files
+read fresh at every session start. There is no reason to wipe them on a
+schedule. `--rebuild` exists for when you want a clean re-vendor on demand.
