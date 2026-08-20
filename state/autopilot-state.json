@@ -1312,7 +1312,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1787197939111,
+    "at": 1787198249340,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1328,10 +1328,6 @@
   "daily-summary-evening": "2026-08-19",
   "allclear-last-at": 1786553925696,
   "equity-history": [
-    {
-      "at": 1785331186621,
-      "equity": 9553
-    },
     {
       "at": 1785331495835,
       "equity": 9553
@@ -21327,6 +21323,10 @@
     {
       "at": 1787197939111,
       "equity": 9558.3
+    },
+    {
+      "at": 1787198249340,
+      "equity": 9551.82
     }
   ],
   "trade-journal": [
@@ -22152,7 +22152,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -9.40%"
+        "detail": "vs buy-and-hold BTC -9.36%"
       },
       {
         "key": "drawdown",
@@ -22165,7 +22165,7 @@
         "detail": "profit factor 0.61 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — after-fee return -2.75%; vs buy-and-hold BTC -9.40%; profit factor 0.61 (needs ≥ 1.2).",
+    "summary": "NOT READY — after-fee return -2.75%; vs buy-and-hold BTC -9.36%; profit factor 0.61 (needs ≥ 1.2).",
     "unmet": [
       "profitable",
       "benchmark",
@@ -22254,13 +22254,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1787197939111,
+    "at": 1787198249340,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10030.552151124177,
-        "returnPct": 0.30552151124176813,
+        "equity": 10023.749790573485,
+        "returnPct": 0.23749790573485371,
         "trades": 10,
         "winRatePct": 50,
         "profitFactor": 1.4266818007944042,
@@ -22270,8 +22270,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10030.552151124177,
-        "returnPct": 0.30552151124176813,
+        "equity": 10023.749790573485,
+        "returnPct": 0.23749790573485371,
         "trades": 10,
         "winRatePct": 50,
         "profitFactor": 1.4266818007944042,
@@ -22281,8 +22281,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10030.552151124177,
-        "returnPct": 0.30552151124176813,
+        "equity": 10023.749790573485,
+        "returnPct": 0.23749790573485371,
         "trades": 10,
         "winRatePct": 50,
         "profitFactor": 1.4266818007944042,
@@ -22314,8 +22314,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9413.513871861423,
-        "returnPct": -5.864861281385765,
+        "equity": 9411.681840125211,
+        "returnPct": -5.883181598747888,
         "trades": 84,
         "winRatePct": 35.714285714285715,
         "profitFactor": 0.8531755877486862,
@@ -22325,8 +22325,8 @@
       {
         "key": "whale-flow",
         "label": "Refuses entries during heavy net selling by large traders",
-        "equity": 10017.446470195986,
-        "returnPct": 0.17446470195985966,
+        "equity": 10015.113297329917,
+        "returnPct": 0.1511329732991726,
         "trades": 2,
         "winRatePct": 50,
         "profitFactor": 1.9598936347285976,
@@ -30718,6 +30718,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused LINKEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1787198249340,
+      "intentId": "LINKEUR:1787198249340",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused LINKEUR: large trades show heavy net selling"
     }
   ],
   "shadow:top-trader:open-positions": [],
@@ -30816,6 +30823,20 @@
     {
       "timestamp": 1787197939111,
       "intentId": "XRPEUR:1787197939111",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused XRPEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1787198249340,
+      "intentId": "LINKEUR:1787198249340",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused LINKEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1787198249340,
+      "intentId": "XRPEUR:1787198249340",
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused XRPEUR: OKX top traders are net-short"
