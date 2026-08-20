@@ -227,6 +227,18 @@ export interface AutoPilotOptions {
    */
   readonly topTraderCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
   /**
+   * AI second-opinion gate (see `signal/aiJudgment.ts`): returns false to
+   * block a new long entry when an LLM's read of the technical snapshot is
+   * bearish enough to avoid. UNLIKE every other gate above, this can NEVER
+   * be backtested — a model may carry latent knowledge of what a real
+   * historical chart actually did next, which would contaminate any replay
+   * with hindsight the strategy could never have had live. Exists ONLY to
+   * accumulate a forward record via shadow evaluation; never wire this into
+   * production. Checked at entry time only — never blocks an exit. Omit to
+   * leave this check off.
+   */
+  readonly aiJudgmentCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+  /**
    * Ties position size to signal conviction instead of every qualifying trade
    * risking the same fixed %: the weakest setup that still clears
    * `minConfidence` gets `floorPct`, a max-confidence setup gets `ceilingPct`,
@@ -561,6 +573,19 @@ export class PaperAutoPilot {
           event: 'rejected',
           mode: this.mode,
           detail: `top-trader positioning refused ${scanResult.symbol}: OKX top traders are net-short`,
+        });
+        continue;
+      }
+
+      // AI second-opinion gate: forward-test-only, see the option's doc comment.
+      if (this.options.aiJudgmentCheck && !(await this.options.aiJudgmentCheck(scanResult.symbol, timestamp))) {
+        skipped.push({ symbol: scanResult.symbol, reason: 'AI second opinion: bearish read of the setup' });
+        audit.append({
+          timestamp,
+          intentId: `${scanResult.symbol}:${timestamp}`,
+          event: 'rejected',
+          mode: this.mode,
+          detail: `AI second opinion refused ${scanResult.symbol}: bearish read of the setup`,
         });
         continue;
       }

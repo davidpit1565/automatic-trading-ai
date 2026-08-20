@@ -68,6 +68,7 @@ function makePilot(
     marketRegimeCheck?: (timestamp: number) => Promise<boolean>;
     whaleFlowCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     topTraderCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+    aiJudgmentCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     confidenceRisk?: { floorPct: number; ceilingPct: number };
   } = {},
 ) {
@@ -99,6 +100,7 @@ function makePilot(
     marketRegimeCheck: opts.marketRegimeCheck,
     whaleFlowCheck: opts.whaleFlowCheck,
     topTraderCheck: opts.topTraderCheck,
+    aiJudgmentCheck: opts.aiJudgmentCheck,
     confidenceRisk: opts.confidenceRisk,
   });
   return { pilot, portfolio, positions, journal, killSwitch, audit };
@@ -619,6 +621,50 @@ describe('top-trader positioning gate', () => {
     const position = portfolio.openPositions()[0]!;
 
     notNetShort = false; // the gate now refuses any NEW entry...
+    market['QUAL/USD'] = { drift: 0.001, lastPrice: position.stopLoss * 0.99 };
+    const cycle = await pilot.runCycleOnce(T + 3_600_000);
+
+    // ...but the already-open position still exits at its stop.
+    expect(cycle.closed).toHaveLength(1);
+    expect(cycle.closed[0]!.reason).toBe('stop-loss');
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(journal.entries()[0]!.exitReason).toBe('stop-loss');
+  });
+});
+
+describe('AI second-opinion gate', () => {
+  it('refuses a qualifying entry when the AI check reports a bearish read, and audits why', async () => {
+    const { pilot, portfolio, audit } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { aiJudgmentCheck: async () => false },
+    );
+    const cycle = await pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(cycle.skipped.some((s) => s.reason.includes('AI second opinion'))).toBe(true);
+    expect(audit.entries().some((e) => e.event === 'rejected' && e.detail.includes('AI second opinion'))).toBe(true);
+  });
+
+  it('opens normally when the AI check reports a non-bearish read', async () => {
+    const { pilot, portfolio } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { aiJudgmentCheck: async () => true },
+    );
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
+  });
+
+  it('never blocks an exit, even while the AI check refuses new entries', async () => {
+    const market = { 'QUAL/USD': { drift: 0.001 } } as Record<string, { drift: number; lastPrice?: number }>;
+    let notBearish = true;
+    const { pilot, portfolio, journal } = makePilot(market, {
+      aiJudgmentCheck: async () => notBearish,
+    });
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
+    const position = portfolio.openPositions()[0]!;
+
+    notBearish = false; // the gate now refuses any NEW entry...
     market['QUAL/USD'] = { drift: 0.001, lastPrice: position.stopLoss * 0.99 };
     const cycle = await pilot.runCycleOnce(T + 3_600_000);
 
