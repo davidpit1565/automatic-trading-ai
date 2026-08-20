@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 9568.524716966698,
+    "cash": 7649.0786587431785,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -275.05293612025173,
@@ -9,7 +9,27 @@
       "equity": 9568.524716966698
     }
   },
-  "open-positions": [],
+  "open-positions": [
+    {
+      "id": "XRPEUR:1787195138717:0",
+      "symbol": "XRPEUR",
+      "openedAt": 1787195138717,
+      "entryPrice": 0.93853,
+      "quantity": 2039.045042133272,
+      "initialQuantity": 2039.045042133272,
+      "stopLoss": 0.9170663584179946,
+      "takeProfit": 0.9814572831640108,
+      "feesPaid": 5.7411148301800194,
+      "realizedPnl": 0,
+      "highestPrice": 0.93853,
+      "lowestPrice": 0.93853,
+      "confidence": 49.750464700555405,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "audit-log": [
     {
       "timestamp": 1784042069348,
@@ -1256,12 +1276,19 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "market regime filter refused LINKEUR: broader market trend is down"
+    },
+    {
+      "timestamp": 1787195138717,
+      "intentId": "XRPEUR:1787195138717:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry XRPEUR: 2039.045042133272 @ 0.93853 (stop 0.9170663584179946, target 0.9814572831640108, confidence 50)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1787194828203,
+    "at": 1787195138717,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -1275,10 +1302,6 @@
   "daily-summary-evening": "2026-08-19",
   "allclear-last-at": 1786553925696,
   "equity-history": [
-    {
-      "at": 1785328105297,
-      "equity": 9553
-    },
     {
       "at": 1785328413585,
       "equity": 9553
@@ -21274,6 +21297,10 @@
     {
       "at": 1787194828203,
       "equity": 9568.52
+    },
+    {
+      "at": 1787195138717,
+      "equity": 9562.78
     }
   ],
   "trade-journal": [
@@ -22074,7 +22101,8 @@
     "c:DOTEUR:1785861844771:1",
     "c:ADAEUR:1785771978956:0",
     "o:LINKEUR:1786469253067:0",
-    "c:LINKEUR:1786469253067:0"
+    "c:LINKEUR:1786469253067:0",
+    "o:XRPEUR:1787195138717:0"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -22097,7 +22125,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -9.31%"
+        "detail": "vs buy-and-hold BTC -9.33%"
       },
       {
         "key": "drawdown",
@@ -22110,7 +22138,7 @@
         "detail": "profit factor 0.61 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — after-fee return -2.75%; vs buy-and-hold BTC -9.31%; profit factor 0.61 (needs ≥ 1.2).",
+    "summary": "NOT READY — after-fee return -2.75%; vs buy-and-hold BTC -9.33%; profit factor 0.61 (needs ≥ 1.2).",
     "unmet": [
       "profitable",
       "benchmark",
@@ -22199,13 +22227,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1787194828203,
+    "at": 1787195138717,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10038.400028901466,
-        "returnPct": 0.384000289014657,
+        "equity": 10035.253788986425,
+        "returnPct": 0.35253788986425205,
         "trades": 10,
         "winRatePct": 50,
         "profitFactor": 1.4266818007944042,
@@ -22215,8 +22243,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10038.400028901466,
-        "returnPct": 0.384000289014657,
+        "equity": 10035.253788986425,
+        "returnPct": 0.35253788986425205,
         "trades": 10,
         "winRatePct": 50,
         "profitFactor": 1.4266818007944042,
@@ -22226,8 +22254,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10038.400028901466,
-        "returnPct": 0.384000289014657,
+        "equity": 10035.253788986425,
+        "returnPct": 0.35253788986425205,
         "trades": 10,
         "winRatePct": 50,
         "profitFactor": 1.4266818007944042,
@@ -22259,8 +22287,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9414.292611507602,
-        "returnPct": -5.857073884923976,
+        "equity": 9413.465652737785,
+        "returnPct": -5.865343472622153,
         "trades": 84,
         "winRatePct": 35.714285714285715,
         "profitFactor": 0.8531755877486862,
@@ -28055,7 +28083,7 @@
       "takeProfit": 0.9810887117354394,
       "feesPaid": 6.024407347524366,
       "realizedPnl": 0,
-      "highestPrice": 0.93825,
+      "highestPrice": 0.93853,
       "lowestPrice": 0.93825,
       "confidence": 49.642926876248595,
       "validationVerdict": null,
@@ -28225,7 +28253,7 @@
       "takeProfit": 0.9810887117354394,
       "feesPaid": 6.024407347524366,
       "realizedPnl": 0,
-      "highestPrice": 0.93825,
+      "highestPrice": 0.93853,
       "lowestPrice": 0.93825,
       "confidence": 41.642926876248595,
       "validationVerdict": null,
@@ -28395,7 +28423,7 @@
       "takeProfit": 0.9810887117354394,
       "feesPaid": 6.024407347524366,
       "realizedPnl": 0,
-      "highestPrice": 0.93825,
+      "highestPrice": 0.93853,
       "lowestPrice": 0.93825,
       "confidence": 49.642926876248595,
       "validationVerdict": null,
@@ -30557,6 +30585,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused XRPEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1787195138717,
+      "intentId": "XRPEUR:1787195138717",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused XRPEUR: large trades show heavy net selling"
     }
   ],
   "shadow:top-trader:open-positions": [],
@@ -30592,6 +30627,13 @@
     {
       "timestamp": 1787194828203,
       "intentId": "XRPEUR:1787194828203",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused XRPEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1787195138717,
+      "intentId": "XRPEUR:1787195138717",
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused XRPEUR: OKX top traders are net-short"
@@ -30693,5 +30735,8 @@
       "confidence": 51.582870289456075,
       "notes": "opened autonomously by the paper autopilot"
     }
-  ]
+  ],
+  "move-alert-buckets": {
+    "XRPEUR:1787195138717:0": 0
+  }
 }
