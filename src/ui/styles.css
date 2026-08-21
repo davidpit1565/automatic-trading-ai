@@ -838,9 +838,9 @@ button.secondary:active {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%); }
 
 .hub-tabs { display: flex; gap: 0.3rem; background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-md); padding: 0.25rem; margin-bottom: 1.1rem; }
+  border-radius: var(--r-pill); padding: 0.25rem; margin-bottom: 1.1rem; }
 .hub-tab { flex: 1; background: none; border: none; color: var(--text-dim); font-size: 0.8rem;
-  font-weight: 600; padding: 0.5rem 0.4rem; border-radius: var(--r-sm); cursor: pointer;
+  font-weight: 600; padding: 0.5rem 0.4rem; border-radius: var(--r-pill); cursor: pointer;
   transition: all var(--dur-fast) var(--ease); }
 .hub-tab:hover { color: var(--text); }
 .hub-tab.active { background: var(--accent); color: #fff; }
@@ -894,11 +894,11 @@ button.secondary:active {
    tap target and the star is not nested inside it (a button inside a button is
    invalid HTML and its clicks are unreliable). */
 .mk-controls { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
-.mk-search { flex: 1 1 auto; min-width: 0; padding: 0.58rem 0.85rem; border-radius: var(--r-md);
+.mk-search { flex: 1 1 auto; min-width: 0; padding: 0.58rem 1rem; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.9rem;
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .mk-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
-.mk-sort { flex: 0 0 auto; padding: 0.58rem 0.65rem; border-radius: var(--r-md);
+.mk-sort { flex: 0 0 auto; padding: 0.58rem 0.75rem; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.86rem; }
 
 .market-row-wrap { position: relative; display: block; }
@@ -1073,10 +1073,13 @@ button.secondary:active {
 .detail-head-left { display: flex; align-items: center; gap: 0.7rem; }
 .detail-coin { display: flex; align-items: center; gap: 0.6rem; }
 .detail-coin .coin-logo { width: 30px; height: 30px; }
-/* Flat circular icon button — back arrows, bell, etc. Same shape as
-   .star-btn (borderless, raised-surface fill) for one consistent
-   icon-button language across the coin-detail header. */
-.icon-btn { background: var(--surface-raised); border: none; color: var(--text);
+/* Frosted-glass circular icon button — back arrow, star, etc. Same shape
+   as .star-btn for one consistent icon-button language across the
+   coin-detail header — translucent + blurred rather than a flat fill, the
+   circular glass buttons the reference uses throughout its own header. */
+.icon-btn { background: color-mix(in srgb, var(--surface-raised) 70%, transparent);
+  backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.08); color: var(--text);
   width: 38px; height: 38px; border-radius: 50%; cursor: pointer; flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center;
   transition: background var(--dur-fast) var(--ease); }
@@ -1086,7 +1089,9 @@ button.secondary:active {
 .detail-name { font-size: 1.15rem; font-weight: 750; letter-spacing: -0.01em; }
 .detail-price { text-align: right; }
 .detail-price-row { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.7rem; }
-.star-btn { background: var(--surface-raised); border: none; color: var(--text-dim);
+.star-btn { background: color-mix(in srgb, var(--surface-raised) 70%, transparent);
+  backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.08); color: var(--text-dim);
   width: 38px; height: 38px; border-radius: 50%; font-size: 1.1rem; cursor: pointer;
   transition: all var(--dur-fast) var(--ease); }
 .star-btn:hover { background: var(--surface-hover); color: var(--text); }
@@ -1097,9 +1102,9 @@ button.secondary:active {
 .dstat-label { font-size: 0.68rem; color: var(--text-dim); }
 .dstat-value { font-size: 0.85rem; font-weight: 650; font-variant-numeric: tabular-nums; }
 .view-tabs { display: flex; gap: 0.2rem; margin-bottom: 0.9rem; padding: 0.22rem; background: var(--surface);
-  border: 1px solid var(--border); border-radius: var(--r-md); }
+  border: 1px solid var(--border); border-radius: var(--r-pill); }
 .view-tab { flex: 1; background: transparent; border: none; color: var(--text-dim); padding: 0.5rem 0;
-  border-radius: var(--r-sm); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  border-radius: var(--r-pill); cursor: pointer; display: flex; align-items: center; justify-content: center;
   transition: all var(--dur-fast) var(--ease); }
 .view-tab svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .view-tab:hover { color: var(--text); }
@@ -1132,10 +1137,10 @@ button.secondary:active {
 
 /* Timeframe selector + real price chart */
 .range-bar { display: flex; gap: 0.2rem; margin: 0.75rem 0; padding: 0.22rem; background: var(--surface);
-  border: 1px solid var(--border); border-radius: var(--r-md); overflow-x: auto; scrollbar-width: none; }
+  border: 1px solid var(--border); border-radius: var(--r-pill); overflow-x: auto; scrollbar-width: none; }
 .range-bar::-webkit-scrollbar { display: none; }
 .range-btn { background: transparent; border: none; color: var(--text-dim);
-  border-radius: var(--r-sm); padding: 0.42rem 0.78rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; flex: 0 0 auto;
+  border-radius: var(--r-pill); padding: 0.42rem 0.78rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; flex: 0 0 auto;
   transition: all var(--dur-fast) var(--ease); }
 .range-btn:hover { color: var(--text); }
 .range-btn.active { background: linear-gradient(155deg, var(--accent), var(--accent-2)); color: #fff;
