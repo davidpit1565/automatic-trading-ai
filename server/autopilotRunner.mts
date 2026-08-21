@@ -24,6 +24,7 @@ import {
   AUTOPILOT_MAX_RSI_FOR_LONG,
   AUTOPILOT_MIN_CONFIDENCE,
   AUTOPILOT_REGIME_PERIOD,
+  AUTOPILOT_RISK_LIMITS,
   AUTOPILOT_TRAILING,
   PaperAutoPilot,
 } from '../src/core/autopilot/paperAutoPilot';
@@ -456,6 +457,9 @@ async function main(): Promise<void> {
     // Weak (just-above-floor) setups risk less, strong setups risk up to the
     // same ceiling as before — never more. See AUTOPILOT_CONFIDENCE_RISK.
     confidenceRisk: AUTOPILOT_CONFIDENCE_RISK,
+    // Raised total-exposure cap (60% → 80%); per-position/open-position caps
+    // unchanged. See AUTOPILOT_RISK_LIMITS for the measurement.
+    riskLimits: AUTOPILOT_RISK_LIMITS,
     // Portfolio circuit-breaker: pause new buying while equity is more than
     // DD_BREAKER_PCT below its peak. Exits/stops keep protecting open trades.
     haltNewEntries: () => breakerEngaged(store),

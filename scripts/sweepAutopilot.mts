@@ -58,6 +58,8 @@ interface Cfg {
   marketRegimePeriod?: number;
   /** Blocks entries when OKX's top traders are net-short that asset (topTraderGate.ts) — omit to leave it off. */
   topTraderGate?: boolean;
+  /** Partial override on top of DEFAULT_RISK_LIMITS — e.g. to test a looser maxTotalExposurePct. */
+  riskLimits?: Partial<typeof DEFAULT_RISK_LIMITS>;
 }
 const CONFIGS: Cfg[] = [
   { name: 'PROD (40/65/1.5-1.5)', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 } },
@@ -107,6 +109,15 @@ const CONFIGS: Cfg[] = [
   // into production until measured.
   { name: 'PROD+regime50+confRisk+BTCregime50+topTrader', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 }, marketRegimePeriod: 50, topTraderGate: true },
   { name: 'PROD+topTrader only (isolates its own contribution)', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, topTraderGate: true },
+  // Loosening one knob at a time on top of the EXACT config actually running
+  // in production today (regime EMA50 + confRisk .5-1 — same as the row
+  // above named 'PROD+regime50+confRisk .5-1'), to see whether any of it
+  // can close some of the real-money-readiness benchmark's BTC gap without
+  // dropping the other measured protections. Each isolates one variable
+  // against that same baseline row.
+  { name: 'PROD+regime50+confRisk + rsi75', minConfidence: 40, maxRsiForLong: 75, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 } },
+  { name: 'PROD+regime50+confRisk + trail 2.5/2.5', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 2.5, trailR: 2.5 }, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 } },
+  { name: 'PROD+regime50+confRisk + exposure80', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 }, riskLimits: { maxTotalExposurePct: 80 } },
 ];
 
 const source = new KrakenPublicSource();
@@ -191,7 +202,8 @@ async function replay(
     scheduler: { start() {}, stop() {}, isRunning: () => false, intervalMs: () => null },
     portfolio, positions, killSwitch: new PersistedKillSwitch(store), audit: new PersistedAuditLog(store),
     getDailyLoss: () => 0, costRate: COST, minConfidence: cfg.minConfidence,
-    maxRsiForLong: cfg.maxRsiForLong, trailing: cfg.trailing, riskLimits: DEFAULT_RISK_LIMITS,
+    maxRsiForLong: cfg.maxRsiForLong, trailing: cfg.trailing,
+    riskLimits: cfg.riskLimits ? { ...DEFAULT_RISK_LIMITS, ...cfg.riskLimits } : DEFAULT_RISK_LIMITS,
     ...(cfg.evaluate ? { evaluate: cfg.evaluate } : {}),
     ...(regimeFilters ? { regimeCheck: async (s: string, ts: number) => regimeFilters.get(s)?.(ts) ?? true } : {}),
     ...(marketRegimeFilter ? { marketRegimeCheck: async (ts: number) => marketRegimeFilter(ts) } : {}),
@@ -228,22 +240,34 @@ for (const [entryTf, confirmTf, label] of [['1h', '4h', '1h entry / 30 days'], [
   }
   const usable = ref.slice(WARMUP).map((x) => x.timestamp);
   const mid = Math.floor(usable.length / 2);
-  let bhSum = 0, bhN = 0;
+  let bhSum = 0, bhN = 0, btcBh: number | null = null;
   for (const s of symbols) {
     const series = e.get(s);
     if (!series || series.length < WARMUP + 2) continue;
     const w = series.slice(WARMUP);
-    bhSum += ((w[w.length - 1]!.close - w[0]!.close) / w[0]!.close) * 100;
+    const ret = ((w[w.length - 1]!.close - w[0]!.close) / w[0]!.close) * 100;
+    bhSum += ret;
     bhN++;
+    if (s === btcSymbol) btcBh = ret;
   }
   console.log(`\n=== ${label} (${usable.length} bars) ===`);
-  console.log(`buy & hold over the same window: ${(bhSum / bhN).toFixed(2)}% (mean of ${bhN} majors)`);
+  console.log(`buy & hold, 10-asset basket mean: ${(bhSum / bhN).toFixed(2)}% (${bhN} majors)`);
+  // The real-money-readiness gate's own "benchmark" criterion compares
+  // against BTC specifically, not the basket — this is the number that
+  // actually needs to be beaten for that criterion to pass.
+  console.log(`buy & hold, BTC only:              ${btcBh === null ? 'n/a' : btcBh.toFixed(2) + '%'}`);
   console.log('config                  |   full ret |  full PF | trades |  OOS ret | OOS PF');
+  // profitFactor is `null` from tradeAnalytics whenever there were zero
+  // losing trades (grossLoss === 0) — undefined, not zero. Printing that as
+  // "0.000" reads as the worst possible score when it's actually the best
+  // (every trade was a winner); render it as '∞' instead so the sweep output
+  // can't be misread backwards.
+  const fmtPf = (pf: number | null, n: number): string => (pf === null ? (n > 0 ? '∞' : '-') : pf.toFixed(3));
   for (const cfg of CONFIGS) {
     const full = await replay(cfg, e, c, usable, entryTf, confirmTf, daily, topTraderRatios);
     const oos = await replay(cfg, e, c, usable.slice(mid), entryTf, confirmTf, daily, topTraderRatios);
     console.log(
-      `${cfg.name} | ${full.ret.toFixed(3).padStart(9)}% | ${(full.pf ?? 0).toFixed(3).padStart(8)} | ${String(full.n).padStart(6)} | ${oos.ret.toFixed(3).padStart(7)}% | ${(oos.pf ?? 0).toFixed(3)}`,
+      `${cfg.name} | ${full.ret.toFixed(3).padStart(9)}% | ${fmtPf(full.pf, full.n).padStart(8)} | ${String(full.n).padStart(6)} | ${oos.ret.toFixed(3).padStart(7)}% | ${fmtPf(oos.pf, oos.n)}`,
     );
   }
 }
