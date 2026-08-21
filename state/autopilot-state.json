@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 4614.56776192596,
+    "cash": 4038.791229079512,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 211.4652705611952,
@@ -62,6 +62,25 @@
       "highestPrice": 0.769,
       "lowestPrice": 0.7426,
       "confidence": 48.96124220790719,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "DOGEEUR:1787308170186:3",
+      "symbol": "DOGEEUR",
+      "openedAt": 1787308170186,
+      "entryPrice": 0.0717624,
+      "quantity": 7999.375295938218,
+      "initialQuantity": 7999.375295938218,
+      "stopLoss": 0.06951023589001372,
+      "takeProfit": 0.07626672821997257,
+      "feesPaid": 1.7221631092117105,
+      "realizedPnl": 0,
+      "highestPrice": 0.0717624,
+      "lowestPrice": 0.0717624,
+      "confidence": 49.25088931315993,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -1433,12 +1452,19 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry DOTEUR: 2685.332429298768 @ 0.7456 (stop 0.7268535729120441, target 0.7830928541759119, confidence 49)"
+    },
+    {
+      "timestamp": 1787308170186,
+      "intentId": "DOGEEUR:1787308170186:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry DOGEEUR: 7999.375295938218 @ 0.0717624 (stop 0.06951023589001372, target 0.07626672821997257, confidence 49)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1787307859922,
+    "at": 1787308170186,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -1452,10 +1478,6 @@
   "daily-summary-evening": "2026-08-20",
   "allclear-last-at": 1786553925696,
   "equity-history": [
-    {
-      "at": 1785441361771,
-      "equity": 9567.16
-    },
     {
       "at": 1785441673338,
       "equity": 9567.16
@@ -21451,6 +21473,10 @@
     {
       "at": 1787307859922,
       "equity": 10123.25
+    },
+    {
+      "at": 1787308170186,
+      "equity": 10099.56
     }
   ],
   "trade-journal": [
@@ -22404,7 +22430,8 @@
     "c:DOTEUR:1787291569091:2",
     "o:ADAEUR:1787303477749:0",
     "o:LTCEUR:1787303791491:1",
-    "o:DOTEUR:1787303791491:2"
+    "o:DOTEUR:1787303791491:2",
+    "o:DOGEEUR:1787308170186:3"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -22427,7 +22454,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -16.89%"
+        "detail": "vs buy-and-hold BTC -16.94%"
       },
       {
         "key": "drawdown",
@@ -22440,7 +22467,7 @@
         "detail": "profit factor 1.30 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — vs buy-and-hold BTC -16.89%.",
+    "summary": "NOT READY — vs buy-and-hold BTC -16.94%.",
     "unmet": [
       "benchmark"
     ]
@@ -22527,13 +22554,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1787307859922,
+    "at": 1787308170186,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10710.651663656223,
-        "returnPct": 7.106516636562228,
+        "equity": 10685.205383209484,
+        "returnPct": 6.852053832094844,
         "trades": 16,
         "winRatePct": 68.75,
         "profitFactor": 3.94880970379078,
@@ -22543,8 +22570,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10710.651663656223,
-        "returnPct": 7.106516636562228,
+        "equity": 10685.205383209484,
+        "returnPct": 6.852053832094844,
         "trades": 16,
         "winRatePct": 68.75,
         "profitFactor": 3.94880970379078,
@@ -22554,8 +22581,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10710.651663656223,
-        "returnPct": 7.106516636562228,
+        "equity": 10685.205383209484,
+        "returnPct": 6.852053832094844,
         "trades": 16,
         "winRatePct": 68.75,
         "profitFactor": 3.94880970379078,
@@ -22587,8 +22614,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10013.412736005212,
-        "returnPct": 0.13412736005211628,
+        "equity": 9994.108982167154,
+        "returnPct": -0.05891017832846046,
         "trades": 94,
         "winRatePct": 41.48936170212766,
         "profitFactor": 1.3641246419283954,
@@ -22598,8 +22625,8 @@
       {
         "key": "whale-flow",
         "label": "Refuses entries during heavy net selling by large traders",
-        "equity": 10639.925286369435,
-        "returnPct": 6.399252863694346,
+        "equity": 10628.679315252777,
+        "returnPct": 6.286793152527771,
         "trades": 8,
         "winRatePct": 87.5,
         "profitFactor": 18.208881521851414,
@@ -22620,8 +22647,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10516.79287332487,
-        "returnPct": 5.1679287332487,
+        "equity": 10491.807161039691,
+        "returnPct": 4.918071610396909,
         "trades": 4,
         "winRatePct": 100,
         "profitFactor": null,
@@ -25356,6 +25383,13 @@
     {
       "timestamp": 1787307859922,
       "intentId": "DOTEUR:1787307859922",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused DOTEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1787308170186,
+      "intentId": "DOTEUR:1787308170186",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused DOTEUR: maximum open positions reached (5/5)"
@@ -29260,6 +29294,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry DOTEUR: 2836.781892713486 @ 0.7459 (stop 0.7271535729120441, target 0.7833928541759119, confidence 49)"
+    },
+    {
+      "timestamp": 1787308170186,
+      "intentId": "DOGEEUR:1787308170186",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused DOGEEUR: no exposure headroom: 6457.50 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:no-confirm:open-positions": [
@@ -29573,6 +29614,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry DOTEUR: 2836.781892713486 @ 0.7459 (stop 0.7271535729120441, target 0.7833928541759119, confidence 41)"
+    },
+    {
+      "timestamp": 1787308170186,
+      "intentId": "DOGEEUR:1787308170186",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused DOGEEUR: no exposure headroom: 6457.50 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:fixed-stop:open-positions": [
@@ -29886,6 +29934,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry DOTEUR: 2836.781892713486 @ 0.7459 (stop 0.7271535729120441, target 0.7833928541759119, confidence 49)"
+    },
+    {
+      "timestamp": 1787308170186,
+      "intentId": "DOGEEUR:1787308170186",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused DOGEEUR: no exposure headroom: 6457.50 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:live-mirror:trade-journal": [
@@ -32502,6 +32557,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused DOTEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1787308170186,
+      "intentId": "DOGEEUR:1787308170186",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused DOGEEUR: large trades show heavy net selling"
     }
   ],
   "shadow:top-trader:open-positions": [],
@@ -32897,6 +32959,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused ADAEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1787308170186,
+      "intentId": "DOGEEUR:1787308170186",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused DOGEEUR: OKX top traders are net-short"
     }
   ],
   "shadow:whale-flow:open-positions": [
@@ -33362,6 +33431,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry DOTEUR: 2785.437201146176 @ 0.7459 (stop 0.7271535729120441, target 0.7833928541759119, confidence 49)"
+    },
+    {
+      "timestamp": 1787308170186,
+      "intentId": "DOGEEUR:1787308170186",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused DOGEEUR: no exposure headroom: 6340.62 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:ai-judgment:trade-journal": [
@@ -33461,6 +33537,7 @@
   "move-alert-buckets": {
     "ADAEUR:1787303477749:0": 0,
     "LTCEUR:1787303791491:1": 0,
-    "DOTEUR:1787303791491:2": 0
+    "DOTEUR:1787303791491:2": 0,
+    "DOGEEUR:1787308170186:3": 0
   }
 }
