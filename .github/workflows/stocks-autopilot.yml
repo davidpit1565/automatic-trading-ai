@@ -30,7 +30,9 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Long enough for the internal loop below (24 * 5min = 120min) plus
+    # headroom for npm ci / git operations.
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,12 +42,21 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Run one stocks cycle
+      - name: Run stocks cycles (internal 5-min loop)
         env:
           ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
           ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Measured 2026-08-21: despite the */15 cron above, actual gaps
+          # between recorded state were mostly 60-110 minutes — GitHub's
+          # scheduler is unreliable at this frequency, the same root cause
+          # crypto's autopilot.yml already had to work around. 24 cycles *
+          # 5 min = 120 min of coverage per trigger, safely past the worst
+          # gap measured, with state committed every cycle so a cancelled
+          # run still keeps whatever it did.
+          STOCKS_LOOP_CYCLES: '24'
+          STOCKS_STATE_COMMIT_EVERY: '1'
         run: npx tsx server/stocksRunner.mts
       - name: Commit updated state
         run: |

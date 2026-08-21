@@ -1244,3 +1244,67 @@ Now renders as `∞`.
   list itself grows enough (via measurement) to justify the split.
 - Alpaca's secret key must never reach the browser — the stocks side only
   ever exposes what the server already wrote to the committed state file.
+
+## maxOpenPositions widening: measured, inconclusive — not adopted (2026-08-21)
+
+Same day as the exposure-cap widening above, David asked whether raising
+`maxOpenPositions` (5) could help too — motivated by a real, same-day audit-
+log observation: SOL and ETH (both showing HOT on the live Market Scan) were
+refused not on signal quality but purely on "maximum open positions reached
+(5/5)". Extended `scripts/sweepAutopilot.mts` with a `PROD live +
+maxOpenPositions 8` row layered on the exact current production config
+(regime EMA50 + confRisk + BTC market regime + the 80% exposure cap).
+
+Result: identical numbers to the unmodified production row in BOTH windows
+(30-day: 8.08%/6 trades; 120-day: 0.00%/0 trades) — the cap was never
+actually binding in either historical replay. This is a different, weaker
+result than the exposure-cap measurement: that one showed a small measured
+upside with no downside. This one shows **no measured effect at all**,
+positive or negative — the historical sample just never generated enough
+simultaneous qualifying setups to exercise the lever, so "safe" can't
+honestly be claimed from this data the way it could for the exposure cap.
+The real SOL/ETH refusal from earlier today is a genuine live data point
+that this particular backtest window doesn't corroborate either way.
+
+Decided: leave it at 5, not adopted. Given the choice between (a) leave it
+since the measured evidence is silent rather than supportive, (b) adopt it
+anyway as an unmeasured bet, or (c) wait for more live evidence — (a) is the
+only one consistent with this project's own "measure, don't guess; keep
+only measured improvements" rule. Absence of a measured downside is not the
+same bar as the exposure-cap change cleared (a measured, if small, upside
+with no downside) — it's simply "not exercised by this data." There's also
+a real, non-backtested reason for caution the sweep can't see either way:
+more concurrent positions means less diversification benefit per trade and
+more assets exposed simultaneously in a correlated crypto-wide selloff, even
+though per-position/per-asset caps are unchanged. Capital protection over
+raw profit (CLAUDE.md's priority order) tips this the same direction as the
+measurement: stay at 5 until there's an actual measured case for more.
+
+## Stocks reliability gap fixed: no internal loop (2026-08-21)
+
+Investigating a "stocks seems to be weakening" report surfaced two separate
+things. The performance dip itself (equity peak 2026-08-10 → -1.8% since)
+is 3 losing trades after 3 winning ones on an 8-trade sample — ~24% odds by
+chance alone on this arm's own measured 37.5% win rate. Read as noise, not
+a new trend; the stocks arm's already-measured structural ceiling (positive
+expectancy, PF 1.6-2.5, but only ~2-7% of simple buy-and-hold — see
+"Stocks measured" 2026-07-29 above) is unchanged and not new information.
+
+The second thing was real and fixable: `stocksRunner.mts`'s `main()` ran
+exactly one cycle and exited, with no equivalent of the crypto side's
+`autopilot.yml` internal-loop fix (2026-08-17, `LOOP_CYCLES`/
+`STATE_COMMIT_EVERY`, same root cause: GitHub's scheduler is unreliable at
+high cron frequency). Measured: despite `stocks-autopilot.yml`'s nominal
+*/15-minute cron, actual gaps between recorded equity-history points during
+market hours were mostly 60-110 minutes — roughly 1/4 to 1/7 of the
+intended cycles were actually running. Fixed the same way as crypto: added
+an internal loop (`STOCKS_LOOP_CYCLES`, `STOCKS_LOOP_INTERVAL_MS`,
+`STOCKS_STATE_COMMIT_EVERY` env vars, workflow sets 24 cycles × 5 min = 120
+min of coverage per trigger, comfortably past the worst gap measured) with
+per-cycle mid-run git persistence, mirroring `autopilotRunner.mts`'s
+`persistStateToGit` (duplicated rather than shared, per this file's own
+"fully isolated" design). `isUsMarketOpen()` is now checked every cycle
+inside the loop rather than once before it, so a run spanning market close
+degrades to cheap no-ops instead of exiting early. This does not fix the
+structural performance ceiling — it fixes how often the (unchanged)
+strategy actually gets to run.
