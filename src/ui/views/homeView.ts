@@ -9,7 +9,7 @@ import { fetchCloudState, type CloudState } from '../cloudState';
 import { fetchTopMarkets, findBtcSymbol, type MarketSnapshot } from '../markets';
 import { sparklineSvg } from '../charts';
 import { attachCoinLogoFallback, coinLogoHtml, completedLogoHtml } from '../coinLogo';
-import { formatPrice, formatPct } from '../format';
+import { formatPrice, formatPct, formatPriceSplit } from '../format';
 import type { ViewHandle } from '../viewLifecycle';
 
 const PRICE_REFRESH_MS = 15_000;
@@ -49,7 +49,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   hero.dataset['nav'] = 'value';
   hero.innerHTML = `
     <div class="hero-label">Portfolio value <span class="tag-sim">SIMULATED</span><span class="hero-more">history ›</span></div>
-    <div class="hero-value" id="hv-equity">—</div>
+    <div class="hero-value" id="hv-equity"><span class="hero-value-major">—</span></div>
     <div class="hero-change" id="hv-change"></div>
     <div class="hero-split"><span id="hv-cash"></span><span id="hv-invested"></span></div>
     <div class="hero-bench" id="hv-bench" hidden></div>
@@ -210,9 +210,13 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     const equity = state.cash + invested;
     const totalReturn = state.initialCash > 0 ? ((equity - state.initialCash) / state.initialCash) * 100 : 0;
 
-    setText('hv-equity', euro(equity));
+    const { major, minor } = formatPriceSplit(equity);
+    const equityEl = container.querySelector<HTMLElement>('#hv-equity')!;
+    equityEl.innerHTML = `<span class="hero-value-currency">€</span><span class="hero-value-major">${major}</span><span class="hero-value-minor">.${minor}</span>`;
     const change = container.querySelector<HTMLElement>('#hv-change')!;
-    change.textContent = `${formatPct(totalReturn)} all time`;
+    // The up/down colour + arrow (added via CSS) already convey direction,
+    // so the leading +/- from formatPct would be a redundant third signal.
+    change.textContent = `${formatPct(totalReturn).replace(/^[+-]/, '')} all time`;
     change.className = `hero-change ${totalReturn >= 0 ? 'up' : 'down'}`;
     setText('hv-cash', `Cash ${euro(state.cash)}`);
     setText('hv-invested', `Invested ${euro(invested)}`);

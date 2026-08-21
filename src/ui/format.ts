@@ -7,6 +7,18 @@ export function formatPrice(value: number): string {
   return value.toPrecision(4);
 }
 
+/**
+ * Splits a euro amount into a bold "major" part and a lighter, smaller
+ * "minor" (cents) part — the big-integer-plus-small-decimal treatment used
+ * for the hero balance, e.g. major "26" / minor ".85".
+ */
+export function formatPriceSplit(value: number): { major: string; minor: string } {
+  const [major, minor = '00'] = value
+    .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    .split('.');
+  return { major: major!, minor };
+}
+
 export function formatPct(value: number | null, digits = 2): string {
   if (value === null) return '—';
   const sign = value > 0 ? '+' : '';
