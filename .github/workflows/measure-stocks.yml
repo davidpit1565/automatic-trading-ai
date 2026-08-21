@@ -40,4 +40,10 @@ jobs:
         env:
           ALPACA_API_KEY_ID: ${{ secrets.ALPACA_API_KEY_ID }}
           ALPACA_API_SECRET_KEY: ${{ secrets.ALPACA_API_SECRET_KEY }}
-        run: npx tsx scripts/measureStocks.mts "${{ inputs.timeframe }}" "${{ inputs.symbols }}"
+          # Routed through env vars rather than interpolated straight into the
+          # run: string — the `type: choice` list already constrains these,
+          # but this way no future dispatch input can end up in a shell
+          # command unquoted-injection style, even if the input type changes.
+          MEASURE_TIMEFRAME: ${{ inputs.timeframe }}
+          MEASURE_SYMBOLS: ${{ inputs.symbols }}
+        run: npx tsx scripts/measureStocks.mts "$MEASURE_TIMEFRAME" "$MEASURE_SYMBOLS"
