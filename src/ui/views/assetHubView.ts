@@ -109,7 +109,7 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     if (opts.showBenchmark && state.benchmark && state.benchmark.btc > 0 && state.benchmark.equity > 0) {
       const bot = ((equity - state.benchmark.equity) / state.benchmark.equity) * 100;
       benchEl.hidden = false;
-      benchEl.textContent = `vs Bitcoin — robot ${formatPct(bot)}${bot >= 0 ? ' · leading' : ''}`;
+      benchEl.textContent = `vs Bitcoin — agent ${formatPct(bot)}${bot >= 0 ? ' · leading' : ''}`;
     } else {
       benchEl.hidden = true;
     }

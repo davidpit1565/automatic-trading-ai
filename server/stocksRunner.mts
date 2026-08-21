@@ -3,7 +3,7 @@
  *
  * Fully isolated from the crypto runner (`autopilotRunner.mts`): its own
  * state file, its own portfolio (USD), its own GitHub Actions workflow.
- * Nothing here can affect the crypto robot that already works.
+ * Nothing here can affect the crypto agent that already works.
  *
  * Reuses the exact same core engines as crypto (scanner -> signal -> risk ->
  * paper autopilot) unchanged — they were already asset-agnostic. SIMULATED
@@ -87,7 +87,7 @@ export function buildAlpacaSourceFromEnv(): AlpacaStockSource | null {
 /**
  * Records a per-symbol price snapshot for the curated stock universe (not
  * just symbols with open positions), so the browser can show "what does the
- * stocks robot see right now" without ever calling Alpaca directly — Alpaca
+ * stocks agent see right now" without ever calling Alpaca directly — Alpaca
  * requires a secret key per request, unlike Kraken's public API, so the
  * browser can never call it safely. This is the read-only, no-keys
  * equivalent: written here (server-side, where the key already lives) and

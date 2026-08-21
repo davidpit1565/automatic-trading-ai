@@ -127,13 +127,13 @@ export function readinessLineHe(readiness: RealMoneyReadiness): string {
 }
 
 /**
- * Once-a-day portfolio digest so the user knows the robot is alive and how
+ * Once-a-day portfolio digest so the user knows the agent is alive and how
  * it is doing, without a message every cycle. Sent at most once per day.
  */
 export function buildDailySummary(input: DailySummaryInput): string {
   const ret = `${input.totalReturnPct >= 0 ? '+' : ''}${input.totalReturnPct.toFixed(2)}%`;
   const lines: string[] = [
-    input.heading ?? '📊 סיכום יומי — רובוט מסחר (כסף מדומה)',
+    input.heading ?? '📊 סיכום יומי — סוכן מסחר (כסף מדומה)',
     `💰 שווי תיק: ${euro(input.equity)} (${ret} מההתחלה)`,
     `💵 מזומן פנוי: ${euro(input.cash)}`,
     `📈 רווח/הפסד: ${signedEuro(input.realizedPnl)} ממומש · ${signedEuro(input.unrealizedPnl)} על הנייר`,
@@ -142,9 +142,9 @@ export function buildDailySummary(input: DailySummaryInput): string {
   if (input.benchmark) {
     const b = input.benchmark;
     const fmt = (v: number): string => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
-    const verdict = b.portfolioPct >= b.assetPct ? 'הרובוט מוביל 🎉' : 'החזקה פשוטה מובילה';
+    const verdict = b.portfolioPct >= b.assetPct ? 'הסוכן מוביל 🎉' : 'החזקה פשוטה מובילה';
     lines.push(
-      `🏁 מול ${b.label} (מאז תחילת המעקב): הרובוט ${fmt(b.portfolioPct)} · ${b.label} ${fmt(b.assetPct)} → ${verdict}`,
+      `🏁 מול ${b.label} (מאז תחילת המעקב): הסוכן ${fmt(b.portfolioPct)} · ${b.label} ${fmt(b.assetPct)} → ${verdict}`,
     );
   }
   if (input.positions.length === 0) {
@@ -200,7 +200,7 @@ export interface PeriodReportInput {
 
 export function buildPeriodReport(i: PeriodReportInput): string {
   const lines: string[] = [
-    `🗓️ דו"ח ${i.title} — רובוט מסחר (כסף מדומה)`,
+    `🗓️ דו"ח ${i.title} — סוכן מסחר (כסף מדומה)`,
     `💰 שווי תיק: ${euro(i.equity)}`,
   ];
   lines.push(
@@ -220,9 +220,9 @@ export function buildPeriodReport(i: PeriodReportInput): string {
   }
   if (i.benchmark) {
     const f = (v: number): string => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
-    const verdict = i.benchmark.portfolioPct >= i.benchmark.assetPct ? 'הרובוט מוביל 🎉' : 'ביטקוין מוביל';
+    const verdict = i.benchmark.portfolioPct >= i.benchmark.assetPct ? 'הסוכן מוביל 🎉' : 'ביטקוין מוביל';
     lines.push(
-      `🏁 מול ${i.benchmark.label}: הרובוט ${f(i.benchmark.portfolioPct)} · ${i.benchmark.label} ${f(i.benchmark.assetPct)} → ${verdict}`,
+      `🏁 מול ${i.benchmark.label}: הסוכן ${f(i.benchmark.portfolioPct)} · ${i.benchmark.label} ${f(i.benchmark.assetPct)} → ${verdict}`,
     );
   }
   return lines.join('\n');
@@ -241,7 +241,7 @@ export function buildAllClearMessage(): string {
   return (
     '🛡️ בדיקת ביטחון תקופתית — הכל מבוטח ✅\n' +
     'כל ההגנות פעילות: תקרת סיכון לעסקה, תקרת חשיפה, בלם הפסד יומי, ומגבלת פוזיציות. ' +
-    'כסף מדומה בלבד — הרובוט לא יכול לגעת בכסף אמיתי.'
+    'כסף מדומה בלבד — הסוכן לא יכול לגעת בכסף אמיתי.'
   );
 }
 
@@ -292,7 +292,7 @@ export function buildCycleMessage(
   cycle: Pick<CycleResult, 'opened' | 'closed' | 'timestamp'>,
 ): string | null {
   if (cycle.opened.length === 0 && cycle.closed.length === 0) return null;
-  const lines: string[] = ['🤖 רובוט מסחר (כסף מדומה)'];
+  const lines: string[] = ['🤖 סוכן מסחר (כסף מדומה)'];
   for (const o of cycle.opened) {
     let line = `🟢 קנייה ${o.symbol}: ${formatQty(o.quantity)} יח׳ במחיר ${euro(o.entry)}`;
     if (typeof o.confidence === 'number') line += ` · ביטחון ${o.confidence.toFixed(0)}%`;
@@ -320,7 +320,7 @@ export function buildStockCycleMessage(
   cycle: Pick<CycleResult, 'opened' | 'closed' | 'timestamp'>,
 ): string | null {
   if (cycle.opened.length === 0 && cycle.closed.length === 0) return null;
-  const lines: string[] = ['📈 רובוט מניות (כסף מדומה)'];
+  const lines: string[] = ['📈 סוכן מניות (כסף מדומה)'];
   for (const o of cycle.opened) {
     let line = `🟢 קנייה ${o.symbol}: ${formatQty(o.quantity)} יח׳ במחיר ${dollar(o.entry)}`;
     if (typeof o.confidence === 'number') line += ` · ביטחון ${o.confidence.toFixed(0)}%`;

@@ -17,12 +17,12 @@
  * Same three entries, opposite verdicts. The cause is exit granularity, not
  * position sizing: livePipeline checks exits INTRABAR (low <= stop,
  * high >= target) while the autopilot only ever sees candle CLOSES. On ADA the
- * backtest booked a take-profit at 0.1584 that the robot never saw — it exited
+ * backtest booked a take-profit at 0.1584 that the agent never saw — it exited
  * at a close of 0.1529 on the trailed stop instead. With few trades, one such
  * flip moves the profit factor by a factor of fifty.
  *
  * Intrabar is the right convention for a system with resting stop/target orders
- * at the exchange. This robot has none: it polls, and acts on a close. So for
+ * at the exchange. This agent has none: it polls, and acts on a close. So for
  * TUNING decisions this script is the instrument to trust, and livePipeline is
  * the fast approximation.
  *

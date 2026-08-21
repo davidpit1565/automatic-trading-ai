@@ -1,6 +1,6 @@
 /**
  * Crypto — the primary crypto section (replaces the old unified "Home").
- * Overview/History/Profit read the REAL cloud robot's committed state;
+ * Overview/History/Profit read the REAL cloud agent's committed state;
  * Market reuses the existing full crypto market browser.
  */
 
@@ -14,7 +14,7 @@ import type { ViewHandle } from '../viewLifecycle';
 export function renderCryptoView(container: HTMLElement, data: ActiveDataSource): ViewHandle {
   return renderAssetHub(container, {
     title: 'Crypto',
-    subtitle: 'The real cloud robot — SIMULATED money, matches the Telegram alerts.',
+    subtitle: 'The real cloud agent — SIMULATED money, matches the Telegram alerts.',
     currencySymbol: '€',
     fetchState: fetchCloudState,
     showBenchmark: true,

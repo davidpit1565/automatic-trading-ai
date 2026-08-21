@@ -78,7 +78,7 @@ export const CURATED_STOCK_INSTRUMENTS: Instrument[] = [
 /**
  * BROWSABLE (display-only) superset of the curated majors above — mirrors
  * `krakenPublic.ts`'s curated-vs-discovered split: broadening what a user can
- * see the price of is safe and instant; broadening what the robot actually
+ * see the price of is safe and instant; broadening what the agent actually
  * TRADES stays gated behind a real measurement (`scripts/measureStocks.mts`),
  * exactly like the crypto majors. Nothing here is read by the autopilot —
  * only `stocksRunner.mts`'s market-snapshot recorder and the browser's

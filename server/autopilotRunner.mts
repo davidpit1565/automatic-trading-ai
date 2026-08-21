@@ -135,8 +135,8 @@ function persistStateToGit(label: string): void {
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Scheduled digests: each fires once per local day, at or after its hour. */
 const SUMMARY_SLOTS = [
-  { hour: 10, key: 'daily-summary-morning', heading: '☀️ סיכום בוקר — רובוט מסחר (כסף מדומה)' },
-  { hour: 22, key: 'daily-summary-evening', heading: '🌙 סיכום ערב — רובוט מסחר (כסף מדומה)' },
+  { hour: 10, key: 'daily-summary-morning', heading: '☀️ סיכום בוקר — סוכן מסחר (כסף מדומה)' },
+  { hour: 22, key: 'daily-summary-evening', heading: '🌙 סיכום ערב — סוכן מסחר (כסף מדומה)' },
 ];
 /** Alert when an open position moves by at least this % (each new step). */
 const MOVE_ALERT_PCT = Number(process.env['MOVE_ALERT_PCT']) || 5;
@@ -519,7 +519,7 @@ async function runCycle(
   );
 
   // Heartbeat: guarantees the state file exists so the workflow always has
-  // something to persist, and records when the cloud robot last ran.
+  // something to persist, and records when the cloud agent last ran.
   store.set('autopilot-last-run', {
     at: now,
     source: source.name,
@@ -968,7 +968,7 @@ interface BenchmarkAnchor {
  * Compare the portfolio against simply holding Bitcoin over the same window.
  * The anchor (BTC price + portfolio equity) is captured the first time this
  * runs, so both returns are measured from the same moment — a fair test of
- * whether the robot beats buy-and-hold.
+ * whether the agent beats buy-and-hold.
  */
 async function computeBenchmark(
   store: FileStore,

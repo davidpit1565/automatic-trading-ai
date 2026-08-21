@@ -39,7 +39,7 @@ const INTERVAL_MINUTES: Record<Timeframe, number> = {
 
 /**
  * Curated majors, EUR-quoted. Kraken names Bitcoin XBT; we display BTC.
- * TRADED by the robot (`server/autopilotRunner.mts` trades exactly
+ * TRADED by the agent (`server/autopilotRunner.mts` trades exactly
  * `instruments.slice(0, 10)`) — this order is load-bearing. Do NOT reorder
  * or insert above this line; broadening the browsable universe happens by
  * appending more instruments after it (see `getInstruments` below), never by
@@ -166,7 +166,7 @@ export class KrakenPublicSource implements MarketDataSource {
   }
 
   /**
-   * The curated 10 majors always lead, in their fixed order (what the robot
+   * The curated 10 majors always lead, in their fixed order (what the agent
    * trades). Appended after them: every other EUR pair Kraken currently
    * lists live, broadening the BROWSABLE universe — or, if that live call
    * fails, the static fallback list, so browsing never regresses. Cached
@@ -205,7 +205,7 @@ export class KrakenPublicSource implements MarketDataSource {
       if (wsQuote !== 'EUR' || !wsBase) continue;
       const base = ASSET_ALIASES[wsBase] ?? wsBase;
       // When a curated major already covers this asset, reuse ITS symbol: the
-      // caller then dedupes it away, and the robot's trading symbol is left
+      // caller then dedupes it away, and the agent's trading symbol is left
       // exactly as-is. Otherwise the pair broadens the universe under its own
       // altname.
       const symbol = CURATED_SYMBOL_BY_BASE.get(base) ?? info.altname;
@@ -414,7 +414,7 @@ export class KrakenPublicSource implements MarketDataSource {
    *
    * Kraken answers 429 (rate limited) and 5xx (busy) under load, and observed
    * live: a burst of requests draws a wall of 503s. Without a retry each of
-   * those silently drops that symbol from the cycle, so the robot decides on a
+   * those silently drops that symbol from the cycle, so the agent decides on a
    * partial view of the market and the gap never surfaces.
    *
    * Only these transient statuses are retried, with exponential backoff. A 4xx
