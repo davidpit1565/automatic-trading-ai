@@ -708,15 +708,35 @@ button.secondary:active {
 /* ============================================================= */
 .app { min-height: 100dvh; }
 
+/* Fixed, full-bleed colour wash pinned behind the topbar and the gap above
+   the hero — the iOS 26 "liquid glass" look needs something colourful
+   underneath the glass to actually read as transparent, otherwise a blurred
+   pane over a flat near-black background just looks like a flat panel.
+   Tracks the hero's own up/down sentiment class (mirrored onto <body> by
+   homeView.ts) rather than inventing a second, meaningless colour signal.
+   z-index: -1 keeps it behind ordinary (z-index: auto) page content while
+   still showing through the topbar, which sits above it at z-index: 20. */
+.ambient-wash {
+  position: fixed; top: 0; left: 0; right: 0; height: 460px; z-index: -1;
+  pointer-events: none; filter: blur(8px);
+  background: radial-gradient(110% 65% at 35% -15%, var(--wash-color, transparent) 0%, transparent 75%);
+  transition: opacity var(--dur-slow) var(--ease);
+}
+body[data-sentiment="up"] { --wash-color: rgba(127, 191, 156, 0.5); }
+body[data-sentiment="down"] { --wash-color: rgba(217, 140, 147, 0.5); }
+
 .topbar {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0.75rem 1rem;
-  background: linear-gradient(180deg, rgba(18,22,30,0.92) 0%, rgba(7,9,13,0.88) 100%);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border-bottom: 1px solid rgba(35,42,56,0.6);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+  /* Genuinely translucent rather than a near-opaque panel with a blur
+     filter tacked on — the wash above (and whatever scrolls under it)
+     should read clearly through the glass. */
+  background: linear-gradient(180deg, rgba(18,22,30,0.4) 0%, rgba(7,9,13,0.28) 100%);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
 }
 
 /* Topbar responsive padding */
@@ -738,7 +758,9 @@ button.secondary:active {
   box-shadow: 0 0 0 3px var(--accent-tint), 0 0 18px var(--accent-glow);
 }
 .topbar-btc { display: flex; align-items: center; gap: 0.45rem; font-size: 0.82rem;
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-pill); padding: 0.3rem 0.7rem;
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: var(--r-pill); padding: 0.3rem 0.7rem;
   box-shadow: var(--shadow-xs); }
 .tb-label { color: var(--text-dim); font-weight: 750; }
 .tb-price { font-weight: 650; font-variant-numeric: tabular-nums; }
@@ -1077,7 +1099,7 @@ button.secondary:active {
    as .star-btn for one consistent icon-button language across the
    coin-detail header — translucent + blurred rather than a flat fill, the
    circular glass buttons the reference uses throughout its own header. */
-.icon-btn { background: color-mix(in srgb, var(--surface-raised) 70%, transparent);
+.icon-btn { background: color-mix(in srgb, var(--surface-raised) 55%, transparent);
   backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
   border: 1px solid rgba(255,255,255,0.08); color: var(--text);
   width: 38px; height: 38px; border-radius: 50%; cursor: pointer; flex: 0 0 auto;
@@ -1089,7 +1111,7 @@ button.secondary:active {
 .detail-name { font-size: 1.15rem; font-weight: 750; letter-spacing: -0.01em; }
 .detail-price { text-align: right; }
 .detail-price-row { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.7rem; }
-.star-btn { background: color-mix(in srgb, var(--surface-raised) 70%, transparent);
+.star-btn { background: color-mix(in srgb, var(--surface-raised) 55%, transparent);
   backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
   border: 1px solid rgba(255,255,255,0.08); color: var(--text-dim);
   width: 38px; height: 38px; border-radius: 50%; font-size: 1.1rem; cursor: pointer;
