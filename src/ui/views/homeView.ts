@@ -145,12 +145,19 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     if (!state || state.equityHistory.length < 2) {
       spark.innerHTML = '';
       hero.classList.remove('up', 'down');
+      delete document.body.dataset['sentiment'];
       return;
     }
     const values = state.equityHistory.map((e) => e.equity);
     const up = values[values.length - 1]! >= values[0]!;
     hero.classList.toggle('up', up);
     hero.classList.toggle('down', !up);
+    // Mirrored onto <body> (as a data attribute — bare .up/.down are already
+    // global text-color classes elsewhere, so reusing them on <body> would
+    // tint all inherited text) so the fixed ambient wash behind the glass
+    // topbar (styles.css .ambient-wash) tracks the same real sentiment —
+    // one signal, not an invented second one.
+    document.body.dataset['sentiment'] = up ? 'up' : 'down';
     spark.innerHTML = sparklineSvg(values, { stroke: 'var(--accent-text)', fill: false, width: 320, height: 64 });
   }
 
