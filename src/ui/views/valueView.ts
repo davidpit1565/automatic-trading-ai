@@ -4,7 +4,7 @@
  * (1D → All), candlesticks by default (bucketed from the real recorded
  * equity samples — open/high/low/close per bucket, not fabricated) with a
  * Line toggle, an interactive crosshair + tooltip, and the gain/loss since
- * tracking began. Read-only; data recorded by the cloud robot each cycle.
+ * tracking began. Read-only; data recorded by the cloud agent each cycle.
  */
 
 import type { ActiveDataSource } from '../dataSource';
@@ -28,7 +28,7 @@ export function renderValueView(container: HTMLElement, _data: ActiveDataSource)
     const state = await fetchCloudState();
     if (!state) {
       if (!loadedOnce) {
-        body.innerHTML = '<div class="empty">Couldn\'t reach the cloud robot — retrying.</div>';
+        body.innerHTML = '<div class="empty">Couldn\'t reach the cloud agent — retrying.</div>';
       }
       return;
     }

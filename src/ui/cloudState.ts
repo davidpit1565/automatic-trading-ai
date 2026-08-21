@@ -1,7 +1,7 @@
 /**
- * Reads the cloud robot's real state — the same state/autopilot-state.json
+ * Reads the cloud agent's real state — the same state/autopilot-state.json
  * the GitHub Actions autopilot commits after every run. This is what makes
- * the dashboard show the REAL robot (the one that sends Telegram alerts),
+ * the dashboard show the REAL agent (the one that sends Telegram alerts),
  * not a separate in-browser simulation.
  *
  * Public raw URL; read-only; no keys. Fails soft (returns null) so the UI
@@ -44,9 +44,9 @@ export interface CloudReadiness {
   readonly criteria: CloudReadinessCriterion[];
 }
 
-/** One curated symbol's last-known price, as recorded by the cloud robot's
+/** One curated symbol's last-known price, as recorded by the cloud agent's
  * own cycle — not a live tick. This is the read-only, no-keys way to show
- * "what does the robot see right now" for a source (like Alpaca) that
+ * "what does the agent see right now" for a source (like Alpaca) that
  * requires a secret per request and can never be called from the browser. */
 export interface MarketSnapshotEntry {
   readonly symbol: string;
@@ -68,7 +68,7 @@ export interface CloudState {
   readonly equityHistory: { at: number; equity: number }[];
   /** Honest real-money readiness verdict, or null if not computed yet. */
   readonly readiness: CloudReadiness | null;
-  /** Last-known price per curated symbol, or empty if the robot hasn't
+  /** Last-known price per curated symbol, or empty if the agent hasn't
    * recorded one yet (e.g. the crypto state file, which has no such field). */
   readonly marketSnapshot: MarketSnapshotEntry[];
 }
@@ -124,7 +124,7 @@ export async function fetchCloudState(
   stateUrl: string = STATE_URL,
 ): Promise<CloudState | null> {
   // One automatic retry: a single transient failure no longer flashes
-  // "couldn't reach the cloud robot" on the value/history pages.
+  // "couldn't reach the cloud agent" on the value/history pages.
   for (let attempt = 0; attempt < 2; attempt++) {
     const state = await fetchCloudStateOnce(fetchFn, stateUrl);
     if (state) return state;
@@ -132,7 +132,7 @@ export async function fetchCloudState(
   return null;
 }
 
-/** Same shape, the separate stocks robot's state file. */
+/** Same shape, the separate stocks agent's state file. */
 export async function fetchStocksState(
   fetchFn: typeof fetch = (input, init) => fetch(input, init),
 ): Promise<CloudState | null> {

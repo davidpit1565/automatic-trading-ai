@@ -195,7 +195,7 @@ export function evaluateScan(
   );
 
   // Conviction floor: refuse near-coin-flip setups even when the hard gates
-  // pass, so the robot only commits capital to strong evidence.
+  // pass, so the agent only commits capital to strong evidence.
   if (confidence < criteria.minConfidence) {
     return {
       kind: 'rejected',

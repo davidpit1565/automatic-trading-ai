@@ -11,7 +11,7 @@ import { KrakenPublicSource } from '../../src/core/data/krakenPublic';
 
 const NOW = 1_700_000_000_000;
 // Mirrors the curated-majors order in src/core/data/krakenPublic.ts — the
-// robot trades exactly these 10, in this order (`slice(0, 10)`).
+// agent trades exactly these 10, in this order (`slice(0, 10)`).
 const CURATED_SYMBOLS = [
   'XBTEUR', 'ETHEUR', 'SOLEUR', 'XRPEUR', 'ADAEUR',
   'DOGEEUR', 'LTCEUR', 'DOTEUR', 'LINKEUR', 'AVAXEUR',
@@ -483,7 +483,7 @@ describe('Kraken asset aliases', () => {
     const dogecoins = result.value.filter((i) => i.base === 'DOGE' || i.base === 'XDG');
     expect(dogecoins).toHaveLength(1);
     expect(dogecoins[0]!.base).toBe('DOGE');
-    // The curated symbol is preserved — the robot's trading path is untouched.
+    // The curated symbol is preserved — the agent's trading path is untouched.
     expect(dogecoins[0]!.symbol).toBe('DOGEEUR');
     expect(result.value.some((i) => i.symbol === 'XDGEUR')).toBe(false);
     // Unrelated new pairs still broaden the universe as before.

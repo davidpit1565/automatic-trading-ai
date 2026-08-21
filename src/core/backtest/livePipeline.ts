@@ -18,8 +18,8 @@
  *     PaperAutoPilot, one shared account   return -0.857%  PF 0.019  3 trades
  *
  * Same three entries. The cause is the intrabar exit convention below: on ADA
- * this harness booked a take-profit at 0.1584 that the robot never saw, because
- * the robot only observes CLOSES and exited at 0.1529 on the trailed stop
+ * this harness booked a take-profit at 0.1584 that the agent never saw, because
+ * the agent only observes CLOSES and exited at 0.1529 on the trailed stop
  * instead. With few trades one such flip moves the profit factor fifty-fold.
  * This harness stays useful as the fast approximation for sweeps.
  *
@@ -27,7 +27,7 @@
  *  - Exits are checked INTRABAR (low <= stop, high >= target) rather than on
  *    the candle close. Stop is checked before target (conservative: if a bar
  *    spans both, we assume the loss). This is the right convention for a system
- *    with resting stop/target orders at the exchange — but this robot has none:
+ *    with resting stop/target orders at the exchange — but this agent has none:
  *    it polls and acts on a close, so intrabar OVERSTATES what it can capture,
  *    especially on winners.
  *  - A single position at a time (the autopilot holds <=1 per symbol; this

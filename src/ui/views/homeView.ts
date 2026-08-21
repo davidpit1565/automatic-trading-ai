@@ -1,6 +1,6 @@
 /**
  * Home — the primary dashboard. Presentation only: shows the REAL cloud
- * robot (committed autopilot-state.json) plus live prices, so what you see
+ * agent (committed autopilot-state.json) plus live prices, so what you see
  * here matches the Telegram alerts. Phone-first, English.
  */
 
@@ -77,7 +77,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   actList.id = 'home-activity';
   actWrap.appendChild(actList);
 
-  const status = el('p', 'muted-line', 'Loading the cloud robot…');
+  const status = el('p', 'muted-line', 'Loading the cloud agent…');
   status.id = 'home-status';
 
   container.append(hero, posWrap, marketsWrap, readyWrap, actWrap, status);
@@ -191,7 +191,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   function renderActivity(): void {
     actList.innerHTML = '';
     if (!state || state.history.length === 0) {
-      actList.appendChild(el('div', 'empty', 'No trades yet — the robot is waiting for a qualified opportunity.'));
+      actList.appendChild(el('div', 'empty', 'No trades yet — the agent is waiting for a qualified opportunity.'));
       return;
     }
     for (const t of state.history.slice(0, 5)) {
@@ -233,7 +233,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       const bot = ((equity - state.benchmark.equity) / state.benchmark.equity) * 100;
       const btcPct = ((prices[btc]! - state.benchmark.btc) / state.benchmark.btc) * 100;
       bench.hidden = false;
-      bench.textContent = `vs Bitcoin — robot ${formatPct(bot)} · BTC ${formatPct(btcPct)}${bot >= btcPct ? ' · leading' : ''}`;
+      bench.textContent = `vs Bitcoin — agent ${formatPct(bot)} · BTC ${formatPct(btcPct)}${bot >= btcPct ? ' · leading' : ''}`;
     } else {
       // A transient failure to price just this one cycle (e.g. BTC's fetch
       // failed) must not leave a stale comparison on screen looking current.
@@ -254,7 +254,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       renderHeroSpark();
       await refreshPrices();
     } else if (!state) {
-      setText('home-status', "Couldn't reach the cloud robot — retrying automatically.");
+      setText('home-status', "Couldn't reach the cloud agent — retrying automatically.");
     }
   }
 

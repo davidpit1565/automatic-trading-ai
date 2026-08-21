@@ -148,14 +148,14 @@ data (not the ~30-day-old numbers the old constants cited):
   `PortfolioEngine.exit`'s own math) and exposes it on `CycleResult.closed[].
   pnl`, plus an optional `onRealizedPnl(pnl, timestamp)` hook. Wired in both
   places that run a real exits loop — `server/autopilotRunner.mts` (the
-  actual cloud robot) and `positionsView.ts` (the in-browser local
+  actual cloud agent) and `positionsView.ts` (the in-browser local
   autopilot) — to `dailyLossTracker.record(pnl, timestamp)`.
   `DailyLossTracker.record()` itself already ignores non-negative P&L, so
   wins never touch the loss counter. 2 new tests confirm the reported `pnl`
   matches the trade journal's `realizedPnl` exactly and that `onRealizedPnl`
   fires with the right amount/timestamp on a loss (and not is-a-loss on a
   win). The daily-loss limit now actually engages when it should.
-- The robot's TRADED universe stays pinned to the 10 curated majors
+- The agent's TRADED universe stays pinned to the 10 curated majors
   (`slice(0, 10)`, deliberately) — widening THAT requires a proper sweep +
   out-of-sample validation first (measure, don't guess), not a slice change.
   Not yet done.
@@ -221,7 +221,7 @@ Kraken's live AssetPairs list and appends every online EUR pair beyond the
 10 curated majors (measured live: 538 total today) instead of a fixed ~26
 list; falls back to the previous static ~16-coin list if that call fails, so
 browsing never regresses. The curated 10 majors always lead in their fixed,
-load-bearing order — `autopilotRunner.mts`'s `slice(0, 10)` (what the robot
+load-bearing order — `autopilotRunner.mts`'s `slice(0, 10)` (what the agent
 actually TRADES) is completely unaffected; this only broadens what's
 BROWSABLE. Guarded against reintroducing the chart-freeze bug: the Markets
 list's auto-refresh sweep (`fetchTopMarkets`) is now capped at 60 coins
@@ -455,11 +455,11 @@ On identical inputs (5 majors, 720 1h candles, same parameters):
 Same three entries, opposite verdicts. The cause is **exit granularity, not
 position sizing**: livePipeline checks exits intrabar (`low <= stop`,
 `high >= target`); the autopilot only ever sees candle closes. On ADA the
-backtest booked a take-profit at 0.1584 the robot never saw — it exited at a
+backtest booked a take-profit at 0.1584 the agent never saw — it exited at a
 close of 0.1529 on the trailed stop. With few trades one such flip moves the
 profit factor fiftyfold.
 
-Intrabar is correct for a system with resting exchange orders. This robot polls
+Intrabar is correct for a system with resting exchange orders. This agent polls
 and acts on a close, so intrabar overstates what it can capture, on winners
 especially. Added `scripts/validateAutopilot.mts` — replays the real autopilot
 over the real 10-symbol universe with the real risk limits. **Tune against that
@@ -655,7 +655,7 @@ fold gate above (0/3), and `atrTargetMultiple: 3` over `atrStopMultiple: 2`
 gives rewardRisk of exactly **1.50**, sitting precisely on
 `DEFAULT_RISK_LIMITS.minRewardRisk` (1.5). The check is `rewardRisk <
 minRewardRisk`, so it passes today by zero margin: any later nudge to that limit
-would silently mute the entire robot. Shipping a losing config onto a rejection
+would silently mute the entire agent. Shipping a losing config onto a rejection
 boundary is not capital protection.
 
 **What shipped is measurement capability, not strategy:**
@@ -930,7 +930,7 @@ nothing in production reads it.
 `confidenceCalibration`, `exitReasonBreakdown`, `efficiencyReport` and
 `strategyBreakdown` exist in `src/core/feedback/performanceFeedback.ts` and are
 consumed by exactly ONE caller: `positionsView.ts`, a UI panel. **Nothing feeds
-back into any trading decision.** The robot analyses and displays; it does not
+back into any trading decision.** The agent analyses and displays; it does not
 adapt. Wiring calibration into sizing or entry selection is the obvious next
 step for the "learn and understand" goal, but it needs enough closed trades for
 the buckets to be signal rather than noise — which is what the shadow records
@@ -1003,7 +1003,7 @@ David asked whether the platform could extend to stocks. Decision: extend
 this app rather than build a new one, with a completely isolated stocks arm
 (own portfolio in USD, own state file `state/stocks-state.json`, own GitHub
 Actions workflow `stocks-autopilot.yml`) — nothing here can touch the crypto
-robot that already works. Chose **Alpaca** (official, documented, versioned
+agent that already works. Chose **Alpaca** (official, documented, versioned
 Market Data API) over a free keyless alternative (Yahoo Finance's unofficial
 chart endpoint — verified reachable, but undocumented and could break/get
 blocked without warning), since David wants this to eventually be able to
@@ -1037,7 +1037,7 @@ before trusting any specific number here — measure, don't guess applies to
 this asset class exactly as it does to crypto.
 
 ## Stocks promoted to a primary nav tab (2026-08-03, PR #40)
-David reported he couldn't find the stocks robot in the app, even though it
+David reported he couldn't find the stocks agent in the app, even though it
 was live and trading (confirmed via Telegram notifications and the committed
 `state/stocks-state.json`). Root cause: pure discoverability, not a data bug
 — Stocks was one tile among eight in the Tools grid, while crypto gets three
@@ -1079,7 +1079,7 @@ The Stocks tab itself gained a Markets section listing all 10 symbols with
 price + day change.
 
 **Honestly not tick-by-tick real-time** like Kraken's public feed — it updates
-on the robot's own cycle cadence (~15-30 min during US market hours only).
+on the agent's own cycle cadence (~15-30 min during US market hours only).
 That is the safe ceiling without adding a secret-holding proxy; a real-time
 option was offered and explicitly not chosen.
 

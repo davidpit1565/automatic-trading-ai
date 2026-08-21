@@ -91,7 +91,7 @@ describe('monitorSystemChanges', () => {
     expect(calls.length).toBeGreaterThan(0);
   });
 
-  it("labels the alert for the robot it's actually about, with the right currency symbol", async () => {
+  it("labels the alert for the agent it's actually about, with the right currency symbol", async () => {
     // Two robots share this same code path (see systemMonitorRunner.mts) —
     // an alert must say which one it's about and never claim € for a USD
     // portfolio (or vice versa).

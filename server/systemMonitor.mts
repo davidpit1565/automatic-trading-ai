@@ -227,7 +227,7 @@ export async function monitorSystemChanges(
   store: FileStore,
   telegram: { token: string; chatId: string },
   now: number,
-  /** Distinguishes which robot an alert is about, e.g. "Crypto" or "Stocks". */
+  /** Distinguishes which agent an alert is about, e.g. "Crypto" or "Stocks". */
   label = 'Crypto',
   currencySymbol = '€',
 ): Promise<void> {

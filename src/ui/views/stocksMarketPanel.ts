@@ -98,7 +98,7 @@ function rowHtml(r: Row): string {
 
 export function renderStocksMarketPanel(container: HTMLElement): ViewHandle {
   container.innerHTML = `
-    <p class="view-sub">Every tracked US stock. Prices update once per robot cycle (market hours only), not live.</p>
+    <p class="view-sub">Every tracked US stock. Prices update once per agent cycle (market hours only), not live.</p>
     <div class="mk-tabs" id="sm-tabs" role="tablist">${CATEGORIES.map(
       (c, i) =>
         `<button class="mk-tab${i === 0 ? ' active' : ''}" role="tab" aria-selected="${i === 0}" data-cat="${c.key}">${c.label}</button>`,

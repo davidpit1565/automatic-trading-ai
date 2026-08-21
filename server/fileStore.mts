@@ -4,7 +4,7 @@
  * The browser uses LocalStorageStore; the Node runner uses this, persisting
  * the entire platform state (portfolio, positions, journal, audit log, kill
  * switch) to a single JSON file that the GitHub Actions workflow commits
- * back to the repo between scheduled runs — so the cloud robot resumes
+ * back to the repo between scheduled runs — so the cloud agent resumes
  * exactly where it left off.
  */
 

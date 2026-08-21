@@ -224,7 +224,7 @@ const EXTRAS_HTML = `
     <div class="block"><div class="block-head"><h2>Closed orders</h2></div><div class="stack stack-card" id="mk-orders"><div class="empty">Loading…</div></div></div>
     <div class="block" id="mk-stats"></div>`;
 
-/** One of the robot's own past trades on this market — same row shape as
+/** One of the agent's own past trades on this market — same row shape as
  * the History view, just filtered to one symbol. */
 function tradeRowHtml(m: MarketRow, t: { kind: 'buy' | 'sell'; price: number; quantity: number; at: number; note: string | null }): string {
   const buy = t.kind === 'buy';

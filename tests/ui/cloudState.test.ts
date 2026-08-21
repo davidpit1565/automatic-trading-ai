@@ -1,5 +1,5 @@
 /**
- * Tests for the cloud-state reader — the layer that turns the robot's committed
+ * Tests for the cloud-state reader — the layer that turns the agent's committed
  * state file into what the app shows. Previously untested, which is how raw
  * 17-digit floats reached the History list in production.
  */

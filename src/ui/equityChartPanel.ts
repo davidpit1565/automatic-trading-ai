@@ -41,7 +41,7 @@ const mon = (t: number): string => new Date(t).toLocaleDateString('en-GB', { mon
  * tracking, where a weekly bucket would flatten everything into 1-2 candles). */
 const TARGET_CANDLES = 30;
 /** Never bucket finer than this — avoids near-one-sample-per-candle noise
- * when there's very little history. Roughly the cloud robot's recording
+ * when there's very little history. Roughly the cloud agent's recording
  * cadence, so this floor rarely binds once tracking has run a while. */
 const MIN_BUCKET_MS = 5 * 60_000;
 

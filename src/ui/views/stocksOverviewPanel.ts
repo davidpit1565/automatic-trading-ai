@@ -39,7 +39,7 @@ export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
   async function load(): Promise<void> {
     const state = await fetchStocksState();
     if (!state) {
-      if (!loadedOnce) statusEl.textContent = 'Waiting for the stocks robot — set up ALPACA_API_KEY_ID / ALPACA_API_SECRET_KEY as GitHub Actions secrets to start it (see PROJECT_STATE.md).';
+      if (!loadedOnce) statusEl.textContent = 'Waiting for the stocks agent — set up ALPACA_API_KEY_ID / ALPACA_API_SECRET_KEY as GitHub Actions secrets to start it (see PROJECT_STATE.md).';
       return;
     }
     loadedOnce = true;
