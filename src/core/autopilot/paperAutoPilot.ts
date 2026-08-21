@@ -113,6 +113,25 @@ export const AUTOPILOT_CONFIDENCE_RISK = { floorPct: 0.5, ceilingPct: 1 };
  */
 export const AUTOPILOT_MARKET_REGIME_PERIOD = 50;
 
+/**
+ * Risk limits for live entries — DEFAULT_RISK_LIMITS with a raised total-
+ * exposure cap (60% → 80%). Measured 2026-08-21 (`scripts/sweepAutopilot.mts`,
+ * real Kraken data, layered on the exact production config — regime EMA50 +
+ * confidence-scaled risk — in-sample + out-of-sample, both the 30-day and
+ * 120-day windows) specifically to see whether it narrows the real-money-
+ * readiness benchmark's gap to plain BTC buy-and-hold: in the 30-day strong-
+ * BTC-uptrend window it was the best of the knobs tried, but only +0.90pp
+ * over the 60% baseline (9.80%→10.70%, still zero losing trades) against an
+ * ~8pp gap to BTC — nowhere near closing it. In the 120-day window it was
+ * identical to the baseline (the higher cap was never actually binding).
+ * Kept anyway: no downside observed in either window, a small and
+ * risk-bounded widening (maxPositionPct/maxOpenPositions unchanged, so any
+ * single position is still capped the same way) — but it does not and is
+ * not claimed to fix the benchmark criterion; that gap is the accepted cost
+ * of this risk-managed design during a strong uptrend, not a bug.
+ */
+export const AUTOPILOT_RISK_LIMITS: RiskLimits = { ...DEFAULT_RISK_LIMITS, maxTotalExposurePct: 80 };
+
 export interface AutoPilotOptions {
   readonly source: MarketDataSource;
   readonly symbols: readonly string[];

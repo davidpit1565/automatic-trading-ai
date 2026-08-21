@@ -1187,6 +1187,47 @@ candidates clear the promotion bar yet — mean-reversion (17 trades, PF 0.58)
 and breakout (21 trades, PF 0.98) are both losing; live-mirror/no-confirm/
 fixed-stop have only 4 trades each, too few to read. Nothing promoted.
 
+## Exposure cap raised 60%→80%: measured, doesn't close the BTC gap (2026-08-21)
+
+The real-money-readiness gate flipped 5/6 criteria green; the sole blocker is
+the "benchmark" criterion — the live paper account trailing plain
+buy-and-hold BTC by ~17%. David asked whether that gap has a free, measured
+fix. It doesn't, but one small knob was worth adopting anyway.
+
+Extended `scripts/sweepAutopilot.mts` with a BTC-only benchmark line (it
+previously only printed a 10-asset basket mean — the wrong number to judge
+this specific criterion against) and three new rows, each loosening exactly
+one knob on top of the exact production config (regime EMA50 + confidence-
+scaled risk): a wider RSI-for-long ceiling (65→75), a wider trailing stop
+(1.5/1.5→2.5/2.5), and a higher total-exposure cap (60%→80%). Ran against
+real Kraken history, both the 30-day (strong BTC uptrend, +17.84%
+buy-and-hold) and 120-day (flat/down, BTC +0.25%) windows, in-sample +
+out-of-sample.
+
+Result: no free lever closes the gap. In the uptrend window, production was
++9.80% (zero losing trades); the best variant (exposure80) reached +10.70% —
++0.90pp, against an ~8pp gap. Widening RSI made it worse (+9.45%, and
+introduced real losing trades for the first time). In the flat/down window,
+production already BEATS BTC (+1.81% vs +0.25%); RSI-widening there is a
+real loss (-2.39%), while trailing/exposure widening are exactly neutral
+(never actually binding in that window). The gap is the accepted, structural
+cost of a risk-managed strategy that isn't 100%-invested during a strong
+trend — not a bug, and not something this sweep found a way around.
+
+Adopted only the exposure-cap widening (`AUTOPILOT_RISK_LIMITS` in
+`paperAutoPilot.ts`, wired into `server/autopilotRunner.mts`): no downside
+in either window, a small upside in one, and per-position/open-position
+caps are unchanged so no single trade can size up any further than before.
+Explicitly NOT sold as fixing the benchmark criterion — it doesn't, and
+closing that gap for real would mean giving up meaningfully more of the
+downside protection this design was built for, a tradeoff not yet made.
+While fixing this also caught and fixed a real display bug in the sweep
+script itself: `tradeAnalytics`'s `profitFactor` is `null` (not 0) when a
+run had zero losing trades, but the script printed that as `0.000` —
+reading as the worst possible score when it's actually the best. Several
+production-baseline rows hit exactly that case and would have been misread.
+Now renders as `∞`.
+
 ## Important Decisions
 - Autonomous improvement loop (CronCreate ~every 5h) resumes after usage resets;
   David pre-approved changes — no approval prompts.
