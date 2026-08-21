@@ -1,5 +1,6 @@
 # AI Trading Assistant
 
+**Live dashboard: https://davidpit1565.github.io/automatic-trading-ai/**
 **מדריך התקנה בעברית: [SETUP.he.md](SETUP.he.md)**
 
 A professional AI-powered trading **analysis** platform — a disciplined analyst, not a
@@ -61,10 +62,20 @@ Stage 6), every live order will require explicit human confirmation.
   (see `docs/execution-architecture.md`).
 - **Stage 3 — complete**: Risk Management Engine between signals and proposals —
   risk-based position sizing with a hard 1% per-trade ceiling, 20% single-position and
-  per-asset caps, 60% total-exposure limit, max open positions, daily loss protection
-  with automatic next-day reset, risk/reward and stop-distance validation, and a fully
-  explainable `TradeRiskAssessment`. Refusing a trade is a success condition. See
-  `ROADMAP.md` for stage-by-stage status.
+  per-asset caps, an 80% total-exposure limit (raised from 60% on 2026-08-21, measured
+  on real Kraken history — see `PROJECT_STATE.md`), max open positions, daily loss
+  protection with automatic next-day reset, risk/reward and stop-distance validation,
+  and a fully explainable `TradeRiskAssessment`. Refusing a trade is a success
+  condition. See `ROADMAP.md` for stage-by-stage status.
+- **Cloud agent — complete**: the crypto Paper Autopilot and a fully isolated US-stocks
+  Paper Autopilot both also run headlessly in GitHub Actions on a schedule (no browser
+  or computer needed), committing state back to the repo and sending Telegram alerts
+  on every trade. The public dashboard (GitHub Pages) reads that same committed state
+  read-only — what you see there always matches what the cloud agent actually did. See
+  `docs/cloud-autopilot.he.md`.
+- **US Stocks — complete**: a second, fully isolated Paper Autopilot trading a curated
+  set of US equities (Alpaca paper-trading, USD), its own primary nav tab, own state
+  file, own risk limits — a bug on one side cannot affect the other.
 
 ## Architecture
 
@@ -143,9 +154,12 @@ Every feature follows TDD: tests first, then implementation, then regression run
 
 ## Roadmap
 
-Stage 6 Execution Preparation (human confirmation mandatory; architecture already
-designed in `docs/execution-architecture.md`) → Stage 7 Performance Feedback. Each
-stage proceeds only after the previous one is verified — details in `ROADMAP.md`.
+Stage 7 (Performance Feedback) core is complete. What remains is the live half of
+Stage 6 — Execution Preparation (human confirmation mandatory; architecture already
+designed in `docs/execution-architecture.md`) — gated on the real-money-readiness
+checklist in `src/core/feedback/realMoneyReadiness.ts` turning green on the real,
+committed track record. Each stage proceeds only after the previous one is verified —
+details in `ROADMAP.md`.
 
 > Educational and analytical tool. Not financial advice. Past performance never
 > guarantees future results.
