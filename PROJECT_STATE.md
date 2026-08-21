@@ -1266,11 +1266,19 @@ honestly be claimed from this data the way it could for the exposure cap.
 The real SOL/ETH refusal from earlier today is a genuine live data point
 that this particular backtest window doesn't corroborate either way.
 
-Not adopted pending a decision: the honest choices are (a) leave it, since
-the measured evidence is silent rather than supportive; (b) adopt it anyway
-as a low-risk bet given the live anecdote, explicitly labelled as
-"unmeasured, not measured-safe"; or (c) wait and accumulate more live
-audit-log evidence of how often the cap actually binds before deciding.
+Decided: leave it at 5, not adopted. Given the choice between (a) leave it
+since the measured evidence is silent rather than supportive, (b) adopt it
+anyway as an unmeasured bet, or (c) wait for more live evidence — (a) is the
+only one consistent with this project's own "measure, don't guess; keep
+only measured improvements" rule. Absence of a measured downside is not the
+same bar as the exposure-cap change cleared (a measured, if small, upside
+with no downside) — it's simply "not exercised by this data." There's also
+a real, non-backtested reason for caution the sweep can't see either way:
+more concurrent positions means less diversification benefit per trade and
+more assets exposed simultaneously in a correlated crypto-wide selloff, even
+though per-position/per-asset caps are unchanged. Capital protection over
+raw profit (CLAUDE.md's priority order) tips this the same direction as the
+measurement: stay at 5 until there's an actual measured case for more.
 
 ## Stocks reliability gap fixed: no internal loop (2026-08-21)
 
