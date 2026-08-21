@@ -15,7 +15,12 @@
 import { chromium } from 'playwright-core';
 
 // ?demo=1 forces the deterministic synthetic data source so e2e runs are
-// reproducible and never depend on (or hammer) live market APIs.
+// reproducible and never depend on (or hammer) live market APIs. Note that
+// the crypto/stocks hub's Overview/History/Profit sub-tabs are a partial
+// exception: they read the REAL committed cloud-agent state from a public
+// raw.githubusercontent.com URL (see src/ui/cloudState.ts) regardless of
+// ?demo=1, so checks touching them only assert structure, never fetched
+// content, to stay reliable without live network access.
 const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:4173/?demo=1';
 const executablePath =
   process.env.CHROMIUM_PATH ??
@@ -46,20 +51,27 @@ try {
   // Bottom navigation exposes the primary sections.
   const navs = await page.$$eval('.nav-btn', (els) => els.map((e) => e.dataset.nav));
   check(
-    'bottom nav has home/markets/history/tools',
-    ['home', 'markets', 'history', 'tools'].every((n) => navs.includes(n)),
+    'bottom nav has crypto/stocks/markets/tools',
+    ['crypto', 'stocks', 'markets', 'tools'].every((n) => navs.includes(n)),
   );
 
-  // Home dashboard (default view) renders its real-time value card.
-  check('home dashboard equity card', (await page.$('#hv-equity')) !== null);
+  // Crypto is the default view — its Overview sub-tab renders the real cloud
+  // agent's equity card (matches the Telegram alerts, see assetHubView.ts).
+  await page.click('[data-nav="crypto"]');
+  await page.waitForSelector('#hv-equity', { timeout: 10000 });
+  check('crypto overview equity card', (await page.$('#hv-equity')) !== null);
 
-  // Markets and History views mount.
+  // Markets view (top-level nav) mounts the full market browser.
   await page.click('[data-nav="markets"]');
   await page.waitForSelector('#mk-list', { timeout: 10000 });
   check('markets view rendered', (await page.$('#mk-list')) !== null);
-  await page.click('[data-nav="history"]');
-  await page.waitForSelector('#history-list', { timeout: 10000 });
-  check('history view rendered', (await page.$('#history-list')) !== null);
+
+  // History is now a sub-tab inside the Crypto asset hub, not a top-level nav
+  // destination (see assetHubView.ts). Its content lands in #hub-history-list.
+  await page.click('[data-nav="crypto"]');
+  await page.click('[data-hub="history"]');
+  await page.waitForSelector('#hub-history-list', { timeout: 10000 });
+  check('crypto history sub-tab rendered', (await page.$('#hub-history-list')) !== null);
 
   // Backtesting Lab runs and renders a comparison (via Tools).
   await page.click('[data-nav="tools"]');
@@ -76,80 +88,38 @@ try {
   await page.waitForSelector('#grid-results .stat-card', { timeout: 20000 });
   check('grid result cards', (await page.$$('#grid-results .stat-card')).length >= 4);
 
-  // Paper Portfolio: buy, then a position row must appear.
+  // Paper Portfolio: the manual buy/sell simulator (PaperPortfolio, localStorage-
+  // backed). This is the only client-side portfolio panel left — the old
+  // scan->signal->risk "verified pipeline" position lifecycle now runs
+  // server-side (server/autopilotRunner.mts) and is exercised below via the
+  // Market Scan section's Signal/Risk panels instead of an in-browser open/close
+  // flow. Buy then sell the same quantity to prove the full round trip works.
   await page.click('[data-nav="tools"]');
   await page.click('[data-tab="portfolio"]');
   await page.waitForSelector('#pp-buy', { timeout: 10000 });
   await page.click('#pp-buy');
   await page.waitForSelector('#pp-positions table', { timeout: 20000 });
-  check('paper portfolio position row', (await page.$$('#pp-positions tbody tr')).length === 1);
-
-  // PORTFOLIO — full position lifecycle through the verified pipeline.
-  await page.click('[data-nav="tools"]');
-  await page.click('[data-tab="positions"]');
-  await page.waitForSelector('#pf-open', { timeout: 10000 });
-  await page.waitForSelector('#pf-overview .stat-card', { timeout: 20000 });
-  check(
-    'portfolio overview cards rendered',
-    (await page.$$('#pf-overview .stat-card')).length >= 5,
-  );
-  // Try each demo symbol until one qualifies end-to-end (scan->signal->risk).
-  const pfSymbols = await page.$$eval('#pf-symbol option', (els) => els.map((e) => e.value));
-  let pfOpened = false;
-  for (const symbol of pfSymbols) {
-    await page.selectOption('#pf-symbol', symbol);
-    await page.click('#pf-open');
-    await page.waitForFunction(
-      () => {
-        const t = document.querySelector('#pf-status')?.textContent ?? '';
-        return t.includes('Opened') || t.includes('refused') || t.includes('no qualifying') || t.includes('No market data');
-      },
-      { timeout: 30000 },
-    );
-    const text = await page.$eval('#pf-status', (e) => e.textContent);
-    if (text.includes('Opened')) {
-      pfOpened = true;
-      break;
-    }
-  }
-  check('a position opened via the pipeline', pfOpened);
-  await page.waitForSelector('#pf-positions tbody tr', { timeout: 20000 });
-  check('open position row rendered', (await page.$$('#pf-positions tbody tr')).length >= 1);
-  await page.click('[data-close-all]');
-  await page.waitForSelector('#pf-journal tbody tr', { timeout: 20000 });
-  check('journal entry after close', (await page.$$('#pf-journal tbody tr')).length === 1);
-  await page.waitForSelector('#pf-analytics .stat-card', { timeout: 20000 });
-  const analyticsText = await page.$eval('#pf-analytics', (e) => e.textContent);
-  check(
-    'analytics render win rate, profit factor, drawdown',
-    ['Win rate', 'Profit factor', 'Max drawdown'].every((s) => analyticsText.includes(s)),
-  );
-  check('equity and drawdown charts rendered', (await page.$$('#pf-analytics svg')).length === 2);
-
-  // PAPER AUTOPILOT — autonomous simulated cycle + kill switch.
-  check(
-    'autopilot starts stopped',
-    (await page.$eval('#ap-status', (e) => e.textContent)).includes('stopped'),
-  );
-  await page.click('#ap-cycle');
+  check('paper portfolio position row after buy', (await page.$$('#pp-positions tbody tr')).length === 1);
+  await page.click('#pp-sell');
   await page.waitForFunction(
-    () => document.querySelector('#ap-status')?.textContent?.includes('Last cycle'),
-    { timeout: 60000 },
+    () => (document.querySelector('#pp-positions')?.textContent ?? '').includes('No open positions'),
+    { timeout: 20000 },
   );
-  const apStatus = await page.$eval('#ap-status', (e) => e.textContent);
-  check('autopilot cycle reports actions', /opened \d+ \/ closed \d+/.test(apStatus));
-  await page.waitForSelector('#ap-audit tbody tr', { timeout: 20000 });
-  check('audit log populated', (await page.$$('#ap-audit tbody tr')).length > 0);
-  await page.click('#ap-kill');
-  check(
-    'kill switch halts automation',
-    (await page.$eval('#ap-status', (e) => e.textContent)).includes('KILL SWITCH ENGAGED'),
-  );
-  await page.click('#ap-kill'); // disengage for a clean state
-  check(
-    'kill switch disengages explicitly',
-    !(await page.$eval('#ap-status', (e) => e.textContent)).includes('KILL SWITCH'),
-  );
+  check('paper portfolio position closed after sell', (await page.$$('#pp-positions tbody tr')).length === 0);
+  check('trade journal recorded buy and sell', (await page.$$('#pp-trades tbody tr')).length === 2);
+
+  // CLOUD AUTOPILOT — the old in-browser "Paper Autopilot" panel (manual
+  // cycle button + kill switch) no longer exists: the autonomous cycle now
+  // runs on a schedule server-side (server/autopilotRunner.mts via
+  // .github/workflows/autopilot.yml) and commits its state to
+  // state/autopilot-state.json. The SPA only displays that committed state,
+  // read-only, in the Crypto hub's Overview/History/Profit sub-tabs. Assert
+  // structure only (see BASE comment above) — the fetch itself is live network.
+  await page.click('[data-nav="crypto"]');
+  await page.click('[data-hub="profit"]');
+  await page.waitForSelector('#hub-return', { timeout: 10000 });
+  check('cloud autopilot return card rendered', (await page.$('#hub-return')) !== null);
+  check('cloud autopilot readiness panel rendered', (await page.$('#hub-readiness')) !== null);
 
   // MONITORING — manual scan through the full pipeline.
   await page.click('[data-nav="tools"]');
