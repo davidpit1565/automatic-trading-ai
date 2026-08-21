@@ -392,9 +392,11 @@ export function candleChartSvg(
   }
   const ema20Path = buildEmaPath(ema20);
   const ema50Path = buildEmaPath(ema50);
+  // Bright vs. dimmed neutral (not two blues) — the app's palette has no
+  // blue anywhere; brightness/weight carries the distinction instead.
   const emaLines = `
-    ${ema20Path ? `<path class="pema pema20" fill="none" stroke="#6cb3ff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" d="${ema20Path}"/>` : ''}
-    ${ema50Path ? `<path class="pema pema50" fill="none" stroke="#4c82f7" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" d="${ema50Path}"/>` : ''}
+    ${ema20Path ? `<path class="pema pema20" fill="none" stroke="var(--accent-text)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" d="${ema20Path}"/>` : ''}
+    ${ema50Path ? `<path class="pema pema50" fill="none" stroke="var(--text-dim)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" d="${ema50Path}"/>` : ''}
   `;
 
   // Support/Resistance levels (last 20 candles). Labelled "R"/"S" at the
@@ -404,10 +406,10 @@ export function candleChartSvg(
   const srResistanceY = geo.y(sr.resistance);
   const srSupportY = geo.y(sr.support);
   const srLines = `
-    <line class="psr psr-resistance" x1="${padL.toFixed(1)}" y1="${srResistanceY.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${srResistanceY.toFixed(1)}" stroke="rgba(22, 199, 132, 0.3)" stroke-width="1" stroke-dasharray="3,2"/>
-    <text class="psr-label psr-label-resistance" x="${(padL + 2).toFixed(1)}" y="${(srResistanceY - 2.5).toFixed(1)}" font-size="7" fill="rgba(22, 199, 132, 0.85)">R</text>
-    <line class="psr psr-support" x1="${padL.toFixed(1)}" y1="${srSupportY.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${srSupportY.toFixed(1)}" stroke="rgba(234, 57, 67, 0.3)" stroke-width="1" stroke-dasharray="3,2"/>
-    <text class="psr-label psr-label-support" x="${(padL + 2).toFixed(1)}" y="${(srSupportY - 2.5).toFixed(1)}" font-size="7" fill="rgba(234, 57, 67, 0.85)">S</text>
+    <line class="psr psr-resistance" x1="${padL.toFixed(1)}" y1="${srResistanceY.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${srResistanceY.toFixed(1)}" stroke="var(--hot)" stroke-width="1" stroke-dasharray="3,2" opacity="0.3"/>
+    <text class="psr-label psr-label-resistance" x="${(padL + 2).toFixed(1)}" y="${(srResistanceY - 2.5).toFixed(1)}" font-size="7" fill="var(--hot)" opacity="0.85">R</text>
+    <line class="psr psr-support" x1="${padL.toFixed(1)}" y1="${srSupportY.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${srSupportY.toFixed(1)}" stroke="var(--cold)" stroke-width="1" stroke-dasharray="3,2" opacity="0.3"/>
+    <text class="psr-label psr-label-support" x="${(padL + 2).toFixed(1)}" y="${(srSupportY - 2.5).toFixed(1)}" font-size="7" fill="var(--cold)" opacity="0.85">S</text>
   `;
 
   const last = candles[n - 1]!;
