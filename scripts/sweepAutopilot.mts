@@ -257,11 +257,17 @@ for (const [entryTf, confirmTf, label] of [['1h', '4h', '1h entry / 30 days'], [
   // actually needs to be beaten for that criterion to pass.
   console.log(`buy & hold, BTC only:              ${btcBh === null ? 'n/a' : btcBh.toFixed(2) + '%'}`);
   console.log('config                  |   full ret |  full PF | trades |  OOS ret | OOS PF');
+  // profitFactor is `null` from tradeAnalytics whenever there were zero
+  // losing trades (grossLoss === 0) — undefined, not zero. Printing that as
+  // "0.000" reads as the worst possible score when it's actually the best
+  // (every trade was a winner); render it as '∞' instead so the sweep output
+  // can't be misread backwards.
+  const fmtPf = (pf: number | null, n: number): string => (pf === null ? (n > 0 ? '∞' : '-') : pf.toFixed(3));
   for (const cfg of CONFIGS) {
     const full = await replay(cfg, e, c, usable, entryTf, confirmTf, daily, topTraderRatios);
     const oos = await replay(cfg, e, c, usable.slice(mid), entryTf, confirmTf, daily, topTraderRatios);
     console.log(
-      `${cfg.name} | ${full.ret.toFixed(3).padStart(9)}% | ${(full.pf ?? 0).toFixed(3).padStart(8)} | ${String(full.n).padStart(6)} | ${oos.ret.toFixed(3).padStart(7)}% | ${(oos.pf ?? 0).toFixed(3)}`,
+      `${cfg.name} | ${full.ret.toFixed(3).padStart(9)}% | ${fmtPf(full.pf, full.n).padStart(8)} | ${String(full.n).padStart(6)} | ${oos.ret.toFixed(3).padStart(7)}% | ${fmtPf(oos.pf, oos.n)}`,
     );
   }
 }
