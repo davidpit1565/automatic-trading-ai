@@ -118,6 +118,19 @@ const CONFIGS: Cfg[] = [
   { name: 'PROD+regime50+confRisk + rsi75', minConfidence: 40, maxRsiForLong: 75, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 } },
   { name: 'PROD+regime50+confRisk + trail 2.5/2.5', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 2.5, trailR: 2.5 }, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 } },
   { name: 'PROD+regime50+confRisk + exposure80', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 }, riskLimits: { maxTotalExposurePct: 80 } },
+  // The exposure-cap widening above was adopted into production 2026-08-21
+  // (see paperAutoPilot.ts's AUTOPILOT_RISK_LIMITS). The TRUE current
+  // production config is regime EMA50 + confRisk .5-1 + BTC market regime
+  // EMA50 + that 80% exposure cap — this row matches it exactly, as the
+  // fair baseline for the next knob (maxOpenPositions, below).
+  { name: 'PROD live (regime50+confRisk+BTCregime50+exposure80)', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 }, marketRegimePeriod: 50, riskLimits: { maxTotalExposurePct: 80 } },
+  // Same exact config, position-count cap raised 5→8 (the audit log shows
+  // real same-day refusals of otherwise-qualifying SOL/ETH setups purely on
+  // "maximum open positions reached (5/5)", not signal quality) — does more
+  // concurrent (smaller, since per-position/per-asset caps are unchanged)
+  // positions actually help, or does the extra concentration hurt more than
+  // it captures?
+  { name: 'PROD live + maxOpenPositions 8', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 }, marketRegimePeriod: 50, riskLimits: { maxTotalExposurePct: 80, maxOpenPositions: 8 } },
 ];
 
 const source = new KrakenPublicSource();

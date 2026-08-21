@@ -20,6 +20,7 @@
  * "measure, don't guess" gap, not an oversight.
  */
 
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { AlpacaStockSource, CURATED_STOCK_INSTRUMENTS, BROWSABLE_STOCK_INSTRUMENTS } from '../src/core/data/alpacaStocks';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
@@ -60,6 +61,66 @@ const MARKET_DAY_ANCHOR_KEY = 'market-day-anchor';
  */
 const SNAPSHOT_STAGGER_MS = Number(process.env['STOCKS_SNAPSHOT_STAGGER_MS']) || 350;
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+/**
+ * Internal cycle loop, mirroring the crypto runner's fix for the same root
+ * cause (`autopilotRunner.mts`'s `LOOP_CYCLES`/`STATE_COMMIT_EVERY`, measured
+ * 2026-08-17): GitHub's scheduler is unreliable at high cron frequency, so a
+ * single-cycle-per-trigger design silently loses most of its intended runs.
+ * Measured 2026-08-21: despite `stocks-autopilot.yml`'s nominal every-15-
+ * minute cron, actual gaps between recorded equity-history points during market
+ * hours were mostly 60-110 minutes — the stocks side never got crypto's
+ * mitigation. 24 cycles * 5 min = 120 min of coverage per trigger, safely
+ * past the worst gap measured.
+ */
+const LOOP_CYCLES = Math.max(1, Number(process.env['STOCKS_LOOP_CYCLES']) || 1);
+const LOOP_INTERVAL_MS = Number(process.env['STOCKS_LOOP_INTERVAL_MS']) || 300_000;
+/** Persist state to git every N cycles during the run (0 = only at run end). */
+const STATE_COMMIT_EVERY = Math.max(0, Number(process.env['STOCKS_STATE_COMMIT_EVERY']) || 0);
+
+/**
+ * Commit + push the state file mid-run, same rationale and shape as the
+ * crypto runner's `persistStateToGit` — duplicated rather than shared/
+ * imported to keep the two sides fully isolated (see this file's header):
+ * a bug in one's git-persistence helper must never be able to reach the
+ * other's. Best-effort; only runs inside GitHub Actions.
+ */
+function persistStateToGit(label: string): void {
+  if (process.env['GITHUB_ACTIONS'] !== 'true') return;
+  const run = (cmd: string): string => execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  try {
+    run('git config user.name "github-actions[bot]"');
+    run('git config user.email "github-actions[bot]@users.noreply.github.com"');
+    run(`git add ${STATE_PATH}`);
+    try {
+      run('git diff --staged --quiet');
+      return; // exits 0 = no changes
+    } catch {
+      /* non-zero = there are staged changes; proceed to commit */
+    }
+    run(`git commit -m "Stocks autopilot state (mid-run ${label})"`);
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        run('git push origin HEAD:main');
+        console.log(`Stocks state persisted mid-run (${label}).`);
+        return;
+      } catch {
+        try {
+          run('git fetch origin main');
+          run('git rebase -X theirs origin/main');
+        } catch {
+          try {
+            run('git rebase --abort');
+          } catch {
+            /* nothing to abort */
+          }
+        }
+      }
+    }
+    console.error(`Could not persist stocks state mid-run (${label}) after retries.`);
+  } catch (cause) {
+    console.error('persistStateToGit failed:', cause instanceof Error ? cause.message : cause);
+  }
+}
 // No real Alpaca history exists yet to measure a stocks-specific floor via
 // sweepStrategy.mts (see the file-header note). Borrowing crypto's measured
 // AUTOPILOT_MIN_CONFIDENCE (40) as a conservative interim floor — capital
@@ -241,11 +302,6 @@ export async function runStocksCycle(
 }
 
 async function main(): Promise<void> {
-  const now = Date.now();
-  if (!isUsMarketOpen(now)) {
-    console.log('US market closed — skipping this stocks cycle.');
-    return;
-  }
   const source = buildAlpacaSourceFromEnv();
   if (!source) {
     console.log('Alpaca credentials not configured (ALPACA_API_KEY_ID/ALPACA_API_SECRET_KEY) — skipping.');
@@ -278,10 +334,27 @@ async function main(): Promise<void> {
     chatId: process.env['TELEGRAM_CHAT_ID'] ?? '',
   };
 
-  try {
-    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, symbols, now, SNAPSHOT_STAGGER_MS);
-  } catch (cause) {
-    console.error('Stocks cycle failed:', cause instanceof Error ? cause.message : cause);
+  for (let i = 0; i < LOOP_CYCLES; i++) {
+    if (i > 0) await sleep(LOOP_INTERVAL_MS);
+    const now = Date.now();
+    if (!isUsMarketOpen(now)) {
+      console.log('US market closed — skipping this stocks cycle.');
+      continue;
+    }
+    let traded = false;
+    try {
+      traded = await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, symbols, now, SNAPSHOT_STAGGER_MS);
+    } catch (cause) {
+      // Never let one bad cycle kill the whole run — log and keep looping.
+      console.error('Stocks cycle failed:', cause instanceof Error ? cause.message : cause);
+    }
+    // Persist mid-run: immediately after any trade, and every N cycles. The
+    // final cycle is left to the workflow's end-of-run commit step.
+    const isLast = i === LOOP_CYCLES - 1;
+    const periodic = STATE_COMMIT_EVERY > 0 && (i + 1) % STATE_COMMIT_EVERY === 0;
+    if (!isLast && (traded || periodic)) {
+      persistStateToGit(`cycle ${i + 1}/${LOOP_CYCLES}`);
+    }
   }
 }
 
