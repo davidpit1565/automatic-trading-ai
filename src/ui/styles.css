@@ -25,14 +25,16 @@
      --accent above which needs to host white text on top of it. */
   --accent-text: #dbdfe8;
 
-  /* Semantic colours — muted sage/dusty-rose rather than saturated neon,
-     matching the Revolut X reference (its hot/cold reads as desaturated
-     pastel-on-black, not bright neon-on-navy). Still legible on the deep
-     background at normal text weight. */
-  --hot: #7fbf9c;
-  --hot-tint: rgba(127, 191, 156, 0.13);
-  --cold: #d98c93;
-  --cold-tint: rgba(217, 140, 147, 0.13);
+  /* Semantic colours — a fresh, saturated emerald/coral pair. An earlier
+     pass over-corrected toward a fully desaturated sage/dusty-rose (chasing
+     the Revolut X reference too literally) and it read as flat/lifeless
+     against the deep background rather than premium — reported directly
+     and fixed 2026-08-21. Still clearly distinct from the original harsh
+     neon (#21d789/#f2495f), just not washed out. */
+  --hot: #4cd787;
+  --hot-tint: rgba(76, 215, 135, 0.13);
+  --cold: #f26d7d;
+  --cold-tint: rgba(242, 109, 125, 0.13);
   --neutral: #8b93a5;
   --neutral-tint: rgba(139, 147, 165, 0.13);
   --warn: #f5b93d;
@@ -109,7 +111,7 @@ body {
 
 .data-source-banner.live {
   background: var(--hot-tint);
-  border-color: rgba(127, 191, 156, 0.4);
+  border-color: rgba(76, 215, 135, 0.4);
   color: var(--hot);
 }
 
@@ -342,13 +344,13 @@ button.secondary:active {
 .badge-hot {
   background: var(--hot-tint);
   color: var(--hot);
-  border: 1px solid rgba(127, 191, 156, 0.4);
+  border: 1px solid rgba(76, 215, 135, 0.4);
 }
 
 .badge-cold {
   background: var(--cold-tint);
   color: var(--cold);
-  border: 1px solid rgba(217, 140, 147, 0.4);
+  border: 1px solid rgba(242, 109, 125, 0.4);
 }
 
 .badge-neutral {
@@ -417,7 +419,7 @@ button.secondary:active {
 
 .signal-opportunity {
   background: var(--hot-tint);
-  border: 1px solid rgba(127, 191, 156, 0.4);
+  border: 1px solid rgba(76, 215, 135, 0.4);
 }
 
 .signal-rejected {
@@ -489,7 +491,7 @@ button.secondary:active {
 
 .verdict-robust {
   background: var(--hot-tint);
-  border: 1px solid rgba(127, 191, 156, 0.4);
+  border: 1px solid rgba(76, 215, 135, 0.4);
 }
 
 .verdict-caution {
@@ -499,7 +501,7 @@ button.secondary:active {
 
 .verdict-overfitted {
   background: var(--cold-tint);
-  border: 1px solid rgba(217, 140, 147, 0.4);
+  border: 1px solid rgba(242, 109, 125, 0.4);
 }
 
 .verdict-insufficient-data {
@@ -722,8 +724,8 @@ button.secondary:active {
   background: radial-gradient(110% 65% at 35% -15%, var(--wash-color, transparent) 0%, transparent 75%);
   transition: opacity var(--dur-slow) var(--ease);
 }
-body[data-sentiment="up"] { --wash-color: rgba(127, 191, 156, 0.5); }
-body[data-sentiment="down"] { --wash-color: rgba(217, 140, 147, 0.5); }
+body[data-sentiment="up"] { --wash-color: rgba(76, 215, 135, 0.5); }
+body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 
 .topbar {
   position: sticky; top: 0; z-index: 20;
@@ -811,8 +813,8 @@ body[data-sentiment="down"] { --wash-color: rgba(217, 140, 147, 0.5); }
   position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(130% 70% at 50% -25%, var(--glow-color, transparent) 0%, transparent 65%);
 }
-.hero.up { --glow-color: rgba(127, 191, 156, 0.16); }
-.hero.down { --glow-color: rgba(217, 140, 147, 0.16); }
+.hero.up { --glow-color: rgba(76, 215, 135, 0.16); }
+.hero.down { --glow-color: rgba(242, 109, 125, 0.16); }
 .hero::after {
   /* Subtle top-edge highlight — the kind of glass-panel detail premium
      fintech dashboards use to give a card a sense of light and depth. */
@@ -953,7 +955,7 @@ body[data-sentiment="down"] { --wash-color: rgba(217, 140, 147, 0.5); }
 /* Freshness dot beside the update time, mirroring the reference market apps. */
 .row-clock { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
   margin-inline-end: 0.35rem; vertical-align: baseline; }
-.row-clock.fresh { background: var(--hot); box-shadow: 0 0 6px rgba(127,191,156,0.5); }
+.row-clock.fresh { background: var(--hot); box-shadow: 0 0 6px rgba(76,215,135,0.5); }
 .row-clock.stale { background: var(--warn); }
 .market-more { padding: 0.9rem; text-align: center; font-size: 0.82rem; color: var(--text-dim); }
 
@@ -1216,8 +1218,8 @@ body[data-sentiment="down"] { --wash-color: rgba(217, 140, 147, 0.5); }
 
 /* Support/Resistance levels with smooth animation */
 .pchart .psr { transition: stroke 300ms ease, opacity 300ms ease; }
-.pchart .psr-resistance { stroke: rgba(127, 191, 156, 0.32); }
-.pchart .psr-support { stroke: rgba(217, 140, 147, 0.32); }
+.pchart .psr-resistance { stroke: rgba(76, 215, 135, 0.32); }
+.pchart .psr-support { stroke: rgba(242, 109, 125, 0.32); }
 .pchart .psr-label { font-family: inherit; font-weight: 700; letter-spacing: 0.02em; }
 
 /* OHLC readout: one compact, legible row with a scrim behind it */
@@ -1252,7 +1254,7 @@ body[data-sentiment="down"] { --wash-color: rgba(217, 140, 147, 0.5); }
 .readiness .block-head { display: flex; align-items: center; justify-content: space-between; }
 .ready-badge { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.05em; padding: 0.22rem 0.6rem;
   border-radius: var(--r-pill); }
-.ready-badge.go { background: var(--hot-tint); color: var(--hot); border: 1px solid rgba(127,191,156,0.4); }
+.ready-badge.go { background: var(--hot-tint); color: var(--hot); border: 1px solid rgba(76,215,135,0.4); }
 .ready-badge.no { background: var(--warn-tint); color: var(--warn); border: 1px solid rgba(245,185,61,0.4); }
 .readiness-note { color: var(--text-dim); font-size: 0.8rem; margin: 0.25rem 0 0.6rem; }
 .readiness-list { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-direction: column;
@@ -1355,9 +1357,9 @@ body[data-sentiment="down"] { --wash-color: rgba(217, 140, 147, 0.5); }
   to { transform: translateX(400px); opacity: 0; }
 }
 
-.toast.success { border-color: rgba(127,191,156,0.4); background: var(--hot-tint); }
+.toast.success { border-color: rgba(76,215,135,0.4); background: var(--hot-tint); }
 .toast.success .toast-icon { color: var(--hot); }
-.toast.error { border-color: rgba(217,140,147,0.4); background: var(--cold-tint); }
+.toast.error { border-color: rgba(242,109,125,0.4); background: var(--cold-tint); }
 .toast.error .toast-icon { color: var(--cold); }
 .toast.info { border-color: rgba(255, 255, 255, 0.4); background: var(--accent-tint); }
 .toast.info .toast-icon { color: var(--accent-text); }
