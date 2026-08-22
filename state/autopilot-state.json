@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 10373.534159205761,
+    "cash": 8292.603206869086,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 576.6966039252974,
@@ -9,7 +9,27 @@
       "equity": 10373.534159205761
     }
   },
-  "open-positions": [],
+  "open-positions": [
+    {
+      "id": "SOLEUR:1787359532367:0",
+      "symbol": "SOLEUR",
+      "openedAt": 1787359532367,
+      "entryPrice": 79.9,
+      "quantity": 25.966293264595148,
+      "initialQuantity": 25.966293264595148,
+      "stopLoss": 77.68698234883347,
+      "takeProfit": 84.32603530233308,
+      "feesPaid": 6.224120495523458,
+      "realizedPnl": 0,
+      "highestPrice": 79.9,
+      "lowestPrice": 79.9,
+      "confidence": 48.566843609316905,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "audit-log": [
     {
       "timestamp": 1784042069348,
@@ -1515,12 +1535,19 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 7725.902056579386 @ 0.195863 (take-profit)"
+    },
+    {
+      "timestamp": 1787359532367,
+      "intentId": "SOLEUR:1787359532367:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry SOLEUR: 25.966293264595148 @ 79.9 (stop 77.68698234883347, target 84.32603530233308, confidence 49)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1787359220835,
+    "at": 1787359532367,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -1534,10 +1561,6 @@
   "daily-summary-evening": "2026-08-21",
   "allclear-last-at": 1786553925696,
   "equity-history": [
-    {
-      "at": 1785515577633,
-      "equity": 9567.16
-    },
     {
       "at": 1785515886054,
       "equity": 9567.16
@@ -21533,6 +21556,10 @@
     {
       "at": 1787359220835,
       "equity": 10373.53
+    },
+    {
+      "at": 1787359532367,
+      "equity": 10367.31
     }
   ],
   "trade-journal": [
@@ -22608,7 +22635,8 @@
     "c:DOTEUR:1787303791491:2",
     "c:DOGEEUR:1787308170186:3",
     "c:LINKEUR:1787308481690:4",
-    "c:ADAEUR:1787303477749:0"
+    "c:ADAEUR:1787303477749:0",
+    "o:SOLEUR:1787359532367:0"
   ],
   "real-money-readiness": {
     "ready": false,
@@ -22631,7 +22659,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -14.40%"
+        "detail": "vs buy-and-hold BTC -14.25%"
       },
       {
         "key": "drawdown",
@@ -22644,7 +22672,7 @@
         "detail": "profit factor 1.82 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — vs buy-and-hold BTC -14.40%.",
+    "summary": "NOT READY — vs buy-and-hold BTC -14.25%.",
     "unmet": [
       "benchmark"
     ]
@@ -22666,7 +22694,7 @@
   },
   "shadow:live-mirror:shadow-started-at": 1785254092443,
   "shadow:live-mirror:portfolio-engine": {
-    "cash": 10970.165301791247,
+    "cash": 8769.550142251923,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 1085.5407508267372,
@@ -22677,7 +22705,7 @@
   },
   "shadow:no-confirm:shadow-started-at": 1785254092443,
   "shadow:no-confirm:portfolio-engine": {
-    "cash": 10970.165301791247,
+    "cash": 8769.550142251923,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 1085.5407508267372,
@@ -22688,7 +22716,7 @@
   },
   "shadow:fixed-stop:shadow-started-at": 1785254092443,
   "shadow:fixed-stop:portfolio-engine": {
-    "cash": 10970.165301791247,
+    "cash": 8769.550142251923,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 1085.5407508267372,
@@ -22731,39 +22759,39 @@
     }
   },
   "shadow-standings": {
-    "at": 1787359220835,
+    "at": 1787359532367,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10970.165301791247,
-        "returnPct": 9.701653017912468,
+        "equity": 10963.583202610173,
+        "returnPct": 9.635832026101724,
         "trades": 19,
         "winRatePct": 73.68421052631578,
         "profitFactor": 5.597532800125882,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1785254092443
       },
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10970.165301791247,
-        "returnPct": 9.701653017912468,
+        "equity": 10963.583202610173,
+        "returnPct": 9.635832026101724,
         "trades": 19,
         "winRatePct": 73.68421052631578,
         "profitFactor": 5.597532800125882,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1785254092443
       },
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10970.165301791247,
-        "returnPct": 9.701653017912468,
+        "equity": 10963.583202610173,
+        "returnPct": 9.635832026101724,
         "trades": 19,
         "winRatePct": 73.68421052631578,
         "profitFactor": 5.597532800125882,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1785254092443
       },
       {
@@ -22791,8 +22819,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10365.685726361091,
-        "returnPct": 3.656857263610909,
+        "equity": 10355.79107783294,
+        "returnPct": 3.557910778329406,
         "trades": 99,
         "winRatePct": 44.44444444444444,
         "profitFactor": 1.6095965059705664,
@@ -22802,12 +22830,12 @@
       {
         "key": "whale-flow",
         "label": "Refuses entries during heavy net selling by large traders",
-        "equity": 11010.823676899001,
-        "returnPct": 10.10823676899001,
+        "equity": 11004.21718269286,
+        "returnPct": 10.042171826928607,
         "trades": 11,
         "winRatePct": 90.9090909090909,
         "profitFactor": 30.314994861278493,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1786561343790
       },
       {
@@ -22824,12 +22852,12 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10771.609411643454,
-        "returnPct": 7.716094116434542,
+        "equity": 10765.146445996468,
+        "returnPct": 7.651464459964681,
         "trades": 7,
         "winRatePct": 100,
         "profitFactor": null,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1787242347381
       }
     ]
@@ -29438,7 +29466,27 @@
       "detail": "paper exit DOTEUR: 2990.8337290727554 @ 0.6524 (take-profit)"
     }
   ],
-  "shadow:live-mirror:open-positions": [],
+  "shadow:live-mirror:open-positions": [
+    {
+      "id": "SOLEUR:1787359532367:0",
+      "symbol": "SOLEUR",
+      "openedAt": 1787359532367,
+      "entryPrice": 79.9,
+      "quantity": 27.45973792688672,
+      "initialQuantity": 27.45973792688672,
+      "stopLoss": 77.68698234883347,
+      "takeProfit": 84.32603530233308,
+      "feesPaid": 6.582099181074748,
+      "realizedPnl": 0,
+      "highestPrice": 79.9,
+      "lowestPrice": 79.9,
+      "confidence": 48.566843609316905,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:live-mirror:audit-log": [
     {
       "timestamp": 1785347897947,
@@ -29845,9 +29893,36 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 11786.22182918805 @ 0.195864 (take-profit)"
+    },
+    {
+      "timestamp": 1787359532367,
+      "intentId": "SOLEUR:1787359532367:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry SOLEUR: 27.45973792688672 @ 79.9 (stop 77.68698234883347, target 84.32603530233308, confidence 49)"
     }
   ],
-  "shadow:no-confirm:open-positions": [],
+  "shadow:no-confirm:open-positions": [
+    {
+      "id": "SOLEUR:1787359532367:0",
+      "symbol": "SOLEUR",
+      "openedAt": 1787359532367,
+      "entryPrice": 79.9,
+      "quantity": 27.45973792688672,
+      "initialQuantity": 27.45973792688672,
+      "stopLoss": 77.68698234883347,
+      "takeProfit": 84.32603530233308,
+      "feesPaid": 6.582099181074748,
+      "realizedPnl": 0,
+      "highestPrice": 79.9,
+      "lowestPrice": 79.9,
+      "confidence": 40.566843609316905,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:no-confirm:audit-log": [
     {
       "timestamp": 1785347897947,
@@ -30254,9 +30329,36 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 11786.22182918805 @ 0.195864 (take-profit)"
+    },
+    {
+      "timestamp": 1787359532367,
+      "intentId": "SOLEUR:1787359532367:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry SOLEUR: 27.45973792688672 @ 79.9 (stop 77.68698234883347, target 84.32603530233308, confidence 41)"
     }
   ],
-  "shadow:fixed-stop:open-positions": [],
+  "shadow:fixed-stop:open-positions": [
+    {
+      "id": "SOLEUR:1787359532367:0",
+      "symbol": "SOLEUR",
+      "openedAt": 1787359532367,
+      "entryPrice": 79.9,
+      "quantity": 27.45973792688672,
+      "initialQuantity": 27.45973792688672,
+      "stopLoss": 77.68698234883347,
+      "takeProfit": 84.32603530233308,
+      "feesPaid": 6.582099181074748,
+      "realizedPnl": 0,
+      "highestPrice": 79.9,
+      "lowestPrice": 79.9,
+      "confidence": 48.566843609316905,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:fixed-stop:audit-log": [
     {
       "timestamp": 1785347897947,
@@ -30663,6 +30765,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 11786.22182918805 @ 0.195864 (take-profit)"
+    },
+    {
+      "timestamp": 1787359532367,
+      "intentId": "SOLEUR:1787359532367:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry SOLEUR: 27.45973792688672 @ 79.9 (stop 77.68698234883347, target 84.32603530233308, confidence 49)"
     }
   ],
   "shadow:live-mirror:trade-journal": [
@@ -33228,7 +33337,7 @@
   ],
   "shadow:whale-flow:shadow-started-at": 1786561343790,
   "shadow:whale-flow:portfolio-engine": {
-    "cash": 11010.823676899001,
+    "cash": 8802.05244731306,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 1078.2507427471699,
@@ -33626,6 +33735,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 11769.059149589322 @ 0.195864 (take-profit)"
+    },
+    {
+      "timestamp": 1787359532367,
+      "intentId": "SOLEUR:1787359532367:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry SOLEUR: 27.561511081098875 @ 79.9 (stop 77.68698234883347, target 84.32603530233308, confidence 49)"
     }
   ],
   "shadow:top-trader:open-positions": [],
@@ -34280,9 +34396,36 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused ADAEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1787359532367,
+      "intentId": "SOLEUR:1787359532367",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused SOLEUR: OKX top traders are net-short"
     }
   ],
-  "shadow:whale-flow:open-positions": [],
+  "shadow:whale-flow:open-positions": [
+    {
+      "id": "SOLEUR:1787359532367:0",
+      "symbol": "SOLEUR",
+      "openedAt": 1787359532367,
+      "entryPrice": 79.9,
+      "quantity": 27.561511081098875,
+      "initialQuantity": 27.561511081098875,
+      "stopLoss": 77.68698234883347,
+      "takeProfit": 84.32603530233308,
+      "feesPaid": 6.606494206139401,
+      "realizedPnl": 0,
+      "highestPrice": 79.9,
+      "lowestPrice": 79.9,
+      "confidence": 48.566843609316905,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:whale-flow:trade-journal": [
     {
       "id": "LINKEUR:1786985399872:0",
@@ -34588,7 +34731,7 @@
   ],
   "shadow:ai-judgment:shadow-started-at": 1787242347381,
   "shadow:ai-judgment:portfolio-engine": {
-    "cash": 10771.609411643454,
+    "cash": 8610.824563667777,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 814.3551273732148,
@@ -34597,7 +34740,27 @@
       "equity": 10771.609411643454
     }
   },
-  "shadow:ai-judgment:open-positions": [],
+  "shadow:ai-judgment:open-positions": [
+    {
+      "id": "SOLEUR:1787359532367:0",
+      "symbol": "SOLEUR",
+      "openedAt": 1787359532367,
+      "entryPrice": 79.9,
+      "quantity": 26.962726937780864,
+      "initialQuantity": 26.962726937780864,
+      "stopLoss": 77.68698234883347,
+      "takeProfit": 84.32603530233308,
+      "feesPaid": 6.462965646986073,
+      "realizedPnl": 0,
+      "highestPrice": 79.9,
+      "lowestPrice": 79.9,
+      "confidence": 48.566843609316905,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:ai-judgment:audit-log": [
     {
       "timestamp": 1787242970406,
@@ -34871,6 +35034,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 11572.8956210231 @ 0.195864 (take-profit)"
+    },
+    {
+      "timestamp": 1787359532367,
+      "intentId": "SOLEUR:1787359532367:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry SOLEUR: 26.962726937780864 @ 79.9 (stop 77.68698234883347, target 84.32603530233308, confidence 49)"
     }
   ],
   "shadow:ai-judgment:trade-journal": [
@@ -35035,5 +35205,8 @@
       "confidence": 49.06030843835063,
       "notes": "opened autonomously by the paper autopilot"
     }
-  ]
+  ],
+  "move-alert-buckets": {
+    "SOLEUR:1787359532367:0": 0
+  }
 }
