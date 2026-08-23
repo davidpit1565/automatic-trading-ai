@@ -111,13 +111,13 @@ describe('maybeSendSummaries (the exact bug class already found once)', () => {
     const telegram = { token: 'T', chatId: 'C', fetchFn };
     const { portfolio, journal } = buildPortfolio();
 
-    // 10:30 local time in Asia/Jerusalem -> morning slot is due.
-    const morning = Date.parse('2026-07-28T07:30:00Z');
-    await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, morning);
+    // 15:30 local time in Asia/Jerusalem -> the daily slot (hour 15) is due.
+    const afternoon = Date.parse('2026-07-28T12:30:00Z');
+    await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, afternoon);
     expect(sent).toHaveLength(1);
 
-    // A second cycle the same morning must NOT resend.
-    await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, morning + 60_000);
+    // A second cycle the same afternoon must NOT resend.
+    await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, afternoon + 60_000);
     expect(sent).toHaveLength(1);
   });
 
@@ -125,6 +125,15 @@ describe('maybeSendSummaries (the exact bug class already found once)', () => {
     const fetchFn = vi.fn();
     const telegram = { token: '', chatId: '', fetchFn: fetchFn as unknown as typeof fetch };
     const { portfolio, journal } = buildPortfolio();
+    await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, Date.parse('2026-07-28T12:30:00Z'));
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it('before hour 15 local, nothing is sent even if otherwise due', async () => {
+    const fetchFn = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const telegram = { token: 'T', chatId: 'C', fetchFn: fetchFn as unknown as typeof fetch };
+    const { portfolio, journal } = buildPortfolio();
+    // 10:30 Asia/Jerusalem — before the single daily slot.
     await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, Date.parse('2026-07-28T07:30:00Z'));
     expect(fetchFn).not.toHaveBeenCalled();
   });
