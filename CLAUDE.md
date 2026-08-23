@@ -1,5 +1,10 @@
 # Autonomous Trading AI — Development Rules
 
+## Language
+The user writes in Hebrew. Answer and summarize in Hebrew (עברית) in chat —
+not English. Code, comments, commit messages, and PR titles/descriptions stay
+in English as usual.
+
 ## Mission
 Maximum correctness while minimizing token usage, context, file reads, and
 unnecessary tool calls. **Save cost — but never at the expense of quality or
