@@ -135,8 +135,7 @@ function persistStateToGit(label: string): void {
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Scheduled digests: each fires once per local day, at or after its hour. */
 const SUMMARY_SLOTS = [
-  { hour: 10, key: 'daily-summary-morning', heading: '☀️ סיכום בוקר — סוכן מסחר (כסף מדומה)' },
-  { hour: 22, key: 'daily-summary-evening', heading: '🌙 סיכום ערב — סוכן מסחר (כסף מדומה)' },
+  { hour: 15, key: 'daily-summary', heading: '📊 סיכום יומי — סוכן מסחר (כסף מדומה)' },
 ];
 /** Alert when an open position moves by at least this % (each new step). */
 const MOVE_ALERT_PCT = Number(process.env['MOVE_ALERT_PCT']) || 5;
@@ -824,16 +823,14 @@ export async function maybeSendSummaries(
     readiness: store.get<RealMoneyReadiness>(READINESS_KEY) ?? null,
   };
 
-  // Only the evening digest carries the shadow-strategy line — once a day is
-  // plenty, and repeating it in the morning digest too would just be noise.
+  // Single digest a day now carries the shadow-strategy line every time.
   const shadowSaved = store.get<{ standings: ShadowStanding[] }>(SHADOW_STANDINGS_KEY);
   for (const slot of dueSlots) {
-    const isEvening = slot.key === 'daily-summary-evening';
     const result = await sendTelegramMessage(
       buildDailySummary({
         ...baseSummary,
         heading: slot.heading,
-        ...(isEvening && shadowSaved ? { shadows: shadowSaved.standings } : {}),
+        ...(shadowSaved ? { shadows: shadowSaved.standings } : {}),
       }),
       telegram,
     );
