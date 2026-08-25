@@ -972,8 +972,15 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 /* Freshness dot beside the update time, mirroring the reference market apps. */
 .row-clock { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
   margin-inline-end: 0.35rem; vertical-align: baseline; }
-.row-clock.fresh { background: var(--hot); box-shadow: 0 0 6px rgba(76,215,135,0.5); }
+/* A gently pulsing dot reads as "this is live" the way a static one doesn't
+   — the same signal a recording indicator or an active call gives. Stale
+   deliberately stays still: a pulse there would claim a liveness the data
+   doesn't have. */
+.row-clock.fresh { background: var(--hot); box-shadow: 0 0 6px rgba(76,215,135,0.5);
+  animation: row-clock-pulse 2.2s ease-in-out infinite; }
 .row-clock.stale { background: var(--warn); }
+@keyframes row-clock-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .row-clock.fresh { animation: none; } }
 .market-more { padding: 0.9rem; text-align: center; font-size: 0.82rem; color: var(--text-dim); }
 
 @media (min-width: 860px) {
