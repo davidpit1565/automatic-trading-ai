@@ -70,7 +70,7 @@ describe('buildTestMessage', () => {
     const msg = buildTestMessage();
     expect(typeof msg).toBe('string');
     expect(msg.length).toBeGreaterThan(0);
-    expect(msg).toContain('הבוט מחובר');
+    expect(msg).toContain('הסוכן מחובר');
   });
 });
 
@@ -154,6 +154,34 @@ describe('buildDailySummary', () => {
       benchmark: { label: 'ביטקוין', portfolioPct: -1, assetPct: 2 },
     });
     expect(behind).toContain('החזקה פשוטה מובילה');
+  });
+
+  it('appends a separate USD stocks section when stocks data is provided', () => {
+    const msg = buildDailySummary({
+      ...base,
+      positions: [],
+      stocks: {
+        equity: 10_500,
+        cash: 3_000,
+        totalReturnPct: 5,
+        realizedPnl: 300,
+        unrealizedPnl: -20,
+        openedLast24h: 1,
+        closedLast24h: 2,
+      },
+    });
+    expect(msg).toContain('מניות');
+    expect(msg).toContain('$10,500');
+    expect(msg).toContain('+$300');
+    expect(msg).toContain('-$20');
+    // The crypto section's € figures must still be present too — a stocks
+    // section is additive, never a replacement.
+    expect(msg).toContain('€10,250');
+  });
+
+  it('omits the stocks section entirely when no stocks data is given', () => {
+    const msg = buildDailySummary({ ...base, positions: [] });
+    expect(msg).not.toContain('מניות');
   });
 });
 

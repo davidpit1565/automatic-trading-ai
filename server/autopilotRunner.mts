@@ -12,6 +12,7 @@
  */
 
 import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { KrakenPublicSource } from '../src/core/data/krakenPublic';
 import { CoinbasePublicSource } from '../src/core/data/coinbasePublic';
@@ -63,9 +64,17 @@ import {
   buildSafetyAlert,
   buildTestMessage,
   sendTelegramMessage,
+  type DailySummaryStocks,
 } from './telegram.mts';
 
 const STATE_PATH = process.env['AUTOPILOT_STATE_PATH'] ?? 'state/autopilot-state.json';
+// Read fresh on every call (not a frozen module-level const), same rationale
+// as getSummaryTimezone() below — so tests can point this at a temp file
+// regardless of whatever env was set at module-import time.
+function getStocksStatePath(): string {
+  return process.env['STOCKS_STATE_PATH'] ?? 'state/stocks-state.json';
+}
+const STOCKS_INITIAL_CASH = 10_000; // USD — must match server/stocksRunner.mts's own constant.
 const INITIAL_CASH = 10_000;
 const CONFIRMATION_TF = '4h' as const;
 const ENTRY_TF = '1h' as const;
@@ -728,12 +737,27 @@ async function recordEquity(
   store.set(READINESS_KEY, readiness);
 }
 
+/** Per-position record of the most extreme ±MOVE_ALERT_PCT step already alerted. */
+interface MoveBucketExtreme {
+  readonly neg: number;
+  readonly pos: number;
+}
+
 /**
- * Notify when an open position crosses a new ±MOVE_ALERT_PCT step since
- * entry (e.g. +5%, +10%, -5%), so big swings surface without spamming on
- * every tick. The last-alerted step per position is remembered in state.
+ * Notify when an open position reaches a new, MORE EXTREME ±MOVE_ALERT_PCT
+ * step than ever alerted for it before (e.g. +5%, +10%, -5%), so big swings
+ * surface without spamming on every tick.
+ *
+ * Bug fixed 2026-08-23: the previous version compared against only the
+ * LAST bucket (`previous[p.id] !== bucket`), not the most extreme one ever
+ * seen. A price hovering right across a threshold (e.g. wobbling between
+ * -4.9% and -5.1%) truncates to bucket 0 and bucket -1 alternately, so every
+ * single wobble back across the line re-fired the same "-5%" alert — one
+ * position sent the identical alert 8+ times over several hours. Tracking
+ * the most extreme step per direction (neg/pos) instead of the last one
+ * makes a returning wobble a no-op: only a NEW record extreme re-alerts.
  */
-async function maybeSendMoveAlerts(
+export async function maybeSendMoveAlerts(
   store: FileStore,
   source: MarketDataSource,
   portfolio: PortfolioEngine,
@@ -749,18 +773,36 @@ async function maybeSendMoveAlerts(
     source,
     open.map((p) => p.symbol),
   );
-  const previous = store.get<Record<string, number>>(MOVE_BUCKETS_KEY) ?? {};
-  const current: Record<string, number> = {};
+  // Older committed state stored a single number per position (the last
+  // bucket, not the extreme). Migrate that shape on read so an already-open
+  // position from before this fix keeps alerting correctly instead of going
+  // silent forever just because its stored value isn't {neg, pos}.
+  const previousRaw = store.get<Record<string, MoveBucketExtreme | number>>(MOVE_BUCKETS_KEY) ?? {};
+  const previous: Record<string, MoveBucketExtreme> = {};
+  for (const [id, value] of Object.entries(previousRaw)) {
+    previous[id] = typeof value === 'number' ? { neg: Math.min(0, value), pos: Math.max(0, value) } : value;
+  }
+  const current: Record<string, MoveBucketExtreme> = {};
   for (const p of open) {
     const price = prices[p.symbol];
+    const prevExtreme = previous[p.id] ?? { neg: 0, pos: 0 };
     if (price === undefined || !(p.entryPrice > 0)) {
-      if (previous[p.id] !== undefined) current[p.id] = previous[p.id]!;
+      current[p.id] = prevExtreme;
       continue;
     }
     const movePct = ((price - p.entryPrice) / p.entryPrice) * 100;
     const bucket = Math.trunc(movePct / MOVE_ALERT_PCT); // signed step index
-    current[p.id] = bucket;
-    if (bucket !== 0 && previous[p.id] !== bucket) {
+    let { neg, pos } = prevExtreme;
+    let isNewExtreme = false;
+    if (bucket < neg) {
+      neg = bucket;
+      isNewExtreme = true;
+    } else if (bucket > pos) {
+      pos = bucket;
+      isNewExtreme = true;
+    }
+    current[p.id] = { neg, pos };
+    if (isNewExtreme) {
       const result = await sendTelegramMessage(buildMoveAlert(p.symbol, movePct), telegram);
       console.log(result.sent ? `Move alert sent for ${p.symbol}.` : `Move alert failed: ${result.reason}`);
     }
@@ -769,9 +811,64 @@ async function maybeSendMoveAlerts(
 }
 
 /**
- * Send the morning (08:00) and evening (22:00) digests, each at most once
- * per local day. So the user sees where things stand at the start and end
- * of the day without a message every cycle. No-op without Telegram.
+ * Read-only snapshot of the fully isolated US-stocks Paper Autopilot, folded
+ * into the crypto digest so one daily message covers both sides instead of
+ * needing to open the app separately for stocks (requested 2026-08-23).
+ *
+ * Reads `state/stocks-state.json` directly rather than fetching live Alpaca
+ * prices — this workflow has no Alpaca credentials (and shouldn't need any,
+ * per the two sides' deliberate isolation) — using that file's own last
+ * committed price snapshot instead, same data the stocks dashboard itself
+ * shows. Genuinely read-only — deliberately avoids `PortfolioEngine.snapshot()`,
+ * which persists a new day-anchor on its first call each day; that write
+ * would never reach a commit (the crypto workflow only ever `git add`s its
+ * own state file) but there's no reason to touch the stocks file at all
+ * for what is otherwise a pure read, so this recomputes equity/P&L directly
+ * from the two engines' pure accessors instead. A missing/corrupt file
+ * (stocks never ran, or ran on a fork without it) returns null rather than
+ * fabricating a fake all-zero stocks section or crashing the crypto digest.
+ */
+export function readStocksSummary(now: number): DailySummaryStocks | null {
+  const stocksStatePath = getStocksStatePath();
+  if (!existsSync(stocksStatePath)) return null;
+  try {
+    const stocksStore = new FileStore(stocksStatePath);
+    const stocksJournal = new TradeJournal(stocksStore);
+    const stocksPositions = new PositionEngine(stocksStore, stocksJournal);
+    const portfolioState = stocksStore.get<{ cash: number; initialCash: number; closedRealizedPnl: number }>(
+      'portfolio-engine',
+    ) ?? { cash: STOCKS_INITIAL_CASH, initialCash: STOCKS_INITIAL_CASH, closedRealizedPnl: 0 };
+    const snapshotEntries =
+      stocksStore.get<{ symbols: readonly { symbol: string; price: number }[] }>('market-snapshot')
+        ?.symbols ?? [];
+    const prices: Record<string, number> = {};
+    for (const e of snapshotEntries) prices[e.symbol] = e.price;
+    const open = stocksPositions.openPositions();
+    const investedValue = open.reduce((sum, p) => sum + p.quantity * (prices[p.symbol] ?? p.entryPrice), 0);
+    const equity = portfolioState.cash + investedValue;
+    const realizedPnl = portfolioState.closedRealizedPnl + stocksPositions.openRealizedPnl();
+    const since = now - DAY_MS;
+    return {
+      equity,
+      cash: portfolioState.cash,
+      totalReturnPct: ((equity - portfolioState.initialCash) / portfolioState.initialCash) * 100,
+      realizedPnl,
+      unrealizedPnl: stocksPositions.unrealizedPnl(prices),
+      openedLast24h:
+        open.filter((p) => p.openedAt >= since).length +
+        stocksJournal.entries().filter((e) => e.entryTimestamp >= since).length,
+      closedLast24h: stocksJournal.entries().filter((e) => e.exitTimestamp >= since).length,
+    };
+  } catch (cause) {
+    console.error('Could not read stocks state for the daily summary:', cause instanceof Error ? cause.message : cause);
+    return null;
+  }
+}
+
+/**
+ * Send the single daily digest (see SUMMARY_SLOTS), at most once per local
+ * day, folding in the stocks side's own numbers (see `readStocksSummary`).
+ * No-op without Telegram.
  */
 export async function maybeSendSummaries(
   store: FileStore,
@@ -821,6 +918,7 @@ export async function maybeSendSummaries(
     closedLast24h: journal.entries().filter((e) => e.exitTimestamp >= since).length,
     benchmark,
     readiness: store.get<RealMoneyReadiness>(READINESS_KEY) ?? null,
+    stocks: readStocksSummary(now),
   };
 
   // Single digest a day now carries the shadow-strategy line every time.
