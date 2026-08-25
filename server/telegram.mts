@@ -31,6 +31,15 @@ function signedEuro(value: number): string {
   return `${value >= 0 ? '+' : '-'}€${Math.abs(value).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 }
 
+function usd(value: number): string {
+  return `$${value.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+}
+
+/** Money with an explicit +/- sign, e.g. "+$12.34" / "-$5.00". */
+function signedUsd(value: number): string {
+  return `${value >= 0 ? '+' : '-'}$${Math.abs(value).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+}
+
 /** Human-readable trade quantity — never the raw 15-decimal float. */
 function formatQty(qty: number): string {
   const abs = Math.abs(qty);
@@ -54,6 +63,21 @@ export interface DailySummaryBenchmark {
   readonly assetPct: number;
 }
 
+/**
+ * Same shape as the crypto summary above, in USD, for the fully isolated
+ * US-stocks Paper Autopilot — optional because the digest must still send
+ * correctly (crypto-only) if the stocks state can't be read for any reason.
+ */
+export interface DailySummaryStocks {
+  readonly equity: number;
+  readonly cash: number;
+  readonly totalReturnPct: number;
+  readonly realizedPnl: number;
+  readonly unrealizedPnl: number;
+  readonly openedLast24h: number;
+  readonly closedLast24h: number;
+}
+
 export interface DailySummaryInput {
   readonly equity: number;
   readonly cash: number;
@@ -75,6 +99,8 @@ export interface DailySummaryInput {
    * appears at most once a day rather than in every digest.
    */
   readonly shadows?: readonly ShadowStanding[];
+  /** The stocks side's own numbers, appended as a second section. */
+  readonly stocks?: DailySummaryStocks | null;
 }
 
 /** One-line summary of the shadow strategy standings, or how far they are from meaning anything. */
@@ -164,6 +190,17 @@ export function buildDailySummary(input: DailySummaryInput): string {
   if (input.shadows) {
     lines.push(...shadowSummaryLines(input.shadows));
   }
+  if (input.stocks) {
+    const s = input.stocks;
+    const sRet = `${s.totalReturnPct >= 0 ? '+' : ''}${s.totalReturnPct.toFixed(2)}%`;
+    lines.push(
+      '',
+      '📈 מניות (ארה"ב, כסף מדומה — חשבון נפרד):',
+      `   💰 שווי: ${usd(s.equity)} (${sRet} מההתחלה) · 💵 מזומן: ${usd(s.cash)}`,
+      `   📊 רווח/הפסד: ${signedUsd(s.realizedPnl)} ממומש · ${signedUsd(s.unrealizedPnl)} על הנייר`,
+      `   🔄 24 שעות אחרונות: ${s.openedLast24h} קניות, ${s.closedLast24h} מכירות`,
+    );
+  }
   return lines.join('\n');
 }
 
@@ -172,7 +209,7 @@ export function buildDailySummary(input: DailySummaryInput): string {
  * without waiting for a real trade. Sent only when explicitly requested.
  */
 export function buildTestMessage(): string {
-  return '✅ הבוט מחובר! מעכשיו תקבל כאן התראה על כל קנייה/מכירה. כסף מדומה בלבד.';
+  return '✅ הסוכן מחובר! מעכשיו תקבל כאן התראה על כל קנייה/מכירה. כסף מדומה בלבד.';
 }
 
 /** Alert sent once when a safety limit pauses new buying for the day. */

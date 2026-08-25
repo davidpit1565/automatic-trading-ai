@@ -11,7 +11,7 @@
  * when invoked directly (`npx tsx server/autopilotRunner.mts`), so importing
  * it here for its exported helpers is side-effect-free.
  */
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,8 +19,10 @@ import { FileStore } from '../../server/fileStore.mts';
 import {
   breakerEngaged,
   localDayAndHour,
+  maybeSendMoveAlerts,
   maybeSendPeriodicReports,
   maybeSendSummaries,
+  readStocksSummary,
 } from '../../server/autopilotRunner.mts';
 import { PortfolioEngine } from '../../src/core/position/portfolioEngine';
 import { PositionEngine } from '../../src/core/position/positionEngine';
@@ -100,6 +102,139 @@ function buildPortfolio(): { portfolio: PortfolioEngine; journal: TradeJournal }
   const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'EUR' });
   return { portfolio, journal };
 }
+
+function priceSource(getPrice: () => number): MarketDataSource {
+  return {
+    name: 'fake-price',
+    getInstruments: async () => ({ ok: true, value: [btcInstrument] }),
+    getCandles: async () => ({ ok: true, value: [btcCandle(getPrice()), btcCandle(getPrice())] }),
+  };
+}
+
+describe('readStocksSummary (folds the isolated stocks side into the crypto digest)', () => {
+  const ORIGINAL_STOCKS_STATE_PATH = process.env['STOCKS_STATE_PATH'];
+  let stocksPath: string;
+
+  beforeEach(() => {
+    stocksPath = join(dir, 'stocks-state.json');
+    process.env['STOCKS_STATE_PATH'] = stocksPath;
+  });
+  afterEach(() => {
+    if (ORIGINAL_STOCKS_STATE_PATH === undefined) delete process.env['STOCKS_STATE_PATH'];
+    else process.env['STOCKS_STATE_PATH'] = ORIGINAL_STOCKS_STATE_PATH;
+  });
+
+  it('returns null (not a fake empty account) when the stocks state file does not exist', () => {
+    expect(readStocksSummary(Date.now())).toBeNull();
+  });
+
+  it('reads real equity/cash/P&L from the stocks state file using its own last-known prices', () => {
+    const stocksStore = new FileStore(stocksPath);
+    const stocksJournal = new TradeJournal(stocksStore);
+    const stocksPositions = new PositionEngine(stocksStore, stocksJournal);
+    const opened = stocksPositions.open({
+      symbol: 'AAPL', quantity: 10, entryPrice: 200, stopLoss: 180, takeProfit: 240, timestamp: 0,
+    });
+    if (!opened.ok) throw new Error('open failed');
+    // readStocksSummary reads cash/initialCash/closedRealizedPnl straight
+    // off the store (deliberately not via PortfolioEngine — see its doc
+    // comment), so this writes that same shape directly: 10,000 initial
+    // minus the 2,000 spent opening the AAPL position above.
+    stocksStore.set('portfolio-engine', { cash: 8_000, initialCash: 10_000, baseCurrency: 'USD', closedRealizedPnl: 0, dayAnchor: null });
+    // No live Alpaca fetch available here — the last-known price snapshot
+    // the stocks runner itself committed is what this must read instead.
+    stocksStore.set('market-snapshot', { at: 0, symbols: [{ symbol: 'AAPL', price: 220, changePct: 10, updatedAt: 0 }] });
+
+    const summary = readStocksSummary(1000);
+    expect(summary).not.toBeNull();
+    // cash 8,000 (10,000 - 10*200) + market value 10*220 = 10,200.
+    expect(summary!.equity).toBeCloseTo(10_200, 5);
+    expect(summary!.unrealizedPnl).toBeCloseTo(200, 5); // 10 * (220 - 200)
+    expect(summary!.openedLast24h).toBe(1);
+  });
+
+  it('never writes back to the stocks state file (read-only)', () => {
+    const stocksStore = new FileStore(stocksPath);
+    new TradeJournal(stocksStore);
+    stocksStore.set('portfolio-engine', { cash: 5_000, initialCash: 10_000, baseCurrency: 'USD', closedRealizedPnl: 0, dayAnchor: null });
+    const contentBefore = readFileSync(stocksPath, 'utf8');
+    readStocksSummary(Date.now());
+    const contentAfter = readFileSync(stocksPath, 'utf8');
+    expect(contentAfter).toBe(contentBefore);
+  });
+});
+
+describe('maybeSendMoveAlerts (a real spam bug: wobbling near a threshold re-alerted every time)', () => {
+  it('alerts once on a new extreme, and never again for the same or a shallower move', async () => {
+    const sent: string[] = [];
+    const fetchFn = (async (url: string | URL) => {
+      sent.push(String(url));
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const telegram = { token: 'T', chatId: 'C', fetchFn };
+    const journal = new TradeJournal(store);
+    const positions = new PositionEngine(store, journal);
+    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'EUR' });
+    const opened = positions.open({
+      symbol: 'XRP-EUR', quantity: 100, entryPrice: 100, stopLoss: 80, takeProfit: 130, timestamp: 0,
+    });
+    if (!opened.ok) throw new Error('open failed');
+
+    let price = 100;
+    // -5.5% -> a genuinely new extreme (crosses the -5% step for the first time).
+    price = 94.5;
+    await maybeSendMoveAlerts(store, priceSource(() => price), portfolio, telegram);
+    expect(sent).toHaveLength(1);
+
+    // Recovers to -4.8% -> back inside the band, no alert.
+    price = 95.2;
+    await maybeSendMoveAlerts(store, priceSource(() => price), portfolio, telegram);
+    expect(sent).toHaveLength(1);
+
+    // Wobbles back to -5.4% -> the SAME step already alerted, not a new extreme.
+    // The pre-fix version compared only against the immediately-previous bucket
+    // (which had reset to 0 on the recovery above) and would have re-sent here.
+    price = 94.6;
+    await maybeSendMoveAlerts(store, priceSource(() => price), portfolio, telegram);
+    expect(sent).toHaveLength(1);
+
+    // A genuinely deeper move (-11%) is a new extreme and does alert again.
+    price = 89;
+    await maybeSendMoveAlerts(store, priceSource(() => price), portfolio, telegram);
+    expect(sent).toHaveLength(2);
+  });
+
+  it('migrates the old single-number bucket shape instead of going silent forever', async () => {
+    const sent: string[] = [];
+    const fetchFn = (async (url: string | URL) => {
+      sent.push(String(url));
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const telegram = { token: 'T', chatId: 'C', fetchFn };
+    const journal = new TradeJournal(store);
+    const positions = new PositionEngine(store, journal);
+    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'EUR' });
+    const opened = positions.open({
+      symbol: 'XRP-EUR', quantity: 100, entryPrice: 100, stopLoss: 80, takeProfit: 130, timestamp: 0,
+    });
+    if (!opened.ok) throw new Error('open failed');
+    // Legacy shape: a plain number (the old "last bucket"), already at -1.
+    store.set('move-alert-buckets', { [opened.value.id]: -1 });
+
+    // A deeper move than the legacy value should still alert.
+    const price = 89; // -11% -> bucket -2, deeper than the migrated neg extreme of -1.
+    await maybeSendMoveAlerts(store, priceSource(() => price), portfolio, telegram);
+    expect(sent).toHaveLength(1);
+  });
+
+  it('does nothing without Telegram credentials configured', async () => {
+    const fetchFn = vi.fn();
+    const telegram = { token: '', chatId: '', fetchFn: fetchFn as unknown as typeof fetch };
+    const { portfolio } = buildPortfolio();
+    await maybeSendMoveAlerts(store, priceSource(() => 90), portfolio, telegram);
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+});
 
 describe('maybeSendSummaries (the exact bug class already found once)', () => {
   it('sends the digest once due, and never a second time the same day', async () => {
