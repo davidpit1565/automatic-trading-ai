@@ -187,6 +187,20 @@ body {
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
 
+/* The browser's native <select> appearance (its own arrow glyph, its own
+   vertical rhythm) never matches a custom border/radius/background, and
+   reads as an unstyled form control dropped into an otherwise fully custom
+   UI. Swap it for one flat chevron so a select looks like the app's other
+   controls. .mk-sort below repeats the same chevron at its own padding. */
+.control select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23929bb0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2rem;
+}
+
 .control input:focus,
 .control select:focus {
   outline: none;
@@ -922,8 +936,11 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.9rem;
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .mk-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
-.mk-sort { flex: 0 0 auto; padding: 0.58rem 0.75rem; border-radius: var(--r-pill);
-  border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.86rem; }
+.mk-sort { flex: 0 0 auto; padding: 0.58rem 1.85rem 0.58rem 0.9rem; border-radius: var(--r-pill);
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.86rem;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23929bb0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 0.8rem center; }
 
 .market-row-wrap { position: relative; display: block; }
 .mk-star { position: absolute; top: 50%; right: 0.35rem; transform: translateY(-50%);
@@ -1497,6 +1514,16 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .skeleton-bar.w-60 { width: 60%; }
 .skeleton-bar.w-70 { width: 70%; }
 .market-row-num .skeleton-bar { margin-left: auto; }
+
+/* Same shimmer, but sized for a .row (flex, not the market grid) — used for
+   the very first paint of "Open positions" / "Recent activity" before the
+   cloud state loads, so that moment reads as "loading" rather than as a
+   blank gap where content should be. */
+.skeleton-list-row { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;
+  padding: 0.72rem 0.9rem; }
+.skeleton-list-row .row-main { display: flex; align-items: center; gap: 0.6rem; }
+.skeleton-list-row .skeleton-lines { display: flex; flex-direction: column; gap: 0.35rem; }
+.skeleton-list-row .skeleton-side { display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem; }
 .skeleton-dot, .skeleton-bar {
   background: linear-gradient(90deg, var(--border) 25%, var(--surface-raised) 50%, var(--border) 75%);
   background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite;

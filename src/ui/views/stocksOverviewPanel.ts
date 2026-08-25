@@ -8,6 +8,7 @@ import { fetchStocksState } from '../cloudState';
 import { sparklineSvg } from '../charts';
 import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
 import { formatPrice, formatPct, formatPriceSplit } from '../format';
+import { skeletonRowsHtml } from '../loadingStates';
 import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 60_000;
@@ -16,13 +17,13 @@ const dollar = (v: number): string => `$${formatPrice(v)}`;
 export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
   container.innerHTML = `
     <section class="hero">
-      <div class="hero-label">Portfolio value</div>
+      <div class="hero-label">Portfolio value <span class="tag-sim">SIMULATED</span></div>
       <div class="hero-value" id="stocks-ov-equity">—</div>
       <div class="hero-change" id="stocks-ov-change"></div>
       <div class="hero-split"><span id="stocks-ov-cash"></span><span id="stocks-ov-invested"></span></div>
       <div class="hero-spark" id="stocks-ov-spark"></div>
     </section>
-    <section class="block"><div class="block-head"><h2>Open positions</h2></div><div class="stack stack-card" id="stocks-ov-positions"></div></section>
+    <section class="block"><div class="block-head"><h2>Open positions</h2></div><div class="stack stack-card" id="stocks-ov-positions">${skeletonRowsHtml(2)}</div></section>
     <p class="muted-line" id="stocks-ov-status">Loading…</p>`;
   attachCoinLogoFallback(container);
 
@@ -39,7 +40,13 @@ export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
   async function load(): Promise<void> {
     const state = await fetchStocksState();
     if (!state) {
-      if (!loadedOnce) statusEl.textContent = 'Waiting for the stocks agent — set up ALPACA_API_KEY_ID / ALPACA_API_SECRET_KEY as GitHub Actions secrets to start it (see PROJECT_STATE.md).';
+      if (!loadedOnce) {
+        statusEl.textContent = 'Waiting for the stocks agent — set up ALPACA_API_KEY_ID / ALPACA_API_SECRET_KEY as GitHub Actions secrets to start it (see PROJECT_STATE.md).';
+        // Swap the shimmering skeleton for an honest message — left alone
+        // it would shimmer forever until the agent's first successful run.
+        positionsEl.innerHTML = '';
+        positionsEl.appendChild(Object.assign(document.createElement('div'), { className: 'empty', textContent: 'Waiting for the stocks agent…' }));
+      }
       return;
     }
     loadedOnce = true;

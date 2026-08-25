@@ -10,6 +10,7 @@ import { fetchTopMarkets, findBtcSymbol, type MarketSnapshot } from '../markets'
 import { sparklineSvg } from '../charts';
 import { attachCoinLogoFallback, coinLogoHtml, completedLogoHtml } from '../coinLogo';
 import { formatPrice, formatPct, formatPriceSplit } from '../format';
+import { skeletonRowsHtml } from '../loadingStates';
 import type { ViewHandle } from '../viewLifecycle';
 
 const PRICE_REFRESH_MS = 15_000;
@@ -69,12 +70,14 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   posWrap.innerHTML = `<div class="block-head"><h2>Open positions</h2></div>`;
   const posList = el('div', 'stack stack-card');
   posList.id = 'home-positions';
+  posList.innerHTML = skeletonRowsHtml(2);
   posWrap.appendChild(posList);
 
   const actWrap = el('section', 'block');
   actWrap.innerHTML = `<div class="block-head"><h2>Recent activity</h2><button class="link-btn" data-hub="history">See all</button></div>`;
   const actList = el('div', 'stack stack-card');
   actList.id = 'home-activity';
+  actList.innerHTML = skeletonRowsHtml(3);
   actWrap.appendChild(actList);
 
   const status = el('p', 'muted-line', 'Loading the cloud agent…');
@@ -254,7 +257,14 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       renderHeroSpark();
       await refreshPrices();
     } else if (!state) {
+      // Swap the shimmering skeleton for an honest "still trying" message —
+      // left alone, it would shimmer forever on a real outage, which reads
+      // as a stuck/broken screen rather than a momentary loading state.
       setText('home-status', "Couldn't reach the cloud agent — retrying automatically.");
+      posList.innerHTML = '';
+      posList.appendChild(el('div', 'empty', 'Waiting for the cloud agent…'));
+      actList.innerHTML = '';
+      actList.appendChild(el('div', 'empty', 'Waiting for the cloud agent…'));
     }
   }
 

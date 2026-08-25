@@ -75,6 +75,28 @@ export function createSkeletonTitle(): HTMLElement {
 }
 
 /**
+ * Shimmering row placeholders matching a `.row` / `.stack-card` list's own
+ * geometry (icon + two lines, a value on the right) — for the first paint of
+ * a list before its data has loaded, so that moment reads as "loading"
+ * rather than as blank space where content belongs.
+ */
+export function skeletonRowsHtml(count = 2): string {
+  // Fixed pixel widths, not the %-based .w-40/.w-60 modifiers used inside
+  // the markets grid — those percentages resolve against a grid track's
+  // concrete width, but .skeleton-lines here is a plain flex column with no
+  // width of its own, so a percentage on its children has nothing to
+  // resolve against and collapses to ~0.
+  const row = `
+    <div class="skeleton-list-row">
+      <div class="row-main"><span class="skeleton-dot"></span>
+        <div class="skeleton-lines"><span class="skeleton-bar" style="width:72px"></span><span class="skeleton-bar" style="width:52px"></span></div>
+      </div>
+      <div class="skeleton-side"><span class="skeleton-bar" style="width:56px"></span></div>
+    </div>`;
+  return row.repeat(count);
+}
+
+/**
  * Show empty state with icon, title, and optional action button.
  */
 export function showEmptyState(
