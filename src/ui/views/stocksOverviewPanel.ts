@@ -7,7 +7,7 @@
 import { fetchStocksState } from '../cloudState';
 import { sparklineSvg } from '../charts';
 import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
-import { formatPrice, formatPct } from '../format';
+import { formatPrice, formatPct, formatPriceSplit } from '../format';
 import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 60_000;
@@ -45,7 +45,8 @@ export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
     loadedOnce = true;
     const equity = state.equityHistory.at(-1)?.equity ?? state.cash;
     const totalReturn = state.initialCash > 0 ? ((equity - state.initialCash) / state.initialCash) * 100 : 0;
-    equityEl.textContent = dollar(equity);
+    const { major, minor } = formatPriceSplit(equity);
+    equityEl.innerHTML = `<span class="hero-value-currency">$</span><span class="hero-value-major">${major}</span><span class="hero-value-minor">.${minor}</span>`;
     changeEl.textContent = `${formatPct(totalReturn)} all time`;
     changeEl.className = `hero-change ${totalReturn >= 0 ? 'up' : 'down'}`;
     cashEl.textContent = `Cash ${dollar(state.cash)}`;
