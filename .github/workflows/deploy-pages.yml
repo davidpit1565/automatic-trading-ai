@@ -15,6 +15,9 @@ on:
 
 permissions:
   contents: write
+  # Read-only lookup of the open PR for this branch, so the Telegram
+  # notification can link straight to it instead of the compare page.
+  pull-requests: read
 
 concurrency:
   group: pages-deploy
@@ -58,13 +61,23 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMPARE_URL: https://github.com/${{ github.repository }}/compare/main...claude/market-scan-integration-r9lck1
         run: |
           if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
             echo "Telegram not configured, skipping notification."
             exit 0
           fi
-          export TEXT=$'✅ הבדיקות עברו על הענף claude/market-scan-integration-r9lck1 — מוכן לבדיקה/מיזוג.\n'"$COMPARE_URL"
+          # Link straight to the open PR (not the compare page) — the
+          # GitHub mobile app opens a PR link directly into its own "Merge"
+          # screen, which is the whole point of this notification. Falls
+          # back to the compare URL (which offers to CREATE one) if no PR
+          # is open yet for this branch.
+          PR_URL=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY%%/*}:claude/market-scan-integration-r9lck1&state=open" \
+            | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const a=JSON.parse(d);console.log(a[0]?.html_url??"");}catch{console.log("")}})')
+          LINK_URL="${PR_URL:-$COMPARE_URL}"
+          export TEXT=$'✅ הבדיקות עברו על הענף claude/market-scan-integration-r9lck1 — מוכן לבדיקה/מיזוג.\n'"$LINK_URL"
           # Telegram can return HTTP 200 with {"ok":false,...} on a bad
           # token/chat id — checking curl's exit code alone (or piping to
           # /dev/null, as an earlier version of this step did) would report
