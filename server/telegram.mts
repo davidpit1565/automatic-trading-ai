@@ -372,10 +372,20 @@ export function buildStockCycleMessage(
   return lines.join('\n');
 }
 
+/** An inline button row, e.g. one "Approve" / "Reject" pair. `callback_data` is
+ * what comes back on `getTelegramUpdates` when the human taps it — max 64
+ * bytes per Telegram's own limit, so callers must keep it short (an intent id,
+ * not a whole payload). */
+export interface InlineKeyboardButton {
+  readonly text: string;
+  readonly callback_data: string;
+}
+
 export async function sendTelegramMessage(
   text: string,
   config: TelegramConfig,
-): Promise<SendResult> {
+  replyMarkup?: { inline_keyboard: readonly (readonly InlineKeyboardButton[])[] },
+): Promise<SendResult & { messageId?: number }> {
   if (!config.token || !config.chatId) {
     return { sent: false, reason: 'Telegram credentials not set' };
   }
@@ -384,11 +394,73 @@ export async function sendTelegramMessage(
     const response = await doFetch(`https://api.telegram.org/bot${config.token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: config.chatId, text, disable_web_page_preview: true }),
+      body: JSON.stringify({
+        chat_id: config.chatId,
+        text,
+        disable_web_page_preview: true,
+        ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+      }),
     });
     if (!response.ok) return { sent: false, reason: `Telegram HTTP ${response.status}` };
-    return { sent: true };
+    const payload = (await response.json()) as { result?: { message_id?: number } };
+    return { sent: true, messageId: payload.result?.message_id };
   } catch (cause) {
     return { sent: false, reason: cause instanceof Error ? cause.message : String(cause) };
+  }
+}
+
+export interface TelegramCallbackQuery {
+  readonly id: string;
+  readonly data: string;
+}
+
+/**
+ * Short-poll for pending button taps (callback queries) since the last-seen
+ * update id. `timeout: 0` (no Telegram-side long-poll) is deliberate — this
+ * runs inside a GitHub Actions job with its own wall-clock budget, so the
+ * caller controls polling cadence itself rather than blocking one HTTP call
+ * for minutes.
+ */
+export async function getTelegramUpdates(
+  config: TelegramConfig,
+  offset: number,
+): Promise<{ updates: readonly TelegramCallbackQuery[]; nextOffset: number }> {
+  if (!config.token) return { updates: [], nextOffset: offset };
+  const doFetch = config.fetchFn ?? ((input, init) => fetch(input, init));
+  try {
+    const response = await doFetch(
+      `https://api.telegram.org/bot${config.token}/getUpdates?offset=${offset}&timeout=0&allowed_updates=%5B%22callback_query%22%5D`,
+      { method: 'GET' },
+    );
+    if (!response.ok) return { updates: [], nextOffset: offset };
+    const payload = (await response.json()) as {
+      result?: readonly { update_id: number; callback_query?: { id: string; data?: string } }[];
+    };
+    const results = payload.result ?? [];
+    const updates: TelegramCallbackQuery[] = [];
+    let nextOffset = offset;
+    for (const u of results) {
+      nextOffset = Math.max(nextOffset, u.update_id + 1);
+      if (u.callback_query?.data) updates.push({ id: u.callback_query.id, data: u.callback_query.data });
+    }
+    return { updates, nextOffset };
+  } catch {
+    return { updates: [], nextOffset: offset };
+  }
+}
+
+/** Clears the button's "loading" spinner in the Telegram client. Best-effort — a
+ * failure here never blocks the decision itself from being recorded. */
+export async function answerCallbackQuery(callbackQueryId: string, config: TelegramConfig): Promise<void> {
+  if (!config.token) return;
+  const doFetch = config.fetchFn ?? ((input, init) => fetch(input, init));
+  try {
+    await doFetch(`https://api.telegram.org/bot${config.token}/answerCallbackQuery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ callback_query_id: callbackQueryId }),
+    });
+  } catch {
+    // best-effort, see doc comment
   }
 }

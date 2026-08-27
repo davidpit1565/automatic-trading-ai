@@ -20,6 +20,33 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## STAGE 6 STARTED (2026-08-27): real-money execution layer, still not connected
+David asked what's needed to connect a real wallet, then explicitly asked to
+start building it. See `docs/execution-architecture.md` for the full design
+and current checklist. Summary:
+- Checked the readiness gate live: crypto is 5/6 (blocked only on "beats
+  buy-and-hold BTC", a known ~20% gap in a strong bull run, no free fix);
+  stocks is 4/6 (needs more closed trades + a benchmark comparison not wired
+  yet). Neither is ready, and readiness alone was never the whole gate anyway.
+- The execution contracts (`src/core/execution/types.ts`) were "design only"
+  — zero implementations existed. Two now do, both paper-only/no-real-money:
+  `src/core/execution/paperBrokerAdapter.ts` (implements `BrokerAdapter`
+  against the existing paper `PortfolioEngine`) and
+  `server/telegramConfirmationGate.mts` (implements `ConfirmationGate`,
+  sends real Telegram Approve/Reject buttons, no path to auto-approve).
+  `tests/ui/architecture.test.ts` updated to whitelist exactly the one
+  `BrokerAdapter` file and assert it stays network-free and paper-mode-only —
+  every other file in `src` is still blocked from implementing it.
+- Persistent audit log storage was already built (`PersistedAuditLog`) and
+  needed no new work; both new pieces log through it.
+- NOT done, and explicitly not started: a real Revolut X adapter (needs
+  David to create separately-scoped, order-capable API credentials), and
+  wiring the confirmation gate + broker adapter into an actual running
+  orchestrator loop. Nothing currently built can place a real order or
+  touch real money; `paperAutoPilot.ts`'s existing autonomous paper loop is
+  untouched and still has no confirmation step, by design.
+- Full gate green: tsc clean, 779 vitest (760 + 19 new), vite build ok.
+
 ## Strategy (measured on ~30d real Kraken data; SIMULATED)
 - No-chase RSI ceiling `AUTOPILOT_MAX_RSI_FOR_LONG=65` (PF ~1.0→2.3).
 - Trailing stop `AUTOPILOT_TRAILING=undefined` (OFF — measured 2026-08-27,

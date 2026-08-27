@@ -1,0 +1,162 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryStore } from '../../src/core/data/storage';
+import { PersistedAuditLog } from '../../src/core/autopilot/auditLog';
+import type { OrderIntent } from '../../src/core/execution/types';
+import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
+import { ConfirmationPendingError, TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
+
+function approvedAssessment(): TradeRiskAssessment {
+  return {
+    approved: true,
+    asset: 'BTCEUR',
+    entry: 100,
+    stopLoss: 95,
+    takeProfit: 115,
+    positionSize: 2,
+    positionValue: 200,
+    riskAmount: 10,
+    riskPercentage: 1,
+    rewardRiskRatio: 3,
+    portfolioExposure: 2,
+    reasons: [],
+    warnings: [],
+  };
+}
+
+function intent(id = 'BTCEUR:1:0'): OrderIntent {
+  return {
+    id,
+    createdAt: 1_000,
+    mode: 'live',
+    symbol: 'BTCEUR',
+    side: 'buy',
+    quantity: 2,
+    limitPrice: 100,
+    stopLoss: 95,
+    takeProfit: 115,
+    assessment: approvedAssessment(),
+  };
+}
+
+/** Routes the one fetchFn Telegram's client uses across sendMessage /
+ * getUpdates / answerCallbackQuery, based on the endpoint in the URL —
+ * mirrors how one real bot token talks to all three. */
+function fakeTelegram(getUpdatesResponses: { update_id: number; callback_query?: { id: string; data: string } }[][]) {
+  let updatesCallIndex = 0;
+  const sent: string[] = [];
+  const answered: string[] = [];
+  const fetchFn = (async (url: string, init?: { body?: string }) => {
+    if (url.includes('/sendMessage')) {
+      sent.push(JSON.parse(init!.body!).text);
+      return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 });
+    }
+    if (url.includes('/getUpdates')) {
+      const batch = getUpdatesResponses[updatesCallIndex] ?? [];
+      updatesCallIndex++;
+      return new Response(JSON.stringify({ ok: true, result: batch }), { status: 200 });
+    }
+    if (url.includes('/answerCallbackQuery')) {
+      answered.push(JSON.parse(init!.body!).callback_query_id);
+      return new Response('{}', { status: 200 });
+    }
+    throw new Error(`unexpected Telegram endpoint: ${url}`);
+  }) as unknown as typeof fetch;
+  return { fetchFn, sent, answered };
+}
+
+describe('TelegramConfirmationGate (real network I/O — the human safety gate for Stage 6)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('throws immediately, without sending anything, when Telegram credentials are missing', async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const gate = new TelegramConfirmationGate(store, { token: '', chatId: '' }, audit);
+    await expect(gate.requestConfirmation(intent())).rejects.toThrow(/credentials/);
+  });
+
+  it('sends one Telegram message with approve/reject buttons and resolves approved on a matching tap', async () => {
+    const { fetchFn, sent } = fakeTelegram([
+      [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:approve:BTCEUR:1:0' } }],
+    ]);
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+
+    const promise = gate.requestConfirmation(intent());
+    const decision = await promise;
+
+    expect(decision).toMatchObject({ intentId: 'BTCEUR:1:0', approved: true, decidedBy: 'C' });
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toContain('BTCEUR');
+    expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation', 'confirmed']);
+  });
+
+  it('resolves approved: false on a reject tap', async () => {
+    const { fetchFn } = fakeTelegram([
+      [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:reject:BTCEUR:1:0' } }],
+    ]);
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+    const decision = await gate.requestConfirmation(intent());
+    expect(decision.approved).toBe(false);
+    expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation', 'rejected']);
+  });
+
+  it('ignores a callback tap for a different intent and keeps polling for the right one', async () => {
+    const { fetchFn } = fakeTelegram([
+      [{ update_id: 10, callback_query: { id: 'cb-other', data: 'confirm:approve:SOMETHING-ELSE' } }],
+      [{ update_id: 11, callback_query: { id: 'cb1', data: 'confirm:approve:BTCEUR:1:0' } }],
+    ]);
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+    const promise = gate.requestConfirmation(intent());
+    await vi.runAllTimersAsync();
+    const decision = await promise;
+    expect(decision.approved).toBe(true);
+  });
+
+  it('does not re-send the Telegram message on a resumed call for the same intent (idempotent)', async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    // First run: no reply ever arrives — every poll attempt comes back empty.
+    const empty = Array.from({ length: 5 }, () => [] as never[]);
+    const first = fakeTelegram(empty);
+    const gateRun1 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: first.fetchFn }, audit);
+    const p1 = gateRun1.requestConfirmation(intent());
+    const p1Assertion = expect(p1).rejects.toThrow(ConfirmationPendingError);
+    await vi.runAllTimersAsync();
+    await p1Assertion;
+    expect(first.sent).toHaveLength(1);
+
+    // Second run (simulating the next scheduled invocation), same store: the
+    // pending record already exists, so this must not send a second message.
+    const second = fakeTelegram([
+      [{ update_id: 20, callback_query: { id: 'cb2', data: 'confirm:approve:BTCEUR:1:0' } }],
+    ]);
+    const gateRun2 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: second.fetchFn }, audit);
+    const decision = await gateRun2.requestConfirmation(intent());
+    expect(second.sent).toHaveLength(0);
+    expect(decision.approved).toBe(true);
+  });
+
+  it('throws ConfirmationPendingError (never a fabricated decision) if nobody answers in time', async () => {
+    const empty = Array.from({ length: 5 }, () => [] as never[]);
+    const { fetchFn, sent } = fakeTelegram(empty);
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+    const promise = gate.requestConfirmation(intent());
+    const assertion = expect(promise).rejects.toThrow(ConfirmationPendingError);
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(sent).toHaveLength(1);
+    expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation']);
+  });
+});

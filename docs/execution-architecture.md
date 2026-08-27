@@ -1,8 +1,12 @@
-# Execution Control Layer — Design (Stage 6 preparation)
+# Execution Control Layer — Design (Stage 6 in progress)
 
-**Status: design only. No execution code is implemented or enabled.**
-The contracts live in `src/core/execution/types.ts`; architecture tests enforce
-that the module stays implementation-free until Stage 6 is formally started.
+**Status: Stage 6 started 2026-08-27 (David's explicit go-ahead), building in
+the safe order below. No real broker and no real money are connected yet —
+what exists so far is paper-only and not wired into any live orchestrator.**
+The contracts live in `src/core/execution/types.ts`, still implementation-free
+itself; an architecture test enforces that exactly one whitelisted file
+(`paperBrokerAdapter.ts`, paper-only, no network) may implement `BrokerAdapter`
+today, and that no other file — anywhere, real broker included — does.
 
 ## Position in the architecture
 
@@ -48,12 +52,32 @@ Signal Engine ──▶ Risk Engine ──▶ Trade Proposal (TradeRiskAssessmen
 with `cancelled` / `rejected` reachable from every pre-fill state.
 An engaged kill switch forces every in-flight intent to `cancelled`.
 
-## What Stage 6 must add (and only then)
+## What Stage 6 must add
 
-- Paper `BrokerAdapter` implementation driven through the full state machine.
-- A confirmation UI that shows the complete `TradeRiskAssessment` beside the
-  order before asking for approval.
-- Persistent audit log storage.
-- Revolut X adapter behind a separate, explicitly-scoped API key.
+- [x] **Paper `BrokerAdapter`** (`src/core/execution/paperBrokerAdapter.ts`,
+      2026-08-27) — implements the full state machine against the existing
+      paper `PortfolioEngine`, no network, mode fixed to `'paper'`. Not wired
+      into `paperAutoPilot.ts`, which stays exactly as it was (autonomous,
+      ungated, paper-only) — this is separate machinery, proven in isolation.
+- [x] **A confirmation UI** (`server/telegramConfirmationGate.mts`,
+      2026-08-27) — sends the order's real numbers (risk %, reward:risk,
+      resulting portfolio exposure) to Telegram with Approve/Reject buttons,
+      short-polls for the tap. No code path in this class can resolve
+      `approved: true` without one. Adapted to this project's cyclical
+      GitHub-Actions runtime: a single call polls for a bounded window and
+      throws `ConfirmationPendingError` if unanswered rather than fabricating
+      a decision; the SAME intent is resumed (not re-sent) on the next
+      scheduled run via a persisted pending record.
+- [x] **Persistent audit log storage** — already existed
+      (`PersistedAuditLog`, `src/core/autopilot/auditLog.ts`), reused as-is
+      by both pieces above.
+- [ ] **Revolut X adapter behind a separate, explicitly-scoped API key** — not
+      started. Needs David to create and hand over order-capable credentials
+      (distinct from the existing read-only market-data key) when he decides
+      to proceed; every order still requires his Telegram approval regardless.
+- [ ] **Wiring**: nothing yet calls `TelegramConfirmationGate` →
+      `PaperBrokerAdapter` (or a real adapter) as a live orchestrator loop —
+      today they are tested, working machinery, not a running feature.
 
-Until then: the platform reads market data, analyses, and simulates — nothing else.
+Until the last two items: the platform reads market data, analyses, and
+simulates — nothing it does can reach a real account.
