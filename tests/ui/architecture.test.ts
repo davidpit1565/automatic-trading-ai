@@ -140,13 +140,34 @@ describe('core layering', () => {
         /\bfetch\s*\(|BrokerAdapter|placeOrder|submitOrder/,
       );
     }
-    // No BrokerAdapter implementation exists anywhere in src.
+    // Stage 6 in progress (2026-08-27, David asked to start building it):
+    // exactly ONE file may implement BrokerAdapter today —
+    // src/core/execution/paperBrokerAdapter.ts, a paper-only, no-network
+    // simulator built to prove the OrderIntent state machine end-to-end
+    // before any real broker exists. It is never imported by
+    // paperAutoPilot.ts (checked above: that file has no BrokerAdapter
+    // reference at all) — building it does not wire it into the currently
+    // running autonomous paper autopilot. A REAL broker adapter (Revolut X
+    // or otherwise) must still not exist anywhere until David explicitly
+    // provides real, separately-scoped API credentials for it.
+    const PAPER_BROKER_ADAPTER_PATH = join(root, 'src/core/execution/paperBrokerAdapter.ts');
     for (const file of collectFiles(join(root, 'src')).filter((f) => f.endsWith('.ts'))) {
+      if (file === PAPER_BROKER_ADAPTER_PATH) continue;
       expect(
         readFileSync(file, 'utf8'),
         `${file} must not implement a broker adapter before Stage 6`,
       ).not.toMatch(/implements\s+BrokerAdapter/);
     }
+    // The one allowed implementation must itself stay paper-only: no network
+    // I/O, no real broker SDK, mode fixed to 'paper'.
+    const paperBroker = readFileSync(PAPER_BROKER_ADAPTER_PATH, 'utf8');
+    expect(paperBroker).toMatch(/implements\s+BrokerAdapter/);
+    expect(paperBroker, 'the paper broker adapter must not do real network I/O').not.toMatch(
+      /\bfetch\s*\(|XMLHttpRequest|WebSocket/,
+    );
+    expect(paperBroker, "the paper broker adapter's mode must be fixed to 'paper'").toMatch(
+      /mode\s*=\s*['"]paper['"]/,
+    );
     // The autopilot opens positions only through risk-approved proposals.
     const pilot = readFileSync(join(root, 'src/core/autopilot/paperAutoPilot.ts'), 'utf8');
     expect(pilot).toContain('openFromAssessment');

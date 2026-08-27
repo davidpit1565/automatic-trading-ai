@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, readinessLineHe, sendTelegramMessage } from '../../server/telegram.mts';
+import { answerCallbackQuery, buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, getTelegramUpdates, readinessLineHe, sendTelegramMessage } from '../../server/telegram.mts';
 import { assessRealMoneyReadiness, READINESS_THRESHOLDS } from '../../src/core/feedback/realMoneyReadiness';
 
 describe('buildStockCycleMessage', () => {
@@ -381,5 +381,88 @@ describe('buildDailySummary — shadow strategy line', () => {
   it('makes clear this is simulated and does not affect the real account', () => {
     const msg = buildDailySummary({ ...base, shadows: [standing({ trades: 25, returnPct: 1 })] });
     expect(msg).toContain('כסף מדומה');
+  });
+});
+
+describe('sendTelegramMessage with an inline keyboard (confirmation-gate buttons)', () => {
+  it('sends the reply_markup and returns the message id from Telegram', async () => {
+    const sentReplyMarkups: unknown[] = [];
+    const fakeFetch = (async (_url: string, init: { body: string }) => {
+      sentReplyMarkups.push((JSON.parse(init.body) as { reply_markup?: unknown }).reply_markup);
+      return new Response(JSON.stringify({ ok: true, result: { message_id: 42 } }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const result = await sendTelegramMessage(
+      'confirm?',
+      { token: 'T', chatId: 'C', fetchFn: fakeFetch },
+      { inline_keyboard: [[{ text: 'Yes', callback_data: 'yes' }]] },
+    );
+    expect(result.sent).toBe(true);
+    expect(result.messageId).toBe(42);
+    expect(sentReplyMarkups).toEqual([{ inline_keyboard: [[{ text: 'Yes', callback_data: 'yes' }]] }]);
+  });
+
+  it('omits reply_markup entirely for a plain message (unchanged existing behaviour)', async () => {
+    let sentBody: Record<string, unknown> | null = null;
+    const fakeFetch = (async (_url: string, init: { body: string }) => {
+      sentBody = JSON.parse(init.body) as Record<string, unknown>;
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }) as unknown as typeof fetch;
+    await sendTelegramMessage('plain', { token: 'T', chatId: 'C', fetchFn: fakeFetch });
+    expect(sentBody).not.toHaveProperty('reply_markup');
+  });
+});
+
+describe('getTelegramUpdates (short poll for confirmation-gate button taps)', () => {
+  it('returns callback queries and advances the offset past the highest update_id seen', async () => {
+    const fakeFetch = (async () =>
+      new Response(
+        JSON.stringify({
+          ok: true,
+          result: [
+            { update_id: 5, callback_query: { id: 'cb1', data: 'confirm:approve:X' } },
+            { update_id: 6, message: { text: 'irrelevant, no callback_query' } },
+          ],
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    const { updates, nextOffset } = await getTelegramUpdates({ token: 'T', chatId: 'C', fetchFn: fakeFetch }, 0);
+    expect(updates).toEqual([{ id: 'cb1', data: 'confirm:approve:X' }]);
+    expect(nextOffset).toBe(7);
+  });
+
+  it('returns no updates and keeps the offset unchanged without credentials, on HTTP failure, or on a network error', async () => {
+    const noCreds = await getTelegramUpdates({ token: '', chatId: '' }, 3);
+    expect(noCreds).toEqual({ updates: [], nextOffset: 3 });
+
+    const httpFail = (async () => new Response('{}', { status: 500 })) as unknown as typeof fetch;
+    expect(await getTelegramUpdates({ token: 'T', chatId: 'C', fetchFn: httpFail }, 3)).toEqual({
+      updates: [],
+      nextOffset: 3,
+    });
+
+    const networkError = (async () => {
+      throw new Error('offline');
+    }) as unknown as typeof fetch;
+    expect(await getTelegramUpdates({ token: 'T', chatId: 'C', fetchFn: networkError }, 3)).toEqual({
+      updates: [],
+      nextOffset: 3,
+    });
+  });
+});
+
+describe('answerCallbackQuery', () => {
+  it('posts the callback query id and never throws even when the request fails', async () => {
+    let posted: string | null = null;
+    const fakeFetch = (async (url: string) => {
+      posted = url;
+      return new Response('{}', { status: 200 });
+    }) as unknown as typeof fetch;
+    await answerCallbackQuery('cb1', { token: 'T', chatId: 'C', fetchFn: fakeFetch });
+    expect(posted).toContain('/answerCallbackQuery');
+
+    const throwing = (async () => {
+      throw new Error('offline');
+    }) as unknown as typeof fetch;
+    await expect(answerCallbackQuery('cb1', { token: 'T', chatId: 'C', fetchFn: throwing })).resolves.toBeUndefined();
   });
 });

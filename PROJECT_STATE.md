@@ -20,10 +20,37 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## STAGE 6 STARTED (2026-08-27): real-money execution layer, still not connected
+David asked what's needed to connect a real wallet, then explicitly asked to
+start building it. See `docs/execution-architecture.md` for the full design
+and current checklist. Summary:
+- Checked the readiness gate live: crypto is 5/6 (blocked only on "beats
+  buy-and-hold BTC", a known ~20% gap in a strong bull run, no free fix);
+  stocks is 4/6 (needs more closed trades + a benchmark comparison not wired
+  yet). Neither is ready, and readiness alone was never the whole gate anyway.
+- The execution contracts (`src/core/execution/types.ts`) were "design only"
+  — zero implementations existed. Two now do, both paper-only/no-real-money:
+  `src/core/execution/paperBrokerAdapter.ts` (implements `BrokerAdapter`
+  against the existing paper `PortfolioEngine`) and
+  `server/telegramConfirmationGate.mts` (implements `ConfirmationGate`,
+  sends real Telegram Approve/Reject buttons, no path to auto-approve).
+  `tests/ui/architecture.test.ts` updated to whitelist exactly the one
+  `BrokerAdapter` file and assert it stays network-free and paper-mode-only —
+  every other file in `src` is still blocked from implementing it.
+- Persistent audit log storage was already built (`PersistedAuditLog`) and
+  needed no new work; both new pieces log through it.
+- NOT done, and explicitly not started: a real Revolut X adapter (needs
+  David to create separately-scoped, order-capable API credentials), and
+  wiring the confirmation gate + broker adapter into an actual running
+  orchestrator loop. Nothing currently built can place a real order or
+  touch real money; `paperAutoPilot.ts`'s existing autonomous paper loop is
+  untouched and still has no confirmation step, by design.
+- Full gate green: tsc clean, 779 vitest (760 + 19 new), vite build ok.
+
 ## Strategy (measured on ~30d real Kraken data; SIMULATED)
 - No-chase RSI ceiling `AUTOPILOT_MAX_RSI_FOR_LONG=65` (PF ~1.0→2.3).
-- Trailing stop `AUTOPILOT_TRAILING={activateR:1,trailR:2}` (PF ~2.4→3.0,
-  drawdown ~1.1%→0.8%). Conviction floor `AUTOPILOT_MIN_CONFIDENCE=20`.
+- Trailing stop `AUTOPILOT_TRAILING=undefined` (OFF — measured 2026-08-27,
+  see below). Conviction floor `AUTOPILOT_MIN_CONFIDENCE=40`.
 - Shared pure helpers so live autopilot and harness stay identical.
 - Portfolio drawdown circuit-breaker (`src/core/risk/drawdownBreaker.ts`,
   DD_BREAKER_PCT=8): pauses NEW entries when equity >8% below its peak; exits
@@ -68,6 +95,50 @@ data (not the ~30-day-old numbers the old constants cited):
   alts.
 - Full gate green (tsc · 490 vitest · vite build) both times; no test
   hardcoded either constant.
+
+## WIN-RATE QUESTION (2026-08-27): trailing stop measured off; closer target re-confirmed as a trap
+David asked for a much higher win rate ("traders who win 99% of trades"),
+having seen both live paper accounts (crypto + stocks) give back some of a
+recent winning streak. Answered honestly rather than chasing the number:
+
+- **No real, liquid strategy sustains ~99% win rate.** Ran the up-to-date
+  `scripts/sweepAutopilot.mts` (which replays the actual `PaperAutoPilot`,
+  not `sweepStrategy.mts`'s per-symbol approximation) across ~30 configs on
+  two real windows (1h entries/30d, 4h entries/120d). Every config that
+  showed 90-100% win rate did so on 1-2 trades — noise, not edge. The
+  ACTUAL current production config already ran ~92% win rate in the recent
+  strongly-trending 30-day window (13 trades) but only 25% in the choppier
+  120-day window (8 trades) — win rate is regime-dependent, not a fixed
+  trait of the strategy, and a "99% win rate trader" claim on real volume is
+  a red flag (inverted risk/reward, or a cherry-picked sample), not a goal
+  to chase.
+- **Trailing stop measured OFF** (`AUTOPILOT_TRAILING` now `undefined`):
+  across both windows tested, dropping the `{activateR:1.5, trailR:1.5}`
+  trail never did worse than keeping it, and did better in the 1h window
+  (return 13.56%→14.15%, same 92.3% win rate). A small, real, no-downside
+  win — see the dated comment on `AUTOPILOT_TRAILING` in `paperAutoPilot.ts`.
+- **A closer take-profit target (raises win% but costs profit factor) was
+  RE-TESTED and RE-REJECTED** — same conclusion as 2026-07-20 (see below),
+  independently reproduced today on `sweepStrategy.mts` (atrTargetMultiple
+  4→3: win% 54.8%→63.2%, but PF drops and the change was measured against
+  that script's own stale "PROD baseline" row, which still hardcoded
+  `minConfidence: 20` against the real production value of 40 — flagged as
+  a tooling-hygiene gap, not fixed here since `sweepAutopilot.mts` is the
+  script actually kept current). A higher win rate bought by a smaller,
+  less robust edge is not the improvement it looks like.
+- **Confidence-floor granularity between 40 and 50 checked and REJECTED
+  too**: David pushed further on the win-rate question, so `floor 42/45/48
+  no-trail` rows were added to `sweepAutopilot.mts` to see if any floor
+  beats the current 40. In the 1h/30d window, win rate strictly *decreases*
+  as the floor rises (92.3%→88.9%→83.3%→66.7% at 40/42/45/48) while trades
+  collapse (13→9→6→3) — floor 40 is already the local peak, not an
+  under-tuned value; a higher confidence score isn't more predictive of a
+  win here (matches the 2026-07-27 finding that winner/loser confidence was
+  statistically identical before the floor existed). This closes the
+  confidence-floor lever entirely: there is no adjustment left in this
+  family that legitimately buys a higher win rate.
+- Full gate green (tsc · 760 vitest · vite build); no test hardcoded the
+  removed trailing-stop value.
 
 ## Pending Work (autonomous queue)
 - TESTED AND REJECTED (2026-07-20): David asked whether a CLOSER take-profit

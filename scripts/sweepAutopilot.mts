@@ -66,6 +66,14 @@ const CONFIGS: Cfg[] = [
   { name: 'floor 20            ', minConfidence: 20, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 } },
   { name: 'floor 30            ', minConfidence: 30, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 } },
   { name: 'floor 50            ', minConfidence: 50, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 } },
+  // Finer floor granularity between the measured 40 and the too-sparse 50,
+  // now against the true current baseline (no trail — see 'fixed stop (no
+  // trail)' below, adopted 2026-08-27): is there a floor that raises win
+  // rate further than 40 without starving the sample the way 50 does?
+  { name: 'floor 40 no-trail (TRUE PROD)', minConfidence: 40, maxRsiForLong: 65 },
+  { name: 'floor 42 no-trail   ', minConfidence: 42, maxRsiForLong: 65 },
+  { name: 'floor 45 no-trail   ', minConfidence: 45, maxRsiForLong: 65 },
+  { name: 'floor 48 no-trail   ', minConfidence: 48, maxRsiForLong: 65 },
   { name: 'rsi 55              ', minConfidence: 40, maxRsiForLong: 55, trailing: { activateR: 1.5, trailR: 1.5 } },
   { name: 'rsi 75              ', minConfidence: 40, maxRsiForLong: 75, trailing: { activateR: 1.5, trailR: 1.5 } },
   { name: 'fixed stop (no trail)', minConfidence: 40, maxRsiForLong: 65 },
@@ -236,7 +244,7 @@ async function replay(
     peak = Math.max(peak, equity);
   }
   const a = tradeAnalytics(journal.entries(), { initialCash: CASH });
-  return { ret: ((equity - CASH) / CASH) * 100, dd: a.maxDrawdownPct, pf: a.profitFactor, n: a.tradeCount };
+  return { ret: ((equity - CASH) / CASH) * 100, dd: a.maxDrawdownPct, pf: a.profitFactor, n: a.tradeCount, win: a.winRatePct };
 }
 
 const daily = await loadDaily();
@@ -269,7 +277,7 @@ for (const [entryTf, confirmTf, label] of [['1h', '4h', '1h entry / 30 days'], [
   // against BTC specifically, not the basket — this is the number that
   // actually needs to be beaten for that criterion to pass.
   console.log(`buy & hold, BTC only:              ${btcBh === null ? 'n/a' : btcBh.toFixed(2) + '%'}`);
-  console.log('config                  |   full ret |  full PF | trades |  OOS ret | OOS PF');
+  console.log('config                  |   full ret |  full PF |  win% | trades |  OOS ret | OOS PF |  OOS win%');
   // profitFactor is `null` from tradeAnalytics whenever there were zero
   // losing trades (grossLoss === 0) — undefined, not zero. Printing that as
   // "0.000" reads as the worst possible score when it's actually the best
@@ -279,8 +287,9 @@ for (const [entryTf, confirmTf, label] of [['1h', '4h', '1h entry / 30 days'], [
   for (const cfg of CONFIGS) {
     const full = await replay(cfg, e, c, usable, entryTf, confirmTf, daily, topTraderRatios);
     const oos = await replay(cfg, e, c, usable.slice(mid), entryTf, confirmTf, daily, topTraderRatios);
+    const fmtWin = (w: number | null): string => (w === null ? '-' : w.toFixed(1));
     console.log(
-      `${cfg.name} | ${full.ret.toFixed(3).padStart(9)}% | ${fmtPf(full.pf, full.n).padStart(8)} | ${String(full.n).padStart(6)} | ${oos.ret.toFixed(3).padStart(7)}% | ${fmtPf(oos.pf, oos.n)}`,
+      `${cfg.name} | ${full.ret.toFixed(3).padStart(9)}% | ${fmtPf(full.pf, full.n).padStart(8)} | ${fmtWin(full.win).padStart(5)} | ${String(full.n).padStart(6)} | ${oos.ret.toFixed(3).padStart(7)}% | ${fmtPf(oos.pf, oos.n).padStart(6)} | ${fmtWin(oos.win).padStart(9)}`,
     );
   }
 }
