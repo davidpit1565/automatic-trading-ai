@@ -236,7 +236,7 @@ async function replay(
     peak = Math.max(peak, equity);
   }
   const a = tradeAnalytics(journal.entries(), { initialCash: CASH });
-  return { ret: ((equity - CASH) / CASH) * 100, dd: a.maxDrawdownPct, pf: a.profitFactor, n: a.tradeCount };
+  return { ret: ((equity - CASH) / CASH) * 100, dd: a.maxDrawdownPct, pf: a.profitFactor, n: a.tradeCount, win: a.winRatePct };
 }
 
 const daily = await loadDaily();
@@ -269,7 +269,7 @@ for (const [entryTf, confirmTf, label] of [['1h', '4h', '1h entry / 30 days'], [
   // against BTC specifically, not the basket — this is the number that
   // actually needs to be beaten for that criterion to pass.
   console.log(`buy & hold, BTC only:              ${btcBh === null ? 'n/a' : btcBh.toFixed(2) + '%'}`);
-  console.log('config                  |   full ret |  full PF | trades |  OOS ret | OOS PF');
+  console.log('config                  |   full ret |  full PF |  win% | trades |  OOS ret | OOS PF |  OOS win%');
   // profitFactor is `null` from tradeAnalytics whenever there were zero
   // losing trades (grossLoss === 0) — undefined, not zero. Printing that as
   // "0.000" reads as the worst possible score when it's actually the best
@@ -279,8 +279,9 @@ for (const [entryTf, confirmTf, label] of [['1h', '4h', '1h entry / 30 days'], [
   for (const cfg of CONFIGS) {
     const full = await replay(cfg, e, c, usable, entryTf, confirmTf, daily, topTraderRatios);
     const oos = await replay(cfg, e, c, usable.slice(mid), entryTf, confirmTf, daily, topTraderRatios);
+    const fmtWin = (w: number | null): string => (w === null ? '-' : w.toFixed(1));
     console.log(
-      `${cfg.name} | ${full.ret.toFixed(3).padStart(9)}% | ${fmtPf(full.pf, full.n).padStart(8)} | ${String(full.n).padStart(6)} | ${oos.ret.toFixed(3).padStart(7)}% | ${fmtPf(oos.pf, oos.n)}`,
+      `${cfg.name} | ${full.ret.toFixed(3).padStart(9)}% | ${fmtPf(full.pf, full.n).padStart(8)} | ${fmtWin(full.win).padStart(5)} | ${String(full.n).padStart(6)} | ${oos.ret.toFixed(3).padStart(7)}% | ${fmtPf(oos.pf, oos.n).padStart(6)} | ${fmtWin(oos.win).padStart(9)}`,
     );
   }
 }

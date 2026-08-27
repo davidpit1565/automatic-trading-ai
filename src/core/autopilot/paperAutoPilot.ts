@@ -58,15 +58,21 @@ export const AUTOPILOT_MIN_CONFIDENCE = 40;
 export const AUTOPILOT_MAX_RSI_FOR_LONG = 65;
 
 /**
- * Production trailing stop. Re-measured 2026-07-27 on current real Kraken
- * data (`scripts/sweepStrategy.mts`, 5 majors, 720 1h candles, in-sample +
- * out-of-sample): tightening from {activateR:1, trailR:2} to {activateR:1.5,
- * trailR:1.5} beat the prior setting on every metric — return 0.32%→0.35%,
- * max drawdown 0.99%→0.98%, win rate 35.7%→44.4%, PF 1.35→1.42, and
- * out-of-sample PF 0.77→0.83. Activates after +1.5×risk, then trails
- * 1.5×risk below peak.
+ * Production trailing stop — currently OFF. Re-measured 2026-08-27 on the
+ * real, current production config (`scripts/sweepAutopilot.mts`, which
+ * replays the actual PaperAutoPilot rather than sweepStrategy.mts's
+ * per-symbol approximation — that older script's "PROD baseline" row had
+ * drifted stale, still hardcoding minConfidence 20 against the real 40):
+ * across both windows tested (1h entries/30d and 4h entries/120d, in-sample
+ * + out-of-sample), dropping the {activateR:1.5, trailR:1.5} trail never
+ * did worse than keeping it, and in the 1h window it did better (return
+ * 13.56%→14.15%, same 92.3% win rate, 13 trades) — the tighter 1.5R
+ * activation was cutting some winners short before their fixed target
+ * rather than protecting more profit than the target already locks in.
+ * Kept as a config knob (`trailing?` below) rather than deleted, since a
+ * future measurement on a different window could reverse this.
  */
-export const AUTOPILOT_TRAILING: TrailingConfig = { activateR: 1.5, trailR: 1.5 };
+export const AUTOPILOT_TRAILING: TrailingConfig | undefined = undefined;
 
 /**
  * Daily-EMA period for the regime gate (see `signal/regimeFilter.ts`).

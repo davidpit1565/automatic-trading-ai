@@ -22,8 +22,8 @@
 
 ## Strategy (measured on ~30d real Kraken data; SIMULATED)
 - No-chase RSI ceiling `AUTOPILOT_MAX_RSI_FOR_LONG=65` (PF ~1.0→2.3).
-- Trailing stop `AUTOPILOT_TRAILING={activateR:1,trailR:2}` (PF ~2.4→3.0,
-  drawdown ~1.1%→0.8%). Conviction floor `AUTOPILOT_MIN_CONFIDENCE=20`.
+- Trailing stop `AUTOPILOT_TRAILING=undefined` (OFF — measured 2026-08-27,
+  see below). Conviction floor `AUTOPILOT_MIN_CONFIDENCE=40`.
 - Shared pure helpers so live autopilot and harness stay identical.
 - Portfolio drawdown circuit-breaker (`src/core/risk/drawdownBreaker.ts`,
   DD_BREAKER_PCT=8): pauses NEW entries when equity >8% below its peak; exits
@@ -68,6 +68,39 @@ data (not the ~30-day-old numbers the old constants cited):
   alts.
 - Full gate green (tsc · 490 vitest · vite build) both times; no test
   hardcoded either constant.
+
+## WIN-RATE QUESTION (2026-08-27): trailing stop measured off; closer target re-confirmed as a trap
+David asked for a much higher win rate ("traders who win 99% of trades"),
+having seen both live paper accounts (crypto + stocks) give back some of a
+recent winning streak. Answered honestly rather than chasing the number:
+
+- **No real, liquid strategy sustains ~99% win rate.** Ran the up-to-date
+  `scripts/sweepAutopilot.mts` (which replays the actual `PaperAutoPilot`,
+  not `sweepStrategy.mts`'s per-symbol approximation) across ~30 configs on
+  two real windows (1h entries/30d, 4h entries/120d). Every config that
+  showed 90-100% win rate did so on 1-2 trades — noise, not edge. The
+  ACTUAL current production config already ran ~92% win rate in the recent
+  strongly-trending 30-day window (13 trades) but only 25% in the choppier
+  120-day window (8 trades) — win rate is regime-dependent, not a fixed
+  trait of the strategy, and a "99% win rate trader" claim on real volume is
+  a red flag (inverted risk/reward, or a cherry-picked sample), not a goal
+  to chase.
+- **Trailing stop measured OFF** (`AUTOPILOT_TRAILING` now `undefined`):
+  across both windows tested, dropping the `{activateR:1.5, trailR:1.5}`
+  trail never did worse than keeping it, and did better in the 1h window
+  (return 13.56%→14.15%, same 92.3% win rate). A small, real, no-downside
+  win — see the dated comment on `AUTOPILOT_TRAILING` in `paperAutoPilot.ts`.
+- **A closer take-profit target (raises win% but costs profit factor) was
+  RE-TESTED and RE-REJECTED** — same conclusion as 2026-07-20 (see below),
+  independently reproduced today on `sweepStrategy.mts` (atrTargetMultiple
+  4→3: win% 54.8%→63.2%, but PF drops and the change was measured against
+  that script's own stale "PROD baseline" row, which still hardcoded
+  `minConfidence: 20` against the real production value of 40 — flagged as
+  a tooling-hygiene gap, not fixed here since `sweepAutopilot.mts` is the
+  script actually kept current). A higher win rate bought by a smaller,
+  less robust edge is not the improvement it looks like.
+- Full gate green (tsc · 760 vitest · vite build); no test hardcoded the
+  removed trailing-stop value.
 
 ## Pending Work (autonomous queue)
 - TESTED AND REJECTED (2026-07-20): David asked whether a CLOSER take-profit
