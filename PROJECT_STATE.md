@@ -99,6 +99,17 @@ recent winning streak. Answered honestly rather than chasing the number:
   a tooling-hygiene gap, not fixed here since `sweepAutopilot.mts` is the
   script actually kept current). A higher win rate bought by a smaller,
   less robust edge is not the improvement it looks like.
+- **Confidence-floor granularity between 40 and 50 checked and REJECTED
+  too**: David pushed further on the win-rate question, so `floor 42/45/48
+  no-trail` rows were added to `sweepAutopilot.mts` to see if any floor
+  beats the current 40. In the 1h/30d window, win rate strictly *decreases*
+  as the floor rises (92.3%→88.9%→83.3%→66.7% at 40/42/45/48) while trades
+  collapse (13→9→6→3) — floor 40 is already the local peak, not an
+  under-tuned value; a higher confidence score isn't more predictive of a
+  win here (matches the 2026-07-27 finding that winner/loser confidence was
+  statistically identical before the floor existed). This closes the
+  confidence-floor lever entirely: there is no adjustment left in this
+  family that legitimately buys a higher win rate.
 - Full gate green (tsc · 760 vitest · vite build); no test hardcoded the
   removed trailing-stop value.
 

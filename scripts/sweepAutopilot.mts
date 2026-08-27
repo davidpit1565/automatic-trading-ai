@@ -66,6 +66,14 @@ const CONFIGS: Cfg[] = [
   { name: 'floor 20            ', minConfidence: 20, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 } },
   { name: 'floor 30            ', minConfidence: 30, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 } },
   { name: 'floor 50            ', minConfidence: 50, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 } },
+  // Finer floor granularity between the measured 40 and the too-sparse 50,
+  // now against the true current baseline (no trail — see 'fixed stop (no
+  // trail)' below, adopted 2026-08-27): is there a floor that raises win
+  // rate further than 40 without starving the sample the way 50 does?
+  { name: 'floor 40 no-trail (TRUE PROD)', minConfidence: 40, maxRsiForLong: 65 },
+  { name: 'floor 42 no-trail   ', minConfidence: 42, maxRsiForLong: 65 },
+  { name: 'floor 45 no-trail   ', minConfidence: 45, maxRsiForLong: 65 },
+  { name: 'floor 48 no-trail   ', minConfidence: 48, maxRsiForLong: 65 },
   { name: 'rsi 55              ', minConfidence: 40, maxRsiForLong: 55, trailing: { activateR: 1.5, trailR: 1.5 } },
   { name: 'rsi 75              ', minConfidence: 40, maxRsiForLong: 75, trailing: { activateR: 1.5, trailR: 1.5 } },
   { name: 'fixed stop (no trail)', minConfidence: 40, maxRsiForLong: 65 },
