@@ -65,7 +65,18 @@ jobs:
             exit 0
           fi
           export TEXT=$'✅ הבדיקות עברו על הענף claude/market-scan-integration-r9lck1 — מוכן לבדיקה/מיזוג.\n'"$COMPARE_URL"
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+          # Telegram can return HTTP 200 with {"ok":false,...} on a bad
+          # token/chat id — checking curl's exit code alone (or piping to
+          # /dev/null, as an earlier version of this step did) would report
+          # "success" even when nothing was actually delivered. Read the
+          # real response body instead.
+          RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "$(node -e 'console.log(JSON.stringify({chat_id: process.env.TELEGRAM_CHAT_ID, text: process.env.TEXT, disable_web_page_preview: true}))')" \
-            > /dev/null
+            -d "$(node -e 'console.log(JSON.stringify({chat_id: process.env.TELEGRAM_CHAT_ID, text: process.env.TEXT, disable_web_page_preview: true}))')")
+          if echo "$RESPONSE" | grep -q '"ok":true'; then
+            echo "Telegram notification delivered."
+          else
+            # Logged, not fatal — same "optional, never blocks the build"
+            # rule as everywhere else Telegram is used in this project.
+            echo "Telegram notification FAILED — response: $RESPONSE"
+          fi
