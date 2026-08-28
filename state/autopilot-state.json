@@ -1588,7 +1588,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1787933605069,
+    "at": 1787933915725,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1604,10 +1604,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1786165556448,
-      "equity": 9520.16
-    },
     {
       "at": 1786165865309,
       "equity": 9520.16
@@ -21603,6 +21599,10 @@
     {
       "at": 1787933605069,
       "equity": 10195.85
+    },
+    {
+      "at": 1787933915725,
+      "equity": 10195.85
     }
   ],
   "trade-journal": [
@@ -22826,7 +22826,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -17.18%"
+        "detail": "vs buy-and-hold BTC -16.76%"
       },
       {
         "key": "drawdown",
@@ -22839,7 +22839,7 @@
         "detail": "profit factor 1.42 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — vs buy-and-hold BTC -17.18%.",
+    "summary": "NOT READY — vs buy-and-hold BTC -16.76%.",
     "unmet": [
       "benchmark"
     ]
@@ -22905,7 +22905,7 @@
   },
   "shadow:mean-reversion:shadow-started-at": 1785254092443,
   "shadow:mean-reversion:portfolio-engine": {
-    "cash": 9453.578129962076,
+    "cash": 7557.190357091684,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -268.54201143398404,
@@ -22926,7 +22926,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1787933605069,
+    "at": 1787933915725,
     "standings": [
       {
         "key": "live-mirror",
@@ -22975,12 +22975,12 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9453.578129962076,
-        "returnPct": -5.464218700379242,
+        "equity": 9448.137453196567,
+        "returnPct": -5.518625468034333,
         "trades": 57,
         "winRatePct": 40.35087719298245,
         "profitFactor": 0.6574058019657543,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1785254092443
       },
       {
@@ -29811,7 +29811,27 @@
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
-  "shadow:mean-reversion:open-positions": [],
+  "shadow:mean-reversion:open-positions": [
+    {
+      "id": "XBTEUR:1787933915725:0",
+      "symbol": "XBTEUR",
+      "openedAt": 1787933915725,
+      "entryPrice": 66980,
+      "quantity": 0.028228062496154303,
+      "initialQuantity": 0.028228062496154303,
+      "stopLoss": 66020.0842509911,
+      "takeProfit": 68899.8314980178,
+      "feesPaid": 5.672146877977246,
+      "realizedPnl": 0,
+      "highestPrice": 66980,
+      "lowestPrice": 66980,
+      "confidence": 30.788312852587183,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:mean-reversion:audit-log": [
     {
       "timestamp": 1785298718729,
@@ -31275,6 +31295,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit DOGEEUR: 25755.256855290572 @ 0.0740389 (stop-loss)"
+    },
+    {
+      "timestamp": 1787933915725,
+      "intentId": "XBTEUR:1787933915725:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry XBTEUR: 0.028228062496154303 @ 66980 (stop 66020.0842509911, target 68899.8314980178, confidence 31)"
     }
   ],
   "shadow:live-mirror:open-positions": [],
