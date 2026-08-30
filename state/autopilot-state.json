@@ -1588,7 +1588,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788132330604,
+    "at": 1788132640527,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1604,10 +1604,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1786342829763,
-      "equity": 9520.16
-    },
     {
       "at": 1786343137943,
       "equity": 9520.16
@@ -21603,6 +21599,10 @@
     {
       "at": 1788132330604,
       "equity": 10195.85
+    },
+    {
+      "at": 1788132640527,
+      "equity": 10195.85
     }
   ],
   "trade-journal": [
@@ -22826,7 +22826,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -17.39%"
+        "detail": "vs buy-and-hold BTC -17.10%"
       },
       {
         "key": "drawdown",
@@ -22839,7 +22839,7 @@
         "detail": "profit factor 1.42 (needs ≥ 1.2)"
       }
     ],
-    "summary": "NOT READY — vs buy-and-hold BTC -17.39%.",
+    "summary": "NOT READY — vs buy-and-hold BTC -17.10%.",
     "unmet": [
       "benchmark"
     ]
@@ -22905,7 +22905,7 @@
   },
   "shadow:mean-reversion:shadow-started-at": 1785254092443,
   "shadow:mean-reversion:portfolio-engine": {
-    "cash": 3775.1459006034147,
+    "cash": 3767.628643936392,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -268.54201143398404,
@@ -22926,7 +22926,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1788132330604,
+    "at": 1788132640527,
     "standings": [
       {
         "key": "live-mirror",
@@ -22975,12 +22975,12 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9446.321176641148,
-        "returnPct": -5.536788233588522,
+        "equity": 9419.105336316554,
+        "returnPct": -5.808946636834462,
         "trades": 57,
         "winRatePct": 40.35087719298245,
         "profitFactor": 0.6574058019657543,
-        "openPositions": 3,
+        "openPositions": 4,
         "startedAt": 1785254092443
       },
       {
@@ -30736,7 +30736,7 @@
       "feesPaid": 5.674580024052164,
       "realizedPnl": 0,
       "highestPrice": 41.7,
-      "lowestPrice": 41.7,
+      "lowestPrice": 41.52,
       "confidence": 31.564653555558692,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -30755,8 +30755,27 @@
       "feesPaid": 5.637616755075261,
       "realizedPnl": 0,
       "highestPrice": 0.168296,
-      "lowestPrice": 0.168296,
+      "lowestPrice": 0.16701,
       "confidence": 30.27029592225935,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "AVAXEUR:1788132640527:3",
+      "symbol": "AVAXEUR",
+      "openedAt": 1788132640527,
+      "entryPrice": 6.186,
+      "quantity": 1.2115700533418468,
+      "initialQuantity": 1.2115700533418468,
+      "stopLoss": 6.0855956109597615,
+      "takeProfit": 6.386808778080478,
+      "feesPaid": 0.02248431704991799,
+      "realizedPnl": 0,
+      "highestPrice": 6.186,
+      "lowestPrice": 6.186,
+      "confidence": 33.44971533950408,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -32247,6 +32266,27 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ADAEUR: 11166.07397100993 @ 0.168296 (stop 0.16457668311506493, target 0.17573463376987014, confidence 30)"
+    },
+    {
+      "timestamp": 1788132640527,
+      "intentId": "AVAXEUR:1788132640527:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry AVAXEUR: 1.2115700533418468 @ 6.186 (stop 6.0855956109597615, target 6.386808778080478, confidence 33)"
+    },
+    {
+      "timestamp": 1788132640527,
+      "intentId": "SOLEUR:1788132640527",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused SOLEUR: no exposure headroom: 5651.48 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1788132640527,
+      "intentId": "DOGEEUR:1788132640527",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused DOGEEUR: no exposure headroom: 5651.48 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:live-mirror:open-positions": [],
