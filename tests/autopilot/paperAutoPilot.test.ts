@@ -70,6 +70,8 @@ function makePilot(
     topTraderCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     aiJudgmentCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     confidenceRisk?: { floorPct: number; ceilingPct: number };
+    trailing?: import('../../src/core/risk/trailingStop').TrailingConfig;
+    trendExit?: { emaPeriod: number };
   } = {},
 ) {
   const store = new MemoryStore();
@@ -102,6 +104,8 @@ function makePilot(
     topTraderCheck: opts.topTraderCheck,
     aiJudgmentCheck: opts.aiJudgmentCheck,
     confidenceRisk: opts.confidenceRisk,
+    trailing: opts.trailing,
+    trendExit: opts.trendExit,
   });
   return { pilot, portfolio, positions, journal, killSwitch, audit };
 }
@@ -395,6 +399,65 @@ describe('autonomous paper exits', () => {
 
     expect(cycle.closed[0]!.pnl).toBeCloseTo(journal.entries()[0]!.realizedPnl, 6);
     expect(cycle.closed[0]!.pnl).toBeGreaterThan(0);
+  });
+});
+
+describe('trend-exit (replaces the fixed take-profit while configured)', () => {
+  it('holds a position PAST where the fixed take-profit would have closed it, while the trend is still intact', async () => {
+    const market = { 'QUAL/USD': { drift: 0.001 } } as Record<string, { drift: number; lastPrice?: number }>;
+    const { pilot, portfolio } = makePilot(market, { trendExit: { emaPeriod: 20 } });
+    await pilot.runCycleOnce(T);
+    const position = portfolio.openPositions()[0]!;
+
+    // Same price a plain fixed-target position would already be closing at
+    // (see the take-profit test above) — but the close is still above the
+    // trailing EMA (this is a steady uptrend), so trendExit holds it open.
+    market['QUAL/USD'] = { drift: 0.001, lastPrice: position.takeProfit * 1.01 };
+    const cycle = await pilot.runCycleOnce(T + 3_600_000);
+    expect(cycle.closed).toHaveLength(0);
+    expect(portfolio.openPositions()).toHaveLength(1);
+  });
+
+  it('closes via signal-exit when price falls below the trailing EMA, before ever reaching the stop', async () => {
+    const market = { 'QUAL/USD': { drift: 0.001 } } as Record<string, { drift: number; lastPrice?: number }>;
+    const { pilot, portfolio, journal } = makePilot(market, { trendExit: { emaPeriod: 20 } });
+    await pilot.runCycleOnce(T);
+    const position = portfolio.openPositions()[0]!;
+
+    const pullbackPrice = position.entryPrice * 0.99;
+    expect(pullbackPrice).toBeGreaterThan(position.stopLoss); // isolates trend-exit from stop-loss
+    market['QUAL/USD'] = { drift: 0.001, lastPrice: pullbackPrice };
+    const cycle = await pilot.runCycleOnce(T + 3_600_000);
+
+    expect(cycle.closed).toHaveLength(1);
+    expect(cycle.closed[0]!.reason).toBe('signal-exit');
+    expect(journal.entries()[0]!.exitReason).toBe('signal-exit');
+  });
+
+  it('still protects capital: a real stop-loss breach closes as stop-loss even with trendExit configured', async () => {
+    const market = { 'QUAL/USD': { drift: 0.001 } } as Record<string, { drift: number; lastPrice?: number }>;
+    const { pilot, portfolio, journal } = makePilot(market, { trendExit: { emaPeriod: 20 } });
+    await pilot.runCycleOnce(T);
+    const position = portfolio.openPositions()[0]!;
+
+    market['QUAL/USD'] = { drift: 0.001, lastPrice: position.stopLoss * 0.99 };
+    const cycle = await pilot.runCycleOnce(T + 3_600_000);
+    expect(cycle.closed[0]!.reason).toBe('stop-loss');
+    expect(journal.entries()[0]!.exitReason).toBe('stop-loss');
+  });
+
+  it('leaves the default fixed-target behaviour unchanged when trendExit is omitted', async () => {
+    // Same scenario as the plain take-profit test — confirms the new option
+    // is opt-in and does not alter any existing, unconfigured position.
+    const market = { 'QUAL/USD': { drift: 0.001 } } as Record<string, { drift: number; lastPrice?: number }>;
+    const { pilot, portfolio, journal } = makePilot(market);
+    await pilot.runCycleOnce(T);
+    const position = portfolio.openPositions()[0]!;
+
+    market['QUAL/USD'] = { drift: 0.001, lastPrice: position.takeProfit * 1.01 };
+    const cycle = await pilot.runCycleOnce(T + 3_600_000);
+    expect(cycle.closed[0]!.reason).toBe('take-profit');
+    expect(journal.entries()[0]!.exitReason).toBe('take-profit');
   });
 });
 

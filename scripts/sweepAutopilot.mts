@@ -60,6 +60,10 @@ interface Cfg {
   topTraderGate?: boolean;
   /** Partial override on top of DEFAULT_RISK_LIMITS — e.g. to test a looser maxTotalExposurePct. */
   riskLimits?: Partial<typeof DEFAULT_RISK_LIMITS>;
+  /** Hold-through-trend exit (paperAutoPilot.ts's trendExit) — replaces the
+   * fixed take-profit with "close below a trailing EMA". Omit for the
+   * existing fixed-target behaviour. */
+  trendExit?: { emaPeriod: number };
 }
 const CONFIGS: Cfg[] = [
   { name: 'PROD (40/65/1.5-1.5)', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 } },
@@ -139,6 +143,16 @@ const CONFIGS: Cfg[] = [
   // positions actually help, or does the extra concentration hurt more than
   // it captures?
   { name: 'PROD live + maxOpenPositions 8', minConfidence: 40, maxRsiForLong: 65, trailing: { activateR: 1.5, trailR: 1.5 }, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 }, marketRegimePeriod: 50, riskLimits: { maxTotalExposurePct: 80, maxOpenPositions: 8 } },
+  // TRUE current production (2026-08-27: AUTOPILOT_TRAILING measured off,
+  // see paperAutoPilot.ts's own dated comment) — every row above this one
+  // still hardcodes the old trailing 1.5/1.5, so none of them reflect what
+  // is actually live today. This is the real baseline for the trend-exit
+  // question David asked: does trend-exit (hold through trend, no fixed
+  // take-profit) beat the current no-trail fixed-target config?
+  { name: 'PROD live (no trail, current)', minConfidence: 40, maxRsiForLong: 65, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 }, marketRegimePeriod: 50, riskLimits: { maxTotalExposurePct: 80 } },
+  { name: 'PROD live + trend-exit EMA10', minConfidence: 40, maxRsiForLong: 65, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 }, marketRegimePeriod: 50, riskLimits: { maxTotalExposurePct: 80 }, trendExit: { emaPeriod: 10 } },
+  { name: 'PROD live + trend-exit EMA20', minConfidence: 40, maxRsiForLong: 65, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 }, marketRegimePeriod: 50, riskLimits: { maxTotalExposurePct: 80 }, trendExit: { emaPeriod: 20 } },
+  { name: 'PROD live + trend-exit EMA50', minConfidence: 40, maxRsiForLong: 65, regimePeriod: 50, confidenceRisk: { floorPct: 0.5, ceilingPct: 1 }, marketRegimePeriod: 50, riskLimits: { maxTotalExposurePct: 80 }, trendExit: { emaPeriod: 50 } },
 ];
 
 const source = new KrakenPublicSource();
@@ -223,7 +237,7 @@ async function replay(
     scheduler: { start() {}, stop() {}, isRunning: () => false, intervalMs: () => null },
     portfolio, positions, killSwitch: new PersistedKillSwitch(store), audit: new PersistedAuditLog(store),
     getDailyLoss: () => 0, costRate: COST, minConfidence: cfg.minConfidence,
-    maxRsiForLong: cfg.maxRsiForLong, trailing: cfg.trailing,
+    maxRsiForLong: cfg.maxRsiForLong, trailing: cfg.trailing, trendExit: cfg.trendExit,
     riskLimits: cfg.riskLimits ? { ...DEFAULT_RISK_LIMITS, ...cfg.riskLimits } : DEFAULT_RISK_LIMITS,
     ...(cfg.evaluate ? { evaluate: cfg.evaluate } : {}),
     ...(regimeFilters ? { regimeCheck: async (s: string, ts: number) => regimeFilters.get(s)?.(ts) ?? true } : {}),

@@ -20,6 +20,7 @@
 import type { MarketDataSource } from '../data/revolutClient';
 import type { KeyValueStore } from '../data/storage';
 import type { ExecutionMode } from '../execution/types';
+import { ema } from '../indicators/ema';
 import { MONITOR_INTERVALS, type MonitorInterval, type Scheduler } from '../monitor/scheduler';
 import type { PortfolioEngine } from '../position/portfolioEngine';
 import type { PositionEngine } from '../position/positionEngine';
@@ -184,6 +185,19 @@ export interface AutoPilotOptions {
    * Omit for a fixed stop.
    */
   readonly trailing?: TrailingConfig;
+  /**
+   * Hold-through-trend exit: replaces the FIXED take-profit with "close below
+   * a trailing EMA" — same idea already measured in the backtest harness
+   * (`livePipeline.ts`'s `trendExit`), now wired into the real engine so it
+   * can be measured against the actual PaperAutoPilot rather than only its
+   * backtest approximation. The protective stop-loss is unchanged and still
+   * checked FIRST every cycle: a bar that guts the stop is still a stop-loss
+   * regardless of trendExit being configured — capital protection is never
+   * overridden by letting a winner run. Omit for the existing fixed-target
+   * behaviour; only one of `trendExit`/fixed-target applies per position
+   * (mirrors `livePipeline.ts`'s own `else if`).
+   */
+  readonly trendExit?: { readonly emaPeriod: number };
   /**
    * When it returns true, the cycle SKIPS new entries (exits/stops still run).
    * Used by the portfolio drawdown circuit-breaker: stop adding risk while the
@@ -439,8 +453,19 @@ export class PaperAutoPilot {
         : position.stopLoss;
 
       let reason: ExitReason | null = null;
-      if (price <= stopLoss) reason = 'stop-loss';
-      else if (price >= position.takeProfit) reason = 'take-profit';
+      if (price <= stopLoss) {
+        reason = 'stop-loss';
+      } else if (this.options.trendExit) {
+        // Same rule as livePipeline.ts's trendExit: close below a trailing
+        // EMA computed over this position's own recently-fetched candles —
+        // replaces the fixed take-profit entirely while configured. Logged
+        // as 'signal-exit' (not a new ExitReason value): the closest existing
+        // bucket for "a price-action rule, not a fixed level, closed this".
+        const level = ema(candles.value.map((c) => c.close), this.options.trendExit.emaPeriod).at(-1) ?? null;
+        if (level !== null && price < level) reason = 'signal-exit';
+      } else if (price >= position.takeProfit) {
+        reason = 'take-profit';
+      }
       if (reason === null) continue;
 
       const exitFee = position.quantity * price * costRate;
