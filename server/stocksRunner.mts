@@ -327,6 +327,13 @@ async function main(): Promise<void> {
     costRate: COST_RATE,
     riskLimits: DEFAULT_RISK_LIMITS,
     minConfidence: INTERIM_MIN_CONFIDENCE,
+    // Measured 2026-08-31 via sweepAutopilot.mts on real Alpaca history:
+    // trend-exit (close below a trailing EMA instead of a fixed take-profit)
+    // pooled PF 1.62 vs 1.23 on 459 vs 778 trades across 41 symbols/3 folds
+    // at live cost — a credible, large-sample improvement. Crypto's own
+    // measurement was inconclusive (single-digit trade counts) and is
+    // intentionally left unchanged.
+    trendExit: { emaPeriod: 50 },
   });
 
   const telegram = {

@@ -178,9 +178,15 @@ upside, not a promise to eliminate the tradeoff.
   live default on every cost tier tested — e.g. at the live 0.10%/side cost,
   PF 1.62 vs 1.23, return 3.45% vs 2.31%, on 459 vs 778 trades pooled across
   41 symbols and 3 folds — an order of magnitude more trade volume than the
-  crypto measurement above, so this reading carries real weight. Not yet
-  adopted into `stocksRunner.mts` (which has its own, separate exit logic
-  from crypto's `PaperAutoPilot` — not touched yet).
+  crypto measurement above, so this reading carries real weight.
+- **Adopted into production (2026-08-31)**: `stocksRunner.mts`'s `main()`
+  now constructs its `PaperAutoPilot` with `trendExit: { emaPeriod: 50 }`.
+  Correction to an earlier note here (and to David): stocks does **not**
+  have its own separate exit-logic implementation — `runStocksCycle` just
+  calls `.runCycleOnce()` on the same `PaperAutoPilot` class crypto uses, so
+  this was a config change at the construction site, not new logic. Crypto's
+  production config is intentionally left unchanged (measurement above is
+  still inconclusive) — do not adopt there without new, larger-sample data.
 - Full gate green: tsc clean, 792 vitest (788 + 4 new), vite build ok.
 
 ## Pending Work (autonomous queue)
