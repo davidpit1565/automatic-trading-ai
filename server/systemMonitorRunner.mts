@@ -17,9 +17,63 @@
 import { fileURLToPath } from 'node:url';
 import { FileStore } from './fileStore.mts';
 import { monitorSystemChanges } from './systemMonitor.mts';
+import { checkAndNudgeStaleWorkflow } from './workflowWatchdog.mts';
+import { sendTelegramMessage } from './telegram.mts';
+import { isUsMarketOpen } from '../src/core/data/marketHours';
 
 const CRYPTO_STATE_PATH = process.env['AUTOPILOT_STATE_PATH'] ?? 'state/autopilot-state.json';
 const STOCKS_STATE_PATH = process.env['STOCKS_STATE_PATH'] ?? 'state/stocks-state.json';
+/**
+ * Generous relative to each workflow's own cron (crypto every 30 min,
+ * stocks every 15 min during market hours) — covers a normal missed tick or
+ * two before assuming GitHub's scheduler silently dropped it (see
+ * `workflowWatchdog.mts`'s doc comment for the measured 3-day stocks outage
+ * this exists to catch).
+ */
+const WATCHDOG_STALE_AFTER_MS = 90 * 60 * 1000;
+
+/**
+ * Re-triggers either cloud workflow if GitHub's scheduler has silently
+ * stopped firing it. Best-effort in every sense: skipped entirely (not an
+ * error) when this isn't running inside GitHub Actions or lacks the token
+ * (e.g. a local run), and a thrown network/API failure is caught and logged
+ * rather than crashing the rest of this monitor run — the same standard
+ * this file's own `monitorSystemChanges` already holds itself to.
+ */
+async function runWatchdog(telegram: { token: string; chatId: string }): Promise<void> {
+  const [owner, repo] = (process.env['GITHUB_REPOSITORY'] ?? '').split('/');
+  const token = process.env['GITHUB_TOKEN'] ?? '';
+  if (!owner || !repo || !token) {
+    console.log('Workflow watchdog skipped: not running in GitHub Actions (or GITHUB_TOKEN unavailable).');
+    return;
+  }
+
+  try {
+    const now = Date.now();
+    const [crypto, stocks] = await Promise.all([
+      checkAndNudgeStaleWorkflow(
+        { owner, repo, workflowFile: 'autopilot.yml', token, staleAfterMs: WATCHDOG_STALE_AFTER_MS },
+        now,
+      ),
+      checkAndNudgeStaleWorkflow(
+        { owner, repo, workflowFile: 'stocks-autopilot.yml', token, shouldBeActive: isUsMarketOpen, staleAfterMs: WATCHDOG_STALE_AFTER_MS },
+        now,
+      ),
+    ]);
+    console.log('Crypto workflow watchdog:', crypto.reason);
+    console.log('Stocks workflow watchdog:', stocks.reason);
+
+    const nudged = [
+      ...(crypto.nudged ? [`Crypto (${crypto.reason})`] : []),
+      ...(stocks.nudged ? [`Stocks (${stocks.reason})`] : []),
+    ];
+    if (nudged.length > 0) {
+      await sendTelegramMessage(`🔧 Watchdog: re-triggered a stalled workflow — ${nudged.join('; ')}.`, telegram);
+    }
+  } catch (cause) {
+    console.error('Workflow watchdog failed (non-fatal):', cause instanceof Error ? cause.message : cause);
+  }
+}
 
 async function main(): Promise<void> {
   const telegram = {
@@ -29,6 +83,7 @@ async function main(): Promise<void> {
 
   await monitorSystemChanges(new FileStore(CRYPTO_STATE_PATH), telegram, Date.now(), 'Crypto', '€');
   await monitorSystemChanges(new FileStore(STOCKS_STATE_PATH), telegram, Date.now(), 'Stocks', '$');
+  await runWatchdog(telegram);
 }
 
 // Guard so importing this module for its pieces never triggers a live run.

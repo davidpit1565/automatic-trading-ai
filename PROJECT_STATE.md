@@ -324,6 +324,47 @@ zero new mechanics: `shadowEvaluator.ts` already supports `trendExit`/
   rendering had coverage before). Full gate green: tsc clean, 811 vitest,
   vite build ok.
 
+## STOCKS WORKFLOW WATCHDOG (2026-08-31)
+David asked for a "red team" check that everything was actually fine. It
+mostly was (tsc/tests/build/architecture gate all green, crypto running
+normally) — except one real, previously-undetected problem: GitHub's own
+scheduler had silently stopped firing `stocks-autopilot.yml`'s cron for
+**3 full days** (last run 2026-08-28, workflow still shown as "active" the
+whole time) — not a bug in our code, a known, undocumented GitHub Actions
+limitation. Confirmed by manually re-running it via `workflow_dispatch`:
+every step succeeded immediately.
+
+- **Fix**: `server/workflowWatchdog.mts` (new) — `checkAndNudgeStaleWorkflow()`
+  reads a workflow's own run history via the GitHub REST API and re-triggers
+  it via `workflow_dispatch` if the gap since its last run exceeds a
+  threshold (90 min, generous relative to both workflows' own crons).
+  Stocks' check is additionally gated by `isUsMarketOpen()` — staleness
+  outside market hours is expected, not a problem, and must never trigger a
+  pointless dispatch.
+- Wired into `server/systemMonitorRunner.mts` (already the reliable ~2h
+  heartbeat behind `system-monitor.yml` — verified this specific workflow
+  had ~332 consecutive successful runs straight through the stocks outage,
+  making it the right place to hang this on rather than adding a 4th,
+  independently-crontab'd workflow file that could itself silently stall).
+  Sends one Telegram line only when an actual nudge happens.
+- **Red-team review before merging caught a real, would-have-shipped
+  regression**: adding a `permissions:` block containing only `actions:
+  write` to `system-monitor.yml` would have silently stripped the implicit
+  `contents: read` `actions/checkout@v4` needs — the very next scheduled
+  run would have failed at checkout, breaking the pre-existing, working
+  crypto/stocks Telegram alerts this file already sends. Fixed by listing
+  `contents: read` explicitly alongside `actions: write` (declaring ANY
+  `permissions:` key replaces every default, not just adds to it). Also
+  caught and fixed: an unwrapped network call that could throw and crash
+  the whole monitor run instead of failing soft like everything else in
+  this file already does; and two independent GitHub API checks awaited
+  sequentially instead of via `Promise.all`.
+- 7 new tests for `checkAndNudgeStaleWorkflow` (mocked fetch — within
+  threshold, past threshold + dispatches, `shouldBeActive` gate skips before
+  ever reading run history, run-history fetch failure, dispatch failure,
+  no-runs-yet). Full gate green: tsc clean, 818 vitest, vite build ok, YAML
+  validated with `yaml.safe_load`.
+
 ## Pending Work (autonomous queue)
 - TESTED AND REJECTED (2026-07-20): David asked whether a CLOSER take-profit
   target (easier to hit, so more trades close in profit instead of stopping
