@@ -13,6 +13,7 @@ import { fetchStocksState } from '../cloudState';
 import { renderAssetHub } from './assetHubView';
 import { renderStocksOverviewPanel } from './stocksOverviewPanel';
 import { renderStocksMarketPanel } from './stocksMarketPanel';
+import { renderStocksLongTermPanel } from './stocksLongTermPanel';
 import type { ViewHandle } from '../viewLifecycle';
 
 export function renderStocksView(container: HTMLElement, _data: ActiveDataSource): ViewHandle {
@@ -24,5 +25,6 @@ export function renderStocksView(container: HTMLElement, _data: ActiveDataSource
     showBenchmark: false,
     renderOverview: (panel) => renderStocksOverviewPanel(panel),
     renderMarket: (panel) => renderStocksMarketPanel(panel),
+    renderLongTerm: (panel) => renderStocksLongTermPanel(panel),
   });
 }

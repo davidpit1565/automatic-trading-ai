@@ -16,7 +16,7 @@ import type { CloudState } from '../cloudState';
 import type { ViewHandle } from '../viewLifecycle';
 
 const STATE_REFRESH_MS = 60_000;
-type HubTab = 'overview' | 'history' | 'market' | 'profit';
+type HubTab = 'overview' | 'history' | 'market' | 'profit' | 'longterm';
 
 export interface AssetHubOptions {
   readonly title: string;
@@ -29,6 +29,12 @@ export interface AssetHubOptions {
   readonly renderOverview: (container: HTMLElement) => ViewHandle | void;
   /** Mounted lazily, once, the first time the Market sub-tab is opened. */
   readonly renderMarket: (container: HTMLElement) => ViewHandle | void;
+  /**
+   * Mounted lazily, once, the first time the Long-Term sub-tab is opened.
+   * Omit entirely to hide that tab — only Stocks has a long-term shadow
+   * wallet today (see `stocksLongTermPanel.ts`); Crypto doesn't pass this.
+   */
+  readonly renderLongTerm?: (container: HTMLElement) => ViewHandle | void;
 }
 
 function el(tag: string, className?: string): HTMLElement {
@@ -48,6 +54,7 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
       <button class="hub-tab" data-hub="history" role="tab" aria-selected="false">History</button>
       <button class="hub-tab" data-hub="market" role="tab" aria-selected="false">Market</button>
       <button class="hub-tab" data-hub="profit" role="tab" aria-selected="false">Profit</button>
+      ${opts.renderLongTerm ? '<button class="hub-tab" data-hub="longterm" role="tab" aria-selected="false">Long-Term</button>' : ''}
     </div>
     <div class="hub-panel active" data-hub-panel="overview"></div>
     <div class="hub-panel" data-hub-panel="history">
@@ -62,7 +69,8 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
         <div class="hero-bench" id="hub-bench" hidden></div>
       </section>
       <section class="block readiness" id="hub-readiness"></section>
-    </div>`;
+    </div>
+    ${opts.renderLongTerm ? '<div class="hub-panel" data-hub-panel="longterm"></div>' : ''}`;
   attachCoinLogoFallback(container);
 
   const overviewPanel = container.querySelector<HTMLElement>('[data-hub-panel="overview"]')!;
@@ -72,11 +80,14 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
   const returnEl = container.querySelector<HTMLElement>('#hub-return')!;
   const benchEl = container.querySelector<HTMLElement>('#hub-bench')!;
   const readinessEl = container.querySelector<HTMLElement>('#hub-readiness')!;
+  const longTermPanel = container.querySelector<HTMLElement>('[data-hub-panel="longterm"]');
 
   const historyChart = mountEquityChartPanel(historyChartSlot, { currencySymbol: opts.currencySymbol });
 
   let marketMounted = false;
   let marketHandle: ViewHandle | void;
+  let longTermMounted = false;
+  let longTermHandle: ViewHandle | void;
   const overviewHandle = opts.renderOverview(overviewPanel);
 
   function renderHistoryList(state: CloudState): void {
@@ -152,6 +163,10 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
       marketHandle = opts.renderMarket(marketPanel) ?? undefined;
       marketMounted = true;
     }
+    if (tab === 'longterm' && !longTermMounted && opts.renderLongTerm && longTermPanel) {
+      longTermHandle = opts.renderLongTerm(longTermPanel) ?? undefined;
+      longTermMounted = true;
+    }
   });
 
   let timer = 0;
@@ -163,12 +178,14 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
       window.clearInterval(timer);
       overviewHandle?.pause();
       marketHandle?.pause();
+      longTermHandle?.pause();
     },
     resume: () => {
       void load();
       timer = window.setInterval(() => void load(), STATE_REFRESH_MS);
       overviewHandle?.resume();
       marketHandle?.resume();
+      longTermHandle?.resume();
     },
   };
 }
