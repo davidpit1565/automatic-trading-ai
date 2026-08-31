@@ -108,6 +108,27 @@ export interface DailySummaryInput {
   readonly shadows?: readonly ShadowStanding[];
   /** The stocks side's own numbers, appended as a second section. */
   readonly stocks?: DailySummaryStocks | null;
+  /**
+   * Crypto's own long-term investing "wallet" — a separate paper portfolio
+   * holding through weeks/months instead of the main runner's tight-stop
+   * trading (see `autopilotRunner.mts`'s `LONGTERM_SHADOW_CANDIDATES`).
+   * Null/omitted if it hasn't run yet.
+   */
+  readonly longTermShadow?: ShadowStanding | null;
+}
+
+/** One line for a long-term shadow wallet's standing — shared by crypto and
+ * stocks (see `shadowEvaluator.ts`'s `long-term` candidate). */
+function longTermShadowLines(standing: ShadowStanding, prefix: string): string[] {
+  if (standing.trades < SHADOW_MEANINGFUL_TRADES) {
+    return [`${prefix} עדיין צובר נתונים (${standing.trades}/${SHADOW_MEANINGFUL_TRADES} עסקאות) — מוקדם לדרג.`];
+  }
+  const sign = standing.returnPct >= 0 ? '+' : '';
+  return [
+    `${prefix} ${sign}${standing.returnPct.toFixed(2)}% ` +
+      `(${standing.trades} עסקאות, PF ${standing.profitFactor === null ? 'n/a' : standing.profitFactor.toFixed(2)}). ` +
+      `כסף מדומה, חשבון נפרד.`,
+  ];
 }
 
 /** One-line summary of the shadow strategy standings, or how far they are from meaning anything. */
@@ -197,6 +218,9 @@ export function buildDailySummary(input: DailySummaryInput): string {
   if (input.shadows) {
     lines.push(...shadowSummaryLines(input.shadows));
   }
+  if (input.longTermShadow) {
+    lines.push(...longTermShadowLines(input.longTermShadow, '🌱 ארנק השקעות לטווח ארוך:'));
+  }
   if (input.stocks) {
     const s = input.stocks;
     const sRet = `${s.totalReturnPct >= 0 ? '+' : ''}${s.totalReturnPct.toFixed(2)}%`;
@@ -208,17 +232,7 @@ export function buildDailySummary(input: DailySummaryInput): string {
       `   🔄 24 שעות אחרונות: ${s.openedLast24h} קניות, ${s.closedLast24h} מכירות`,
     );
     if (s.longTermShadow) {
-      const lt = s.longTermShadow;
-      if (lt.trades < SHADOW_MEANINGFUL_TRADES) {
-        lines.push(`   🌱 ארנק השקעות לטווח ארוך: עדיין צובר נתונים (${lt.trades}/${SHADOW_MEANINGFUL_TRADES} עסקאות) — מוקדם לדרג.`);
-      } else {
-        const sign = lt.returnPct >= 0 ? '+' : '';
-        lines.push(
-          `   🌱 ארנק השקעות לטווח ארוך: ${sign}${lt.returnPct.toFixed(2)}% ` +
-            `(${lt.trades} עסקאות, PF ${lt.profitFactor === null ? 'n/a' : lt.profitFactor.toFixed(2)}). ` +
-            `כסף מדומה, חשבון נפרד.`,
-        );
-      }
+      lines.push(...longTermShadowLines(s.longTermShadow, '   🌱 ארנק השקעות לטווח ארוך:'));
     }
   }
   return lines.join('\n');

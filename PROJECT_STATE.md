@@ -267,6 +267,63 @@ meant a second nav destination for what is conceptually one asset class.
   threshold / above-threshold / wrong-candidate-key-ignored). Full gate
   green: tsc clean, 808 vitest, vite build ok.
 
+## LONG-TERM WALLET — CRYPTO (2026-08-31)
+David confirmed ("אם זה יהיה טוב לנו אז כן, תעשה") building the same
+long-term wallet for crypto that stocks got earlier today. Same shape,
+zero new mechanics: `shadowEvaluator.ts` already supports `trendExit`/
+`baseCurrency` from the stocks build, so this was pure wiring.
+
+- `server/autopilotRunner.mts`: new `LONGTERM_SHADOW_CANDIDATES` (one
+  candidate, key `long-term`, `AUTOPILOT_MIN_CONFIDENCE`/`AUTOPILOT_MAX_RSI_FOR_LONG`,
+  `trendExit: { emaPeriod: 50 }`) run once per cycle via `runLongTermShadow()`
+  on **daily bars** (own `runShadowCycle` call, separate from the main
+  9-candidate `runShadows()` batch which stays on `ENTRY_TF`/`1h` since it's
+  shared across all 9). Stored under its own key
+  (`shadow-longterm-standings`) so it can't collide with or be confused for
+  the existing 9-candidate shadow board.
+- Note this candidate is deliberately NOT validated by the earlier trend-exit
+  measurement (`sweepAutopilot.mts`, inconclusive on the hourly timeframe) —
+  it's a different timeframe entirely (daily), so that earlier inconclusive
+  reading doesn't transfer either way. This is exactly the shadow system's
+  own reason for existing: forward-test an idea instead of guessing from
+  insufficient backtest evidence.
+- Telegram digest: refactored the stocks section's long-term line into a
+  shared `longTermShadowLines()` helper (byte-identical output, verified by
+  the pre-existing stocks tests passing unchanged) and reused it for a new
+  top-level crypto line (`🌱 ארנק השקעות לטווח ארוך:`, no leading spaces vs
+  the stocks sub-section's indented one).
+- No UI yet for crypto's long-term wallet (unlike stocks, which got a
+  dedicated hub tab after David asked separately) — not requested this
+  round; the stocks `stocksLongTermPanel.ts` pattern is ready to copy if he
+  asks for it later.
+- Same-day side investigation: David was alarmed by 5 days with zero new
+  crypto trades. Investigated and found no bug — kill switch off, drawdown
+  breaker at 3.1%/8%, daily-loss reset; ruled out the BTC market-regime gate
+  specifically (shadow copies WITHOUT that gate are equally silent over the
+  same window). The base signal at `minConfidence=40`/`RSI≤65` simply hasn't
+  found a qualifying setup on any of the 10 traded majors — consistent with
+  a documented 2026-08-21 sweep showing this exact config can produce a full
+  120-day backtest window with 0 trades in non-trending conditions. Reported
+  to David as expected selective behavior, not a defect; no code changed.
+- **Red-team review caught a real inefficiency before merge**: `runLongTermShadow`
+  was re-fetching daily candles and re-running a full daily-bar evaluation on
+  every 5-minute internal loop cycle (up to `LOOP_CYCLES` times per trigger)
+  even though daily bars only change once a day — needless Kraken request
+  volume for zero new information. Fixed with a day-gate (`localDayAndHour` +
+  a stored last-run-day key, same idiom already used elsewhere in this file
+  for once-a-day alerts), not set on failure so a transient error retries
+  next cycle rather than waiting a full day. Note: the stocks-side
+  `runStocksShadow` (merged earlier today) has the same inefficiency,
+  un-fixed — lower severity there (market-hours-gated, fewer loop cycles)
+  but worth the same fix if David wants it.
+- 3 new tests (`telegram`: crypto's top-level long-term line renders
+  distinctly from the stocks-nested one, omitted entirely when absent;
+  `autopilotRunner`: `maybeSendSummaries` actually folds a stored
+  `shadow-longterm-standings` entry into the sent digest text — closing the
+  gap the red-team review flagged, where only the pure `buildDailySummary`
+  rendering had coverage before). Full gate green: tsc clean, 811 vitest,
+  vite build ok.
+
 ## Pending Work (autonomous queue)
 - TESTED AND REJECTED (2026-07-20): David asked whether a CLOSER take-profit
   target (easier to hit, so more trades close in profit instead of stopping
