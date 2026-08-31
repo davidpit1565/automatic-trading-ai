@@ -55,6 +55,21 @@ export interface MarketSnapshotEntry {
   readonly updatedAt: number;
 }
 
+/** One shadow-portfolio candidate's forward-test standing (see
+ * `shadowEvaluator.ts`/`stocksRunner.mts`'s `STOCKS_SHADOW_CANDIDATES`) —
+ * e.g. the stocks "long-term investing" wallet, key `'long-term'`. */
+export interface CloudShadowStanding {
+  readonly key: string;
+  readonly label: string;
+  readonly equity: number;
+  readonly returnPct: number;
+  readonly trades: number;
+  readonly winRatePct: number | null;
+  readonly profitFactor: number | null;
+  readonly openPositions: number;
+  readonly startedAt: number;
+}
+
 export interface CloudState {
   readonly cash: number;
   readonly initialCash: number;
@@ -71,6 +86,8 @@ export interface CloudState {
   /** Last-known price per curated symbol, or empty if the agent hasn't
    * recorded one yet (e.g. the crypto state file, which has no such field). */
   readonly marketSnapshot: MarketSnapshotEntry[];
+  /** Shadow-portfolio candidate standings, or empty if none have run yet. */
+  readonly shadowStandings: CloudShadowStanding[];
 }
 
 interface RawState {
@@ -87,6 +104,19 @@ interface RawState {
   };
   'market-snapshot'?: {
     symbols?: Array<{ symbol?: string; price?: number; changePct?: number; updatedAt?: number }>;
+  };
+  'shadow-standings'?: {
+    standings?: Array<{
+      key?: string;
+      label?: string;
+      equity?: number;
+      returnPct?: number;
+      trades?: number;
+      winRatePct?: number | null;
+      profitFactor?: number | null;
+      openPositions?: number;
+      startedAt?: number;
+    }>;
   };
 }
 
@@ -189,6 +219,24 @@ async function fetchCloudStateOnce(fetchFn: typeof fetch, stateUrl: string): Pro
             typeof s.symbol === 'string' && typeof s.price === 'number' && typeof s.changePct === 'number' &&
             typeof s.updatedAt === 'number',
         ),
+      shadowStandings: (raw['shadow-standings']?.standings ?? [])
+        .filter(
+          (s): s is Required<Pick<NonNullable<typeof s>, 'key' | 'label' | 'equity' | 'returnPct' | 'trades' | 'openPositions' | 'startedAt'>> & { winRatePct?: number | null; profitFactor?: number | null } =>
+            typeof s.key === 'string' && typeof s.label === 'string' && typeof s.equity === 'number' &&
+            typeof s.returnPct === 'number' && typeof s.trades === 'number' && typeof s.openPositions === 'number' &&
+            typeof s.startedAt === 'number',
+        )
+        .map((s) => ({
+          key: s.key,
+          label: s.label,
+          equity: s.equity,
+          returnPct: s.returnPct,
+          trades: s.trades,
+          winRatePct: typeof s.winRatePct === 'number' ? s.winRatePct : null,
+          profitFactor: typeof s.profitFactor === 'number' ? s.profitFactor : null,
+          openPositions: s.openPositions,
+          startedAt: s.startedAt,
+        })),
     };
   } catch {
     return null;

@@ -225,6 +225,48 @@ no `shadow:` keys at all).
   below and above the meaningful-trades bar). Full gate green: tsc clean,
   800 vitest, vite build ok.
 
+## LONG-TERM WALLET UI (2026-08-31)
+David couldn't see the long-term wallet anywhere in the app (Telegram-only)
+and asked for it to be visible — a new screen, or inside Stocks, "whichever
+is best, but must be perfect." Added a 5th sub-tab, **Long-Term**, to the
+Stocks hub (next to Overview/History/Market/Profit) rather than a whole new
+primary section — it's stocks-scoped and the hub's existing lazy-mount
+sub-tab pattern already fits perfectly; a brand-new top-level view would have
+meant a second nav destination for what is conceptually one asset class.
+
+- `src/ui/cloudState.ts`: `CloudState` gained `shadowStandings` (parses the
+  `'shadow-standings'` key `stocksRunner.mts` writes), same
+  filter-then-default-to-empty convention as `marketSnapshot`.
+- `src/ui/views/assetHubView.ts`: `AssetHubOptions` gained an **optional**
+  `renderLongTerm` — omitted entirely (crypto today) the tab/panel don't
+  exist in the DOM at all, so this cannot break or clutter Crypto's hub.
+- `src/ui/views/stocksLongTermPanel.ts` (new): hero card (equity/return/
+  trades/open) + a "Track record" block gated by the same meaningful-trades
+  bar as the Telegram line — below it, an honest "still gathering data"
+  message instead of a win-rate that would be noise. A distinct top-level
+  "not started yet" empty state (own `.empty` block, hero hidden entirely)
+  covers the real production case: the shadow cycle hasn't run for even one
+  full cycle yet, so `shadow-standings` doesn't exist in the committed state
+  file at all as of this writing.
+- Reused every existing style class verbatim (`.hero`, `.tag-sim`, `.block`,
+  `.stack-card`, `.row`, `.empty`) — no visual reinvention, so it matches the
+  "$100k app" bar by construction rather than by eyeballing it.
+- **Real bug caught by actually looking at it, not just the tests passing**:
+  toggling `.hidden` on the loading-skeleton element did nothing visually —
+  `.stack` sets `display: flex`, same CSS specificity as the `[hidden]` UA
+  rule and declared later, so it won. Fixed with an explicit
+  `style.display = 'none'/''` alongside the `.hidden` toggle. Caught by
+  running the actual dev server under Playwright (`chromium` from the global
+  npm install, `executablePath: '/opt/pw-browsers/chromium'`) and looking at
+  screenshots of all three states (empty / gathering data / full track
+  record) — this project's own rule that UI changes must be seen running,
+  not just type-checked and unit-tested.
+- 8 new tests (`cloudState`: shadow-standings parses/defaults;
+  `assetHubView`: the tab is entirely absent without `renderLongTerm`, lazy-
+  mounts exactly once with it; `stocksLongTermPanel`: not-started / below-
+  threshold / above-threshold / wrong-candidate-key-ignored). Full gate
+  green: tsc clean, 808 vitest, vite build ok.
+
 ## Pending Work (autonomous queue)
 - TESTED AND REJECTED (2026-07-20): David asked whether a CLOSER take-profit
   target (easier to hit, so more trades close in profit instead of stopping

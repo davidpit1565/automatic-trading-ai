@@ -112,6 +112,33 @@ describe('market-snapshot parsing', () => {
   });
 });
 
+describe('shadow-standings parsing', () => {
+  it('parses a well-formed standing, defaulting missing winRatePct/profitFactor to null', async () => {
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'shadow-standings': {
+        at: 1,
+        standings: [
+          { key: 'long-term', label: 'Long-term investing', equity: 10_500, returnPct: 5, trades: 3, openPositions: 1, startedAt: 0 },
+        ],
+      },
+    });
+    const state = await fetchCloudState(okFetch(body));
+    expect(state!.shadowStandings).toEqual([
+      { key: 'long-term', label: 'Long-term investing', equity: 10_500, returnPct: 5, trades: 3, winRatePct: null, profitFactor: null, openPositions: 1, startedAt: 0 },
+    ]);
+  });
+
+  it('drops malformed entries and defaults to empty when the field is absent', async () => {
+    const withMalformed = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'shadow-standings': { standings: [{ key: 'long-term', equity: 'not a number' }] },
+    });
+    expect((await fetchCloudState(okFetch(withMalformed)))!.shadowStandings).toEqual([]);
+    expect((await fetchCloudState(okFetch(stateFile([]))))!.shadowStandings).toEqual([]);
+  });
+});
+
 describe('fetchStocksState', () => {
   it('reads the separate stocks state file, not the crypto one', async () => {
     const seen: string[] = [];
