@@ -176,6 +176,37 @@ function standingFor(store: MemoryStore, key: string): unknown {
   return store.get(`shadow:${key}:portfolio-engine`);
 }
 
+describe('trendExit and baseCurrency (long-term investing wallet support)', () => {
+  it('threads trendExit through to the candidate\'s PaperAutoPilot without error', async () => {
+    const store = new MemoryStore();
+    const { source } = makeSource();
+    const candidates: ShadowCandidate[] = [
+      { key: 'lt', label: 'LT', minConfidence: 0, maxRsiForLong: 100, trendExit: { emaPeriod: 20 } },
+    ];
+    const { standings, failures } = await runShadowCycle(candidates, baseOptions(store, source));
+
+    expect(failures).toEqual([]);
+    expect(standings).toHaveLength(1);
+    expect(standings[0]!.equity).toBeGreaterThan(0);
+  });
+
+  it('defaults to EUR when baseCurrency is omitted (existing crypto callers unaffected)', async () => {
+    const store = new MemoryStore();
+    const { source } = makeSource();
+    await runShadowCycle(TWO, baseOptions(store, source));
+    const portfolioState = store.get<{ baseCurrency: string }>('shadow:a:portfolio-engine');
+    expect(portfolioState?.baseCurrency).toBe('EUR');
+  });
+
+  it('honors an explicit USD baseCurrency (stocks callers)', async () => {
+    const store = new MemoryStore();
+    const { source } = makeSource();
+    await runShadowCycle(TWO, { ...baseOptions(store, source), baseCurrency: 'USD' });
+    const portfolioState = store.get<{ baseCurrency: string }>('shadow:a:portfolio-engine');
+    expect(portfolioState?.baseCurrency).toBe('USD');
+  });
+});
+
 describe('shadow candidate configuration errors', () => {
   it('rejects a duplicate key rather than silently merging two records', async () => {
     const store = new MemoryStore();

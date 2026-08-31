@@ -183,6 +183,42 @@ describe('buildDailySummary', () => {
     const msg = buildDailySummary({ ...base, positions: [] });
     expect(msg).not.toContain('מניות');
   });
+
+  it('reports the long-term investing wallet as "still gathering data" below the meaningful-trades bar', () => {
+    const msg = buildDailySummary({
+      ...base,
+      positions: [],
+      stocks: {
+        equity: 10_500, cash: 3_000, totalReturnPct: 5, realizedPnl: 300, unrealizedPnl: -20,
+        openedLast24h: 1, closedLast24h: 2,
+        longTermShadow: {
+          key: 'long-term', label: 'Long-term investing', equity: 10_100, returnPct: 1,
+          trades: 3, winRatePct: 100, profitFactor: null, openPositions: 1, startedAt: 0,
+        },
+      },
+    });
+    expect(msg).toContain('השקעות לטווח ארוך');
+    expect(msg).toContain('3/');
+    expect(msg).not.toContain('+1.00%');
+  });
+
+  it('reports the long-term investing wallet\'s real return once past the meaningful-trades bar', () => {
+    const msg = buildDailySummary({
+      ...base,
+      positions: [],
+      stocks: {
+        equity: 10_500, cash: 3_000, totalReturnPct: 5, realizedPnl: 300, unrealizedPnl: -20,
+        openedLast24h: 1, closedLast24h: 2,
+        longTermShadow: {
+          key: 'long-term', label: 'Long-term investing', equity: 10_800, returnPct: 8,
+          trades: 25, winRatePct: 60, profitFactor: 1.8, openPositions: 2, startedAt: 0,
+        },
+      },
+    });
+    expect(msg).toContain('השקעות לטווח ארוך');
+    expect(msg).toContain('+8.00%');
+    expect(msg).toContain('PF 1.80');
+  });
 });
 
 describe('buildCycleMessage', () => {

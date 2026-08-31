@@ -848,6 +848,8 @@ export function readStocksSummary(now: number): DailySummaryStocks | null {
     const equity = portfolioState.cash + investedValue;
     const realizedPnl = portfolioState.closedRealizedPnl + stocksPositions.openRealizedPnl();
     const since = now - DAY_MS;
+    const shadowSaved = stocksStore.get<{ standings: ShadowStanding[] }>('shadow-standings');
+    const longTermShadow = shadowSaved?.standings.find((s) => s.key === 'long-term') ?? null;
     return {
       equity,
       cash: portfolioState.cash,
@@ -858,6 +860,7 @@ export function readStocksSummary(now: number): DailySummaryStocks | null {
         open.filter((p) => p.openedAt >= since).length +
         stocksJournal.entries().filter((e) => e.entryTimestamp >= since).length,
       closedLast24h: stocksJournal.entries().filter((e) => e.exitTimestamp >= since).length,
+      longTermShadow,
     };
   } catch (cause) {
     console.error('Could not read stocks state for the daily summary:', cause instanceof Error ? cause.message : cause);

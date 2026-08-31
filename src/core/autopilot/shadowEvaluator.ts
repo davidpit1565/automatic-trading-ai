@@ -75,6 +75,13 @@ export interface ShadowCandidate {
    * this is forward-only by construction — see `signal/aiJudgment.ts`.
    */
   readonly useAiJudgmentCheck?: boolean;
+  /**
+   * Hold-through-trend exit (see `paperAutoPilot.ts`'s own doc comment) —
+   * lets a candidate represent a genuinely different HOLDING STYLE (weeks/
+   * months via a slow EMA on daily bars) rather than another tight-stop
+   * trading variant. Omit for the default fixed take-profit.
+   */
+  readonly trendExit?: { readonly emaPeriod: number };
 }
 
 export interface ShadowStanding {
@@ -128,6 +135,8 @@ export interface ShadowRunOptions {
    * key is configured — this stays a no-op (always allows) until then.
    */
   readonly aiJudgmentCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+  /** Defaults to 'EUR' (crypto's own currency). Stocks callers pass 'USD'. */
+  readonly baseCurrency?: 'EUR' | 'USD';
 }
 
 /**
@@ -175,7 +184,7 @@ async function runOne(
   const positions = new PositionEngine(store, journal);
   const portfolio = new PortfolioEngine(store, positions, {
     initialCash: options.initialCash,
-    baseCurrency: 'EUR',
+    baseCurrency: options.baseCurrency ?? 'EUR',
   });
 
   const startedAt = store.get<number>(STARTED_AT_KEY) ?? options.now;
@@ -202,6 +211,7 @@ async function runOne(
     maxRsiForLong: candidate.maxRsiForLong,
     ...(candidate.evaluate ? { evaluate: candidate.evaluate } : {}),
     ...(candidate.trailing ? { trailing: candidate.trailing } : {}),
+    ...(candidate.trendExit ? { trendExit: candidate.trendExit } : {}),
     ...(candidate.useWhaleFlowCheck && options.whaleFlowCheck
       ? { whaleFlowCheck: options.whaleFlowCheck }
       : {}),

@@ -189,6 +189,42 @@ upside, not a promise to eliminate the tradeoff.
   still inconclusive) — do not adopt there without new, larger-sample data.
 - Full gate green: tsc clean, 792 vitest (788 + 4 new), vite build ok.
 
+## LONG-TERM INVESTING WALLET — STOCKS (2026-08-31)
+David asked for a genuinely separate "wallet" that holds positions for
+weeks/months instead of the main runner's tight-stop trading (both for
+crypto and stocks; built the stocks side first — crypto already has the
+shadow infra and can get its own long-term candidate the same way later if
+David asks). Confirmed first that nothing like this existed yet (stocks had
+no `shadow:` keys at all).
+
+- **Reused, not reinvented**: crypto's existing shadow-portfolio system
+  (`shadowEvaluator.ts` — isolated forward-paper-testing, already the
+  project's own answer to "can't honestly backtest this idea") is fully
+  generic; it just needed two additions: `ShadowCandidate.trendExit` (wires
+  through to `PaperAutoPilot`, same as the main runner) and
+  `ShadowRunOptions.baseCurrency` (was hardcoded `'EUR'`; now optional,
+  defaults to `'EUR'` so crypto is unaffected, stocks passes `'USD'`).
+- **The "long-term" candidate** (`server/stocksRunner.mts`'s
+  `STOCKS_SHADOW_CANDIDATES`, key `long-term`): same signal/risk engine as
+  the main stocks account, but on **daily bars** (naturally weeks/months-wide
+  ATR stops instead of hourly-wide ones) with `trendExit: { emaPeriod: 50 }`
+  replacing the fixed take-profit — hold through a trend, exit only when the
+  daily trend actually breaks. Runs once per stocks cycle via
+  `runStocksShadow()`, fully isolated (own namespace, own kill switch, own
+  portfolio) — cannot affect the real stocks account. Reported in the
+  Telegram digest's stocks section (`🌱 ארנק השקעות לטווח ארוך`), gated by
+  the same `SHADOW_MEANINGFUL_TRADES` bar as crypto's shadows so an early
+  streak isn't oversold as proven edge.
+- **Simulated money only, same as everywhere else** — this is a forward
+  paper record to judge the IDEA, not a new path to real money. Nothing here
+  changes the real-money-readiness gate.
+- 8 new tests (shadowEvaluator: trendExit threads through, baseCurrency
+  defaults to EUR / accepts USD; stocksRunner: shadow wallet runs alongside
+  the main cycle; autopilotRunner: `readStocksSummary` folds in the shadow
+  standing or reports null; telegram: digest renders the wallet's line both
+  below and above the meaningful-trades bar). Full gate green: tsc clean,
+  800 vitest, vite build ok.
+
 ## Pending Work (autonomous queue)
 - TESTED AND REJECTED (2026-07-20): David asked whether a CLOSER take-profit
   target (easier to hit, so more trades close in profit instead of stopping
