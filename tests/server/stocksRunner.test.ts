@@ -203,4 +203,16 @@ describe('runStocksCycle', () => {
     // per iteration, not skipped or applied once.
     expect(elapsed).toBeGreaterThanOrEqual(35 * 5);
   });
+
+  it('runs the long-term investing shadow wallet alongside the main cycle', async () => {
+    const source = fakeSource();
+    const { autopilot, portfolio, journal } = buildAutopilot(source);
+    const telegram = { token: '', chatId: '' };
+    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], 5_000_000);
+
+    const shadow = store.get<{ at: number; standings: { key: string }[] }>('shadow-standings');
+    expect(shadow?.standings.map((s) => s.key)).toEqual(['long-term']);
+    // Isolated in its own namespace — never the main account's keys.
+    expect(store.get('shadow:long-term:portfolio-engine')).not.toBeUndefined();
+  });
 });

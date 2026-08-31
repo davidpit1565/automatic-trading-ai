@@ -132,6 +132,8 @@ export const BROWSABLE_STOCK_INSTRUMENTS: Instrument[] = [
   { symbol: 'NFLX', base: 'NFLX', quote: 'USD' },
   { symbol: 'CMCSA', base: 'CMCSA', quote: 'USD' },
   { symbol: 'VZ', base: 'VZ', quote: 'USD' },
+  // Gaming — added 2026-08-31 (David asked specifically about GTA/Take-Two)
+  { symbol: 'TTWO', base: 'TTWO', quote: 'USD' },
   // Other
   { symbol: 'PYPL', base: 'PYPL', quote: 'USD' },
 ];

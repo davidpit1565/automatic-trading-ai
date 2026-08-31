@@ -140,6 +140,91 @@ recent winning streak. Answered honestly rather than chasing the number:
 - Full gate green (tsc · 760 vitest · vite build); no test hardcoded the
   removed trailing-stop value.
 
+## TREND-EXIT WIRED INTO THE REAL AUTOPILOT (2026-08-31): stocks looks real, crypto inconclusive
+David lost money on a stop-out and pushed back hard ("this must never happen
+again") — explained the real, structural tradeoff (a fixed stop/target caps
+both the loss AND the gain; no strategy maximizes upside capture while also
+minimizing drawdown, they're in tension) and proposed the already-built
+`trendExit` mechanism (hold through trend via a trailing EMA instead of a
+fixed take-profit) as the measured lever to lean the tradeoff toward more
+upside, not a promise to eliminate the tradeoff.
+
+- **Gap found**: `trendExit` only existed in the backtest approximation
+  (`livePipeline.ts`), never in the real `PaperAutoPilot` — so it could be
+  backtested but never measured against the actual engine. Added
+  `trendExit?: { emaPeriod }` to `PaperAutoPilot` itself, same placement and
+  same rule as `trailing`: stop-loss is still checked FIRST every cycle,
+  unconditionally — trendExit only replaces the fixed take-profit check,
+  never the protective stop. Logged as the existing `'signal-exit'`
+  `ExitReason` (a price-action rule closed it, not a fixed level), not a new
+  enum value. 4 new tests (holds past where fixed-target would have closed
+  it while the trend holds; closes via signal-exit on a trend break before
+  ever reaching the stop; stop-loss still fires first even with trendExit
+  configured; omitting the option leaves default behaviour unchanged).
+- **Crypto measurement (`sweepAutopilot.mts`, now supports `trendExit`,
+  real Kraken data): inconclusive, not adopted.** EMA20/EMA50 trend-exit
+  showed 100% win rate in the recent 30-day trending window — but on only
+  5-6 trades, the same small-sample illusion already flagged in the
+  win-rate work above (2026-08-27) applies here just as much: not enough
+  volume to trust. In the longer, choppier 120-day window, every trend-exit
+  variant was STILL net-losing (0-4 trades each) — no clear win there
+  either. Also surfaced that this file's non-trend-exit "PROD" rows still
+  hardcode the OLD `trailing: 1.5/1.5` even though production trailing is
+  now off (2026-08-27) — flagged, a `PROD live (no trail, current)` row
+  added as the honest current baseline, older rows left as historical
+  reference rather than rewritten.
+- **Stocks pooled measurement (`measureStocks.mts` candidates mode, real
+  Alpaca data, 41 symbols): more credible.** `trend-exit EMA50` beat the
+  live default on every cost tier tested — e.g. at the live 0.10%/side cost,
+  PF 1.62 vs 1.23, return 3.45% vs 2.31%, on 459 vs 778 trades pooled across
+  41 symbols and 3 folds — an order of magnitude more trade volume than the
+  crypto measurement above, so this reading carries real weight.
+- **Adopted into production (2026-08-31)**: `stocksRunner.mts`'s `main()`
+  now constructs its `PaperAutoPilot` with `trendExit: { emaPeriod: 50 }`.
+  Correction to an earlier note here (and to David): stocks does **not**
+  have its own separate exit-logic implementation — `runStocksCycle` just
+  calls `.runCycleOnce()` on the same `PaperAutoPilot` class crypto uses, so
+  this was a config change at the construction site, not new logic. Crypto's
+  production config is intentionally left unchanged (measurement above is
+  still inconclusive) — do not adopt there without new, larger-sample data.
+- Full gate green: tsc clean, 792 vitest (788 + 4 new), vite build ok.
+
+## LONG-TERM INVESTING WALLET — STOCKS (2026-08-31)
+David asked for a genuinely separate "wallet" that holds positions for
+weeks/months instead of the main runner's tight-stop trading (both for
+crypto and stocks; built the stocks side first — crypto already has the
+shadow infra and can get its own long-term candidate the same way later if
+David asks). Confirmed first that nothing like this existed yet (stocks had
+no `shadow:` keys at all).
+
+- **Reused, not reinvented**: crypto's existing shadow-portfolio system
+  (`shadowEvaluator.ts` — isolated forward-paper-testing, already the
+  project's own answer to "can't honestly backtest this idea") is fully
+  generic; it just needed two additions: `ShadowCandidate.trendExit` (wires
+  through to `PaperAutoPilot`, same as the main runner) and
+  `ShadowRunOptions.baseCurrency` (was hardcoded `'EUR'`; now optional,
+  defaults to `'EUR'` so crypto is unaffected, stocks passes `'USD'`).
+- **The "long-term" candidate** (`server/stocksRunner.mts`'s
+  `STOCKS_SHADOW_CANDIDATES`, key `long-term`): same signal/risk engine as
+  the main stocks account, but on **daily bars** (naturally weeks/months-wide
+  ATR stops instead of hourly-wide ones) with `trendExit: { emaPeriod: 50 }`
+  replacing the fixed take-profit — hold through a trend, exit only when the
+  daily trend actually breaks. Runs once per stocks cycle via
+  `runStocksShadow()`, fully isolated (own namespace, own kill switch, own
+  portfolio) — cannot affect the real stocks account. Reported in the
+  Telegram digest's stocks section (`🌱 ארנק השקעות לטווח ארוך`), gated by
+  the same `SHADOW_MEANINGFUL_TRADES` bar as crypto's shadows so an early
+  streak isn't oversold as proven edge.
+- **Simulated money only, same as everywhere else** — this is a forward
+  paper record to judge the IDEA, not a new path to real money. Nothing here
+  changes the real-money-readiness gate.
+- 8 new tests (shadowEvaluator: trendExit threads through, baseCurrency
+  defaults to EUR / accepts USD; stocksRunner: shadow wallet runs alongside
+  the main cycle; autopilotRunner: `readStocksSummary` folds in the shadow
+  standing or reports null; telegram: digest renders the wallet's line both
+  below and above the meaningful-trades bar). Full gate green: tsc clean,
+  800 vitest, vite build ok.
+
 ## Pending Work (autonomous queue)
 - TESTED AND REJECTED (2026-07-20): David asked whether a CLOSER take-profit
   target (easier to hit, so more trades close in profit instead of stopping

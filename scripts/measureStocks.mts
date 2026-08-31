@@ -218,3 +218,54 @@ for (const cost of COSTS) {
     `basket per fold: ${Array.from({ length: FOLDS }, (_, f) => basket(f * foldSize, (f + 1) * foldSize).toFixed(2)).join('%, ')}%  ·  overall ${allBasket.toFixed(2)}%`,
   );
 }
+
+/**
+ * The tables above are POOLED across every symbol — they answer "does this
+ * STRATEGY variant work across the whole candidate basket", not "is THIS
+ * ONE symbol individually worth trading". Candidates mode's own stated job
+ * is the latter ("is there a real edge to promote any of the 40 browsable-
+ * only symbols"), so it needs a per-symbol breakdown too — using just the
+ * LIVE default config, at the live cost rate, full window (no folds: a
+ * single symbol's own history is already the smallest unit being judged).
+ */
+if (MODE === 'candidates') {
+  console.log(`\n${'='.repeat(94)}\nPer-symbol breakdown — LIVE stocks (defaults), cost ${(LIVE_COST * 100).toFixed(2)}%/side`);
+  console.log(
+    'symbol'.padEnd(10) +
+      ['ret%', 'PF', 'win%', 'trades', 'buy&hold%'].map((h) => h.padStart(12)).join(''),
+  );
+  console.log('-'.repeat(10 + 12 * 5));
+  const perSymbol = data
+    .map((d) => {
+      const res = runLivePipelineBacktest(d.bars, {
+        symbol: d.symbol,
+        timeframe: TF,
+        costRate: LIVE_COST,
+        minConfidence: CANDIDATES[0]!.minConfidence,
+        ...(CANDIDATES[0]!.criteria ? { criteria: CANDIDATES[0]!.criteria } : {}),
+      });
+      const trades = res.closedTrades as LivePipelineTrade[];
+      const wins = trades.filter((t) => t.pnl > 0);
+      const gp = wins.reduce((s, t) => s + t.pnl, 0);
+      const gl = trades.filter((t) => t.pnl <= 0).reduce((s, t) => s - t.pnl, 0);
+      const bh = ((d.bars[d.bars.length - 1]!.close - d.bars[0]!.close) / d.bars[0]!.close) * 100;
+      return {
+        symbol: d.symbol,
+        ret: res.totalReturnPct,
+        pf: gl > 0 ? gp / gl : gp > 0 ? Infinity : 0,
+        winPct: trades.length > 0 ? (wins.length / trades.length) * 100 : 0,
+        trades: trades.length,
+        bh,
+      };
+    })
+    .sort((a, b) => b.ret - a.ret);
+  for (const s of perSymbol) {
+    console.log(
+      s.symbol.padEnd(10) +
+        [s.ret.toFixed(2), s.pf === Infinity ? '999' : s.pf.toFixed(2), s.winPct.toFixed(1), String(s.trades), s.bh.toFixed(2)]
+          .map((v) => v.padStart(12))
+          .join(''),
+    );
+  }
+  console.log('-'.repeat(10 + 12 * 5));
+}

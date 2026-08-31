@@ -24,10 +24,12 @@ import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { AlpacaStockSource, CURATED_STOCK_INSTRUMENTS, BROWSABLE_STOCK_INSTRUMENTS } from '../src/core/data/alpacaStocks';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
+import { CachingSource } from '../src/core/data/cachingSource';
 import { isUsMarketOpen } from '../src/core/data/marketHours';
 import { PersistedAuditLog } from '../src/core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../src/core/autopilot/killSwitch';
 import { PaperAutoPilot } from '../src/core/autopilot/paperAutoPilot';
+import { runShadowCycle, type ShadowCandidate } from '../src/core/autopilot/shadowEvaluator';
 import { PositionEngine } from '../src/core/position/positionEngine';
 import { PortfolioEngine } from '../src/core/position/portfolioEngine';
 import { TradeJournal } from '../src/core/position/tradeJournal';
@@ -127,6 +129,69 @@ function persistStateToGit(label: string): void {
 // protection over waiting for enough stock data to measure properly. Revisit
 // once a real sweep can be run against Alpaca history.
 const INTERIM_MIN_CONFIDENCE = 40;
+
+/**
+ * Long-term investing "wallet" (David asked for this 2026-08-31): a separate
+ * paper portfolio that holds through weeks/months instead of the main
+ * runner's tight-stop trading. Reuses the exact same signal/risk engine as
+ * the main system (no new logic, per this project's own house style of
+ * forward-testing a genuinely different IDEA rather than guessing new
+ * mechanics — see `shadowEvaluator.ts`'s doc comment) but on DAILY bars
+ * (naturally weeks/months-wide ATR stops instead of hourly-wide ones) with
+ * `trendExit` replacing the fixed take-profit (already measured to help on
+ * stocks, see the trend-exit note above) — hold through a trend, exit only
+ * when the daily trend actually breaks. Fully isolated: its own namespaced
+ * state inside `stocks-state.json`, no real money, cannot affect the main
+ * stocks account.
+ */
+const STOCKS_SHADOW_STANDINGS_KEY = 'shadow-standings';
+const STOCKS_SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
+  {
+    key: 'long-term',
+    label: 'Long-term investing (daily bars, EMA50 trend-exit — holds weeks/months)',
+    minConfidence: INTERIM_MIN_CONFIDENCE,
+    maxRsiForLong: 65,
+    trendExit: { emaPeriod: 50 },
+  },
+];
+
+/**
+ * One cycle of the long-term shadow wallet, on the SAME curated symbols as
+ * the main stocks account but on daily bars. Purely diagnostic/simulated —
+ * a failure here is logged and never allowed to affect the real cycle,
+ * which has already completed by this point (same contract as crypto's
+ * `runShadows` in `autopilotRunner.mts`).
+ */
+async function runStocksShadow(store: FileStore, source: MarketDataSource, now: number): Promise<void> {
+  try {
+    const symbols = CURATED_STOCK_INSTRUMENTS.map((i) => i.symbol);
+    const caching = new CachingSource(source);
+    const prices: Record<string, number> = {};
+    for (const symbol of symbols) {
+      const candles = await caching.getCandles(symbol, '1d', 2);
+      if (candles.ok && candles.value.length > 0) {
+        prices[symbol] = candles.value[candles.value.length - 1]!.close;
+      }
+    }
+    const { standings, failures } = await runShadowCycle(STOCKS_SHADOW_CANDIDATES, {
+      source: caching,
+      symbols,
+      timeframe: '1d',
+      initialCash: INITIAL_CASH,
+      costRate: COST_RATE,
+      baseCurrency: 'USD',
+      store,
+      now,
+      prices,
+    });
+    store.set(STOCKS_SHADOW_STANDINGS_KEY, { at: now, standings });
+    for (const failure of failures) {
+      console.error(`Stocks shadow candidate '${failure.key}' failed: ${failure.reason}`);
+    }
+  } catch (cause) {
+    console.error('Stocks shadow evaluation skipped:', cause instanceof Error ? cause.message : cause);
+  }
+}
 
 export interface MarketSnapshotEntry {
   readonly symbol: string;
@@ -280,6 +345,7 @@ export async function runStocksCycle(
     }
   }
   await recordEquity(store, portfolio, journal, now, symbolPrices);
+  await runStocksShadow(store, source, now);
 
   // Browsable-only symbols (BROWSABLE minus the traded set already priced
   // above): display prices for the wider list without fetching anything
@@ -327,6 +393,13 @@ async function main(): Promise<void> {
     costRate: COST_RATE,
     riskLimits: DEFAULT_RISK_LIMITS,
     minConfidence: INTERIM_MIN_CONFIDENCE,
+    // Measured 2026-08-31 via sweepAutopilot.mts on real Alpaca history:
+    // trend-exit (close below a trailing EMA instead of a fixed take-profit)
+    // pooled PF 1.62 vs 1.23 on 459 vs 778 trades across 41 symbols/3 folds
+    // at live cost — a credible, large-sample improvement. Crypto's own
+    // measurement was inconclusive (single-digit trade counts) and is
+    // intentionally left unchanged.
+    trendExit: { emaPeriod: 50 },
   });
 
   const telegram = {

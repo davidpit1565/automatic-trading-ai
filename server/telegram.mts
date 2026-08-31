@@ -76,6 +76,13 @@ export interface DailySummaryStocks {
   readonly unrealizedPnl: number;
   readonly openedLast24h: number;
   readonly closedLast24h: number;
+  /**
+   * The long-term investing "wallet" — a separate paper portfolio holding
+   * through weeks/months instead of the main runner's tight-stop trading
+   * (see `stocksRunner.mts`'s `STOCKS_SHADOW_CANDIDATES`). Null/omitted if
+   * it hasn't run yet.
+   */
+  readonly longTermShadow?: ShadowStanding | null;
 }
 
 export interface DailySummaryInput {
@@ -200,6 +207,19 @@ export function buildDailySummary(input: DailySummaryInput): string {
       `   📊 רווח/הפסד: ${signedUsd(s.realizedPnl)} ממומש · ${signedUsd(s.unrealizedPnl)} על הנייר`,
       `   🔄 24 שעות אחרונות: ${s.openedLast24h} קניות, ${s.closedLast24h} מכירות`,
     );
+    if (s.longTermShadow) {
+      const lt = s.longTermShadow;
+      if (lt.trades < SHADOW_MEANINGFUL_TRADES) {
+        lines.push(`   🌱 ארנק השקעות לטווח ארוך: עדיין צובר נתונים (${lt.trades}/${SHADOW_MEANINGFUL_TRADES} עסקאות) — מוקדם לדרג.`);
+      } else {
+        const sign = lt.returnPct >= 0 ? '+' : '';
+        lines.push(
+          `   🌱 ארנק השקעות לטווח ארוך: ${sign}${lt.returnPct.toFixed(2)}% ` +
+            `(${lt.trades} עסקאות, PF ${lt.profitFactor === null ? 'n/a' : lt.profitFactor.toFixed(2)}). ` +
+            `כסף מדומה, חשבון נפרד.`,
+        );
+      }
+    }
   }
   return lines.join('\n');
 }

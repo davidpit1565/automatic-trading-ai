@@ -162,6 +162,41 @@ describe('readStocksSummary (folds the isolated stocks side into the crypto dige
     const contentAfter = readFileSync(stocksPath, 'utf8');
     expect(contentAfter).toBe(contentBefore);
   });
+
+  it('folds in the long-term investing shadow standing when present', () => {
+    const stocksStore = new FileStore(stocksPath);
+    new TradeJournal(stocksStore);
+    stocksStore.set('portfolio-engine', { cash: 10_000, initialCash: 10_000, baseCurrency: 'USD', closedRealizedPnl: 0, dayAnchor: null });
+    stocksStore.set('shadow-standings', {
+      at: 0,
+      standings: [
+        {
+          key: 'long-term',
+          label: 'Long-term investing',
+          equity: 10_500,
+          returnPct: 5,
+          trades: 25,
+          winRatePct: 60,
+          profitFactor: 1.8,
+          openPositions: 1,
+          startedAt: 0,
+        },
+      ],
+    });
+
+    const summary = readStocksSummary(Date.now());
+    expect(summary?.longTermShadow?.key).toBe('long-term');
+    expect(summary?.longTermShadow?.returnPct).toBe(5);
+  });
+
+  it('reports longTermShadow as null when no shadow standing has been recorded yet', () => {
+    const stocksStore = new FileStore(stocksPath);
+    new TradeJournal(stocksStore);
+    stocksStore.set('portfolio-engine', { cash: 10_000, initialCash: 10_000, baseCurrency: 'USD', closedRealizedPnl: 0, dayAnchor: null });
+
+    const summary = readStocksSummary(Date.now());
+    expect(summary?.longTermShadow ?? null).toBeNull();
+  });
 });
 
 describe('maybeSendMoveAlerts (a real spam bug: wobbling near a threshold re-alerted every time)', () => {
