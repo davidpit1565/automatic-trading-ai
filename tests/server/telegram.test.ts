@@ -202,6 +202,28 @@ describe('buildDailySummary', () => {
     expect(msg).not.toContain('+1.00%');
   });
 
+  it('reports crypto\'s own long-term investing wallet as a top-level section (not nested under stocks)', () => {
+    const msg = buildDailySummary({
+      ...base,
+      positions: [],
+      longTermShadow: {
+        key: 'long-term', label: 'Long-term investing', equity: 10_900, returnPct: 9,
+        trades: 30, winRatePct: 55, profitFactor: 1.4, openPositions: 1, startedAt: 0,
+      },
+    });
+    expect(msg).toContain('🌱 ארנק השקעות לטווח ארוך:');
+    expect(msg).toContain('+9.00%');
+    expect(msg).toContain('PF 1.40');
+    // No leading spaces on the crypto section's line (unlike the stocks one,
+    // which is indented as a sub-line of the stocks block).
+    expect(msg).not.toContain('   🌱 ארנק השקעות לטווח ארוך:');
+  });
+
+  it('omits the crypto long-term wallet line entirely when not provided', () => {
+    const msg = buildDailySummary({ ...base, positions: [] });
+    expect(msg).not.toContain('🌱');
+  });
+
   it('reports the long-term investing wallet\'s real return once past the meaningful-trades bar', () => {
     const msg = buildDailySummary({
       ...base,

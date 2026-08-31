@@ -307,6 +307,26 @@ describe('maybeSendSummaries (the exact bug class already found once)', () => {
     await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, Date.parse('2026-07-28T07:30:00Z'));
     expect(fetchFn).not.toHaveBeenCalled();
   });
+
+  it('folds crypto\'s own long-term shadow wallet standing into the digest text', async () => {
+    let capturedText = '';
+    const fetchFn = (async (_url: string | URL, init?: RequestInit) => {
+      capturedText = JSON.parse(String(init?.body)).text;
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const telegram = { token: 'T', chatId: 'C', fetchFn };
+    const { portfolio, journal } = buildPortfolio();
+    store.set('shadow-longterm-standings', {
+      at: 0,
+      standings: [
+        { key: 'long-term', label: 'Long-term investing', equity: 10_800, returnPct: 8, trades: 25, winRatePct: 60, profitFactor: 1.5, openPositions: 1, startedAt: 0 },
+      ],
+    });
+
+    await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, Date.parse('2026-07-28T12:30:00Z'));
+    expect(capturedText).toContain('🌱 ארנק השקעות לטווח ארוך:');
+    expect(capturedText).toContain('+8.00%');
+  });
 });
 
 describe('maybeSendPeriodicReports — elapsed-time gating survives a coverage gap', () => {

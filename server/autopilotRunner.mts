@@ -47,7 +47,12 @@ import { DEFAULT_RISK_LIMITS } from '../src/core/risk/riskEngine';
 import { tradeAnalytics } from '../src/core/position/analytics';
 import { maxDrawdownPct } from '../src/core/backtest/metrics';
 import { CachingSource } from '../src/core/data/cachingSource';
-import { runShadowCycle, SHADOW_CANDIDATES, type ShadowStanding } from '../src/core/autopilot/shadowEvaluator';
+import {
+  runShadowCycle,
+  SHADOW_CANDIDATES,
+  type ShadowCandidate,
+  type ShadowStanding,
+} from '../src/core/autopilot/shadowEvaluator';
 import {
   assessRealMoneyReadiness,
   type RealMoneyReadiness,
@@ -613,6 +618,7 @@ async function runCycle(
   // each fetching its own would double the requests for identical data.
   const cyclePrices = await latestPrices(source, symbols);
   await runShadows(store, source, symbols, now, cyclePrices);
+  await runLongTermShadow(store, source, symbols, now);
   await recordEquity(store, source, portfolio, journal, now, cyclePrices);
   await maybeSendSummaries(store, source, portfolio, journal, telegram, now);
   await maybeSendPeriodicReports(store, source, portfolio, journal, telegram, now);
@@ -622,6 +628,85 @@ async function runCycle(
 }
 
 const SHADOW_STANDINGS_KEY = 'shadow-standings';
+
+/**
+ * Long-term investing "wallet" (David asked for this 2026-08-31, mirroring
+ * the stocks-side one in `stocksRunner.mts`): a separate paper portfolio
+ * that holds through weeks/months instead of the main runner's tight-stop
+ * trading. Same signal/risk engine, but on DAILY bars (naturally
+ * weeks/months-wide ATR stops instead of hourly-wide ones) with `trendExit`
+ * replacing the fixed take-profit — hold through a trend, exit only when the
+ * daily trend actually breaks.
+ *
+ * Crypto's own trend-exit measurement (`sweepAutopilot.mts`, 2026-08-31) was
+ * inconclusive on the main HOURLY timeframe (too few trades in both windows
+ * tested) — this shadow candidate is the honest way to keep testing the
+ * idea without adopting it into the real account on unproven evidence, and
+ * daily bars are different enough that the earlier hourly measurement
+ * doesn't even directly speak to this variant. Isolated by construction
+ * (own namespace, own kill switch, own portfolio) — cannot affect the real
+ * account.
+ */
+const LONGTERM_SHADOW_STANDINGS_KEY = 'shadow-longterm-standings';
+const LONGTERM_SHADOW_LAST_RUN_DAY_KEY = 'longterm-shadow-last-run-day';
+const LONGTERM_SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
+  {
+    key: 'long-term',
+    label: 'Long-term investing (daily bars, EMA50 trend-exit — holds weeks/months)',
+    minConfidence: AUTOPILOT_MIN_CONFIDENCE,
+    maxRsiForLong: AUTOPILOT_MAX_RSI_FOR_LONG,
+    trendExit: { emaPeriod: 50 },
+  },
+];
+
+/**
+ * One cycle of the long-term shadow wallet, on the same traded symbols as
+ * the main account but on daily bars. Purely diagnostic/simulated — a
+ * failure here is logged and never allowed to affect the real cycle, which
+ * has already completed by this point (same contract as `runShadows`).
+ */
+async function runLongTermShadow(
+  store: FileStore,
+  source: MarketDataSource,
+  symbols: readonly string[],
+  now: number,
+): Promise<void> {
+  // Daily bars only change once a day — a 5-minute internal loop (up to
+  // LOOP_CYCLES times per trigger) would otherwise re-fetch identical daily
+  // candles and re-run the same evaluation dozens of times for no new
+  // information. Not set on failure, so a transient error gets retried on
+  // the very next cycle rather than waiting a full day.
+  const { day } = localDayAndHour(now, getSummaryTimezone());
+  if (store.get<string>(LONGTERM_SHADOW_LAST_RUN_DAY_KEY) === day) return;
+  try {
+    const caching = new CachingSource(source);
+    const prices: Record<string, number> = {};
+    for (const symbol of symbols) {
+      const candles = await caching.getCandles(symbol, '1d', 2);
+      if (candles.ok && candles.value.length > 0) {
+        prices[symbol] = candles.value[candles.value.length - 1]!.close;
+      }
+    }
+    const { standings, failures } = await runShadowCycle(LONGTERM_SHADOW_CANDIDATES, {
+      source: caching,
+      symbols,
+      timeframe: '1d',
+      initialCash: INITIAL_CASH,
+      costRate: COST_RATE,
+      baseCurrency: 'EUR',
+      store,
+      now,
+      prices,
+    });
+    store.set(LONGTERM_SHADOW_STANDINGS_KEY, { at: now, standings });
+    store.set(LONGTERM_SHADOW_LAST_RUN_DAY_KEY, day);
+    for (const failure of failures) {
+      console.error(`Long-term shadow candidate '${failure.key}' failed: ${failure.reason}`);
+    }
+  } catch (cause) {
+    console.error('Long-term shadow evaluation skipped:', cause instanceof Error ? cause.message : cause);
+  }
+}
 
 /**
  * Forward-test the candidate strategies on this cycle's bars.
@@ -926,12 +1011,15 @@ export async function maybeSendSummaries(
 
   // Single digest a day now carries the shadow-strategy line every time.
   const shadowSaved = store.get<{ standings: ShadowStanding[] }>(SHADOW_STANDINGS_KEY);
+  const longTermShadowSaved = store.get<{ standings: ShadowStanding[] }>(LONGTERM_SHADOW_STANDINGS_KEY);
+  const longTermShadow = longTermShadowSaved?.standings.find((s) => s.key === 'long-term') ?? null;
   for (const slot of dueSlots) {
     const result = await sendTelegramMessage(
       buildDailySummary({
         ...baseSummary,
         heading: slot.heading,
         ...(shadowSaved ? { shadows: shadowSaved.standings } : {}),
+        ...(longTermShadow ? { longTermShadow } : {}),
       }),
       telegram,
     );
