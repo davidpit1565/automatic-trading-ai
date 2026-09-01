@@ -56,33 +56,6 @@ describe('buildAlpacaSourceFromEnv', () => {
   });
 });
 
-describe('recordEquity', () => {
-  it('appends a rounded equity point on every call', async () => {
-    const journal = new TradeJournal(store);
-    const positions = new PositionEngine(store, journal);
-    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
-    await recordEquity(store, portfolio, journal, 1000, {});
-    await recordEquity(store, portfolio, journal, 2000, {});
-    const history = store.get<Array<{ at: number; equity: number }>>('equity-history');
-    expect(history).toHaveLength(2);
-    expect(history![0]!.equity).toBe(10_000);
-  });
-
-  it('refreshes the real-money readiness verdict alongside the equity point', async () => {
-    const journal = new TradeJournal(store);
-    const positions = new PositionEngine(store, journal);
-    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
-    await recordEquity(store, portfolio, journal, 1000, {});
-    const readiness = store.get<{ ready: boolean; criteria: { key: string; detail: string }[] }>('real-money-readiness');
-    expect(readiness).not.toBeNull();
-    expect(readiness!.ready).toBe(false);
-    // Stocks has no measured buy-and-hold benchmark yet — must not claim BTC.
-    const benchmark = readiness!.criteria.find((c) => c.key === 'benchmark');
-    expect(benchmark?.detail).toContain('a market benchmark');
-    expect(benchmark?.detail).not.toContain('BTC');
-  });
-});
-
 const AAPL: Instrument = { symbol: 'AAPL', base: 'AAPL', quote: 'USD' };
 const candle = (close: number): Candle => ({ timestamp: 0, open: close, high: close, low: close, close, volume: 1000 });
 
@@ -93,6 +66,68 @@ function fakeSource(): MarketDataSource {
     getCandles: async () => ({ ok: true, value: [candle(100), candle(101)] }),
   };
 }
+
+describe('recordEquity', () => {
+  it('appends a rounded equity point on every call', async () => {
+    const journal = new TradeJournal(store);
+    const positions = new PositionEngine(store, journal);
+    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
+    await recordEquity(store, fakeSource(), portfolio, journal, 1000, {});
+    await recordEquity(store, fakeSource(), portfolio, journal, 2000, {});
+    const history = store.get<Array<{ at: number; equity: number }>>('equity-history');
+    expect(history).toHaveLength(2);
+    expect(history![0]!.equity).toBe(10_000);
+  });
+
+  it('refreshes the real-money readiness verdict alongside the equity point', async () => {
+    const journal = new TradeJournal(store);
+    const positions = new PositionEngine(store, journal);
+    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
+    await recordEquity(store, fakeSource(), portfolio, journal, 1000, {});
+    const readiness = store.get<{ ready: boolean; criteria: { key: string; detail: string }[] }>('real-money-readiness');
+    expect(readiness).not.toBeNull();
+    expect(readiness!.ready).toBe(false);
+    // A real (fake-source) SPY fetch succeeds here, so the benchmark is
+    // actually measured now — must name SPY, not the old "not measured" text.
+    const benchmark = readiness!.criteria.find((c) => c.key === 'benchmark');
+    expect(benchmark?.detail).toContain('S&P 500 (SPY)');
+    expect(benchmark?.detail).not.toContain('BTC');
+  });
+
+  it('falls back to "not measured" when the SPY fetch fails', async () => {
+    const journal = new TradeJournal(store);
+    const positions = new PositionEngine(store, journal);
+    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
+    const failingSource: MarketDataSource = {
+      name: 'failing',
+      getInstruments: async () => ({ ok: true, value: [AAPL] }),
+      getCandles: async () => ({ ok: false, error: 'no data' }),
+    };
+    await recordEquity(store, failingSource, portfolio, journal, 1000, {});
+    const readiness = store.get<{ criteria: { key: string; detail: string }[] }>('real-money-readiness');
+    const benchmark = readiness!.criteria.find((c) => c.key === 'benchmark');
+    expect(benchmark?.detail).toContain('a market benchmark');
+  });
+
+  it('keeps the last known-good stored benchmark on a later transient SPY failure, instead of clobbering it with null', async () => {
+    const journal = new TradeJournal(store);
+    const positions = new PositionEngine(store, journal);
+    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
+    // First cycle: real (fake-source) SPY fetch succeeds, anchoring a comparison.
+    await recordEquity(store, fakeSource(), portfolio, journal, 1000, {});
+    const goodBenchmark = store.get('benchmark-result');
+    expect(goodBenchmark).not.toBeNull();
+
+    // Second cycle: a transient failure must not erase that stored value.
+    const failingSource: MarketDataSource = {
+      name: 'failing',
+      getInstruments: async () => ({ ok: true, value: [AAPL] }),
+      getCandles: async () => ({ ok: false, error: 'rate limited' }),
+    };
+    await recordEquity(store, failingSource, portfolio, journal, 2000, {});
+    expect(store.get('benchmark-result')).toEqual(goodBenchmark);
+  });
+});
 
 function buildAutopilot(
   source: MarketDataSource,

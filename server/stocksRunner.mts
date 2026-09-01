@@ -239,14 +239,59 @@ export function updateMarketSnapshot(
   store.set(MARKET_SNAPSHOT_KEY, { at: now, symbols: entries });
 }
 
+const BENCHMARK_ANCHOR_KEY = 'benchmark-anchor';
+/** Latest computed benchmark comparison, persisted so the crypto digest
+ * (which has no Alpaca credentials — see `readStocksSummary` in
+ * `autopilotRunner.mts`) can fold it in by reading the stocks state file
+ * rather than fetching live. */
+const BENCHMARK_RESULT_KEY = 'benchmark-result';
+interface StocksBenchmarkAnchor {
+  spy: number;
+  equity: number;
+  at: number;
+}
+
+/**
+ * Compare the portfolio against simply holding SPY (S&P 500) over the same
+ * window — same pattern as crypto's own BTC benchmark (`computeBenchmark`
+ * in `autopilotRunner.mts`). The anchor (SPY price + portfolio equity) is
+ * captured the first time this runs, so both returns are measured from the
+ * same moment. Fails soft (null) on any fetch issue — the readiness gate
+ * already treats a null benchmark as "not measured yet".
+ */
+async function computeStocksBenchmark(
+  store: FileStore,
+  source: MarketDataSource,
+  equityNow: number,
+  now: number,
+): Promise<{ label: string; portfolioPct: number; assetPct: number } | null> {
+  const candles = await source.getCandles('SPY', ENTRY_TF, 2);
+  if (!candles.ok || candles.value.length === 0) return null;
+  const spyNow = candles.value[candles.value.length - 1]!.close;
+  if (!(spyNow > 0) || !(equityNow > 0)) return null;
+
+  let anchor = store.get<StocksBenchmarkAnchor>(BENCHMARK_ANCHOR_KEY);
+  if (!anchor || !(anchor.spy > 0) || !(anchor.equity > 0)) {
+    anchor = { spy: spyNow, equity: equityNow, at: now };
+    store.set(BENCHMARK_ANCHOR_KEY, anchor);
+  }
+  return {
+    label: 'S&P 500 (SPY)',
+    portfolioPct: ((equityNow - anchor.equity) / anchor.equity) * 100,
+    assetPct: ((spyNow - anchor.spy) / anchor.spy) * 100,
+  };
+}
+
 /**
  * Records an equity-history point and refreshes the real-money readiness
  * verdict from the trade journal — same shape as the crypto runner's
- * `recordEquity`, minus a benchmark (no stocks buy-and-hold comparison is
- * measured yet, so that criterion honestly reports "not measured").
+ * `recordEquity`, now including the same kind of buy-and-hold benchmark
+ * comparison (SPY here, BTC there) instead of permanently reporting "not
+ * measured yet".
  */
 export async function recordEquity(
   store: FileStore,
+  source: MarketDataSource,
   portfolio: PortfolioEngine,
   journal: TradeJournal,
   now: number,
@@ -263,14 +308,22 @@ export async function recordEquity(
 
   const analytics = tradeAnalytics(journal.entries(), { initialCash: INITIAL_CASH });
   const liveDrawdownPct = maxDrawdownPct(history.map((point) => ({ timestamp: point.at, equity: point.equity })));
+  const benchmark = await computeStocksBenchmark(store, source, equity, now);
+  // Only overwrite the STORED comparison on an actual success — a transient
+  // fetch failure returns null here (see computeStocksBenchmark's doc
+  // comment) but must not clobber a real, already-anchored comparison the
+  // cross-process digest (readStocksSummary in autopilotRunner.mts) reads
+  // back later; the live readiness check just below still honestly reflects
+  // "not measured THIS cycle" via `benchmark` itself.
+  if (benchmark) store.set(BENCHMARK_RESULT_KEY, benchmark);
   const readiness = assessRealMoneyReadiness({
     closedTrades: analytics.tradeCount,
     profitFactor: analytics.profitFactor,
     realizedReturnPct: (analytics.totalPnl / INITIAL_CASH) * 100,
     maxDrawdownPct: Math.max(analytics.maxDrawdownPct, liveDrawdownPct),
-    vsBenchmarkPct: null,
+    vsBenchmarkPct: benchmark ? benchmark.portfolioPct - benchmark.assetPct : null,
     daysRunning: (now - firstAt) / DAY_MS,
-    benchmarkLabel: 'a market benchmark',
+    benchmarkLabel: benchmark ? benchmark.label : 'a market benchmark',
   });
   store.set(READINESS_KEY, readiness);
 }
@@ -344,7 +397,7 @@ export async function runStocksCycle(
       symbolPrices[symbol] = candles.value[candles.value.length - 1]!.close;
     }
   }
-  await recordEquity(store, portfolio, journal, now, symbolPrices);
+  await recordEquity(store, source, portfolio, journal, now, symbolPrices);
   await runStocksShadow(store, source, now);
 
   // Browsable-only symbols (BROWSABLE minus the traded set already priced
