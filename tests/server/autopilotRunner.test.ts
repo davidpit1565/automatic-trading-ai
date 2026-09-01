@@ -197,6 +197,25 @@ describe('readStocksSummary (folds the isolated stocks side into the crypto dige
     const summary = readStocksSummary(Date.now());
     expect(summary?.longTermShadow ?? null).toBeNull();
   });
+
+  it('folds in the stocks-side SPY benchmark when one has been recorded', () => {
+    const stocksStore = new FileStore(stocksPath);
+    new TradeJournal(stocksStore);
+    stocksStore.set('portfolio-engine', { cash: 10_000, initialCash: 10_000, baseCurrency: 'USD', closedRealizedPnl: 0, dayAnchor: null });
+    stocksStore.set('benchmark-result', { label: 'S&P 500 (SPY)', portfolioPct: 4, assetPct: 6 });
+
+    const summary = readStocksSummary(Date.now());
+    expect(summary?.benchmark).toEqual({ label: 'S&P 500 (SPY)', portfolioPct: 4, assetPct: 6 });
+  });
+
+  it('reports benchmark as null when not measured yet', () => {
+    const stocksStore = new FileStore(stocksPath);
+    new TradeJournal(stocksStore);
+    stocksStore.set('portfolio-engine', { cash: 10_000, initialCash: 10_000, baseCurrency: 'USD', closedRealizedPnl: 0, dayAnchor: null });
+
+    const summary = readStocksSummary(Date.now());
+    expect(summary?.benchmark ?? null).toBeNull();
+  });
 });
 
 describe('maybeSendMoveAlerts (a real spam bug: wobbling near a threshold re-alerted every time)', () => {

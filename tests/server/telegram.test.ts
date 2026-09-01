@@ -184,6 +184,36 @@ describe('buildDailySummary', () => {
     expect(msg).not.toContain('מניות');
   });
 
+  it("shows the stocks section's own SPY benchmark line, indented, alongside crypto's BTC one", () => {
+    const msg = buildDailySummary({
+      ...base,
+      positions: [],
+      benchmark: { label: 'ביטקוין', portfolioPct: 3.2, assetPct: 1.1 },
+      stocks: {
+        equity: 10_500, cash: 3_000, totalReturnPct: 5, realizedPnl: 300, unrealizedPnl: -20,
+        openedLast24h: 1, closedLast24h: 2,
+        benchmark: { label: 'S&P 500 (SPY)', portfolioPct: 4, assetPct: 6 },
+      },
+    });
+    expect(msg).toContain('🏁 מול ביטקוין');
+    expect(msg).toContain('   🏁 מול S&P 500 (SPY)');
+    expect(msg).toContain('+4.00%');
+    expect(msg).toContain('+6.00%');
+    expect(msg).toContain('החזקה פשוטה מובילה'); // 4% < 6% — buy-and-hold leads
+  });
+
+  it('omits the stocks benchmark line when not measured yet', () => {
+    const msg = buildDailySummary({
+      ...base,
+      positions: [],
+      stocks: {
+        equity: 10_500, cash: 3_000, totalReturnPct: 5, realizedPnl: 300, unrealizedPnl: -20,
+        openedLast24h: 1, closedLast24h: 2,
+      },
+    });
+    expect(msg).not.toContain('🏁');
+  });
+
   it('reports the long-term investing wallet as "still gathering data" below the meaningful-trades bar', () => {
     const msg = buildDailySummary({
       ...base,

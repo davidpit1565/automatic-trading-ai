@@ -83,6 +83,9 @@ export interface DailySummaryStocks {
    * it hasn't run yet.
    */
   readonly longTermShadow?: ShadowStanding | null;
+  /** Portfolio vs. SPY (S&P 500) buy-and-hold — see `computeStocksBenchmark`
+   * in `stocksRunner.mts`. Null/omitted if not measured yet. */
+  readonly benchmark?: DailySummaryBenchmark | null;
 }
 
 export interface DailySummaryInput {
@@ -129,6 +132,14 @@ function longTermShadowLines(standing: ShadowStanding, prefix: string): string[]
       `(${standing.trades} עסקאות, PF ${standing.profitFactor === null ? 'n/a' : standing.profitFactor.toFixed(2)}). ` +
       `כסף מדומה, חשבון נפרד.`,
   ];
+}
+
+/** One line comparing the portfolio to a buy-and-hold benchmark — shared by
+ * crypto (BTC) and stocks (SPY). */
+function benchmarkLines(b: DailySummaryBenchmark, prefix: string): string[] {
+  const fmt = (v: number): string => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
+  const verdict = b.portfolioPct >= b.assetPct ? 'הסוכן מוביל 🎉' : 'החזקה פשוטה מובילה';
+  return [`${prefix}מול ${b.label} (מאז תחילת המעקב): הסוכן ${fmt(b.portfolioPct)} · ${b.label} ${fmt(b.assetPct)} → ${verdict}`];
 }
 
 /** One-line summary of the shadow strategy standings, or how far they are from meaning anything. */
@@ -194,12 +205,7 @@ export function buildDailySummary(input: DailySummaryInput): string {
     `🔄 24 שעות אחרונות: ${input.openedLast24h} קניות, ${input.closedLast24h} מכירות`,
   ];
   if (input.benchmark) {
-    const b = input.benchmark;
-    const fmt = (v: number): string => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
-    const verdict = b.portfolioPct >= b.assetPct ? 'הסוכן מוביל 🎉' : 'החזקה פשוטה מובילה';
-    lines.push(
-      `🏁 מול ${b.label} (מאז תחילת המעקב): הסוכן ${fmt(b.portfolioPct)} · ${b.label} ${fmt(b.assetPct)} → ${verdict}`,
-    );
+    lines.push(...benchmarkLines(input.benchmark, '🏁 '));
   }
   if (input.positions.length === 0) {
     lines.push('📌 אין פוזיציות פתוחות כרגע.');
@@ -231,6 +237,9 @@ export function buildDailySummary(input: DailySummaryInput): string {
       `   📊 רווח/הפסד: ${signedUsd(s.realizedPnl)} ממומש · ${signedUsd(s.unrealizedPnl)} על הנייר`,
       `   🔄 24 שעות אחרונות: ${s.openedLast24h} קניות, ${s.closedLast24h} מכירות`,
     );
+    if (s.benchmark) {
+      lines.push(...benchmarkLines(s.benchmark, '   🏁 '));
+    }
     if (s.longTermShadow) {
       lines.push(...longTermShadowLines(s.longTermShadow, '   🌱 ארנק השקעות לטווח ארוך:'));
     }

@@ -365,6 +365,56 @@ every step succeeded immediately.
   no-runs-yet). Full gate green: tsc clean, 818 vitest, vite build ok, YAML
   validated with `yaml.safe_load`.
 
+## STOCKS SPY BENCHMARK (2026-09-01), layer 1 of 2
+David asked "what else can be improved to make it work better", then to
+build both flagged gaps "in layers." The bigger one: stocks' real-money-
+readiness gate could **never** reach "ready" on the benchmark criterion —
+`vsBenchmarkPct` was hardcoded `null` forever, unlike crypto's real BTC
+comparison. Fixed by mirroring crypto's own pattern exactly:
+
+- `server/stocksRunner.mts`: new `computeStocksBenchmark()` — same anchor-
+  once-then-compare-forever shape as crypto's `computeBenchmark`, using SPY
+  (S&P 500 ETF) as "a market benchmark" (matches the label already used in
+  the readiness criterion's text). `recordEquity()` gained a `source`
+  parameter to fetch it.
+- `server/telegram.mts`: extracted crypto's inline BTC-benchmark rendering
+  into a shared `benchmarkLines()` helper (verified byte-identical output
+  via the pre-existing crypto tests) and reused it for a new stocks-section
+  SPY line.
+- `server/autopilotRunner.mts`: `readStocksSummary()` folds in the stored
+  benchmark result the same way it already does for the long-term shadow
+  standing.
+- **Red-team review before committing (established habit now) caught a
+  real bug**: `recordEquity` was unconditionally overwriting the STORED
+  benchmark with `null` on every transient SPY fetch failure, clobbering an
+  already-anchored, real comparison the cross-process digest depends on —
+  even though nothing about the underlying anchor was actually lost. Fixed:
+  only overwrite the stored value on an actual successful fetch; the live
+  readiness check for that one cycle still honestly reflects the momentary
+  gap via the local (unstored) `benchmark` variable.
+- 6 new tests (`stocksRunner`: benchmark computed as SPY not the old
+  placeholder text, falls back to "not measured" on fetch failure, keeps
+  the last known-good stored value on a later transient failure instead of
+  clobbering it; `telegram`: stocks' SPY line renders indented alongside
+  crypto's BTC one, omitted when not measured; `autopilotRunner`:
+  `readStocksSummary` folds in a stored benchmark or reports null). Full
+  gate green: tsc clean, 824 vitest, vite build ok.
+
+## STOCKS SHADOW DAY-GATE (2026-09-01), layer 2 of 2
+The other flagged gap, closing the loop from the crypto long-term wallet's
+own red-team review: `runStocksShadow` in `stocksRunner.mts` had the exact
+same inefficiency already fixed on the crypto side — re-fetching daily
+candles and re-running the full 10-symbol shadow evaluation on every
+5-minute internal cycle even though daily bars only change once a day.
+Applied the identical fix (own UTC-day key — `new Date(now).toISOString().
+slice(0, 10)`, the convention this same file already uses in
+`updateMarketSnapshot`, kept local rather than importing crypto's
+`localDayAndHour`/timezone helper to preserve the two runners' deliberate
+isolation), not set on failure so a transient error retries next cycle.
+1 new test proving a second call the same UTC day is skipped (the stored
+`shadow-standings.at` timestamp stays unchanged) and a call on a new day
+runs it again. Full gate green: tsc clean, 825 vitest, vite build ok.
+
 ## Pending Work (autonomous queue)
 - TESTED AND REJECTED (2026-07-20): David asked whether a CLOSER take-profit
   target (easier to hit, so more trades close in profit instead of stopping
