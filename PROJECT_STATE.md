@@ -400,6 +400,21 @@ comparison. Fixed by mirroring crypto's own pattern exactly:
   `readStocksSummary` folds in a stored benchmark or reports null). Full
   gate green: tsc clean, 824 vitest, vite build ok.
 
+## STOCKS SHADOW DAY-GATE (2026-09-01), layer 2 of 2
+The other flagged gap, closing the loop from the crypto long-term wallet's
+own red-team review: `runStocksShadow` in `stocksRunner.mts` had the exact
+same inefficiency already fixed on the crypto side — re-fetching daily
+candles and re-running the full 10-symbol shadow evaluation on every
+5-minute internal cycle even though daily bars only change once a day.
+Applied the identical fix (own UTC-day key — `new Date(now).toISOString().
+slice(0, 10)`, the convention this same file already uses in
+`updateMarketSnapshot`, kept local rather than importing crypto's
+`localDayAndHour`/timezone helper to preserve the two runners' deliberate
+isolation), not set on failure so a transient error retries next cycle.
+1 new test proving a second call the same UTC day is skipped (the stored
+`shadow-standings.at` timestamp stays unchanged) and a call on a new day
+runs it again. Full gate green: tsc clean, 825 vitest, vite build ok.
+
 ## Pending Work (autonomous queue)
 - TESTED AND REJECTED (2026-07-20): David asked whether a CLOSER take-profit
   target (easier to hit, so more trades close in profit instead of stopping

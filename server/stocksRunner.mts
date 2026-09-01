@@ -145,6 +145,7 @@ const INTERIM_MIN_CONFIDENCE = 40;
  * stocks account.
  */
 const STOCKS_SHADOW_STANDINGS_KEY = 'shadow-standings';
+const STOCKS_SHADOW_LAST_RUN_DAY_KEY = 'shadow-last-run-day';
 const STOCKS_SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
   {
     key: 'long-term',
@@ -163,6 +164,16 @@ const STOCKS_SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
  * `runShadows` in `autopilotRunner.mts`).
  */
 async function runStocksShadow(store: FileStore, source: MarketDataSource, now: number): Promise<void> {
+  // Daily bars only change once a day — the internal 5-minute cycle loop
+  // (STOCKS_LOOP_CYCLES times per trigger) would otherwise re-fetch
+  // identical daily candles and re-run the same evaluation for no new
+  // information (same measured issue and fix as crypto's own
+  // runLongTermShadow in autopilotRunner.mts). Not set on failure, so a
+  // transient error gets retried on the very next cycle rather than
+  // waiting a full day. UTC calendar day, same convention already used by
+  // updateMarketSnapshot in this same file.
+  const day = new Date(now).toISOString().slice(0, 10);
+  if (store.get<string>(STOCKS_SHADOW_LAST_RUN_DAY_KEY) === day) return;
   try {
     const symbols = CURATED_STOCK_INSTRUMENTS.map((i) => i.symbol);
     const caching = new CachingSource(source);
@@ -185,6 +196,7 @@ async function runStocksShadow(store: FileStore, source: MarketDataSource, now: 
       prices,
     });
     store.set(STOCKS_SHADOW_STANDINGS_KEY, { at: now, standings });
+    store.set(STOCKS_SHADOW_LAST_RUN_DAY_KEY, day);
     for (const failure of failures) {
       console.error(`Stocks shadow candidate '${failure.key}' failed: ${failure.reason}`);
     }

@@ -250,4 +250,25 @@ describe('runStocksCycle', () => {
     // Isolated in its own namespace — never the main account's keys.
     expect(store.get('shadow:long-term:portfolio-engine')).not.toBeUndefined();
   });
+
+  it('only runs the long-term shadow wallet once per UTC day, not every cycle', async () => {
+    const source = fakeSource();
+    const { autopilot, portfolio, journal } = buildAutopilot(source);
+    const telegram = { token: '', chatId: '' };
+    const morning = Date.UTC(2026, 0, 15, 10, 0, 0);
+    const laterSameDay = Date.UTC(2026, 0, 15, 18, 0, 0);
+    const nextDay = Date.UTC(2026, 0, 16, 10, 0, 0);
+
+    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], morning);
+    const firstRun = store.get<{ at: number }>('shadow-standings');
+    expect(firstRun?.at).toBe(morning);
+
+    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], laterSameDay);
+    const stillSameDay = store.get<{ at: number }>('shadow-standings');
+    expect(stillSameDay?.at).toBe(morning); // unchanged — same UTC day, skipped
+
+    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], nextDay);
+    const newDay = store.get<{ at: number }>('shadow-standings');
+    expect(newDay?.at).toBe(nextDay); // a new day runs it again
+  });
 });
