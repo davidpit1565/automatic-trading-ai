@@ -71,12 +71,32 @@ An engaged kill switch forces every in-flight intent to `cancelled`.
 - [x] **Persistent audit log storage** — already existed
       (`PersistedAuditLog`, `src/core/autopilot/auditLog.ts`), reused as-is
       by both pieces above.
-- [ ] **Revolut X adapter behind a separate, explicitly-scoped API key** — not
-      started. Needs David to create and hand over order-capable credentials
-      (distinct from the existing read-only market-data key) when he decides
-      to proceed; every order still requires his Telegram approval regardless.
+- [x] **Revolut X adapter behind a separate, explicitly-scoped API key**
+      (`server/revolutXBrokerAdapter.mts`, 2026-09-02) — David created a
+      Spot-trade-only Revolut X API key (Ed25519, no withdraw permission)
+      distinct from the existing read-only market-data key, stored as
+      `REVOLUT_X_API_KEY`/`REVOLUT_X_PRIVATE_KEY` GitHub secrets. Reuses the
+      exact signing already built and tested for read-only calls
+      (`server/signing.mjs`) against `POST/DELETE/GET /orders` and
+      `GET /balances`. `mode` fixed to `'live'`; `submit()` refuses
+      paper-mode intents and refuses everything when the kill switch is
+      engaged. Places the order, reads its state back ONCE (no wait/poll
+      loop — that is separate wiring-layer work) and reports honestly
+      (`'submitted'`, never fabricated as `'filled'`) when Revolut X hasn't
+      filled it yet. `cancel()` looks up the venue order id from a persisted
+      intentId→venueOrderId map and throws rather than silently no-op'ing
+      when asked to cancel an intent it never placed. `fetchPositions()`
+      reports raw spot balances; Revolut X's balances endpoint carries no
+      cost basis, so `avgCost` is always `0` — reconciliation must compare
+      quantity only, never cost, against this adapter's positions.
+      **Known open question, not yet resolved**: this adapter sends
+      `intent.symbol` as-is to Revolut X's own pair format (e.g. `'BTC-USD'`).
+      Whether the project's own internal asset codes (e.g. `'BTCEUR'`) need
+      translation to Revolut X's actual quoted pairs is wiring-layer work,
+      not yet done — do not wire this adapter to a live orchestrator without
+      resolving it first.
 - [ ] **Wiring**: nothing yet calls `TelegramConfirmationGate` →
-      `PaperBrokerAdapter` (or a real adapter) as a live orchestrator loop —
+      `RevolutXBrokerAdapter` (or the paper one) as a live orchestrator loop —
       today they are tested, working machinery, not a running feature.
 
 Until the last two items: the platform reads market data, analyses, and

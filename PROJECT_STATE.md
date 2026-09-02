@@ -20,6 +20,47 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## STAGE 6: real Revolut X broker adapter built (2026-09-02), still not wired
+David created a Spot-trade-only Revolut X API key (Ed25519, withdraw
+disabled) via the Revolut X web app (not available in the mobile app),
+stored as `REVOLUT_X_API_KEY`/`REVOLUT_X_PRIVATE_KEY` GitHub secrets —
+separate from the existing read-only market-data key.
+`server/revolutXBrokerAdapter.mts` implements `BrokerAdapter` for real:
+`mode: 'live'`, reuses the exact Ed25519 signing already built/tested for
+read-only calls (`server/signing.mjs`) against `POST/DELETE/GET /orders` and
+`GET /balances`. Refuses paper-mode intents and refuses everything when the
+kill switch is engaged. `submit()` places the order then reads its status
+back ONCE (no wait/poll loop — deferred wiring-layer work) and reports
+honestly (`'submitted'`, never fabricated as `'filled'`) when not yet filled.
+`cancel()` throws rather than silently no-op'ing when asked to cancel an
+intent it never placed (looks up a persisted intentId→venueOrderId map).
+`fetchPositions()` reports raw spot balances; Revolut X's balances endpoint
+has no cost basis, so `avgCost` is always `0` — reconciliation must compare
+quantity only. Added `server/signing.d.mts` (a hand-written declaration file
+for the existing plain-JS `signing.mjs`) so a `.mts` file could import it
+with real types; this made a pre-existing `@ts-expect-error` in
+`tests/server/signing.test.ts` stale, removed.
+
+**Red-team review before committing caught a real, would-have-shipped bug**:
+the signing path was built as `` `/api${fullPath}` `` where `fullPath` was
+already `/api/1.0/orders` — a doubled `/api` prefix. Revolut X signs over the
+real path; every authenticated call would have failed signature verification
+(likely HTTP 401) the moment this adapter touched the real API, despite all
+11 unit tests passing, because the original tests only checked the signature
+header was *present*, never that it *verified*. Fixed (`path: fullPath`) and
+locked in with a new test helper that re-derives the exact signed payload
+from the real request (method/path/body) and cryptographically verifies it
+against a matching Ed25519 keypair — proven to actually catch the bug by
+temporarily reintroducing it and watching 3 tests fail, before reverting.
+
+**Known open question, not yet resolved**: this adapter sends `intent.symbol`
+as-is to Revolut X's own pair format (e.g. `'BTC-USD'`). Whether the
+project's internal asset codes (e.g. `'BTCEUR'`) need translation to
+Revolut X's actual quoted pairs is wiring-layer work, not yet done — do not
+wire this adapter to a live orchestrator without resolving it first.
+
+Full gate green: tsc clean, 836 vitest (825 + 11 new), vite build ok.
+
 ## STAGE 6 STARTED (2026-08-27): real-money execution layer, still not connected
 David asked what's needed to connect a real wallet, then explicitly asked to
 start building it. See `docs/execution-architecture.md` for the full design
