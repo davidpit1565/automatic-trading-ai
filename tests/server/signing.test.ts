@@ -8,7 +8,6 @@
 
 import { generateKeyPairSync, verify } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error plain-JS server module without type declarations
 import { buildAuthHeaders, buildSigningPayload, signPayload } from '../../server/signing.mjs';
 
 const { privateKey, publicKey } = generateKeyPairSync('ed25519');
