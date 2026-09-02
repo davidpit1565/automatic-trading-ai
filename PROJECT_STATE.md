@@ -20,6 +20,36 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Real-money go-live: confirmation expiry + manual sell override (2026-09-02)
+David gave the go-ahead to start wiring real-money execution: manual
+approval on every trade (entries AND exits), starting capital 100€ (checked
+Revolut X's public API docs — `min_order_size_quote` is $0.01, so 100€ is
+nowhere near any exchange minimum; the earlier worry was unfounded). Two
+follow-up questions before the actual entry/exit wiring: how long does he
+have to approve, and can he sell whenever he wants (not just when the
+algorithm proposes an exit)? Neither was true yet as built — fixed both:
+
+- **Confirmation expiry** (`telegramConfirmationGate.mts`): a resumed
+  confirmation now auto-expires (`approved: false`, audited) after 20
+  minutes with no reply, instead of resuming to poll forever. The order is
+  a LIMIT order at the price current when the message was sent — a much
+  later tap would submit at a stale price with no relation to the market by
+  then. Nothing auto-*approves*; this only ever produces a rejection.
+- **Manual sell override** (`server/manualSellCommand.mts`, new file): a
+  `/sell <SYMBOL>` Telegram command now works alongside the algorithm's own
+  exit logic, not instead of it — a new `getTelegramMessages` (`telegram.mts`,
+  separate offset from the button-tap polling, filtered to the configured
+  chat id only) detects the command; `checkManualSellRequests` builds an
+  exit intent at the current price for the matching tracked live position
+  and runs it through the EXACT SAME `runLiveOrderFlow` chain as an
+  automatic exit (kill-switch, symbol check, confirmation tap) — this only
+  changes what TRIGGERS the exit, nothing bypasses the safety chain.
+
+Both are tested (9 + 8 new tests) but, like the rest of Stage 6's execution
+machinery, NOT called from any scheduled workflow yet — still building
+toward the actual entry/exit wiring (translating live signals into real
+orders sized for the 100€ account), which is the next piece.
+
 ## Real-money readiness: stocks trade-count/consistency no longer gate either (2026-09-02)
 Follow-up, found while checking live state right after the stocks pivot
 shipped: `assessRealMoneyReadiness`'s `trades`/`consistency` criteria read

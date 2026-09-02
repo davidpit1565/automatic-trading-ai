@@ -35,6 +35,15 @@ import {
 const STORAGE_KEY = 'confirmation-gate-pending';
 const POLL_ATTEMPTS = 5;
 const POLL_INTERVAL_MS = 3000;
+/**
+ * How long a sent confirmation stays awaiting a reply before it auto-expires
+ * (David asked for this 2026-09-02): the order is a LIMIT order at the price
+ * that was current when the message was sent (see the broker adapter) — the
+ * crypto autopilot cron fires roughly every 30 minutes, so a much later tap
+ * would submit at a price with no relation to the market by then. Expiring
+ * instead of submitting stale is the safe default; nothing auto-approves.
+ */
+const MAX_PENDING_MS = 20 * 60 * 1000;
 
 const APPROVE_PREFIX = 'confirm:approve:';
 const REJECT_PREFIX = 'confirm:reject:';
@@ -118,6 +127,27 @@ export class TelegramConfirmationGate implements ConfirmationGate {
 
     const pendingAll = this.store.get<Record<string, PendingRecord>>(STORAGE_KEY) ?? {};
     let pending = pendingAll[intent.id];
+
+    if (pending && Date.now() - pending.sentAt > MAX_PENDING_MS) {
+      delete pendingAll[intent.id];
+      this.store.set(STORAGE_KEY, pendingAll);
+      const minutes = Math.round(MAX_PENDING_MS / 60000);
+      const decision: ConfirmationDecision = {
+        intentId: intent.id,
+        approved: false,
+        decidedAt: Date.now(),
+        decidedBy: 'system',
+        note: `auto-expired after ${minutes}m without a reply — the quoted price is likely stale`,
+      };
+      this.audit.append({
+        timestamp: decision.decidedAt,
+        intentId: intent.id,
+        event: 'rejected',
+        mode: intent.mode,
+        detail: decision.note!,
+      });
+      return decision;
+    }
 
     if (!pending) {
       const result = await sendTelegramMessage(buildConfirmationMessage(intent), this.telegram, {

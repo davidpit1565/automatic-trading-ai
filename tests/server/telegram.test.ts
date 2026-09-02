@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { answerCallbackQuery, buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, getTelegramUpdates, readinessLineHe, sendTelegramMessage } from '../../server/telegram.mts';
+import { answerCallbackQuery, buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, getTelegramMessages, getTelegramUpdates, readinessLineHe, sendTelegramMessage } from '../../server/telegram.mts';
 import { assessRealMoneyReadiness, READINESS_THRESHOLDS } from '../../src/core/feedback/realMoneyReadiness';
 
 describe('buildStockCycleMessage', () => {
@@ -533,6 +533,56 @@ describe('getTelegramUpdates (short poll for confirmation-gate button taps)', ()
     }) as unknown as typeof fetch;
     expect(await getTelegramUpdates({ token: 'T', chatId: 'C', fetchFn: networkError }, 3)).toEqual({
       updates: [],
+      nextOffset: 3,
+    });
+  });
+});
+
+describe('getTelegramMessages (short poll for manual commands, e.g. /sell)', () => {
+  it('returns text messages from the configured chat and advances the offset past the highest update_id seen', async () => {
+    const fakeFetch = (async () =>
+      new Response(
+        JSON.stringify({
+          ok: true,
+          result: [
+            { update_id: 5, message: { text: '/sell XBTEUR', chat: { id: 'C' } } },
+            { update_id: 6, callback_query: { id: 'cb1', data: 'confirm:approve:X' } },
+          ],
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    const { messages, nextOffset } = await getTelegramMessages({ token: 'T', chatId: 'C', fetchFn: fakeFetch }, 0);
+    expect(messages).toEqual([{ updateId: 5, text: '/sell XBTEUR' }]);
+    expect(nextOffset).toBe(7);
+  });
+
+  it('ignores a message from any chat other than the configured one', async () => {
+    const fakeFetch = (async () =>
+      new Response(
+        JSON.stringify({
+          ok: true,
+          result: [{ update_id: 5, message: { text: '/sell XBTEUR', chat: { id: 'someone-else' } } }],
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    const { messages } = await getTelegramMessages({ token: 'T', chatId: 'C', fetchFn: fakeFetch }, 0);
+    expect(messages).toEqual([]);
+  });
+
+  it('returns no messages and keeps the offset unchanged without credentials, on HTTP failure, or on a network error', async () => {
+    expect(await getTelegramMessages({ token: '', chatId: '' }, 3)).toEqual({ messages: [], nextOffset: 3 });
+
+    const httpFail = (async () => new Response('{}', { status: 500 })) as unknown as typeof fetch;
+    expect(await getTelegramMessages({ token: 'T', chatId: 'C', fetchFn: httpFail }, 3)).toEqual({
+      messages: [],
+      nextOffset: 3,
+    });
+
+    const networkError = (async () => {
+      throw new Error('offline');
+    }) as unknown as typeof fetch;
+    expect(await getTelegramMessages({ token: 'T', chatId: 'C', fetchFn: networkError }, 3)).toEqual({
+      messages: [],
       nextOffset: 3,
     });
   });

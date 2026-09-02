@@ -492,6 +492,52 @@ export async function getTelegramUpdates(
   }
 }
 
+export interface TelegramTextMessage {
+  readonly updateId: number;
+  readonly text: string;
+}
+
+/**
+ * Short-poll for plain text messages (not button taps) since the last-seen
+ * update id — used for manual commands (e.g. `/sell <SYMBOL>`,
+ * `server/manualSellCommand.mts`). A SEPARATE offset from
+ * `getTelegramUpdates`'s per-intent ones: unrelated concerns, each free to
+ * advance independently over the same underlying update stream.
+ *
+ * Only ever returns messages from the configured `chatId` — a command must
+ * never be honored from any other chat the bot could ever receive a message
+ * from, even though this bot is only meant to talk to one person.
+ */
+export async function getTelegramMessages(
+  config: TelegramConfig,
+  offset: number,
+): Promise<{ messages: readonly TelegramTextMessage[]; nextOffset: number }> {
+  if (!config.token) return { messages: [], nextOffset: offset };
+  const doFetch = config.fetchFn ?? ((input, init) => fetch(input, init));
+  try {
+    const response = await doFetch(
+      `https://api.telegram.org/bot${config.token}/getUpdates?offset=${offset}&timeout=0&allowed_updates=%5B%22message%22%5D`,
+      { method: 'GET' },
+    );
+    if (!response.ok) return { messages: [], nextOffset: offset };
+    const payload = (await response.json()) as {
+      result?: readonly { update_id: number; message?: { text?: string; chat?: { id?: number | string } } }[];
+    };
+    const results = payload.result ?? [];
+    const messages: TelegramTextMessage[] = [];
+    let nextOffset = offset;
+    for (const u of results) {
+      nextOffset = Math.max(nextOffset, u.update_id + 1);
+      if (u.message?.text && String(u.message.chat?.id ?? '') === String(config.chatId)) {
+        messages.push({ updateId: u.update_id, text: u.message.text });
+      }
+    }
+    return { messages, nextOffset };
+  } catch {
+    return { messages: [], nextOffset: offset };
+  }
+}
+
 /** Clears the button's "loading" spinner in the Telegram client. Best-effort — a
  * failure here never blocks the decision itself from being recorded. */
 export async function answerCallbackQuery(callbackQueryId: string, config: TelegramConfig): Promise<void> {

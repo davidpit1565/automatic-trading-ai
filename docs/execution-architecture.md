@@ -165,6 +165,27 @@ different currency, which is safe, not broken.
   - **Still NOT wired into any workflow**, same posture as the entry side —
     tested, reusable machinery, not a running feature.
 
+- [x] **Confirmation expiry** (`server/telegramConfirmationGate.mts`,
+      2026-09-02) — a sent confirmation now auto-expires (`approved: false,
+      decidedBy: 'system'`, audited) if 20 minutes pass with no reply,
+      instead of resuming to poll indefinitely across runs. The order is a
+      LIMIT order at the price current when the message was sent; the crypto
+      autopilot cron fires roughly every 30 minutes, so a much later tap
+      would submit at a price with no real relation to the market by then.
+      Nothing auto-*approves* — this only ever produces a rejection.
+- [x] **Manual sell override** (`server/manualSellCommand.mts`, 2026-09-02)
+      — David asked "can I sell whenever I want?" (yes, but the built system
+      only proposed exits when the algorithm's own exit logic fired).
+      `checkManualSellRequests` polls for a `/sell <SYMBOL>` text command
+      (a NEW `getTelegramMessages` in `telegram.mts`, separate from the
+      button-tap polling, filtered to the configured chat id only) and, for
+      a matching tracked live position, builds an exit intent at the current
+      price and runs it through the EXACT SAME `runLiveOrderFlow` chain as
+      an automatic exit — kill-switch, symbol check, confirmation tap,
+      nothing bypassed. This only changes what TRIGGERS the exit intent, not
+      the safety chain around submitting it. Still tested, reusable
+      machinery — not called from any scheduled workflow yet.
+
 Until something explicitly decides to generate real signals and feed them
 through this machinery: the platform reads market data, analyses, and
 simulates — nothing it does can reach a real account.

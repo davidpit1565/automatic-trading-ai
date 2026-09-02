@@ -182,6 +182,54 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     expect(decision.approved).toBe(true);
   });
 
+  it('auto-expires a resumed call once 20 minutes have passed without a reply, instead of submitting at a stale price', async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    vi.setSystemTime(0);
+    const empty = Array.from({ length: 5 }, () => [] as never[]);
+    const first = fakeTelegram(empty);
+    const gateRun1 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: first.fetchFn }, audit);
+    const p1 = gateRun1.requestConfirmation(intent());
+    const p1Assertion = expect(p1).rejects.toThrow(ConfirmationPendingError);
+    await vi.runAllTimersAsync();
+    await p1Assertion;
+    expect(first.sent).toHaveLength(1);
+
+    // A later run, 21 minutes on: no re-send, no polling — expired outright.
+    vi.setSystemTime(21 * 60 * 1000);
+    const second = fakeTelegram([]);
+    const gateRun2 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: second.fetchFn }, audit);
+    const decision = await gateRun2.requestConfirmation(intent());
+
+    expect(decision).toMatchObject({ approved: false, decidedBy: 'system' });
+    expect(decision.note).toContain('expired');
+    expect(second.sent).toHaveLength(0);
+    expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation', 'rejected']);
+  });
+
+  it('does not expire a resumed call still within the pending window', async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    vi.setSystemTime(0);
+    const empty = Array.from({ length: 5 }, () => [] as never[]);
+    const first = fakeTelegram(empty);
+    const gateRun1 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: first.fetchFn }, audit);
+    const p1 = gateRun1.requestConfirmation(intent());
+    const p1Assertion = expect(p1).rejects.toThrow(ConfirmationPendingError);
+    await vi.runAllTimersAsync();
+    await p1Assertion;
+
+    // 5 minutes later — well within the 20-minute window: still waits, no re-send.
+    vi.setSystemTime(5 * 60 * 1000);
+    const second = fakeTelegram([
+      [{ update_id: 20, callback_query: { id: 'cb2', data: 'confirm:approve:BTCEUR:1:0' } }],
+    ]);
+    const gateRun2 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: second.fetchFn }, audit);
+    const decision = await gateRun2.requestConfirmation(intent());
+    expect(second.sent).toHaveLength(0);
+    expect(decision.approved).toBe(true);
+  });
+
   it('throws ConfirmationPendingError (never a fabricated decision) if nobody answers in time', async () => {
     const empty = Array.from({ length: 5 }, () => [] as never[]);
     const { fetchFn, sent } = fakeTelegram(empty);
