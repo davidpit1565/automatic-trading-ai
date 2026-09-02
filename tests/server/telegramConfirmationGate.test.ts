@@ -113,6 +113,22 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation', 'confirmed']);
   });
 
+  it('shows the fixed expiry deadline (clock time + minutes) in the sent message, so the human knows exactly how long they have', async () => {
+    vi.setSystemTime(0);
+    const empty = Array.from({ length: 5 }, () => [] as never[]);
+    const { fetchFn, sent } = fakeTelegram(empty);
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+    const promise = gate.requestConfirmation(intent());
+    const assertion = expect(promise).rejects.toThrow(ConfirmationPendingError);
+    await vi.runAllTimersAsync();
+    await assertion;
+
+    expect(sent[0]).toContain('20 דקות');
+    expect(sent[0]).toContain('בתוקף עד');
+  });
+
   it('renders a sell/exit confirmation with the real P&L against the entry price, not the entry-side risk numbers', async () => {
     const { fetchFn, sent } = fakeTelegram([
       [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:approve:BTCEUR:1:0:exit' } }],

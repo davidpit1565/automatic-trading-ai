@@ -66,8 +66,26 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function buildConfirmationMessage(intent: OrderIntent): string {
-  if (intent.side === 'sell') return buildExitConfirmationMessage(intent);
+/** HH:MM in the project's default Hebrew-user timezone (matches the daily
+ * digest's own default in `autopilotRunner.mts`) — an absolute clock time,
+ * not a relative countdown: Telegram already timestamps the message itself,
+ * and a bot can't tick a live countdown down between polls anyway (runs are
+ * ~30 minutes apart), so a fixed deadline is the honest thing to show. */
+function formatDeadline(deadlineMs: number): string {
+  return new Intl.DateTimeFormat('he-IL', {
+    timeZone: 'Asia/Jerusalem',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(deadlineMs);
+}
+
+function expiryLine(deadlineMs: number): string {
+  const minutes = Math.round(MAX_PENDING_MS / 60000);
+  return `⏱ בתוקף עד ${formatDeadline(deadlineMs)} (${minutes} דקות) — אחרי זה מתבטל אוטומטית.`;
+}
+
+function buildConfirmationMessage(intent: OrderIntent, deadlineMs: number): string {
+  if (intent.side === 'sell') return buildExitConfirmationMessage(intent, deadlineMs);
   const a = intent.assessment;
   return (
     `🔔 מחכה לאישור שלך — עסקה בכסף אמיתי\n\n` +
@@ -77,6 +95,7 @@ function buildConfirmationMessage(intent: OrderIntent): string {
     `סיכון: ${a.riskPercentage.toFixed(2)}% מהתיק (${a.riskAmount.toFixed(2)}) · ` +
     `יחס סיכוי/סיכון ${a.rewardRiskRatio.toFixed(1)}:1\n` +
     `חשיפת תיק לאחר העסקה: ${a.portfolioExposure.toFixed(1)}%\n\n` +
+    `${expiryLine(deadlineMs)}\n\n` +
     `לחץ למטה כדי לאשר או לדחות. ללא לחיצה — שום דבר לא יקרה.`
   );
 }
@@ -95,7 +114,7 @@ function buildConfirmationMessage(intent: OrderIntent): string {
  * overrides it to the real `avgFillPrice` for exactly this reason (a filled
  * order can slip). Do not construct a sell `OrderIntent` any other way.
  */
-function buildExitConfirmationMessage(intent: OrderIntent): string {
+function buildExitConfirmationMessage(intent: OrderIntent, deadlineMs: number): string {
   const entryPrice = intent.assessment.entry;
   const pnl = (intent.limitPrice - entryPrice) * intent.quantity;
   const sign = pnl >= 0 ? '+' : '';
@@ -104,6 +123,7 @@ function buildExitConfirmationMessage(intent: OrderIntent): string {
     `מכירה ${intent.symbol}\n` +
     `כמות: ${intent.quantity} · מחיר יציאה: ${intent.limitPrice} (נכנס ב-${entryPrice})\n` +
     `רווח/הפסד משוער: ${sign}${pnl.toFixed(2)}\n\n` +
+    `${expiryLine(deadlineMs)}\n\n` +
     `לחץ למטה כדי לאשר או לדחות. ללא לחיצה — שום דבר לא יקרה.`
   );
 }
@@ -150,7 +170,8 @@ export class TelegramConfirmationGate implements ConfirmationGate {
     }
 
     if (!pending) {
-      const result = await sendTelegramMessage(buildConfirmationMessage(intent), this.telegram, {
+      const sentAt = Date.now();
+      const result = await sendTelegramMessage(buildConfirmationMessage(intent, sentAt + MAX_PENDING_MS), this.telegram, {
         inline_keyboard: [
           [
             { text: '✅ אשר', callback_data: `${APPROVE_PREFIX}${intent.id}` },
@@ -158,7 +179,7 @@ export class TelegramConfirmationGate implements ConfirmationGate {
           ],
         ],
       });
-      pending = { sentAt: Date.now(), updateOffset: 0 };
+      pending = { sentAt, updateOffset: 0 };
       pendingAll[intent.id] = pending;
       this.store.set(STORAGE_KEY, pendingAll);
       this.audit.append({
