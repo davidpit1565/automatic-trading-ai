@@ -20,6 +20,34 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Real-money readiness: stocks trade-count/consistency no longer gate either (2026-09-02)
+Follow-up, found while checking live state right after the stocks pivot
+shipped: `assessRealMoneyReadiness`'s `trades`/`consistency` criteria read
+`closedTrades`/`profitFactor` from the trade journal — both permanently
+frozen at whatever they were the moment the account stopped closing
+positions (11/20 trades, PF 1.17), since a passive buy-and-hold account
+never has another closed trade to record. Same shape of bug as the BTC
+benchmark case just above: a criterion designed for round-trip trading,
+now structurally unmeetable for a strategy with no exits.
+
+Added `gateOnTradeStats?: boolean` (default `true`) alongside
+`gateOnBenchmark`, same mechanism: both criteria still computed and shown
+(marked "informational") but excluded from `unmet`/`ready` when `false`.
+`server/stocksRunner.mts`'s `recordEquity` now passes `gateOnTradeStats:
+false`, and — since realized P&L is equally meaningless here (nothing is
+ever realized) — swapped `realizedReturnPct` from the frozen
+journal-derived `analytics.totalPnl` to the live mark-to-market
+`portfolio.snapshot(...).equity` return, so "profitable" actually reflects
+how the held basket is doing right now instead of a frozen pre-pivot
+number.
+
+Checked the live state after this: crypto's stored readiness (from before
+this session's benchmark-gating fix took effect) already clears every
+OTHER criterion (48/20 trades, 20/14 days, +4.18% after fees, 3.8%
+drawdown, PF 1.42) — only the now-non-gating benchmark criterion was
+unmet. The next scheduled autopilot cycle should be the first time crypto
+reports READY.
+
 ## Real-money readiness: the "beat benchmark" bar no longer gates crypto (2026-09-02)
 Follow-up to the structural BTC-gap finding below: `assessRealMoneyReadiness`
 required `vsBenchmarkPct >= 0` to reach READY, with no way to distinguish
