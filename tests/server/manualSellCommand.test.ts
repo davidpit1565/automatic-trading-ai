@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryStore } from '../../src/core/data/storage';
 import { PersistedAuditLog } from '../../src/core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../../src/core/autopilot/killSwitch';
@@ -15,6 +15,7 @@ import type { MarketDataSource } from '../../src/core/data/revolutClient';
 import type { Candle, Instrument } from '../../src/core/types';
 import { recordLiveEntryFill } from '../../server/liveExitFlow.mts';
 import { checkManualSellRequests, parseSellCommand } from '../../server/manualSellCommand.mts';
+import { TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
 
 function approvedAssessment(): TradeRiskAssessment {
   return {
@@ -223,7 +224,7 @@ describe('checkManualSellRequests', () => {
     expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'blocked-by-kill-switch' }]);
   });
 
-  it('reports no-price-data instead of throwing when the price fetch fails, and does not re-queue the command', async () => {
+  it('reports no-price-data instead of throwing when the price fetch fails, and KEEPS the request queued for the next cycle', async () => {
     const store = new MemoryStore();
     const audit = new PersistedAuditLog(store);
     const killSwitch = new PersistedKillSwitch(store);
@@ -237,21 +238,110 @@ describe('checkManualSellRequests', () => {
     const fetchFn = seedTelegram([
       { update_id: 1, message: { text: '/sell XBTEUR', chat: { id: 'C' } } },
     ]);
-    const outcomes = await checkManualSellRequests(
-      store,
-      { token: 'T', chatId: 'C', fetchFn },
-      failingSource,
-      '1h',
-      {
-        confirmationGate: fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' }),
-        brokerAdapter: fakeBrokerAdapter(filledReport()),
-        killSwitch,
-        audit,
-        verifySymbolExists: async () => true,
-      },
-      9000,
-    );
+    const flowParams = {
+      confirmationGate: fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' }),
+      brokerAdapter: fakeBrokerAdapter(filledReport()),
+      killSwitch,
+      audit,
+      verifySymbolExists: async () => true,
+    };
+    const outcomes = await checkManualSellRequests(store, { token: 'T', chatId: 'C', fetchFn }, failingSource, '1h', flowParams, 9000);
     expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'no-price-data' }]);
+
+    // A later cycle with no NEW /sell message must still retry it — the
+    // request was never dropped just because one fetch attempt failed.
+    const laterOutcomes = await checkManualSellRequests(
+      store,
+      { token: 'T', chatId: 'C', fetchFn: seedTelegram([]) },
+      fakeSource(95),
+      '1h',
+      flowParams,
+      9500,
+    );
+    expect(laterOutcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: filledReport() }]);
+  });
+
+  it('keeps a not-yet-approved manual sell queued and resumes under the SAME intent id on a later cycle, instead of losing it (the bug this fix addresses)', async () => {
+    vi.useFakeTimers();
+    try {
+      const store = new MemoryStore();
+      const audit = new PersistedAuditLog(store);
+      const killSwitch = new PersistedKillSwitch(store);
+      recordLiveEntryFill(store, buyIntent(), filledReport(), 5000);
+
+      // --- Cycle 1: the /sell arrives, but nobody taps the button in time. ---
+      const cycle1Responses = [
+        { ok: true, result: [{ update_id: 1, message: { text: '/sell XBTEUR', chat: { id: 'C' } } }] },
+        ...Array.from({ length: 5 }, () => ({ ok: true, result: [] })),
+      ];
+      let call1 = 0;
+      const fetchFn1 = (async (url: string) => {
+        if (url.includes('/sendMessage')) {
+          return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 });
+        }
+        if (url.includes('/getUpdates')) {
+          const body = cycle1Responses[call1] ?? { ok: true, result: [] };
+          call1++;
+          return new Response(JSON.stringify(body), { status: 200 });
+        }
+        throw new Error(`unexpected Telegram endpoint: ${url}`);
+      }) as unknown as typeof fetch;
+
+      const gate1 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: fetchFn1 }, audit);
+      const cycle1 = checkManualSellRequests(
+        store,
+        { token: 'T', chatId: 'C', fetchFn: fetchFn1 },
+        fakeSource(95),
+        '1h',
+        { confirmationGate: gate1, brokerAdapter: fakeBrokerAdapter(filledReport()), killSwitch, audit, verifySymbolExists: async () => true },
+        9000,
+      );
+      await vi.runAllTimersAsync();
+      expect(await cycle1).toEqual([{ symbol: 'XBTEUR', outcome: 'pending' }]);
+
+      // --- Cycle 2: no new /sell message, but the earlier request is still
+      // queued — it must resume polling under the SAME intent id
+      // ('entry-1:manual-sell', not a fresh timestamp-suffixed one), which is
+      // the only way TelegramConfirmationGate can recognise this as a
+      // resumed confirmation instead of a brand-new one.
+      const cycle2Responses = [
+        { ok: true, result: [] },
+        { ok: true, result: [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:approve:entry-1:manual-sell' } }] },
+      ];
+      let call2 = 0;
+      const fetchFn2 = (async (url: string) => {
+        if (url.includes('/answerCallbackQuery')) return new Response('{}', { status: 200 });
+        if (url.includes('/sendMessage')) {
+          throw new Error('must not re-send — the confirmation is already pending from cycle 1');
+        }
+        if (url.includes('/getUpdates')) {
+          const body = cycle2Responses[call2] ?? { ok: true, result: [] };
+          call2++;
+          return new Response(JSON.stringify(body), { status: 200 });
+        }
+        throw new Error(`unexpected Telegram endpoint: ${url}`);
+      }) as unknown as typeof fetch;
+
+      const gate2 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: fetchFn2 }, audit);
+      const exitReport: OrderStatusReport = {
+        intentId: 'entry-1:manual-sell',
+        state: 'filled',
+        filledQuantity: 2,
+        avgFillPrice: 95,
+        detail: 'ok',
+      };
+      const cycle2 = await checkManualSellRequests(
+        store,
+        { token: 'T', chatId: 'C', fetchFn: fetchFn2 },
+        fakeSource(95),
+        '1h',
+        { confirmationGate: gate2, brokerAdapter: fakeBrokerAdapter(exitReport), killSwitch, audit, verifySymbolExists: async () => true },
+        9500,
+      );
+      expect(cycle2).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: exitReport }]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('ignores a message from any chat other than the configured one', async () => {

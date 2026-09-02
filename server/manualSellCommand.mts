@@ -22,6 +22,7 @@ import { runLiveOrderFlow, type LiveOrderFlowParams, type LiveOrderFlowResult } 
 import { getTelegramMessages, type TelegramConfig } from './telegram.mts';
 
 const MANUAL_SELL_OFFSET_KEY = 'manual-sell-update-offset';
+const MANUAL_SELL_PENDING_KEY = 'manual-sell-pending-symbols';
 
 /**
  * Parses a `/sell <SYMBOL>` command (case-insensitive, extra whitespace
@@ -47,14 +48,26 @@ function findBySymbol(positions: readonly LiveOpenPosition[], symbol: string): L
 
 /**
  * Polls for new `/sell` commands since the last check and, for each symbol
- * requesting one, proposes an immediate exit of that open live position.
+ * with a request outstanding (newly arrived OR still pending from an
+ * earlier cycle), proposes an immediate exit of that open live position.
  * `source.getCandles` is called with the position's INTERNAL symbol
  * (`entryAssessment.asset`), not `position.symbol` (already broker-native) —
  * `MarketDataSource` only understands the internal code.
  *
- * A `/sell` for a symbol with no tracked open position, or one whose price
- * can't be fetched right now, is reported (not silently dropped) but does
- * NOT re-queue the command — the human can simply send it again.
+ * **A request stays queued (`manual-sell-pending-symbols`) until it reaches
+ * a TERMINAL outcome** (submitted, rejected, blocked, unknown-symbol, or no
+ * matching position) — `'pending'` (nobody tapped the button within this
+ * cycle's short poll) and `'no-price-data'` (a transient fetch failure) both
+ * keep it queued for the next cycle instead of silently dropping it. This
+ * matters because the Telegram MESSAGE is consumed (offset advanced) the
+ * moment it's read, long before the order resolves — without a persisted
+ * queue, a `/sell` that isn't approved inside the ~15s the confirmation gate
+ * actively polls would vanish forever, even if the human taps the button
+ * five minutes later (a real bug caught before this shipped: the exit
+ * intent's id used to include the wall-clock `now`, so a resumed call would
+ * never rebuild the SAME id `TelegramConfirmationGate` needs to resume
+ * polling — see PROJECT_STATE.md). The id is now stable
+ * (`${position.id}:manual-sell`) for exactly this reason.
  */
 export async function checkManualSellRequests(
   store: KeyValueStore,
@@ -68,30 +81,33 @@ export async function checkManualSellRequests(
   const { messages, nextOffset } = await getTelegramMessages(telegram, offset);
   if (nextOffset !== offset) store.set(MANUAL_SELL_OFFSET_KEY, nextOffset);
 
-  const requestedSymbols = new Set<string>();
+  const pendingSymbols = new Set(store.get<string[]>(MANUAL_SELL_PENDING_KEY) ?? []);
   for (const message of messages) {
     const symbol = parseSellCommand(message.text);
-    if (symbol) requestedSymbols.add(symbol);
+    if (symbol) pendingSymbols.add(symbol);
   }
-  if (requestedSymbols.size === 0) return [];
+  if (pendingSymbols.size === 0) return [];
 
   const positions = openLivePositions(store);
   const outcomes: ManualSellOutcome[] = [];
-  for (const symbol of requestedSymbols) {
+  for (const symbol of pendingSymbols) {
     const position = findBySymbol(positions, symbol);
     if (!position) {
       outcomes.push({ symbol, outcome: 'no-open-position' });
+      pendingSymbols.delete(symbol);
       continue;
     }
     const candles = await source.getCandles(position.entryAssessment.asset, entryTimeframe, 2);
     if (!candles.ok || candles.value.length === 0) {
       outcomes.push({ symbol, outcome: 'no-price-data' });
-      continue;
+      continue; // stays queued — retried next cycle, never silently dropped
     }
     const price = candles.value[candles.value.length - 1]!.close;
-    const intent = buildLiveExitIntent(`${position.id}:manual-sell:${now}`, position, price, now);
+    const intent = buildLiveExitIntent(`${position.id}:manual-sell`, position, price, now);
     const result = await runLiveOrderFlow({ ...flowParams, intent });
     outcomes.push({ symbol, ...result });
+    if (result.outcome !== 'pending') pendingSymbols.delete(symbol);
   }
+  store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
   return outcomes;
 }

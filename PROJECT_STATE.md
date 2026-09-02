@@ -20,6 +20,41 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Real-money go-live: manual /sell could silently lose a request (2026-09-02)
+David asked for a broad audit ("look for anything to improve, in any area")
+of the whole project. The most severe finding was a real bug in the manual
+`/sell` feature shipped earlier tonight: `checkManualSellRequests`
+(`server/manualSellCommand.mts`) built the exit intent's id as
+`` `${position.id}:manual-sell:${now}` `` — wall-clock-suffixed — and
+consumed the Telegram message's offset (marking `/sell` as "read") BEFORE
+the order actually resolved. `TelegramConfirmationGate` can only resume
+polling a not-yet-answered confirmation by being called again with the
+EXACT SAME intent id (documented in its own header). Since the id changed
+every cycle and the triggering message was already gone, a `/sell` that
+wasn't approved within the ~15s a single cycle actively polls would vanish
+permanently — even tapping the still-visible Telegram button later did
+nothing, because nothing was polling for it anymore. This directly
+undermined the feature's whole point ("sell whenever you want").
+
+Fixed: the intent id is now stable (`${position.id}:manual-sell`, no
+timestamp), and a new persisted `manual-sell-pending-symbols` set keeps a
+request queued across cycles until it reaches a TERMINAL outcome
+(submitted/rejected/blocked/unknown-symbol/no-matching-position) —
+`'pending'` (nobody answered yet) and `'no-price-data'` (a transient fetch
+failure) both keep it queued instead of dropping it. Combined with the
+20-minute confirmation expiry (above), a queued request now always resolves
+eventually: either a real human decision, or an honest auto-expiry, never a
+silent disappearance. New test exercises the actual bug end-to-end with the
+real `TelegramConfirmationGate` (not a fake) across two simulated cycles —
+proven to fail against the old code (asserts `/sendMessage` is never called
+on the resumed cycle; the old, unstable id would have forced a re-send).
+
+Also worth flagging for whoever builds the (not yet started) AUTOMATIC exit
+wiring: `buildLiveExitIntent`'s caller must always pass a STABLE `exitId`
+for the same reason — the function itself doesn't generate the id, so this
+specific bug can't recur inside it, but a future caller could reintroduce
+the same mistake by constructing one from wall-clock time again.
+
 ## Real-money go-live: expiry deadline shown + manual kill-switch (2026-09-02)
 Two more follow-ups from David after the confirmation-expiry/manual-sell PR:
 (1) show how much time is actually left to respond, in the message itself —
