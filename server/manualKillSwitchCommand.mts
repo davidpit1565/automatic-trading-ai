@@ -13,9 +13,12 @@
 
 import type { KeyValueStore } from '../src/core/data/storage';
 import type { AuditLog, KillSwitch } from '../src/core/execution/types';
-import { getTelegramMessages, type TelegramConfig } from './telegram.mts';
-
-const OFFSET_KEY = 'manual-kill-switch-update-offset';
+import {
+  pollAllTelegramUpdates,
+  stashUnclaimedTelegramUpdates,
+  type TelegramConfig,
+  type TelegramTextMessage,
+} from './telegram.mts';
 
 export type ManualKillSwitchCommand = 'pause' | 'resume';
 
@@ -41,7 +44,7 @@ export interface ManualKillSwitchOutcome {
  * applies each in order. `decidedBy` is the audit trail's record of WHO —
  * same contract as `ConfirmationDecision.decidedBy` elsewhere in this
  * project — pass the configured Telegram chat id (the only chat this ever
- * accepts a command from, per `getTelegramMessages`).
+ * accepts a command from, per `pollAllTelegramUpdates`).
  */
 export async function checkManualKillSwitchCommands(
   store: KeyValueStore,
@@ -51,14 +54,20 @@ export async function checkManualKillSwitchCommands(
   decidedBy: string,
   now: number,
 ): Promise<readonly ManualKillSwitchOutcome[]> {
-  const offset = store.get<number>(OFFSET_KEY) ?? 0;
-  const { messages, nextOffset } = await getTelegramMessages(telegram, offset);
-  if (nextOffset !== offset) store.set(OFFSET_KEY, nextOffset);
-
+  // Shared poller (telegram.mts) — never poll Telegram directly here with a
+  // private offset (a real bug, fixed 2026-09-02: see PROJECT_STATE.md).
+  // Anything this function doesn't recognise (every callback_query, plus
+  // any message that isn't /pause or /resume) is stashed back immediately
+  // so other consumers can still find it.
+  const polled = await pollAllTelegramUpdates(store, telegram);
+  const unclaimedMessages: TelegramTextMessage[] = [];
   const outcomes: ManualKillSwitchOutcome[] = [];
-  for (const message of messages) {
+  for (const message of polled.messages) {
     const command = parseKillSwitchCommand(message.text);
-    if (!command) continue;
+    if (!command) {
+      unclaimedMessages.push(message);
+      continue;
+    }
 
     if (command === 'pause') {
       const applied = !killSwitch.isEngaged();
@@ -88,5 +97,6 @@ export async function checkManualKillSwitchCommands(
       outcomes.push({ command, applied });
     }
   }
+  stashUnclaimedTelegramUpdates(store, { messages: unclaimedMessages, callbacks: polled.callbacks });
   return outcomes;
 }

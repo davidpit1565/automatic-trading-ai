@@ -3,6 +3,8 @@ import { MemoryStore } from '../../src/core/data/storage';
 import { PersistedAuditLog } from '../../src/core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../../src/core/autopilot/killSwitch';
 import { checkManualKillSwitchCommands, parseKillSwitchCommand } from '../../server/manualKillSwitchCommand.mts';
+import { checkManualSellRequests } from '../../server/manualSellCommand.mts';
+import type { MarketDataSource } from '../../src/core/data/revolutClient';
 
 function seedTelegram(messages: { update_id: number; message?: { text?: string; chat?: { id: string } } }[]) {
   return (async () =>
@@ -150,5 +152,58 @@ describe('checkManualKillSwitchCommands', () => {
       { command: 'resume', applied: true },
     ]);
     expect(killSwitch.isEngaged()).toBe(false);
+  });
+
+  it('a /pause is not lost even when checkManualSellRequests polls first and does not recognise it (the shared-offset bug this fixes)', async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const killSwitch = new PersistedKillSwitch(store);
+    const noopSource: MarketDataSource = {
+      name: 'noop',
+      getInstruments: async () => ({ ok: true, value: [] }),
+      getCandles: async () => ({ ok: false, error: 'unused in this test' }),
+    };
+
+    // The manual-sell poller runs FIRST in this cycle (as it would in a real
+    // orchestrator) and sees BOTH the /pause message and an unrelated
+    // callback_query in the same batch — it must recognise neither as its
+    // own and stash both back rather than discarding them.
+    const fetchFn = seedTelegram([
+      { update_id: 1, message: { text: '/pause', chat: { id: 'C' } } },
+    ]);
+    const sellOutcomes = await checkManualSellRequests(
+      store,
+      { token: 'T', chatId: 'C', fetchFn },
+      noopSource,
+      '1h',
+      {
+        confirmationGate: { async requestConfirmation() { throw new Error('not used'); } },
+        brokerAdapter: {
+          name: 'unused',
+          mode: 'live',
+          async submit() { throw new Error('not used'); },
+          async cancel() { throw new Error('not used'); },
+          async fetchPositions() { return []; },
+        },
+        killSwitch,
+        audit,
+        verifySymbolExists: async () => true,
+      },
+      1000,
+    );
+    expect(sellOutcomes).toEqual([]); // no /sell command in this batch — nothing to do
+
+    // The kill-switch poller, running afterward with no further Telegram
+    // traffic, must still find the /pause the sell poller didn't touch.
+    const outcomes = await checkManualKillSwitchCommands(
+      store,
+      { token: 'T', chatId: 'C', fetchFn: seedTelegram([]) },
+      killSwitch,
+      audit,
+      'C',
+      2000,
+    );
+    expect(outcomes).toEqual([{ command: 'pause', applied: true }]);
+    expect(killSwitch.isEngaged()).toBe(true);
   });
 });

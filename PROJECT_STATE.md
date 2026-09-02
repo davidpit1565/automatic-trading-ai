@@ -20,6 +20,45 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Real-money go-live: closed both remaining findings (2026-09-02)
+David asked to fix the 2 open findings from the prior deep review, and to
+keep checking for more while at it. Both closed now:
+
+**#3 fixed — shared Telegram update cursor.** The real fix, not a patch:
+added `pollAllTelegramUpdates`/`stashUnclaimedTelegramUpdates` (`telegram.mts`)
+as the ONE place allowed to call Telegram's real `getUpdates` with an
+advancing offset. Migrated all three consumers (`TelegramConfirmationGate`,
+`manualSellCommand.mts`, `manualKillSwitchCommand.mts`) to it — each now
+polls both `message` and `callback_query` types, acts on what it recognises,
+and stashes everything else back so a DIFFERENT consumer can still find it.
+Deleted the old per-consumer `getTelegramUpdates`/`getTelegramMessages`
+entirely (not deprecated — removed) so the same mistake can't quietly
+resurface later. New regression tests prove the actual scenario: a
+confirmation-gate approval survives a different consumer polling first
+(`telegramConfirmationGate.test.ts`), and a `/pause` survives
+`checkManualSellRequests` polling first and not recognising it
+(`manualKillSwitchCommand.test.ts`).
+
+**#4 partially fixed, partially still open by design.**
+- `liveExitFlow.mts`'s `recordLiveEntryFill` now also tracks a PARTIALLY
+  filled buy (`state: 'submitted'` with `filledQuantity > 0`, which is how
+  `RevolutXBrokerAdapter` maps Revolut X's `partially_filled`) — tracking
+  whatever quantity genuinely filled is strictly safer than tracking
+  nothing, even though the untracked remainder still has no poller
+  watching it if it fills more later.
+- `revolutXBrokerAdapter.mts`'s network-failure-during-submit path now says
+  explicitly that the order MAY have reached Revolut X despite the lost
+  response, instead of a flat "rejected" that implied false certainty.
+- **Still genuinely open, by design, not attempted tonight**: a real
+  order-status reconciliation mechanism (periodic `fetchPositions()`
+  cross-check against locally tracked state, or a poller that catches up a
+  resting/partially-filled order to its eventual final state) does not
+  exist anywhere in this codebase. Building it in isolation, with no
+  orchestrator yet to run it periodically, risks building into a vacuum —
+  this belongs with the actual live-wiring work, not before it.
+
+Tests: 918 passing. Full gate green.
+
 ## Real-money go-live: deep review — 2 fixed, 2 real gaps still open (2026-09-02)
 David asked for an even deeper check specifically on "are we really ready
 for this" (real money). Ran the `code-review` skill at max effort against

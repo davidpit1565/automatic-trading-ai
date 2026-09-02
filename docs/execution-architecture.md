@@ -176,26 +176,44 @@ different currency, which is safe, not broken.
 - [x] **Manual sell override** (`server/manualSellCommand.mts`, 2026-09-02)
       — David asked "can I sell whenever I want?" (yes, but the built system
       only proposed exits when the algorithm's own exit logic fired).
-      `checkManualSellRequests` polls for a `/sell <SYMBOL>` text command
-      (a NEW `getTelegramMessages` in `telegram.mts`, separate from the
-      button-tap polling, filtered to the configured chat id only) and, for
-      a matching tracked live position, builds an exit intent at the current
-      price and runs it through the EXACT SAME `runLiveOrderFlow` chain as
-      an automatic exit — kill-switch, symbol check, confirmation tap,
-      nothing bypassed. This only changes what TRIGGERS the exit intent, not
-      the safety chain around submitting it. Still tested, reusable
-      machinery — not called from any scheduled workflow yet.
+      `checkManualSellRequests` polls for a `/sell <SYMBOL>` text command and,
+      for a matching tracked live position, builds an exit intent at the
+      current price and runs it through the EXACT SAME `runLiveOrderFlow`
+      chain as an automatic exit — kill-switch, symbol check, confirmation
+      tap, nothing bypassed. This only changes what TRIGGERS the exit
+      intent, not the safety chain around submitting it. Still tested,
+      reusable machinery — not called from any scheduled workflow yet.
 
 - [x] **Manual kill-switch override** (`server/manualKillSwitchCommand.mts`,
       2026-09-02) — the kill switch previously only ever engaged
       automatically (drawdown breaker etc.); David had no way to halt
       everything himself on demand. `/pause`/`/resume` Telegram commands
-      (same `getTelegramMessages` polling as the manual sell override, its
-      own offset) now engage/disengage it directly, audited either way, a
-      no-op (not an error) if already in the requested state. Independent of
-      the algorithm's own automatic triggers — a human override that works
+      now engage/disengage it directly, audited either way, a no-op (not an
+      error) if already in the requested state. Independent of the
+      algorithm's own automatic triggers — a human override that works
       regardless of what those currently think. Still tested, reusable
       machinery, not called from any scheduled workflow yet.
+
+- [x] **Shared Telegram update cursor** (`telegram.mts`'s
+      `pollAllTelegramUpdates`/`stashUnclaimedTelegramUpdates`, 2026-09-02)
+      — a deep pre-go-live review found that `TelegramConfirmationGate` (one
+      offset PER pending intent), the manual sell override, and the manual
+      kill-switch override each tracked their OWN independent "last seen
+      update_id" and called Telegram's `getUpdates` directly. Telegram's
+      `getUpdates(offset)` is a single GLOBAL cursor per bot token, though —
+      confirming (advancing past) an update from ANY one of these
+      permanently discarded it for every other one too, regardless of
+      `allowed_updates` filtering. A human's `/pause` or `/sell` could
+      silently, permanently vanish with no error if a different consumer's
+      poll happened to run first. Fixed by centralizing: every poll now
+      requests both `message` and `callback_query` types, advances the ONE
+      shared offset, and returns everything to the caller; anything not
+      acted on is stashed back (`stashUnclaimedTelegramUpdates`) so a
+      different consumer can still find it on its own next check — the raw
+      Telegram update is already gone by then, so nothing not stashed is
+      recoverable. All three consumers were migrated to this and their old,
+      now-dangerous per-consumer offset functions were removed entirely
+      (not just deprecated) so the mistake can't quietly resurface.
 
 Until something explicitly decides to generate real signals and feed them
 through this machinery: the platform reads market data, analyses, and

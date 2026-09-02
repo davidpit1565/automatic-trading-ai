@@ -234,7 +234,19 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
       placed = await this.request('POST', '/orders', body);
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : String(cause);
-      return this.reportAndAudit(intent.id, 'rejected', `order request failed: ${message}`);
+      // A network failure here (timeout, dropped connection) means the
+      // RESPONSE was lost, not necessarily the order — Revolut X may have
+      // already accepted and be filling it. Reporting this as a plain
+      // 'rejected' would be a lie of omission: there is no OrderState value
+      // for "unknown, don't assume" (see PROJECT_STATE.md, 2026-09-02 — a
+      // real order-status reconciliation mechanism is still needed), so
+      // this at minimum says so explicitly rather than implying certainty
+      // this project doesn't have.
+      return this.reportAndAudit(
+        intent.id,
+        'rejected',
+        `order request failed before a response was received (${message}) — Revolut X may still have received it; verify manually rather than assuming this never happened`,
+      );
     }
     if (!placed.ok) {
       return this.reportAndAudit(intent.id, 'rejected', `Revolut X rejected the order: HTTP ${placed.status}`);

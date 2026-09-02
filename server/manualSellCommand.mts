@@ -19,9 +19,13 @@ import type { MarketDataSource } from '../src/core/data/revolutClient';
 import type { Timeframe } from '../src/core/types';
 import { buildLiveExitIntent, forgetLivePosition, openLivePositions, type LiveOpenPosition } from './liveExitFlow.mts';
 import { runLiveOrderFlow, type LiveOrderFlowParams, type LiveOrderFlowResult } from './liveOrchestrator.mts';
-import { getTelegramMessages, type TelegramConfig } from './telegram.mts';
+import {
+  pollAllTelegramUpdates,
+  stashUnclaimedTelegramUpdates,
+  type TelegramConfig,
+  type TelegramTextMessage,
+} from './telegram.mts';
 
-const MANUAL_SELL_OFFSET_KEY = 'manual-sell-update-offset';
 const MANUAL_SELL_PENDING_KEY = 'manual-sell-pending-symbols';
 
 /**
@@ -77,15 +81,21 @@ export async function checkManualSellRequests(
   flowParams: Omit<LiveOrderFlowParams, 'intent'>,
   now: number,
 ): Promise<readonly ManualSellOutcome[]> {
-  const offset = store.get<number>(MANUAL_SELL_OFFSET_KEY) ?? 0;
-  const { messages, nextOffset } = await getTelegramMessages(telegram, offset);
-  if (nextOffset !== offset) store.set(MANUAL_SELL_OFFSET_KEY, nextOffset);
-
+  // Shared poller (telegram.mts) — never poll Telegram directly here with a
+  // private offset (a real bug, fixed 2026-09-02: see PROJECT_STATE.md).
+  // Anything this function doesn't recognise (every callback_query, plus
+  // any message that isn't a /sell command) is immediately stashed back so
+  // OTHER consumers (the confirmation gate, the manual kill-switch) can
+  // still find it — the raw Telegram update is already gone by now.
+  const polled = await pollAllTelegramUpdates(store, telegram);
   const pendingSymbols = new Set(store.get<string[]>(MANUAL_SELL_PENDING_KEY) ?? []);
-  for (const message of messages) {
+  const unclaimedMessages: TelegramTextMessage[] = [];
+  for (const message of polled.messages) {
     const symbol = parseSellCommand(message.text);
     if (symbol) pendingSymbols.add(symbol);
+    else unclaimedMessages.push(message);
   }
+  stashUnclaimedTelegramUpdates(store, { messages: unclaimedMessages, callbacks: polled.callbacks });
   if (pendingSymbols.size === 0) return [];
 
   const positions = openLivePositions(store);

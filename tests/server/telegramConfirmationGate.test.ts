@@ -4,6 +4,7 @@ import { PersistedAuditLog } from '../../src/core/autopilot/auditLog';
 import type { OrderIntent } from '../../src/core/execution/types';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
 import { ConfirmationPendingError, TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
+import { pollAllTelegramUpdates, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
 
 function approvedAssessment(): TradeRiskAssessment {
   return {
@@ -268,6 +269,58 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     const gateRun2 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: second.fetchFn }, audit);
     const decision = await gateRun2.requestConfirmation(intent());
     expect(second.sent).toHaveLength(0);
+    expect(decision.approved).toBe(true);
+  });
+
+  it('does not lose an approval tap even when a DIFFERENT Telegram consumer polls first in the same batch (the shared-offset bug this fixes)', async () => {
+    // Before 2026-09-02, every consumer (this gate, the manual /sell and
+    // /pause commands) tracked its OWN independent Telegram offset and
+    // called getUpdates directly — but getUpdates(offset) is a single
+    // GLOBAL cursor per bot token, so whichever consumer polled first
+    // would permanently discard updates the others hadn't read yet. This
+    // proves the fix: a callback_query meant for THIS gate survives being
+    // read first by an unrelated consumer (simulated here directly against
+    // the shared primitives, since manualSellCommand.mts's own poll would
+    // be the real-world other consumer).
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const batchFetch = (async (url: string) => {
+      if (url.includes('/getUpdates')) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            result: [
+              { update_id: 1, message: { text: '/sell ETHEUR', chat: { id: 'C' } } },
+              { update_id: 2, callback_query: { id: 'cb1', data: 'confirm:approve:BTCEUR:1:0' } },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      throw new Error(`unexpected Telegram endpoint in this step: ${url}`);
+    }) as unknown as typeof fetch;
+
+    // A different consumer (simulating manualSellCommand.mts) polls FIRST,
+    // takes only the /sell message it cares about, and must stash back the
+    // callback_query it doesn't understand.
+    const polledByOtherConsumer = await pollAllTelegramUpdates(store, { token: 'T', chatId: 'C', fetchFn: batchFetch });
+    expect(polledByOtherConsumer.messages).toEqual([{ updateId: 1, text: '/sell ETHEUR' }]);
+    stashUnclaimedTelegramUpdates(store, { messages: [], callbacks: polledByOtherConsumer.callbacks });
+
+    // The confirmation gate, polling afterward with no further Telegram
+    // traffic, must still find the approval — it was never actually lost.
+    const noMoreUpdates = (async (url: string) => {
+      if (url.includes('/getUpdates')) return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
+      if (url.includes('/answerCallbackQuery')) return new Response('{}', { status: 200 });
+      throw new Error(`unexpected Telegram endpoint: ${url}`);
+    }) as unknown as typeof fetch;
+    const { fetchFn: sendFetch } = fakeTelegram([]);
+    const combinedFetch = (async (url: string, init?: { body?: string }) => {
+      if (url.includes('/sendMessage')) return sendFetch(url, init);
+      return noMoreUpdates(url);
+    }) as unknown as typeof fetch;
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: combinedFetch }, audit);
+    const decision = await gate.requestConfirmation(intent());
     expect(decision.approved).toBe(true);
   });
 

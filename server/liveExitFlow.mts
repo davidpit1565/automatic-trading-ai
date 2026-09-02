@@ -54,9 +54,23 @@ function readPositions(store: KeyValueStore): Record<string, LiveOpenPosition> {
 }
 
 /**
- * Call after `runLiveOrderFlow` reports a BUY intent's `OrderStatusReport`
- * as `state: 'filled'`. No-ops (returns `false`) for anything else — a sell
- * intent, a buy that hasn't actually filled yet, or a report for a
+ * Call after `runLiveOrderFlow` reports a BUY intent's `OrderStatusReport`.
+ * Tracks the position on a genuine `'filled'` report AND on a
+ * `'submitted'` report that already carries a nonzero `filledQuantity` —
+ * `RevolutXBrokerAdapter` maps Revolut X's own `partially_filled` status to
+ * `'submitted'` (it never fabricates `'filled'` for a partial fill), and a
+ * partially-filled real position is still real capital exposure: tracking
+ * NOTHING for it would mean the resulting position has no stop-loss/target
+ * enforcement and never surfaces to `decideLiveExit` at all (found in a
+ * pre-go-live review, 2026-09-02 — see PROJECT_STATE.md). Tracking whatever
+ * quantity genuinely filled is strictly safer than tracking nothing, even
+ * though the remaining unfilled portion of the order (if any) still has no
+ * follow-up poller watching it — that residual gap needs the broker-level
+ * reconciliation mechanism noted in PROJECT_STATE.md, not something this
+ * function alone can fully close.
+ *
+ * No-ops (returns `false`) for anything else — a sell intent, a buy that
+ * hasn't filled AT ALL yet (`filledQuantity` is 0), or a report for a
  * DIFFERENT intent than the one passed (never trusts a mismatched report's
  * price/quantity onto this intent's position).
  */
@@ -66,8 +80,10 @@ export function recordLiveEntryFill(
   report: OrderStatusReport,
   now: number,
 ): boolean {
-  if (intent.side !== 'buy' || report.state !== 'filled') return false;
+  if (intent.side !== 'buy') return false;
   if (report.intentId !== intent.id) return false;
+  const genuinelyFilled = report.state === 'filled' || (report.state === 'submitted' && report.filledQuantity > 0);
+  if (!genuinelyFilled) return false;
   const positions = readPositions(store);
   const entryPrice = report.avgFillPrice ?? intent.limitPrice;
   positions[intent.id] = {

@@ -27,8 +27,9 @@ import type { ConfirmationDecision, ConfirmationGate, OrderIntent } from '../src
 import type { KeyValueStore } from '../src/core/data/storage';
 import {
   answerCallbackQuery,
-  getTelegramUpdates,
+  pollAllTelegramUpdates,
   sendTelegramMessage,
+  stashUnclaimedTelegramUpdates,
   type TelegramConfig,
 } from './telegram.mts';
 
@@ -59,7 +60,6 @@ export class ConfirmationPendingError extends Error {
 
 interface PendingRecord {
   readonly sentAt: number;
-  readonly updateOffset: number;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -198,41 +198,52 @@ export class TelegramConfirmationGate implements ConfirmationGate {
       if (!result.sent) {
         throw new ConfirmationPendingError(intent.id);
       }
-      pending = { sentAt, updateOffset: 0 };
+      pending = { sentAt };
       pendingAll[intent.id] = pending;
       this.store.set(STORAGE_KEY, pendingAll);
     }
 
     for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
-      const { updates, nextOffset } = await getTelegramUpdates(this.telegram, pending.updateOffset);
-      pending = { ...pending, updateOffset: nextOffset };
-      pendingAll[intent.id] = pending;
-      this.store.set(STORAGE_KEY, pendingAll);
-
-      const match = updates.find(
+      // Shared poller (telegram.mts) — see its doc comment for why this
+      // must never call Telegram's own getUpdates with a private offset:
+      // that was a real bug (an update another consumer needed could be
+      // silently discarded forever). Every attempt MUST stash back
+      // whatever it doesn't use, in every branch below, or the same bug
+      // returns in a new shape.
+      const polled = await pollAllTelegramUpdates(this.store, this.telegram);
+      const matchIndex = polled.callbacks.findIndex(
         (u) => u.data === `${APPROVE_PREFIX}${intent.id}` || u.data === `${REJECT_PREFIX}${intent.id}`,
       );
-      if (match) {
-        await answerCallbackQuery(match.id, this.telegram);
-        const approved = match.data === `${APPROVE_PREFIX}${intent.id}`;
-        delete pendingAll[intent.id];
-        this.store.set(STORAGE_KEY, pendingAll);
-        const decision: ConfirmationDecision = {
-          intentId: intent.id,
-          approved,
-          decidedAt: Date.now(),
-          decidedBy: this.telegram.chatId,
-        };
-        this.audit.append({
-          timestamp: decision.decidedAt,
-          intentId: intent.id,
-          event: approved ? 'confirmed' : 'rejected',
-          mode: intent.mode,
-          detail: approved ? 'approved via Telegram' : 'rejected via Telegram',
-        });
-        return decision;
+
+      if (matchIndex === -1) {
+        stashUnclaimedTelegramUpdates(this.store, polled);
+        if (attempt < POLL_ATTEMPTS - 1) await sleep(POLL_INTERVAL_MS);
+        continue;
       }
-      if (attempt < POLL_ATTEMPTS - 1) await sleep(POLL_INTERVAL_MS);
+
+      const match = polled.callbacks[matchIndex]!;
+      stashUnclaimedTelegramUpdates(this.store, {
+        messages: polled.messages,
+        callbacks: polled.callbacks.filter((_, i) => i !== matchIndex),
+      });
+      await answerCallbackQuery(match.id, this.telegram);
+      const approved = match.data === `${APPROVE_PREFIX}${intent.id}`;
+      delete pendingAll[intent.id];
+      this.store.set(STORAGE_KEY, pendingAll);
+      const decision: ConfirmationDecision = {
+        intentId: intent.id,
+        approved,
+        decidedAt: Date.now(),
+        decidedBy: this.telegram.chatId,
+      };
+      this.audit.append({
+        timestamp: decision.decidedAt,
+        intentId: intent.id,
+        event: approved ? 'confirmed' : 'rejected',
+        mode: intent.mode,
+        detail: approved ? 'approved via Telegram' : 'rejected via Telegram',
+      });
+      return decision;
     }
     throw new ConfirmationPendingError(intent.id);
   }

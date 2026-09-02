@@ -168,6 +168,21 @@ describe('RevolutXBrokerAdapter', () => {
     expect(report.detail).toContain('venue-3');
   });
 
+  it('is explicit that a network failure during placement is AMBIGUOUS, not a confirmed rejection', async () => {
+    const throwingFetch = (async () => {
+      throw new Error('timeout');
+    }) as unknown as typeof fetch;
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), throwingFetch);
+
+    const report = await adapter.submit(intent());
+
+    expect(report.state).toBe('rejected');
+    // No OrderState value exists for "unknown, don't assume" — but the
+    // detail must never imply certainty this project doesn't have.
+    expect(report.detail).toContain('may still have received it');
+    expect(report.detail).toContain('verify manually');
+  });
+
   it('rejects when Revolut X refuses the order placement itself', async () => {
     const { fetchFn } = fakeFetch([{ status: 400, body: { error: 'insufficient funds' } }]);
     const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
