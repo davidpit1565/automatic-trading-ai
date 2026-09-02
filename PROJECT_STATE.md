@@ -20,6 +20,53 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Regime filter measured on real Alpaca data: does not help, not adopted (2026-09-02)
+Ran the 3 new regime candidates (below) for real via `measure-stocks.yml` on
+branch `claude/market-scan-integration-r9lck1` — 10 traded majors, 1251 1d
+bars, 3 folds, live cost (0.10%/side):
+
+| Candidate | f1 PF | f2 PF | f3 PF | folds | all PF | ret% | basket | trades |
+|---|---|---|---|---|---|---|---|---|
+| LIVE stocks (defaults) | 1.22 | 1.98 | 1.43 | 3/3 | 1.77 | 7.36 | 170.38 | 203 |
+| regime EMA100 | 1.22 | 1.99 | 1.42 | 3/3 | 1.77 | 7.36 | 170.38 | 203 |
+| regime EMA200 | 1.09 | 1.98 | 1.42 | **2/3** | 1.73 | 6.92 | 170.38 | 201 |
+| regime EMA100 + trend-exit EMA50 | 1.89 | 3.42 | 1.91 | 3/3 | 2.68 | 8.49 | 170.38 | 110 |
+
+**regime EMA100 is statistically identical to LIVE defaults** (same trade
+count, same return to 2 decimals) — the daily-EMA(100) gate essentially
+never engages for these 10 mega-caps over this window, because the basket
+itself returned +170% (a dominant, sustained bull run): they are almost
+always above their own 100-day EMA anyway. **regime EMA200 is slightly
+worse** and drops a fold below the PF>1.2 bar (2/3, was 3/3). **Combined
+with trend-exit EMA50, the regime gate makes that candidate marginally
+WORSE** than trend-exit EMA50 alone (8.49% vs the already-measured 8.81%
+from 2026-07-29), not better.
+
+**Conclusion: entry-frequency/selectivity via a simple long-EMA regime gate
+is not the missing lever either, and is not adopted.** This was the one
+remaining untested idea named on 2026-07-29 ("the entries are still the
+bottleneck... entry frequency/selectivity itself... has not been
+measured") — now it has been, and it doesn't move the needle, for a
+structural reason: a regime filter built to sit out downtrends can't help
+when the underlying assets barely have one to sit out during the measured
+window. The best performer across every stocks measurement this project
+has run remains **trend-exit EMA50** (2026-07-29): PF 2.75, +8.81%, 3/3
+folds — still only ~5% of the +170-174% basket, still failing "beats
+buy-and-hold." Nothing is promoted; `CURATED_STOCK_INSTRUMENTS`'s live
+config is unchanged.
+
+**Where this leaves the stocks arm**: every lever this project has
+measured — target width, RSI ceiling, confidence floor, trailing stop,
+alternative signal families (mean-reversion, breakout), trend-following
+exits, and now entry-side regime gating — has been tried on real Alpaca
+history and none clears the bar. The honest read is that beating a
+buy-and-hold basket of ten hyper-growth mega-caps during a historic bull
+run with an active, risk-limited, long-only strategy may not be achievable
+without either a fundamentally different edge (not yet identified) or
+accepting materially more drawdown/volatility than this project's capital-
+protection rules allow. Further tuning within the current strategy family
+is very unlikely to close an ~8x gap.
+
 ## Stocks strategy: regime-filter candidates added to measureStocks.mts (2026-09-02)
 David asked to sort out both gaps ("סדר את שניהם"); this is the stocks half
 (live exits is the entry above). The 2026-07-29 trend-exit measurement
@@ -54,9 +101,8 @@ in `measure-stocks.yml`'s CI run).
    the gate was never actually exercised. Fixed: warns once per
    (candidate, symbol) when this happens, rather than silently no-op'ing.
 
-**Not yet run for real** — needs the actual `measure-stocks.yml` workflow
-(has the Alpaca secrets this session doesn't hold) triggered and its
-results read before any conclusion, per "measure, don't guess."
+**Run for real** the same night via `measure-stocks.yml` — see the entry
+above this one for the actual result (does not help, not adopted).
 
 Full gate green: tsc clean, 877 vitest (873 + 4 new), vite build ok.
 
