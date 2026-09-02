@@ -332,11 +332,19 @@ export async function recordEquity(
   const readiness = assessRealMoneyReadiness({
     closedTrades: analytics.tradeCount,
     profitFactor: analytics.profitFactor,
-    realizedReturnPct: (analytics.totalPnl / INITIAL_CASH) * 100,
+    // Mark-to-market (unrealized-inclusive), not analytics.totalPnl: the real
+    // account is passive buy-and-hold (see this file's header) and never
+    // closes a position, so realized P&L alone would stay frozen at
+    // whatever it was before the pivot rather than reflecting the held
+    // basket's actual performance.
+    realizedReturnPct: ((equity - INITIAL_CASH) / INITIAL_CASH) * 100,
     maxDrawdownPct: Math.max(analytics.maxDrawdownPct, liveDrawdownPct),
     vsBenchmarkPct: benchmark ? benchmark.portfolioPct - benchmark.assetPct : null,
     daysRunning: (now - firstAt) / DAY_MS,
     benchmarkLabel: benchmark ? benchmark.label : 'a market benchmark',
+    // Same rationale: closed-trade count and profit factor structurally
+    // never move once the account stops closing positions.
+    gateOnTradeStats: false,
   });
   store.set(READINESS_KEY, readiness);
 }

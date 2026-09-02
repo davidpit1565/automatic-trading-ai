@@ -99,4 +99,50 @@ describe('assessRealMoneyReadiness', () => {
       expect(r.unmet).toEqual(['benchmark']);
     });
   });
+
+  describe('gateOnTradeStats: false', () => {
+    it('is still READY when only trades/consistency fail (a passive buy-and-hold record)', () => {
+      const r = assessRealMoneyReadiness({
+        ...PASSING,
+        closedTrades: 0,
+        profitFactor: null,
+        gateOnTradeStats: false,
+      });
+      expect(r.ready).toBe(true);
+      expect(r.unmet).toEqual([]);
+    });
+
+    it('still reports the true (failing) trades/consistency criteria for transparency, just not as blocking', () => {
+      const r = assessRealMoneyReadiness({
+        ...PASSING,
+        closedTrades: 0,
+        profitFactor: null,
+        gateOnTradeStats: false,
+      });
+      const trades = r.criteria.find((c) => c.key === 'trades')!;
+      const consistency = r.criteria.find((c) => c.key === 'consistency')!;
+      expect(trades.ok).toBe(false);
+      expect(trades.detail).toContain('informational');
+      expect(consistency.ok).toBe(false);
+      expect(consistency.detail).toContain('informational');
+    });
+
+    it('other failing criteria still block readiness', () => {
+      const r = assessRealMoneyReadiness({
+        ...PASSING,
+        closedTrades: 0,
+        profitFactor: null,
+        maxDrawdownPct: READINESS_THRESHOLDS.maxDrawdownPct + 1,
+        gateOnTradeStats: false,
+      });
+      expect(r.ready).toBe(false);
+      expect(r.unmet).toEqual(['drawdown']);
+    });
+
+    it('defaults to gating (unchanged behavior) when omitted', () => {
+      const r = assessRealMoneyReadiness({ ...PASSING, closedTrades: 0, profitFactor: null });
+      expect(r.ready).toBe(false);
+      expect(r.unmet).toEqual(['trades', 'consistency']);
+    });
+  });
 });

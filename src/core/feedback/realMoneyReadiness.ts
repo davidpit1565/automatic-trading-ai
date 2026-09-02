@@ -62,6 +62,19 @@ export interface RealMoneyReadinessInput {
    * can't fail an otherwise-sound record.
    */
   readonly gateOnBenchmark?: boolean;
+  /**
+   * Whether the trades/consistency criteria can block readiness. Defaults to
+   * true. Set false for a strategy that never closes a position (a passive
+   * buy-and-hold arm): "closed trades" and "profit factor" are round-trip
+   * metrics that structurally never move for a strategy with no exits, so
+   * gating on them would make the record permanently unpassable regardless
+   * of how the held basket actually performs. Both are still computed and
+   * reported (for transparency) — they just can't fail an otherwise-sound
+   * record. `realizedReturnPct` should be the mark-to-market (unrealized-
+   * inclusive) return in this mode, since there is no meaningful realized
+   * P&L to report instead.
+   */
+  readonly gateOnTradeStats?: boolean;
 }
 
 export interface RealMoneyReadiness {
@@ -83,7 +96,9 @@ export function assessRealMoneyReadiness(input: RealMoneyReadinessInput): RealMo
     {
       key: 'trades',
       ok: input.closedTrades >= t.minClosedTrades,
-      detail: `${input.closedTrades} / ${t.minClosedTrades} closed trades`,
+      detail:
+        `${input.closedTrades} / ${t.minClosedTrades} closed trades` +
+        (input.gateOnTradeStats === false ? ' (informational — this strategy holds without closing trades)' : ''),
     },
     {
       key: 'days',
@@ -113,14 +128,20 @@ export function assessRealMoneyReadiness(input: RealMoneyReadinessInput): RealMo
       key: 'consistency',
       ok: input.profitFactor !== null && input.profitFactor >= t.minProfitFactor,
       detail:
-        input.profitFactor === null
+        (input.profitFactor === null
           ? `profit factor n/a (needs winning & losing trades)`
-          : `profit factor ${input.profitFactor.toFixed(2)} (needs ≥ ${t.minProfitFactor})`,
+          : `profit factor ${input.profitFactor.toFixed(2)} (needs ≥ ${t.minProfitFactor})`) +
+        (input.gateOnTradeStats === false ? ' (informational — this strategy holds without closing trades)' : ''),
     },
   ];
 
-  const gatingCriteria =
-    input.gateOnBenchmark === false ? criteria.filter((c) => c.key !== 'benchmark') : criteria;
+  const nonGating = new Set<ReadinessKey>();
+  if (input.gateOnBenchmark === false) nonGating.add('benchmark');
+  if (input.gateOnTradeStats === false) {
+    nonGating.add('trades');
+    nonGating.add('consistency');
+  }
+  const gatingCriteria = criteria.filter((c) => !nonGating.has(c.key));
   const unmet = gatingCriteria.filter((c) => !c.ok).map((c) => c.key);
   const ready = unmet.length === 0;
   const summary = ready
