@@ -96,6 +96,31 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     await expect(gate.requestConfirmation(intent())).rejects.toThrow(/credentials/);
   });
 
+  it('genuinely retries the send on a later call after a failed Telegram send, instead of silently treating it as already-sent', async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+
+    // First run: the send itself fails (e.g. rate-limited).
+    const failingFetch = (async (url: string) => {
+      if (url.includes('/sendMessage')) return new Response('{}', { status: 500 });
+      throw new Error(`unexpected Telegram endpoint: ${url}`);
+    }) as unknown as typeof fetch;
+    const gateRun1 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: failingFetch }, audit);
+    await expect(gateRun1.requestConfirmation(intent())).rejects.toThrow(ConfirmationPendingError);
+    expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation']);
+    expect(audit.entries()[0]!.detail).toContain('Telegram send failed');
+
+    // A later run must actually attempt to send again — not silently poll
+    // for a button tap on a message the human never received.
+    const { fetchFn: secondFetch, sent } = fakeTelegram([
+      [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:approve:BTCEUR:1:0' } }],
+    ]);
+    const gateRun2 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: secondFetch }, audit);
+    const decision = await gateRun2.requestConfirmation(intent());
+    expect(sent).toHaveLength(1);
+    expect(decision.approved).toBe(true);
+  });
+
   it('sends one Telegram message with approve/reject buttons and resolves approved on a matching tap', async () => {
     const { fetchFn, sent } = fakeTelegram([
       [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:approve:BTCEUR:1:0' } }],

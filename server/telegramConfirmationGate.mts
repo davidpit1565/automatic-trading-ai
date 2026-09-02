@@ -179,9 +179,6 @@ export class TelegramConfirmationGate implements ConfirmationGate {
           ],
         ],
       });
-      pending = { sentAt, updateOffset: 0 };
-      pendingAll[intent.id] = pending;
-      this.store.set(STORAGE_KEY, pendingAll);
       this.audit.append({
         timestamp: Date.now(),
         intentId: intent.id,
@@ -191,6 +188,19 @@ export class TelegramConfirmationGate implements ConfirmationGate {
           ? 'confirmation request sent to Telegram'
           : `Telegram send failed: ${result.reason} — will retry next run`,
       });
+      // Only lock in "already sent" once the send actually succeeded — a
+      // failed send that still persisted `pending` would permanently skip
+      // this branch on every future call, so the human would never actually
+      // be notified (a real bug: the audit detail claimed "will retry next
+      // run" but nothing did). A failed send instead falls straight through
+      // as pending (never polled — there is nothing to poll for yet), so
+      // the NEXT call re-enters this branch and genuinely retries the send.
+      if (!result.sent) {
+        throw new ConfirmationPendingError(intent.id);
+      }
+      pending = { sentAt, updateOffset: 0 };
+      pendingAll[intent.id] = pending;
+      this.store.set(STORAGE_KEY, pendingAll);
     }
 
     for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {

@@ -17,7 +17,7 @@
 import type { KeyValueStore } from '../src/core/data/storage';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import type { Timeframe } from '../src/core/types';
-import { buildLiveExitIntent, openLivePositions, type LiveOpenPosition } from './liveExitFlow.mts';
+import { buildLiveExitIntent, forgetLivePosition, openLivePositions, type LiveOpenPosition } from './liveExitFlow.mts';
 import { runLiveOrderFlow, type LiveOrderFlowParams, type LiveOrderFlowResult } from './liveOrchestrator.mts';
 import { getTelegramMessages, type TelegramConfig } from './telegram.mts';
 
@@ -95,19 +95,35 @@ export async function checkManualSellRequests(
     if (!position) {
       outcomes.push({ symbol, outcome: 'no-open-position' });
       pendingSymbols.delete(symbol);
+      // Persisted immediately after EACH symbol, not once after the whole
+      // loop — an exception on a LATER symbol in this same pass (a network
+      // error from getCandles, say) must not roll back an earlier symbol's
+      // already-decided outcome back into the pending queue.
+      store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
       continue;
     }
     const candles = await source.getCandles(position.entryAssessment.asset, entryTimeframe, 2);
     if (!candles.ok || candles.value.length === 0) {
       outcomes.push({ symbol, outcome: 'no-price-data' });
-      continue; // stays queued — retried next cycle, never silently dropped
+      // Stays queued (never deleted) — retried next cycle, never silently
+      // dropped. Still persisted immediately, same reasoning as above.
+      store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
+      continue;
     }
     const price = candles.value[candles.value.length - 1]!.close;
     const intent = buildLiveExitIntent(`${position.id}:manual-sell`, position, price, now);
     const result = await runLiveOrderFlow({ ...flowParams, intent });
     outcomes.push({ symbol, ...result });
     if (result.outcome !== 'pending') pendingSymbols.delete(symbol);
+    // A genuinely FILLED sell must stop being tracked as an open position —
+    // otherwise a later /sell for the same symbol would find it again and
+    // could submit a second real sell order for a position already closed.
+    // 'submitted' alone is NOT enough (the broker may only have accepted a
+    // resting order, not yet filled it) — only a confirmed fill forgets it.
+    if (result.outcome === 'submitted' && result.report.state === 'filled') {
+      forgetLivePosition(store, position.id);
+    }
+    store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
   }
-  store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
   return outcomes;
 }

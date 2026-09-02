@@ -20,6 +20,73 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Real-money go-live: deep review — 2 fixed, 2 real gaps still open (2026-09-02)
+David asked for an even deeper check specifically on "are we really ready
+for this" (real money). Ran the `code-review` skill at max effort against
+the full Stage 6 live-execution path. Five findings; two fixed now, two
+left genuinely OPEN (must be resolved before wiring goes live), one
+(the Telegram offset issue) is the most architecturally significant.
+
+**FIXED:**
+1. **`telegramConfirmationGate.mts`**: a failed Telegram send (rate limit,
+   transient 5xx) still persisted the "pending" record, so the `if
+   (!pending)` send path was never re-entered — the human would NEVER
+   actually be notified, yet the audit log claimed "will retry next run"
+   and the order would silently auto-expire as rejected 20 minutes later
+   with no real message ever delivered. Fixed: only persist `pending` once
+   `sendTelegramMessage` actually reports `sent: true`; a failed send now
+   genuinely retries the send itself on the next call.
+2. **`manualSellCommand.mts`**: never called `forgetLivePosition` after a
+   filled sell, so a symbol stayed tracked as "open" even after being sold
+   — a second `/sell` for the same symbol would find it again and could
+   submit a real duplicate sell order. Fixed: `forgetLivePosition` is now
+   called once `result.report.state === 'filled'` (not merely
+   `'submitted'` — a resting, not-yet-filled order must stay tracked).
+   Also fixed a related robustness gap the reviewer found: the pending-
+   symbols queue was only persisted once at the very end of the whole
+   batch, so an exception partway through processing multiple queued
+   symbols could roll back an already-resolved symbol's outcome back into
+   the queue — now persisted immediately after each symbol is resolved.
+
+**STILL OPEN — must be resolved before this goes live:**
+3. **Shared Telegram `getUpdates` offset collision (architectural).**
+   `telegramConfirmationGate.mts` (one offset PER pending intent),
+   `manualSellCommand.mts`, and `manualKillSwitchCommand.mts` each
+   maintain their OWN persisted "last seen update_id" cursor and poll
+   independently — but Telegram's `getUpdates(offset)` is a single GLOBAL
+   cursor per bot token: calling it with a higher offset from ANY one of
+   these permanently discards every not-yet-read update below that point
+   for ALL the others too, regardless of `allowed_updates` filtering.
+   Concretely: if the confirmation gate's poll advances past a `/pause` or
+   `/sell` message the manual-command pollers haven't read yet, that
+   message is gone forever — silently, with no error. This wasn't
+   introduced tonight (the confirmation gate's per-intent-offset design is
+   older), but adding more independent pollers made it a live risk. Needs
+   a real fix before the actual live-wiring PR: one shared cursor, one
+   `getUpdates` call per cycle covering both `message` and
+   `callback_query` types, dispatched to whichever consumer cares — not a
+   quick patch, a genuine (if contained) redesign of the polling layer.
+4. **`revolutXBrokerAdapter.mts` has no order-status reconciliation.**
+   (a) A network failure during `submit()` (timeout, dropped connection)
+   is unconditionally reported as `rejected` with no check for whether
+   Revolut X actually accepted the order before the response was lost —
+   a real fill could exist at the broker with zero local tracking (no
+   stop-loss/target, invisible to `decideLiveExit` and the kill switch's
+   per-position awareness) while our own records say it never happened.
+   (b) A partially-filled order maps to `state: 'submitted'`, which
+   `recordLiveEntryFill` correctly does NOT track (by design — only a
+   genuine `'filled'` is tracked) — but nothing ever polls the order again
+   afterward to catch it up once it eventually fills, so a partial live
+   fill can go completely untracked indefinitely. Both need an actual
+   reconciliation mechanism (periodic `fetchPositions()` cross-check
+   against locally tracked state) that doesn't exist anywhere yet — a
+   real, separate piece of work, not a quick fix, and squarely a capital-
+   protection gap per this project's own priority order.
+
+Tests: 915 passing (11 + 10 in the two touched test files). Full gate
+green. Findings 3 and 4 are reported here as genuinely unresolved — real
+money should not move through this path until they are.
+
 ## Real-money go-live: manual /sell could silently lose a request (2026-09-02)
 David asked for a broad audit ("look for anything to improve, in any area")
 of the whole project. The most severe finding was a real bug in the manual

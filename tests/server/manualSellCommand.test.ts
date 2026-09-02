@@ -13,7 +13,7 @@ import type {
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
 import type { MarketDataSource } from '../../src/core/data/revolutClient';
 import type { Candle, Instrument } from '../../src/core/types';
-import { recordLiveEntryFill } from '../../server/liveExitFlow.mts';
+import { openLivePositions, recordLiveEntryFill } from '../../server/liveExitFlow.mts';
 import { checkManualSellRequests, parseSellCommand } from '../../server/manualSellCommand.mts';
 import { TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
 
@@ -169,7 +169,7 @@ describe('checkManualSellRequests', () => {
       { update_id: 1, message: { text: '/sell XBTEUR', chat: { id: 'C' } } },
     ]);
     const exitReport: OrderStatusReport = {
-      intentId: 'entry-1:manual-sell:9000',
+      intentId: 'entry-1:manual-sell',
       state: 'filled',
       filledQuantity: 2,
       avgFillPrice: 95,
@@ -182,7 +182,7 @@ describe('checkManualSellRequests', () => {
       '1h',
       {
         confirmationGate: fakeConfirmationGate({
-          intentId: 'entry-1:manual-sell:9000',
+          intentId: 'entry-1:manual-sell',
           approved: true,
           decidedAt: 1,
           decidedBy: 'david',
@@ -195,6 +195,50 @@ describe('checkManualSellRequests', () => {
       9000,
     );
     expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: exitReport }]);
+  });
+
+  it('stops tracking the position once its sell genuinely fills, so a later /sell for the same symbol cannot sell it a second time', async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const killSwitch = new PersistedKillSwitch(store);
+    recordLiveEntryFill(store, buyIntent(), filledReport(), 5000);
+
+    const exitReport: OrderStatusReport = {
+      intentId: 'entry-1:manual-sell',
+      state: 'filled',
+      filledQuantity: 2,
+      avgFillPrice: 95,
+      detail: 'ok',
+    };
+    const flowParams = {
+      confirmationGate: fakeConfirmationGate({ intentId: 'entry-1:manual-sell', approved: true, decidedAt: 1, decidedBy: 'david' }),
+      brokerAdapter: fakeBrokerAdapter(exitReport),
+      killSwitch,
+      audit,
+      verifySymbolExists: async () => true,
+    };
+
+    const first = await checkManualSellRequests(
+      store,
+      { token: 'T', chatId: 'C', fetchFn: seedTelegram([{ update_id: 1, message: { text: '/sell XBTEUR', chat: { id: 'C' } } }]) },
+      fakeSource(95),
+      '1h',
+      flowParams,
+      9000,
+    );
+    expect(first).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: exitReport }]);
+    expect(openLivePositions(store)).toEqual([]); // forgotten — no longer tracked as open
+
+    // A second /sell for the same (already-sold) symbol must find nothing to sell.
+    const second = await checkManualSellRequests(
+      store,
+      { token: 'T', chatId: 'C', fetchFn: seedTelegram([{ update_id: 2, message: { text: '/sell XBTEUR', chat: { id: 'C' } } }]) },
+      fakeSource(95),
+      '1h',
+      flowParams,
+      9500,
+    );
+    expect(second).toEqual([{ symbol: 'XBTEUR', outcome: 'no-open-position' }]);
   });
 
   it('respects the kill switch — a manual sell cannot bypass it either', async () => {
