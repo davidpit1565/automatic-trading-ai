@@ -20,6 +20,54 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Real-money go-live: building the actual entry wiring (2026-09-02, in progress)
+With the safety layer independently reviewed twice and everything fixable
+fixed, David asked to start building the actual connection. First pieces,
+all tested, full gate green:
+
+- **Post-approval re-validation** (`runLiveOrderFlow`, `liveOrchestrator.mts`)
+  — the check David asked for earlier tonight ("after I approve, check
+  again it's still good") finally built: an optional `revalidate` hook
+  runs AFTER a human approves, BEFORE the broker ever sees the order. It
+  can only ADD a refusal (`'stale-after-approval'`) — it never runs unless
+  `decision.approved` is already true, so it can't remove the human gate,
+  only strengthen it.
+- **`server/liveLedger.mts`** (new) — a minimal local cash ledger for the
+  REAL account. There is no `PortfolioEngine` for live money (that class
+  simulates fills; a live fill is real, from the broker) — this is the
+  smallest equivalent: `initLiveCash` (idempotent — never resets an
+  already-moving balance), `debitLiveCash`/`creditLiveCash` on real fills,
+  `liveEquity` = cash + mark-to-market of tracked open live positions. Not
+  a full `PortfolioEngine` port (no daily-return anchor, no journal) — the
+  live account only needs "how much can I safely risk right now."
+- **`server/liveEntryMirror.mts`** (new) — mirrors a paper-approved crypto
+  entry into a real order, SIZED INDEPENDENTLY against the live account's
+  own equity (never the paper account's $10,000): re-runs `assessTrade` on
+  the same underlying `TradeOpportunity` (entry/stop/target/confidence
+  don't depend on account size) against live equity/positions. Reuses the
+  exact queue-with-stable-id-until-terminal pattern already proven correct
+  in `manualSellCommand.mts`'s fix (a paper-approved entry is a one-time
+  event per symbol, same "lost forever if not resumed" risk). Also guards
+  against the SAME double-submission risk found there: a resting
+  (submitted, not-yet-filled) entry marks its symbol "outstanding" and
+  refuses a second attempt until `clearOutstandingEntry` is called once
+  that symbol's position is later confirmed closed — a resting order that
+  never resolves stays outstanding forever (no reconciliation poller
+  exists yet), which is the safe direction to fail in, not a bug.
+- **`DailyLossTracker` reuse note for whoever finishes the wiring**: it
+  keys its storage under a fixed `'daily-loss'` key already used by the
+  crypto PAPER autopilot on the same store — instantiate it against a
+  `PrefixedStore(store, 'live')` (already exists, `src/core/data/
+  prefixedStore.ts`, used by the shadow evaluator for the same reason) for
+  live money, never the raw store directly, or paper and live losses would
+  conflate into one circuit breaker.
+
+**Still to build**: the automatic EXIT-side mirror (checking `decideLiveExit`
+against tracked live positions each cycle, not just the manual `/sell`
+override), the actual `autopilotRunner.mts` integration point, the
+`REAL_MONEY_ENABLED` opt-in flag, and — separately, on David's side —
+generating fresh Revolut X API credentials. Continuing next.
+
 ## Real-money go-live: independent re-review + fixed everything fixable (2026-09-02)
 David asked for the shared-Telegram-cursor fix and partial-fill tracking to
 be "fully fixed, not partial", and to keep checking until 100% confident a

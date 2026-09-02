@@ -299,4 +299,72 @@ describe('runLiveOrderFlow', () => {
     expect(result).toEqual({ outcome: 'submitted', report: filledReport() });
     expect(broker.submitCalls).toEqual([theIntent]);
   });
+
+  it('does not call revalidate at all unless the human already approved', async () => {
+    const killSwitch = new PersistedKillSwitch(new MemoryStore());
+    const audit = new PersistedAuditLog(new MemoryStore());
+    const gate = fakeConfirmationGate({ intentId: 'x', approved: false, decidedAt: 1, decidedBy: 'david' });
+    const broker = fakeBrokerAdapter(filledReport());
+    let revalidateCalled = false;
+
+    const result = await runLiveOrderFlow({
+      intent: intent(),
+      confirmationGate: gate,
+      brokerAdapter: broker,
+      killSwitch,
+      audit,
+      verifySymbolExists: async () => true,
+      revalidate: async () => {
+        revalidateCalled = true;
+        return { ok: true };
+      },
+    });
+
+    expect(result).toEqual({ outcome: 'rejected', decidedBy: 'david' });
+    expect(revalidateCalled).toBe(false);
+  });
+
+  it('submits after approval when revalidate passes', async () => {
+    const killSwitch = new PersistedKillSwitch(new MemoryStore());
+    const audit = new PersistedAuditLog(new MemoryStore());
+    const gate = fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' });
+    const broker = fakeBrokerAdapter(filledReport());
+
+    const result = await runLiveOrderFlow({
+      intent: intent(),
+      confirmationGate: gate,
+      brokerAdapter: broker,
+      killSwitch,
+      audit,
+      verifySymbolExists: async () => true,
+      revalidate: async () => ({ ok: true }),
+    });
+
+    expect(result).toEqual({ outcome: 'submitted', report: filledReport() });
+    expect(broker.submitCalls).toHaveLength(1);
+  });
+
+  it('refuses to submit — even after human approval — when revalidate says the setup is no longer good, and audits it', async () => {
+    const killSwitch = new PersistedKillSwitch(new MemoryStore());
+    const audit = new PersistedAuditLog(new MemoryStore());
+    const gate = fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' });
+    const broker = fakeBrokerAdapter(filledReport());
+
+    const result = await runLiveOrderFlow({
+      intent: intent(),
+      confirmationGate: gate,
+      brokerAdapter: broker,
+      killSwitch,
+      audit,
+      verifySymbolExists: async () => true,
+      revalidate: async () => ({ ok: false, reason: 'price moved 4% since the signal fired' }),
+    });
+
+    expect(result).toEqual({ outcome: 'stale-after-approval', reason: 'price moved 4% since the signal fired' });
+    expect(broker.submitCalls).toHaveLength(0); // never reaches the broker
+    const last = audit.entries()[audit.entries().length - 1]!;
+    expect(last.event).toBe('rejected');
+    expect(last.detail).toContain('david');
+    expect(last.detail).toContain('price moved 4%');
+  });
 });

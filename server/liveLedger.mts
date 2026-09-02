@@ -1,0 +1,65 @@
+/**
+ * Local cash ledger for the real live account (2026-09-02).
+ *
+ * There is no `PortfolioEngine` for live money — that class is paper-only
+ * (its whole job is simulating fills locally; a live fill is real and comes
+ * from the broker). But sizing a live entry via `assessTrade` still needs
+ * SOME notion of "current equity" for the real account, and Revolut X's
+ * `fetchPositions()` reports raw balances with no cost basis (see
+ * `revolutXBrokerAdapter.mts`) — not enough on its own to compute equity
+ * against an entry price. This is the minimal, LOCAL equivalent of what
+ * `PortfolioEngine` already does for paper: track cash starting from a
+ * configured amount, debit/credit it on real fills, and derive equity as
+ * cash + the mark-to-market value of tracked open positions
+ * (`liveExitFlow.mts`'s `openLivePositions`).
+ *
+ * Deliberately NOT a full port of `PortfolioEngine` (no daily-return
+ * anchor, no allocation breakdown, no journal) — the live account only
+ * ever needs "how much can I safely risk right now," not the paper
+ * account's full reporting surface.
+ */
+
+import type { KeyValueStore } from '../src/core/data/storage';
+import { openLivePositions } from './liveExitFlow.mts';
+
+const LIVE_CASH_KEY = 'live-cash-eur';
+
+/** Sets the starting cash ONLY if this ledger has never been initialized —
+ * safe to call every cycle without ever resetting a real, already-moving
+ * balance back to the starting figure. */
+export function initLiveCash(store: KeyValueStore, startingCash: number): void {
+  if (!(startingCash > 0)) throw new RangeError(`startingCash must be > 0, got ${startingCash}`);
+  if (store.get<number>(LIVE_CASH_KEY) === undefined) store.set(LIVE_CASH_KEY, startingCash);
+}
+
+export function liveCash(store: KeyValueStore): number {
+  return store.get<number>(LIVE_CASH_KEY) ?? 0;
+}
+
+/** Call the moment a live BUY genuinely fills (see `recordLiveEntryFill`) —
+ * `amount` is the real cost (fill price × filled quantity + fee). */
+export function debitLiveCash(store: KeyValueStore, amount: number): void {
+  store.set(LIVE_CASH_KEY, liveCash(store) - amount);
+}
+
+/** Call the moment a live SELL genuinely fills — `amount` is the real
+ * proceeds (fill price × filled quantity − fee). */
+export function creditLiveCash(store: KeyValueStore, amount: number): void {
+  store.set(LIVE_CASH_KEY, liveCash(store) + amount);
+}
+
+/**
+ * Cash plus the mark-to-market value of every tracked open live position.
+ * `prices` is keyed by this project's INTERNAL instrument symbol (e.g.
+ * 'XBTEUR', the same code `entryAssessment.asset` carries) — NOT the
+ * broker-native pair symbol `LiveOpenPosition.symbol` holds. A position
+ * with no current price available falls back to its own entry price
+ * (same convention `PortfolioEngine.snapshot` already uses for paper).
+ */
+export function liveEquity(store: KeyValueStore, prices: Readonly<Record<string, number>>): number {
+  const invested = openLivePositions(store).reduce((sum, position) => {
+    const price = prices[position.entryAssessment.asset] ?? position.entryPrice;
+    return sum + position.quantity * price;
+  }, 0);
+  return liveCash(store) + invested;
+}
