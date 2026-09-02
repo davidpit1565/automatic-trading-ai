@@ -71,4 +71,32 @@ describe('assessRealMoneyReadiness', () => {
     ]);
     for (const c of r.criteria) expect(c.detail.length).toBeGreaterThan(0);
   });
+
+  describe('gateOnBenchmark: false', () => {
+    it('is still READY when only the benchmark criterion fails', () => {
+      const r = assessRealMoneyReadiness({ ...PASSING, vsBenchmarkPct: -5, gateOnBenchmark: false });
+      expect(r.ready).toBe(true);
+      expect(r.unmet).toEqual([]);
+      expect(r.summary).toContain('READY');
+    });
+
+    it('still reports the true (failing) benchmark criterion for transparency, just not as blocking', () => {
+      const r = assessRealMoneyReadiness({ ...PASSING, vsBenchmarkPct: -5, gateOnBenchmark: false });
+      const benchmark = r.criteria.find((c) => c.key === 'benchmark')!;
+      expect(benchmark.ok).toBe(false);
+      expect(benchmark.detail).toContain('informational');
+    });
+
+    it('other failing criteria still block readiness', () => {
+      const r = assessRealMoneyReadiness({ ...PASSING, realizedReturnPct: -1, gateOnBenchmark: false });
+      expect(r.ready).toBe(false);
+      expect(r.unmet).toEqual(['profitable']);
+    });
+
+    it('defaults to gating (unchanged behavior) when omitted', () => {
+      const r = assessRealMoneyReadiness({ ...PASSING, vsBenchmarkPct: -5 });
+      expect(r.ready).toBe(false);
+      expect(r.unmet).toEqual(['benchmark']);
+    });
+  });
 });

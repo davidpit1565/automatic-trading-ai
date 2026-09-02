@@ -50,6 +50,18 @@ export interface RealMoneyReadinessInput {
   readonly daysRunning: number;
   /** English label for the benchmark criterion's detail text. Defaults to "BTC" (the crypto side's benchmark). */
   readonly benchmarkLabel?: string;
+  /**
+   * Whether the benchmark criterion can block readiness. Defaults to true.
+   * Set false for a strategy that carries a stop-loss/exit: beating 100%
+   * buy-and-hold of the same asset during a monotonic uptrend is structurally
+   * impossible for such a strategy (some capital is, by construction, not in
+   * the trade at every moment the asset climbs past the last stop — see
+   * PROJECT_STATE.md, 2026-09-02), so treating it as a blocking bar would
+   * make the gate permanently unpassable regardless of trading quality. The
+   * comparison is still computed and reported (for transparency) — it just
+   * can't fail an otherwise-sound record.
+   */
+  readonly gateOnBenchmark?: boolean;
 }
 
 export interface RealMoneyReadiness {
@@ -87,9 +99,10 @@ export function assessRealMoneyReadiness(input: RealMoneyReadinessInput): RealMo
       key: 'benchmark',
       ok: input.vsBenchmarkPct !== null && input.vsBenchmarkPct >= 0,
       detail:
-        input.vsBenchmarkPct === null
+        (input.vsBenchmarkPct === null
           ? `vs buy-and-hold ${benchmarkLabel}: not measured yet`
-          : `vs buy-and-hold ${benchmarkLabel} ${pct(input.vsBenchmarkPct)}`,
+          : `vs buy-and-hold ${benchmarkLabel} ${pct(input.vsBenchmarkPct)}`) +
+        (input.gateOnBenchmark === false ? ' (informational — not required for a risk-managed strategy)' : ''),
     },
     {
       key: 'drawdown',
@@ -106,11 +119,13 @@ export function assessRealMoneyReadiness(input: RealMoneyReadinessInput): RealMo
     },
   ];
 
-  const unmet = criteria.filter((c) => !c.ok).map((c) => c.key);
+  const gatingCriteria =
+    input.gateOnBenchmark === false ? criteria.filter((c) => c.key !== 'benchmark') : criteria;
+  const unmet = gatingCriteria.filter((c) => !c.ok).map((c) => c.key);
   const ready = unmet.length === 0;
   const summary = ready
     ? 'READY — the paper record clears every safety threshold (not a profit guarantee).'
-    : `NOT READY — ${criteria.filter((c) => !c.ok).map((c) => c.detail).join('; ')}.`;
+    : `NOT READY — ${gatingCriteria.filter((c) => !c.ok).map((c) => c.detail).join('; ')}.`;
 
   return { ready, criteria, summary, unmet };
 }
