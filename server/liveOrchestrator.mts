@@ -24,6 +24,15 @@
  * Live position EXITS are a materially different problem — deciding *when*
  * to exit a real, already-filled position against live price action — and
  * are intentionally not built here.
+ *
+ * Symbol translation (the open question from PR #101/#102): a caller MUST
+ * translate this project's internal instrument symbol (e.g. Kraken's
+ * 'XBTEUR') to the broker's own pair symbol (e.g. Revolut X's 'BTC-EUR')
+ * with `toRevolutXSymbol` (`server/revolutXBrokerAdapter.mts`) BEFORE
+ * calling `buildLiveOrderIntent` — pass the RESULT as `brokerSymbol`, not
+ * the raw internal code. `verifySymbolExists` can then simply be
+ * `revolutXAdapter.listTradablePairs().then(pairs => pairs.includes(intent.symbol))`
+ * — safe, because by this point `intent.symbol` is already broker-native.
  */
 
 import type {
@@ -53,42 +62,43 @@ export interface LiveOrderFlowParams {
   readonly audit: AuditLog;
   /**
    * Confirms `intent.symbol` is a real, currently tradable instrument on the
-   * target broker BEFORE a human is ever asked to approve it.
+   * target broker BEFORE a human is ever asked to approve it. Expects
+   * `intent.symbol` to ALREADY be in the broker's own format (see the
+   * module-level "Symbol translation" note above) — this only checks
+   * existence, it does not translate.
    * **Mandatory whenever `brokerAdapter.mode === 'live'`** —
    * `runLiveOrderFlow` refuses outright rather than silently skipping the
    * check if it's missing. Omit only for a simulator with no real
    * instrument list to check against (e.g. `PaperBrokerAdapter`, which
    * already validates against local state and never runs in `'live'` mode).
-   *
-   * NOT simply `RevolutXBrokerAdapter.listTradablePairs().then(p =>
-   * p.includes(symbol))` — that method returns Revolut X's own pair symbols
-   * (e.g. 'BTC-USD'), while `intent.symbol` today comes from this project's
-   * internal asset codes (e.g. 'BTCEUR', from `TradeRiskAssessment.asset`).
-   * Nothing in this codebase yet translates between the two (documented as
-   * an open question in docs/execution-architecture.md) — wiring this
-   * straight to `listTradablePairs()` without that translation will refuse
-   * every real order as 'unknown-symbol' forever, which is safe (never a
-   * wrong-symbol trade) but silently non-functional. Resolve the
-   * translation first, or wire this to whatever confirms the intended
-   * asset either way.
    */
   readonly verifySymbolExists?: (symbol: string) => Promise<boolean>;
 }
 
-/** Maps an already risk-approved buy assessment to a live OrderIntent. The
- * caller supplies `id` and is responsible for reusing the SAME id across
- * retries of the same proposal — that's what lets `ConfirmationGate` resume
- * instead of re-sending the approval request. */
+/**
+ * Maps an already risk-approved buy assessment to a live OrderIntent.
+ *
+ * `brokerSymbol` must ALREADY be the broker's own pair symbol (e.g.
+ * 'BTC-EUR'), translated from `assessment.asset` (this project's internal
+ * code, e.g. 'XBTEUR') via `toRevolutXSymbol` — this function does not
+ * translate, it only assembles the intent. `assessment.asset` itself is
+ * preserved unchanged inside `assessment` for traceability/audit.
+ *
+ * The caller supplies `id` and is responsible for reusing the SAME id
+ * across retries of the same proposal — that's what lets `ConfirmationGate`
+ * resume instead of re-sending the approval request.
+ */
 export function buildLiveOrderIntent(
   id: string,
   assessment: TradeRiskAssessment,
   now: number,
+  brokerSymbol: string,
 ): OrderIntent {
   return {
     id,
     createdAt: now,
     mode: 'live',
-    symbol: assessment.asset,
+    symbol: brokerSymbol,
     side: 'buy',
     quantity: assessment.positionSize,
     limitPrice: assessment.entry,

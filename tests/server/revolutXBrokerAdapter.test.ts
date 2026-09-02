@@ -5,7 +5,8 @@ import { PersistedAuditLog } from '../../src/core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../../src/core/autopilot/killSwitch';
 import type { OrderIntent } from '../../src/core/execution/types';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
-import { RevolutXBrokerAdapter } from '../../server/revolutXBrokerAdapter.mts';
+import type { Instrument } from '../../src/core/types';
+import { RevolutXBrokerAdapter, toRevolutXSymbol } from '../../server/revolutXBrokerAdapter.mts';
 
 // A fresh Ed25519 test key pair per run — not a secret, mirrors signing.test.ts.
 const { privateKey: TEST_PRIVATE_KEY, publicKey: TEST_PUBLIC_KEY } = generateKeyPairSync('ed25519');
@@ -281,5 +282,21 @@ describe('RevolutXBrokerAdapter', () => {
     const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
 
     expect(await adapter.listTradablePairs()).toEqual([]);
+  });
+});
+
+describe('toRevolutXSymbol', () => {
+  const instruments: Instrument[] = [
+    { symbol: 'XBTEUR', base: 'BTC', quote: 'EUR' },
+    { symbol: 'ETHEUR', base: 'ETH', quote: 'EUR' },
+  ];
+
+  it('translates an internal instrument symbol to the broker BASE-QUOTE format using its real base/quote, not string-guessing', () => {
+    expect(toRevolutXSymbol('XBTEUR', instruments)).toBe('BTC-EUR');
+    expect(toRevolutXSymbol('ETHEUR', instruments)).toBe('ETH-EUR');
+  });
+
+  it('returns null — never guesses — for a symbol not in the known instrument list', () => {
+    expect(toRevolutXSymbol('DOGEEUR', instruments)).toBeNull();
   });
 });

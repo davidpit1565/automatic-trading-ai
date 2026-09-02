@@ -96,13 +96,13 @@ function filledReport(): OrderStatusReport {
 describe('buildLiveOrderIntent', () => {
   it('maps a risk-approved assessment onto a live buy OrderIntent', () => {
     const assessment = approvedAssessment();
-    const result = buildLiveOrderIntent('my-id', assessment, 12345);
+    const result = buildLiveOrderIntent('my-id', assessment, 12345, 'BTC-EUR');
 
     expect(result).toEqual({
       id: 'my-id',
       createdAt: 12345,
       mode: 'live',
-      symbol: 'BTC-USD',
+      symbol: 'BTC-EUR',
       side: 'buy',
       quantity: 2,
       limitPrice: 100,
@@ -110,6 +110,14 @@ describe('buildLiveOrderIntent', () => {
       takeProfit: 115,
       assessment,
     });
+  });
+
+  it('uses the translated broker symbol, not the internal asset code, as the intent symbol', () => {
+    const assessment = approvedAssessment({ asset: 'XBTEUR' });
+    const result = buildLiveOrderIntent('my-id', assessment, 12345, 'BTC-EUR');
+
+    expect(result.symbol).toBe('BTC-EUR');
+    expect(result.assessment.asset).toBe('XBTEUR');
   });
 });
 
