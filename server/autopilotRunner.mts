@@ -62,6 +62,7 @@ import {
 import { FileStore } from './fileStore.mts';
 import { checkManualKillSwitchCommands } from './manualKillSwitchCommand.mts';
 import { checkManualSellRequests } from './manualSellCommand.mts';
+import { checkManualBuyRequests } from './manualBuyCommand.mts';
 import { mirrorApprovedEntries } from './liveEntryMirror.mts';
 import { checkAutomaticExits } from './liveExitMirror.mts';
 import { initLiveCash } from './liveLedger.mts';
@@ -726,6 +727,7 @@ export async function runLiveMirror(
   try {
     await checkManualKillSwitchCommands(liveStore, telegram, killSwitch, audit, 'david', now);
     await checkManualSellRequests(liveStore, telegram, source, ENTRY_TF, flowParams, now);
+    await checkManualBuyRequests(liveStore, telegram, source, ENTRY_TF, instruments, prices, flowParams, now);
     const newlyApproved = cycleOpened
       .map((o) => o.opportunity)
       .filter((o): o is NonNullable<typeof o> => o !== undefined);

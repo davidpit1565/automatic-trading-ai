@@ -15,9 +15,6 @@ on:
 
 permissions:
   contents: write
-  # Read-only lookup of the open PR for this branch, so the Telegram
-  # notification can link straight to it instead of the compare page.
-  pull-requests: read
 
 concurrency:
   group: pages-deploy
@@ -50,46 +47,3 @@ jobs:
             gh-pages:gh-pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Only on the dev branch — a push here means a batch of work just
-      # passed the full gate, which is exactly "ready for David to review/
-      # merge". Pushes to main (including the autopilot's own state commits)
-      # never fire this: those aren't "a PR is ready" moments. Telegram is
-      # optional, same as everywhere else in this project — silently skips
-      # without secrets rather than failing the job.
-      - name: Notify Telegram — branch is green and ready to review
-        if: success() && github.ref == 'refs/heads/claude/market-scan-integration-r9lck1'
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMPARE_URL: https://github.com/${{ github.repository }}/compare/main...claude/market-scan-integration-r9lck1
-        run: |
-          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
-            echo "Telegram not configured, skipping notification."
-            exit 0
-          fi
-          # Link straight to the open PR (not the compare page) — the
-          # GitHub mobile app opens a PR link directly into its own "Merge"
-          # screen, which is the whole point of this notification. Falls
-          # back to the compare URL (which offers to CREATE one) if no PR
-          # is open yet for this branch.
-          PR_URL=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?head=${GITHUB_REPOSITORY%%/*}:claude/market-scan-integration-r9lck1&state=open" \
-            | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const a=JSON.parse(d);console.log(a[0]?.html_url??"");}catch{console.log("")}})')
-          LINK_URL="${PR_URL:-$COMPARE_URL}"
-          export TEXT=$'✅ הבדיקות עברו על הענף claude/market-scan-integration-r9lck1 — מוכן לבדיקה/מיזוג.\n'"$LINK_URL"
-          # Telegram can return HTTP 200 with {"ok":false,...} on a bad
-          # token/chat id — checking curl's exit code alone (or piping to
-          # /dev/null, as an earlier version of this step did) would report
-          # "success" even when nothing was actually delivered. Read the
-          # real response body instead.
-          RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -H "Content-Type: application/json" \
-            -d "$(node -e 'console.log(JSON.stringify({chat_id: process.env.TELEGRAM_CHAT_ID, text: process.env.TEXT, disable_web_page_preview: true}))')")
-          if echo "$RESPONSE" | grep -q '"ok":true'; then
-            echo "Telegram notification delivered."
-          else
-            # Logged, not fatal — same "optional, never blocks the build"
-            # rule as everywhere else Telegram is used in this project.
-            echo "Telegram notification FAILED — response: $RESPONSE"
-          fi

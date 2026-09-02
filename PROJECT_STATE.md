@@ -1,5 +1,23 @@
 # PROJECT_STATE
 
+## Real money is now LIVE (2026-09-03)
+David generated real Revolut X trading credentials, funded the account
+(100.15€), and set `REAL_MONEY_ENABLED=true` as a repo Variable. The
+platform is no longer simulated-only — `runLiveMirror` now actually runs
+its full chain every cycle.
+
+**`server/manualBuyCommand.mts` (new)** — David asked to prove the pipeline
+end-to-end without waiting on the algorithm's own (genuinely selective)
+signal, which can go days without opening anything. `/buy <SYMBOL>` triggers
+ONE real entry attempt right now: fixed 2:1 reward:risk levels (-1.5%/+3%
+around the current price, since there's no scanner opportunity to size
+against for a manual request), but otherwise reuses `liveEntryMirror.mts`'s
+`mirrorApprovedEntries` AS-IS — same risk sizing against live equity, same
+symbol verification, same Telegram confirmation. Symmetric to
+`/sell`'s relationship to `decideLiveExit`: only what TRIGGERS the attempt
+changes, never the safety chain around it. Wired into `runLiveMirror`
+alongside the other manual overrides.
+
 ## Completed Modules
 - Core pipeline: data (Kraken/Coinbase public, synthetic) → indicators →
   scanner → signal engine → risk engine → position/portfolio → paper autopilot.
