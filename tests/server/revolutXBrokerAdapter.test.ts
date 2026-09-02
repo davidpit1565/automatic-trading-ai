@@ -5,7 +5,8 @@ import { PersistedAuditLog } from '../../src/core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../../src/core/autopilot/killSwitch';
 import type { OrderIntent } from '../../src/core/execution/types';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
-import { RevolutXBrokerAdapter } from '../../server/revolutXBrokerAdapter.mts';
+import type { Instrument } from '../../src/core/types';
+import { RevolutXBrokerAdapter, toRevolutXSymbol } from '../../server/revolutXBrokerAdapter.mts';
 
 // A fresh Ed25519 test key pair per run — not a secret, mirrors signing.test.ts.
 const { privateKey: TEST_PRIVATE_KEY, publicKey: TEST_PUBLIC_KEY } = generateKeyPairSync('ed25519');
@@ -245,5 +246,57 @@ describe('RevolutXBrokerAdapter', () => {
     const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
 
     expect(await adapter.fetchPositions()).toEqual([]);
+  });
+
+  it('lists the real tradable pair symbols, for verifying a symbol before ever proposing it', async () => {
+    const { fetchFn, calls } = fakeFetch([
+      { status: 200, body: { data: { 'BTC-USD': { active: true }, 'ETH-USD': { active: true } } } },
+    ]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    const pairs = await adapter.listTradablePairs();
+
+    expect(pairs).toEqual(['BTC-USD', 'ETH-USD']);
+    expect(calls[0]).toMatchObject({ method: 'GET', url: 'https://revx.revolut.com/api/1.0/configuration/pairs' });
+    expect(verifiesAgainstRealRequest(calls[0]!)).toBe(true);
+  });
+
+  it('returns no pairs when the configuration request fails, rather than reporting a stale/wrong list', async () => {
+    const { fetchFn } = fakeFetch([{ status: 500, body: { error: 'down' } }]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    expect(await adapter.listTradablePairs()).toEqual([]);
+  });
+
+  it('returns no pairs (never throws) when the request itself throws, e.g. a timeout', async () => {
+    const throwingFetch = (async () => {
+      throw new Error('network timeout');
+    }) as typeof fetch;
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), throwingFetch);
+
+    await expect(adapter.listTradablePairs()).resolves.toEqual([]);
+  });
+
+  it('ignores a malformed pairs response (e.g. an array) rather than reporting bogus symbols', async () => {
+    const { fetchFn } = fakeFetch([{ status: 200, body: { data: ['BTC-USD', 'ETH-USD'] } }]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    expect(await adapter.listTradablePairs()).toEqual([]);
+  });
+});
+
+describe('toRevolutXSymbol', () => {
+  const instruments: Instrument[] = [
+    { symbol: 'XBTEUR', base: 'BTC', quote: 'EUR' },
+    { symbol: 'ETHEUR', base: 'ETH', quote: 'EUR' },
+  ];
+
+  it('translates an internal instrument symbol to the broker BASE-QUOTE format using its real base/quote, not string-guessing', () => {
+    expect(toRevolutXSymbol('XBTEUR', instruments)).toBe('BTC-EUR');
+    expect(toRevolutXSymbol('ETHEUR', instruments)).toBe('ETH-EUR');
+  });
+
+  it('returns null — never guesses — for a symbol not in the known instrument list', () => {
+    expect(toRevolutXSymbol('DOGEEUR', instruments)).toBeNull();
   });
 });

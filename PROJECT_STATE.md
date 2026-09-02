@@ -20,6 +20,47 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## STAGE 6: ConfirmationGate → BrokerAdapter wiring built (2026-09-02)
+David approved continuing Stage 6 overnight ("אני מאשר. תמשיך") after being
+told the adapter existed but nothing wired it up. `server/liveOrchestrator.mts`
+closes the last unchecked checklist item: `runLiveOrderFlow` chains
+kill-switch check → mandatory symbol verification → `ConfirmationGate` →
+`BrokerAdapter.submit`; `buildLiveOrderIntent` maps a risk-approved
+`TradeRiskAssessment` to a live buy `OrderIntent`. Deliberately buy/entry
+side only — live exits are a different, harder problem, not built.
+
+**Red-team review before committing caught three real issues, all fixed**:
+1. The symbol-verification check was optional and not tied to
+   `brokerAdapter.mode`, so a live broker could silently skip it if a caller
+   forgot to pass `verifySymbolExists`. Fixed: mandatory whenever
+   `mode === 'live'`, refuses outright (`'missing-symbol-check'`) otherwise.
+2. Two refusal paths (kill-switch-blocked, unknown-symbol) left no audit
+   trail at all, unlike every other terminal state. Fixed: both are now
+   audited.
+3. `RevolutXBrokerAdapter.listTradablePairs()`'s pair-parsing accepted
+   array-shaped/malformed responses as if they were real symbols, and threw
+   uncaught on a network failure instead of returning `[]` like its sibling
+   methods. Both fixed, with new tests (malformed response, thrown fetch).
+
+**Explicitly NOT done, on purpose**: this is not wired into any GitHub
+Actions workflow — no cron job feeds it real signals.
+
+**UPDATE, same night**: review also surfaced that `verifySymbolExists`
+cannot simply be `listTradablePairs()` as originally documented — Revolut
+X's own pair symbols (`'BTC-USD'`) don't match this project's internal
+asset codes (`'BTCEUR'`) without a translation layer. David said to keep
+going ("2 ואז תמזג"), so that translation got built the same night — see
+`toRevolutXSymbol` in the entry above this one. `buildLiveOrderIntent` now
+requires the already-translated symbol as an explicit parameter, closing
+this gap. What's still NOT resolved: whether Revolut X actually LISTS a
+given asset's EUR pair at all (confirmed overnight: public Revolut X docs
+are inconsistent/contradictory on this, and the authoritative check needs
+the authenticated `/configuration/pairs` call this session has no
+credentials to make) — but that's now purely `listTradablePairs()`'s job at
+runtime, not a code gap.
+
+Full gate green: tsc clean, 850 vitest (836 + 14 new), vite build ok.
+
 ## STAGE 6: real Revolut X broker adapter built (2026-09-02), still not wired
 David created a Spot-trade-only Revolut X API key (Ed25519, withdraw
 disabled) via the Revolut X web app (not available in the mobile app),
@@ -53,13 +94,22 @@ from the real request (method/path/body) and cryptographically verifies it
 against a matching Ed25519 keypair — proven to actually catch the bug by
 temporarily reintroducing it and watching 3 tests fail, before reverting.
 
-**Known open question, not yet resolved**: this adapter sends `intent.symbol`
-as-is to Revolut X's own pair format (e.g. `'BTC-USD'`). Whether the
-project's internal asset codes (e.g. `'BTCEUR'`) need translation to
-Revolut X's actual quoted pairs is wiring-layer work, not yet done — do not
-wire this adapter to a live orchestrator without resolving it first.
+**RESOLVED (2026-09-02, same night)**: `toRevolutXSymbol(internalSymbol,
+instruments)` (`server/revolutXBrokerAdapter.mts`) translates this
+project's internal instrument symbol (e.g. Kraken's `'XBTEUR'`) to Revolut
+X's own pair format (e.g. `'BTC-EUR'`) — by looking up the SAME base/quote
+breakdown the trading engine itself already uses (`Instrument.base`/`.quote`,
+e.g. `CURATED_INSTRUMENTS` in `src/core/data/krakenPublic.ts`), never by
+guessing where a concatenated symbol string splits. Returns `null` (never
+guesses) when the internal symbol isn't found. `buildLiveOrderIntent`
+(`server/liveOrchestrator.mts`) now takes the ALREADY-translated broker
+symbol as an explicit 4th parameter rather than using `assessment.asset`
+directly — a caller must call `toRevolutXSymbol` first. This still doesn't
+GUARANTEE Revolut X lists that exact quote currency (e.g. it may not offer
+EUR pairs for every asset) — that's still checked for real at runtime via
+`listTradablePairs()`, exactly as designed.
 
-Full gate green: tsc clean, 836 vitest (825 + 11 new), vite build ok.
+Full gate green: tsc clean, 853 vitest (836 + 17 new), vite build ok.
 
 ## STAGE 6 STARTED (2026-08-27): real-money execution layer, still not connected
 David asked what's needed to connect a real wallet, then explicitly asked to

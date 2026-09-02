@@ -37,6 +37,7 @@ import type {
   OrderStatusReport,
 } from '../src/core/execution/types';
 import type { KeyValueStore } from '../src/core/data/storage';
+import type { Instrument } from '../src/core/types';
 
 const API_BASE = 'https://revx.revolut.com';
 const API_PREFIX = '/api/1.0';
@@ -74,6 +75,48 @@ function readVenueOrderId(json: unknown): string | null {
   const first = json.data[0];
   if (!isRecord(first) || typeof first.venue_order_id !== 'string') return null;
   return first.venue_order_id;
+}
+
+/**
+ * Translates this project's internal instrument symbol (e.g. Kraken's
+ * 'XBTEUR') to the candidate Revolut X pair symbol (e.g. 'BTC-EUR') —
+ * closing the open question from PR #101/#102: internal asset codes don't
+ * match Revolut X's own 'BASE-QUOTE' format as-is.
+ *
+ * Deliberately NOT string-parsing `internalSymbol` itself (splitting
+ * 'BTCEUR' by guessing where the base ends and the quote begins is exactly
+ * the kind of guess this project's rules forbid for money-affecting code).
+ * Instead it looks up the SAME base/quote breakdown the trading engine
+ * itself already uses to know what that symbol even means (`base`/`quote`
+ * on `Instrument`, e.g. `src/core/data/krakenPublic.ts`'s
+ * `CURATED_INSTRUMENTS`) and reformats that.
+ *
+ * Returns `null` — never guesses — when `internalSymbol` isn't found in
+ * `instruments` at all. A non-null result is still only a CANDIDATE: it is
+ * not verified to actually be a Revolut X pair until checked against
+ * `RevolutXBrokerAdapter.listTradablePairs()` (e.g. Revolut X may not list
+ * every quote currency the internal instrument list does).
+ */
+export function toRevolutXSymbol(internalSymbol: string, instruments: readonly Instrument[]): string | null {
+  const found = instruments.find((i) => i.symbol === internalSymbol);
+  if (!found) return null;
+  return `${found.base}-${found.quote}`;
+}
+
+/** Mirrors RevolutXClient.getInstruments()'s own parsing of the same
+ * endpoint (src/core/data/revolutClient.ts) — response maps symbols to pair
+ * configuration, e.g. { "BTC-USD": { ... } }, optionally wrapped in { data }.
+ * Only keys that actually split into a base and quote asset (e.g.
+ * 'BTC-USD') are reported; a malformed or unexpectedly-shaped response
+ * (e.g. an array) yields no symbols rather than bogus ones. */
+function readPairSymbols(json: unknown): string[] {
+  if (!isRecord(json)) return [];
+  const body = isRecord(json.data) && !Array.isArray(json.data) ? json.data : json;
+  if (Array.isArray(body)) return [];
+  return Object.keys(body).filter((symbol) => {
+    const [base, quote] = symbol.split('-');
+    return Boolean(base && quote);
+  });
 }
 
 function readBalances(json: unknown): { currency: string; total: number }[] {
@@ -257,6 +300,25 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
         // state knows entry price. Reconciliation compares quantity only.
         avgCost: 0,
       }));
+  }
+
+  /**
+   * Real, current pair symbols Revolut X trades (e.g. 'BTC-USD') — the
+   * authoritative source for whether a symbol this project wants to trade
+   * actually exists here, and in what form. Callers building a live
+   * `OrderIntent` should translate to a candidate symbol with
+   * `toRevolutXSymbol` first, then verify the RESULT against this list
+   * before ever submitting — refusing rather than guessing when either
+   * step fails. See `server/liveOrchestrator.mts`.
+   */
+  async listTradablePairs(): Promise<string[]> {
+    try {
+      const result = await this.request('GET', '/configuration/pairs');
+      if (!result.ok) return [];
+      return readPairSymbols(result.json);
+    } catch {
+      return [];
+    }
   }
 
   private reportAndAudit(

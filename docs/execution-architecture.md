@@ -89,15 +89,49 @@ An engaged kill switch forces every in-flight intent to `cancelled`.
       reports raw spot balances; Revolut X's balances endpoint carries no
       cost basis, so `avgCost` is always `0` — reconciliation must compare
       quantity only, never cost, against this adapter's positions.
-      **Known open question, not yet resolved**: this adapter sends
-      `intent.symbol` as-is to Revolut X's own pair format (e.g. `'BTC-USD'`).
-      Whether the project's own internal asset codes (e.g. `'BTCEUR'`) need
-      translation to Revolut X's actual quoted pairs is wiring-layer work,
-      not yet done — do not wire this adapter to a live orchestrator without
-      resolving it first.
-- [ ] **Wiring**: nothing yet calls `TelegramConfirmationGate` →
-      `RevolutXBrokerAdapter` (or the paper one) as a live orchestrator loop —
-      today they are tested, working machinery, not a running feature.
+      Also exports `toRevolutXSymbol(internalSymbol, instruments)` — RESOLVES
+      the symbol-translation question below by translating this project's
+      internal instrument symbol (e.g. `'XBTEUR'`) to Revolut X's own pair
+      format (e.g. `'BTC-EUR'`), using the SAME `base`/`quote` breakdown the
+      trading engine already relies on (never by guessing where a
+      concatenated symbol string splits). Returns `null` — never guesses —
+      when the internal symbol isn't recognised.
+- [x] **Wiring** (`server/liveOrchestrator.mts`, 2026-09-02) —
+      `runLiveOrderFlow` chains kill-switch check → mandatory symbol
+      verification → `ConfirmationGate` → `BrokerAdapter.submit`, as tested,
+      reusable machinery. `buildLiveOrderIntent` maps an already
+      risk-approved `TradeRiskAssessment` (buy/entry side only — deciding
+      when to exit a real, filled position is a materially different
+      problem, intentionally not built here) to a live `OrderIntent`.
+      **Every refusal path is audited**, not just the eventual
+      approve/reject/submit, and the symbol check is MANDATORY whenever
+      `brokerAdapter.mode === 'live'` — `runLiveOrderFlow` refuses outright
+      (`'missing-symbol-check'`) rather than silently placing an order with
+      no real-instrument verification if the check is missing.
+      **This closes the checklist item as tested code — it is NOT invoked
+      by any scheduled workflow.** Nothing in `.github/workflows/*.yml`
+      calls this file; no cron job generates live signals or feeds them
+      through it. Turning continuous live trading on — which live signal
+      source feeds this, which asset universe, on what schedule — is a
+      separate, larger decision not made here.
+      **RESOLVED same night**: `buildLiveOrderIntent` now takes the
+      ALREADY-translated broker symbol as an explicit parameter — a caller
+      must call `toRevolutXSymbol` first and pass its result, not
+      `assessment.asset` directly. With that, `verifySymbolExists` really
+      can be `revolutXAdapter.listTradablePairs().then(pairs =>
+      pairs.includes(intent.symbol))`, safely, because by that point
+      `intent.symbol` is already broker-native.
 
-Until the last two items: the platform reads market data, analyses, and
+**What's still genuinely unresolved** (not a code gap — an external fact
+this session has no way to check): whether Revolut X actually LISTS a
+given asset's EUR pair at all. Public Revolut X docs are
+inconsistent/contradictory on this, and the authoritative answer needs the
+authenticated `/configuration/pairs` call, which requires credentials this
+session doesn't hold. This is exactly what `listTradablePairs()` checks for
+real at runtime — a live order for an asset Revolut X doesn't quote in EUR
+will correctly refuse as `'unknown-symbol'` rather than guessing a
+different currency, which is safe, not broken.
+
+Until something explicitly decides to generate real signals and feed them
+through this machinery: the platform reads market data, analyses, and
 simulates — nothing it does can reach a real account.
