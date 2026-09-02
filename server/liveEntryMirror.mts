@@ -22,17 +22,18 @@
  * 2026-09-02 — this reuses that exact pattern, including the incremental-
  * persistence and outstanding-order guard against a duplicate submission).
  *
- * Tested, reusable machinery. Nothing calls this from any scheduled
- * workflow yet — that final wiring, plus the real-money enable flag, is
- * separate, deliberate work still to come.
+ * Called every cycle by `server/autopilotRunner.mts`'s `runLiveMirror` — but
+ * that caller is itself a no-op unless `REAL_MONEY_ENABLED=true` AND real
+ * broker credentials are configured (see its doc comment), so this stays
+ * dormant until a human deliberately turns real money on.
  */
 
 import type { KeyValueStore } from '../src/core/data/storage';
 import type { Instrument } from '../src/core/types';
 import type { TradeOpportunity } from '../src/core/signal/signalEngine';
 import { assessTrade, DEFAULT_RISK_LIMITS, type RiskLimits } from '../src/core/risk/riskEngine';
-import { openLivePositions } from './liveExitFlow.mts';
-import { liveEquity } from './liveLedger.mts';
+import { openLivePositions, recordLiveEntryFill } from './liveExitFlow.mts';
+import { debitLiveCash, liveEquity } from './liveLedger.mts';
 import { runLiveOrderFlow, buildLiveOrderIntent, type LiveOrderFlowParams, type LiveOrderFlowResult } from './liveOrchestrator.mts';
 import { toRevolutXSymbol } from './revolutXBrokerAdapter.mts';
 
@@ -157,6 +158,17 @@ export async function mirrorApprovedEntries(
     if (result.outcome === 'submitted') {
       outstanding.add(symbol);
       writeOutstanding(store, outstanding);
+      // A genuinely (fully or partially) filled buy must actually be
+      // tracked as an open live position — otherwise it's invisible to
+      // stop-loss/take-profit enforcement, to `liveExitMirror.mts`'s
+      // automatic exit checking, and to `liveEquity` (the exact "invisible
+      // real exposure" class of bug already fixed once tonight at the
+      // broker-adapter level for partial fills — reintroduced here at the
+      // caller level, now fixed the same way).
+      if (recordLiveEntryFill(store, intent, result.report, now)) {
+        const fillPrice = result.report.avgFillPrice ?? intent.limitPrice;
+        debitLiveCash(store, result.report.filledQuantity * fillPrice);
+      }
     }
     store.set(PENDING_KEY, pending);
   }

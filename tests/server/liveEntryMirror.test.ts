@@ -107,6 +107,18 @@ describe('mirrorApprovedEntries', () => {
       1000,
     );
     expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report }]);
+
+    // A real, filled buy must actually become a tracked open live position
+    // (stop-loss/take-profit enforcement, visibility to the automatic exit
+    // mirror, correct equity) and debit the cash ledger — a bug caught
+    // before this shipped: `mirrorApprovedEntries` used to mark the symbol
+    // outstanding but never call `recordLiveEntryFill`/`debitLiveCash`,
+    // leaving a real position completely untracked.
+    const tracked = openLivePositions(store);
+    expect(tracked).toHaveLength(1);
+    expect(tracked[0]!.quantity).toBe(0.01);
+    expect(tracked[0]!.entryAssessment.asset).toBe('XBTEUR');
+    expect(liveCash(store)).toBe(100 - 0.01 * 100);
   });
 
   it('refuses (not-approved) rather than submitting when 100€ genuinely cannot support the risk-engine sizing', async () => {

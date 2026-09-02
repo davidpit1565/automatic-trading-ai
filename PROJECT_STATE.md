@@ -68,6 +68,69 @@ override), the actual `autopilotRunner.mts` integration point, the
 `REAL_MONEY_ENABLED` opt-in flag, and — separately, on David's side —
 generating fresh Revolut X API credentials. Continuing next.
 
+## Real-money go-live: entry-mirror bug fix + the full wiring (2026-09-02)
+Self-review of the entry mirror just written above caught a real bug in it
+before it ever shipped: `mirrorApprovedEntries`'s `'submitted'` branch marked
+the symbol outstanding but never called `recordLiveEntryFill`/
+`debitLiveCash` — a real, successfully filled BUY would never actually be
+tracked as an open position. No stop-loss/take-profit enforcement, invisible
+to the new exit mirror, invisible to `liveEquity`. The exact same
+"invisible real exposure" class already fixed once tonight at the
+broker-adapter level (partial fills), reintroduced here at the caller level.
+Fixed the same way; a new test asserts `openLivePositions`/`liveCash`
+actually update after a submitted+filled outcome (the previous 8 tests did
+not check this — exactly how it went unnoticed).
+
+Then built the rest, all tested, full gate green:
+- **`server/liveExitMirror.mts`** (new) — the automatic counterpart to
+  `manualSellCommand.mts`: each cycle, checks every tracked live position
+  against the SAME `decideLiveExit` paper trading uses, and proposes a real
+  exit through the same `runLiveOrderFlow` chain when it fires. No separate
+  pending-queue needed (unlike the entry mirror) — the tracked position
+  itself is the persistent retry trigger, so a `'pending'` confirmation just
+  gets retried next cycle against the same stable id
+  (`${position.id}:auto-exit`, distinct from manual-sell's `:manual-sell`
+  suffix). Shares the same `outstandingExitSubmittedAt` guard, so an
+  automatic exit and a manual `/sell` can never race into two real sell
+  orders for one position.
+- **The actual `autopilotRunner.mts` integration** (`runLiveMirror`, called
+  once per cycle) — wires everything built tonight together: the manual
+  `/pause`/`/resume` kill switch and `/sell` override are checked FIRST (a
+  human's own command always takes effect before this cycle's automatic
+  mirroring), then this cycle's newly paper-approved entries are mirrored,
+  then every tracked live position is checked for an automatic exit. A
+  failure anywhere in this function is caught and logged, never allowed to
+  take down the paper cycle that already completed. `CycleResult['opened']`
+  gained an optional `opportunity` field (the underlying `TradeOpportunity`,
+  populated where paper decides an entry) so the runner can hand this
+  cycle's approved entries to the live mirror without re-deciding anything.
+- **`REAL_MONEY_ENABLED` opt-in flag** — off by construction. `runLiveMirror`
+  no-ops unless `REAL_MONEY_ENABLED=true` (repo Variable) AND real Revolut X
+  credentials (`REVOLUT_X_API_KEY`/`REVOLUT_X_PRIVATE_KEY_PEM`, repo
+  secrets) are BOTH configured, AND Telegram is configured (every live order
+  still needs a human tap). Missing any of these is silent, never an error —
+  this repo stays exactly the simulated-money-only system it has always
+  been until a human deliberately turns it on. `.github/workflows/
+  autopilot.yml` now passes these through (secrets stay secrets, per this
+  project's rule — only in GitHub Actions, never elsewhere).
+- **Live-scoped `DailyLossTracker`, kill switch, audit log, and Telegram
+  poller state** — all built against `new PrefixedStore(store, 'live')`, not
+  the raw store, so nothing about real money conflates with the paper
+  autopilot's own state on the same underlying file. This is deliberately
+  the ONLY code in the project that ever polls Telegram, so namespacing its
+  offset/pending-confirmation state under `'live:'` too costs nothing (no
+  other consumer to keep in sync with) and keeps every trace of real-money
+  state in one place.
+- **`LIVE_STARTING_CASH_EUR`** (repo Variable, defaults to 100 in code) —
+  David's confirmed starting real capital: 100€.
+
+**Still needed before this can actually go live**: David's own action —
+generate fresh Revolut X API credentials (Ed25519 keypair) and add
+`REVOLUT_X_API_KEY`/`REVOLUT_X_PRIVATE_KEY_PEM` as GitHub Actions secrets,
+then deliberately set the `REAL_MONEY_ENABLED` repo Variable to `true`. Until
+then this is tested, reusable machinery that the scheduled workflow calls
+every cycle but that stays a complete no-op.
+
 ## Real-money go-live: independent re-review + fixed everything fixable (2026-09-02)
 David asked for the shared-Telegram-cursor fix and partial-fill tracking to
 be "fully fixed, not partial", and to keep checking until 100% confident a

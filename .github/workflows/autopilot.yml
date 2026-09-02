@@ -62,6 +62,19 @@ jobs:
           # is a paid fallback if that's what's configured instead.
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Real-money wiring (2026-09-02) — OFF by default. Stays a no-op
+          # (simulated money only, exactly as before) unless BOTH this repo
+          # Variable is set to 'true' AND the Revolut X secrets below are
+          # configured; missing either is silent, never an error. Even then,
+          # every live order (entry or exit) still requires an explicit human
+          # tap via Telegram — this can never place a trade on its own.
+          REAL_MONEY_ENABLED: ${{ vars.REAL_MONEY_ENABLED }}
+          REVOLUT_X_API_KEY: ${{ secrets.REVOLUT_X_API_KEY }}
+          REVOLUT_X_PRIVATE_KEY_PEM: ${{ secrets.REVOLUT_X_PRIVATE_KEY_PEM }}
+          # David's confirmed starting real capital: 100€ (repo Variable so it
+          # never needs a code change). Only used the FIRST time the live
+          # ledger initializes — never resets an already-moving real balance.
+          LIVE_STARTING_CASH_EUR: ${{ vars.LIVE_STARTING_CASH_EUR }}
           # Timezone for the 08:00 & 22:00 daily digests. Set this repo
           # Variable to follow you when you travel (e.g. Europe/Brussels).
           # Defaults to Asia/Jerusalem when unset.

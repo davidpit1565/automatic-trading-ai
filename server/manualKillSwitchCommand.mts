@@ -7,8 +7,10 @@
  * triggers (drawdown breaker etc.): a human can engage or lift this
  * regardless of what those currently think, at any time.
  *
- * Tested, reusable machinery — like the rest of this session's manual
- * overrides, nothing calls it from any scheduled workflow yet.
+ * Called every cycle by `server/autopilotRunner.mts`'s `runLiveMirror` — but
+ * that caller is itself a no-op unless `REAL_MONEY_ENABLED=true` AND real
+ * broker credentials are configured (see its doc comment), so this stays
+ * dormant until a human deliberately turns real money on.
  */
 
 import type { KeyValueStore } from '../src/core/data/storage';

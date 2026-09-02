@@ -2,13 +2,13 @@
  * Live order flow — wires `ConfirmationGate` → `BrokerAdapter` together
  * (docs/execution-architecture.md, "What Stage 6 must add", item "Wiring").
  *
- * This closes the last unchecked item on that checklist as TESTED,
- * REUSABLE machinery — it is NOT invoked by any scheduled workflow.
- * Nothing in `.github/workflows/*.yml` calls this file. Turning continuous
- * live trading on (which live signal source feeds it, which asset universe,
- * on what schedule) is a separate, larger decision this file deliberately
- * does not make — David asked to continue building Stage 6's wiring, not to
- * start autonomous live trading tonight.
+ * This closes the last unchecked item on that checklist as TESTED, REUSABLE
+ * machinery. `runLiveOrderFlow` is called every cycle now (via
+ * `liveEntryMirror.mts`/`liveExitMirror.mts` → `server/autopilotRunner.mts`'s
+ * `runLiveMirror`) — but that caller is itself a no-op unless
+ * `REAL_MONEY_ENABLED=true` AND real broker credentials are configured (see
+ * `runLiveMirror`'s doc comment), so no order actually reaches a real
+ * account until a human deliberately turns that on.
  *
  * Every order still goes through the full non-negotiable chain: kill-switch
  * check, symbol verified against the broker's OWN real instrument list

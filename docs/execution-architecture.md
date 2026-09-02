@@ -250,6 +250,72 @@ different currency, which is safe, not broken.
       needs one, and is squarely part of "the actual live-wiring" decision,
       not something to bolt on with no caller to run it periodically.
 
-Until something explicitly decides to generate real signals and feed them
-through this machinery: the platform reads market data, analyses, and
-simulates — nothing it does can reach a real account.
+- [x] **The actual scheduler, and everything it needed** (`server/
+      liveLedger.mts`, `server/liveEntryMirror.mts`, `server/
+      liveExitMirror.mts`, `server/autopilotRunner.mts`'s `runLiveMirror`,
+      2026-09-02) — David asked to build the real connection once the safety
+      layer above was independently reviewed twice with nothing left to fix.
+  - `liveLedger.mts`: there is no `PortfolioEngine` for live money (that
+    class simulates fills; a live fill is real) — the minimal local
+    equivalent: `initLiveCash` (idempotent), `debitLiveCash`/
+    `creditLiveCash` on real fills, `liveEquity` = cash + mark-to-market of
+    tracked open live positions.
+  - Post-approval re-validation: `runLiveOrderFlow` gained an optional
+    `revalidate` hook (answers David's "after I approve, check again it's
+    still good") that runs AFTER a human approves, BEFORE the broker ever
+    sees the order — it can only ADD a refusal (`'stale-after-approval'`),
+    never remove the human gate.
+  - `liveEntryMirror.mts`: mirrors a paper-approved entry into a real order,
+    SIZED INDEPENDENTLY against the live account's own equity (re-runs
+    `assessTrade` on the same `TradeOpportunity`, never the paper account's
+    $10,000). Reuses the exact queue-with-stable-id-until-terminal-outcome
+    pattern proven in `manualSellCommand.mts` (a paper-approved entry is a
+    one-time event, same "lost forever if not resumed" risk), plus the same
+    outstanding-order double-submission guard. **Caught a real bug before
+    shipping**: the `'submitted'` branch marked the symbol outstanding but
+    never called `recordLiveEntryFill`/`debitLiveCash` — a real, filled BUY
+    would never actually become a tracked position (no stop/target
+    enforcement, invisible to the exit mirror and to `liveEquity`). Same
+    "invisible real exposure" class already fixed once at the
+    broker-adapter level for partial fills; fixed the same way here, with a
+    test that actually asserts the position and cash update afterward.
+  - `liveExitMirror.mts`: the automatic counterpart to
+    `manualSellCommand.mts` — checks every tracked live position against
+    the SAME `decideLiveExit` paper trading uses, each cycle, and proposes a
+    real exit through the same `runLiveOrderFlow` chain when it fires. No
+    separate pending-queue (unlike the entry side): the tracked position
+    itself is the persistent retry trigger, so a `'pending'` confirmation
+    just retries next cycle against the same stable id
+    (`${position.id}:auto-exit`). Shares `outstandingExitSubmittedAt` with
+    the manual override, so the two can never race into two real sells for
+    one position.
+  - **`runLiveMirror` (`autopilotRunner.mts`) is the actual integration
+    point** — called once per cycle, it checks the manual `/pause`/`/resume`
+    and `/sell` overrides FIRST (a human's own command always takes effect
+    before this cycle's automatic mirroring), then mirrors this cycle's
+    newly paper-approved entries, then checks every tracked live position
+    for an automatic exit. `CycleResult['opened']` gained an optional
+    `opportunity` field so the runner can hand this cycle's approved entries
+    to the live mirror without re-deciding anything. A failure anywhere in
+    `runLiveMirror` is caught and logged, never allowed to affect the paper
+    cycle that already completed.
+  - **`REAL_MONEY_ENABLED` — off by construction.** `runLiveMirror` is a
+    complete no-op unless a repo Variable (`REAL_MONEY_ENABLED=true`) AND
+    real Revolut X credentials (`REVOLUT_X_API_KEY`/
+    `REVOLUT_X_PRIVATE_KEY_PEM`, repo secrets) are BOTH configured, AND
+    Telegram is configured — missing any one is silent, never an error.
+    `.github/workflows/autopilot.yml` now passes these through every cycle,
+    but the platform stays exactly the simulated-money-only system it has
+    always been until David deliberately sets that Variable — which needs
+    his own separate action first (generating fresh Revolut X API
+    credentials).
+  - Everything real-money-related — the live cash ledger, live kill switch,
+    live audit log, and even the shared Telegram poller's own cursor/pending
+    state — is instantiated against `new PrefixedStore(store, 'live')`, not
+    the raw store, so nothing about it ever conflates with the paper
+    autopilot's own state living in the same file.
+
+Until David sets `REAL_MONEY_ENABLED=true` (and adds the Revolut X
+credentials): the platform reads market data, analyses, and simulates —
+`runLiveMirror` runs every cycle but is a complete no-op, so nothing it does
+can reach a real account.

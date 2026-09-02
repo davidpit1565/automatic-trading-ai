@@ -10,8 +10,10 @@
  * algorithm currently thinks. Nothing here bypasses the confirmation tap —
  * see that file's header for why an exit is never auto-approved either.
  *
- * Tested, reusable machinery — like `liveOrchestrator.mts`/`liveExitFlow.mts`,
- * nothing calls this from any scheduled workflow yet.
+ * Called every cycle by `server/autopilotRunner.mts`'s `runLiveMirror` — but
+ * that caller is itself a no-op unless `REAL_MONEY_ENABLED=true` AND real
+ * broker credentials are configured (see its doc comment), so this stays
+ * dormant until a human deliberately turns real money on.
  */
 
 import type { KeyValueStore } from '../src/core/data/storage';
@@ -24,6 +26,8 @@ import {
   openLivePositions,
   type LiveOpenPosition,
 } from './liveExitFlow.mts';
+import { clearOutstandingEntry } from './liveEntryMirror.mts';
+import { creditLiveCash } from './liveLedger.mts';
 import { runLiveOrderFlow, type LiveOrderFlowParams, type LiveOrderFlowResult } from './liveOrchestrator.mts';
 import {
   pollAllTelegramUpdates,
@@ -159,7 +163,12 @@ export async function checkManualSellRequests(
       // enough (the broker may only have accepted a resting order, not yet
       // filled it) — only a confirmed fill forgets it.
       if (result.report.state === 'filled') {
+        const fillPrice = result.report.avgFillPrice ?? price;
+        creditLiveCash(store, result.report.filledQuantity * fillPrice);
         forgetLivePosition(store, position.id);
+        // Releases this symbol for a FUTURE fresh entry — see
+        // `liveEntryMirror.mts`'s `clearOutstandingEntry` doc comment.
+        clearOutstandingEntry(store, symbol);
       }
     }
     store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);

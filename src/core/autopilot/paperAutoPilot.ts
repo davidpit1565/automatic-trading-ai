@@ -29,7 +29,13 @@ import { assessTrade, confidenceScaledRiskPct, DEFAULT_RISK_LIMITS, type RiskLim
 import type { TrailingConfig } from '../risk/trailingStop';
 import { scanCandles, scanMarket, type ScanResult } from '../scan/marketScanner';
 import { applyHigherTimeframeGate } from '../signal/multiTimeframe';
-import { DEFAULT_SIGNAL_CRITERIA, evaluateScan, MAX_CONFIDENCE, type SignalDecision } from '../signal/signalEngine';
+import {
+  DEFAULT_SIGNAL_CRITERIA,
+  evaluateScan,
+  MAX_CONFIDENCE,
+  type SignalDecision,
+  type TradeOpportunity,
+} from '../signal/signalEngine';
 import type { Timeframe } from '../types';
 import type { PersistedAuditLog } from './auditLog';
 import type { PersistedKillSwitch } from './killSwitch';
@@ -311,6 +317,11 @@ export interface CycleResult {
     confidence?: number;
     /** Short labels of the strongest reasons the entry was taken. */
     reasons?: string[];
+    /** The underlying signal this entry was taken on (entry/stop/target/
+     * confidence — independent of account size) — lets a caller mirror this
+     * SAME approved entry into a real order sized against a different
+     * account (`server/liveEntryMirror.mts`), without re-deciding anything. */
+    opportunity?: TradeOpportunity;
   }[];
   readonly closed: { id?: string; symbol: string; reason: ExitReason; price: number; pnl: number }[];
   readonly skipped: { symbol: string; reason: string }[];
@@ -693,6 +704,7 @@ export class PaperAutoPilot {
           entry: openedPosition.value.entryPrice,
           confidence: decision.opportunity.confidence,
           reasons: topReasons,
+          opportunity: decision.opportunity,
         });
         held.add(scanResult.symbol);
         audit.append({

@@ -18,10 +18,10 @@
  * symbol check, human confirmation via `ConfirmationGate`, only then
  * `BrokerAdapter.submit`) — nothing here bypasses confirmation for an exit.
  *
- * Like `liveOrchestrator.mts`, this is tested, reusable machinery. Nothing
- * calls it from any scheduled workflow yet — see that file's header for the
- * full rationale (David asked to build Stage 6's wiring, not to start
- * autonomous live trading).
+ * Like `liveOrchestrator.mts`, this is called every cycle now (via
+ * `liveEntryMirror.mts`/`liveExitMirror.mts` → `autopilotRunner.mts`'s
+ * `runLiveMirror`) — see that function's doc comment for why it's still a
+ * no-op until `REAL_MONEY_ENABLED=true` and real broker credentials exist.
  */
 
 import type { KeyValueStore } from '../src/core/data/storage';
