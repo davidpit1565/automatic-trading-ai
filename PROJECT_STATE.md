@@ -20,6 +20,21 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Real-money go-live: expiry deadline shown + manual kill-switch (2026-09-02)
+Two more follow-ups from David after the confirmation-expiry/manual-sell PR:
+(1) show how much time is actually left to respond, in the message itself —
+`telegramConfirmationGate.mts` now prints a fixed HH:MM deadline (Asia/
+Jerusalem) plus the window length, computed once when the message is first
+sent. A live countdown would be dishonest here: the bot only polls every
+~30 minutes, so a "countdown" would jump in ~30-minute steps, not tick by
+the second. (2) protection gap found while answering "what else needs
+protecting": the kill switch could only ever engage automatically — David
+had no way to halt everything himself. New `server/manualKillSwitchCommand.mts`:
+`/pause`/`/resume` Telegram commands, same pattern as the manual-sell
+override (own `getTelegramMessages` offset), audited either way, a no-op
+(not an error) if already in the requested state. Both tested (10 + 9 new
+tests), neither wired into any scheduled workflow yet.
+
 ## Real-money go-live: confirmation expiry + manual sell override (2026-09-02)
 David gave the go-ahead to start wiring real-money execution: manual
 approval on every trade (entries AND exits), starting capital 100€ (checked

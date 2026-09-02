@@ -186,6 +186,17 @@ different currency, which is safe, not broken.
       the safety chain around submitting it. Still tested, reusable
       machinery — not called from any scheduled workflow yet.
 
+- [x] **Manual kill-switch override** (`server/manualKillSwitchCommand.mts`,
+      2026-09-02) — the kill switch previously only ever engaged
+      automatically (drawdown breaker etc.); David had no way to halt
+      everything himself on demand. `/pause`/`/resume` Telegram commands
+      (same `getTelegramMessages` polling as the manual sell override, its
+      own offset) now engage/disengage it directly, audited either way, a
+      no-op (not an error) if already in the requested state. Independent of
+      the algorithm's own automatic triggers — a human override that works
+      regardless of what those currently think. Still tested, reusable
+      machinery, not called from any scheduled workflow yet.
+
 Until something explicitly decides to generate real signals and feed them
 through this machinery: the platform reads market data, analyses, and
 simulates — nothing it does can reach a real account.
