@@ -315,7 +315,17 @@ different currency, which is safe, not broken.
     the raw store, so nothing about it ever conflates with the paper
     autopilot's own state living in the same file.
 
-Until David sets `REAL_MONEY_ENABLED=true` (and adds the Revolut X
-credentials): the platform reads market data, analyses, and simulates —
-`runLiveMirror` runs every cycle but is a complete no-op, so nothing it does
-can reach a real account.
+**Status update (2026-09-03): David generated the Revolut X credentials,
+funded the account (100.15€), and set `REAL_MONEY_ENABLED=true`. This is no
+longer hypothetical — `runLiveMirror` now runs its full chain every cycle.**
+
+- [x] **Manual buy override** (`server/manualBuyCommand.mts`, 2026-09-03) —
+      David asked to prove the pipeline end-to-end without waiting on the
+      algorithm's own signal (which can go days without opening anything).
+      `/buy <SYMBOL>` builds a fixed 2:1 reward:risk opportunity (-1.5%/+3%
+      around the current price — there's no scanner opportunity to size a
+      manual request against) and hands it to `liveEntryMirror.mts`'s
+      `mirrorApprovedEntries` AS-IS: same risk sizing against live equity,
+      same symbol verification, same Telegram confirmation. Symmetric to
+      `/sell`'s relationship to `decideLiveExit` — only the TRIGGER differs,
+      never the safety chain.
