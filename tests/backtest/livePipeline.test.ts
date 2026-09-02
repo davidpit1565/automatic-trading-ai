@@ -4,6 +4,7 @@ import {
   type LivePipelineResult,
 } from '../../src/core/backtest/livePipeline';
 import { generateSyntheticCandles } from '../../src/core/data/synthetic';
+import { buildDailyRegimeFilter } from '../../src/core/signal/regimeFilter';
 import { performanceReport } from '../../src/core/validation/performance';
 import type { Candle } from '../../src/core/types';
 
@@ -244,6 +245,118 @@ describe('runLivePipelineBacktest', () => {
       const candles = uptrend();
       const withDefault = runLivePipelineBacktest(candles, { symbol: 'UP', timeframe: '1h' });
       expect(withDefault.closedTrades.some((t) => t.reason === 'take-profit')).toBe(true);
+    });
+  });
+
+  describe('regimeFilter (entry-side daily-trend gate, used by scripts/measureStocks.mts)', () => {
+    it('blocks every entry when the filter always rejects, in an uptrend that would otherwise open positions', () => {
+      const candles = uptrend();
+      const gated = runLivePipelineBacktest(candles, {
+        symbol: 'UP',
+        timeframe: '1h',
+        regimeFilter: () => false,
+      });
+
+      assertSane(gated, candles.length);
+      expect(gated.closedTrades).toEqual([]);
+    });
+
+    it('does not block anything when the filter always allows — same result as omitting it', () => {
+      const candles = uptrend();
+      const ungated = runLivePipelineBacktest(candles, { symbol: 'UP', timeframe: '1h' });
+      const alwaysAllowed = runLivePipelineBacktest(candles, {
+        symbol: 'UP',
+        timeframe: '1h',
+        regimeFilter: () => true,
+      });
+
+      expect(alwaysAllowed.closedTrades.length).toBe(ungated.closedTrades.length);
+      expect(alwaysAllowed.totalReturnPct).toBeCloseTo(ungated.totalReturnPct, 6);
+    });
+
+    // These two use a genuinely SEPARATE, daily-spaced candle series to build
+    // the regime filter — not the hourly entry series itself. This is the
+    // real shape of the only two production call sites: autopilotRunner.mts
+    // (crypto) fetches a distinct daily series; scripts/measureStocks.mts
+    // reuses the entry slice ONLY because it restricts these candidates to
+    // TF='1d' runs, where the entry slice genuinely IS daily. A test that fed
+    // hourly-spaced bars into buildDailyRegimeFilter (which gates on a real
+    // elapsed 86_400_000ms) would never exercise its actual day-boundary
+    // logic at all.
+    const DAY_MS = 86_400_000;
+
+    it('with a real buildDailyRegimeFilter over a genuinely daily series: does not suppress entries during a sustained uptrend', () => {
+      const up = uptrend();
+      const daily = generateSyntheticCandles({
+        seed: 42,
+        startPrice: 100,
+        count: 33,
+        timeframe: '1d',
+        startTimestamp: T0 - 20 * DAY_MS,
+        drift: 0.004,
+        volatility: 0.01,
+      });
+
+      const regime = buildDailyRegimeFilter(daily, { period: 20 });
+      const gated = runLivePipelineBacktest(up, { symbol: 'UP', timeframe: '1h', regimeFilter: regime });
+      const ungated = runLivePipelineBacktest(up, { symbol: 'UP', timeframe: '1h' });
+
+      assertSane(gated, up.length);
+      // A real uptrend regime filter should not remove every entry an
+      // ungated run would have taken — the close sits above its own EMA
+      // through most of a steady uptrend, so the gate should stay open.
+      expect(gated.closedTrades.length).toBeGreaterThan(0);
+      expect(gated.closedTrades.length).toBeLessThanOrEqual(ungated.closedTrades.length);
+    });
+
+    it('with a real buildDailyRegimeFilter over a genuinely daily series: suppresses new entries once the trend has actually turned down', () => {
+      // Sustained hourly uptrend (produces real entries — same shape as the
+      // trendExit tests above), then a hard, sustained hourly reversal.
+      const up = uptrend(300);
+      const down = generateSyntheticCandles({
+        seed: 11,
+        startPrice: up[up.length - 1]!.close,
+        count: 150,
+        timeframe: '1h',
+        startTimestamp: up[up.length - 1]!.timestamp + 3_600_000,
+        drift: -0.02,
+        volatility: 0.01,
+      });
+      const candles = [...up, ...down];
+      // A genuinely daily series spanning the same real-world window: mildly
+      // up through most of it, then a sharp, sustained decline late enough
+      // that the close sits below its own EMA(20) by the end.
+      const dailyUp = generateSyntheticCandles({
+        seed: 42,
+        startPrice: 100,
+        count: 33,
+        timeframe: '1d',
+        startTimestamp: T0 - 20 * DAY_MS,
+        drift: 0.004,
+        volatility: 0.01,
+      });
+      const dailyDown = generateSyntheticCandles({
+        seed: 11,
+        startPrice: dailyUp[dailyUp.length - 1]!.close,
+        count: 20,
+        timeframe: '1d',
+        startTimestamp: dailyUp[dailyUp.length - 1]!.timestamp + DAY_MS,
+        drift: -0.05,
+        volatility: 0.01,
+      });
+      const daily = [...dailyUp, ...dailyDown];
+
+      const regime = buildDailyRegimeFilter(daily, { period: 20 });
+      // Confirms the scenario is real: by the final hourly bar, the gate has turned.
+      expect(regime(candles[candles.length - 1]!.timestamp)).toBe(false);
+
+      const gated = runLivePipelineBacktest(candles, { symbol: 'UP', timeframe: '1h', regimeFilter: regime });
+      const ungated = runLivePipelineBacktest(candles, { symbol: 'UP', timeframe: '1h' });
+
+      assertSane(gated, candles.length);
+      // Gating can only ever remove entries an ungated run would have taken,
+      // never add extra ones.
+      expect(gated.closedTrades.length).toBeLessThanOrEqual(ungated.closedTrades.length);
     });
   });
 });

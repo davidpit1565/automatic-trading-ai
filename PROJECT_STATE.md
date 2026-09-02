@@ -20,6 +20,46 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Stocks strategy: regime-filter candidates added to measureStocks.mts (2026-09-02)
+David asked to sort out both gaps ("סדר את שניהם"); this is the stocks half
+(live exits is the entry above). The 2026-07-29 trend-exit measurement
+concluded "the entries are still the bottleneck, not the exits... the
+remaining untested lever is entry frequency/selectivity itself" — this had
+not been measured. `signal/regimeFilter.ts`'s `buildDailyRegimeFilter`
+(daily-EMA entry gate, already live for crypto) was never applied to
+stocks, and `src/core/backtest/livePipeline.ts`'s own `regimeFilter` option
+(the integration point, not just the pure filter function) had ZERO test
+coverage before this — a real gap, closed with 4 new tests in
+`tests/backtest/livePipeline.test.ts` before trusting a real measurement
+built on it.
+
+Added 3 regime-gated candidates to `scripts/measureStocks.mts`'s
+CANDIDATES: `regime EMA100`, `regime EMA200`, `regime EMA100 + trend-exit
+EMA50` (combining both untested levers). Sanity-verified the script still
+parses/imports correctly for both `1d` and `1h` invocation modes (fake
+credentials — real measurement needs the real Alpaca secrets, only present
+in `measure-stocks.yml`'s CI run).
+
+**Red-team review before committing caught two real issues, both fixed**:
+1. `buildDailyRegimeFilter` assumes genuinely ~24h-apart bars (gates on
+   elapsed 86,400,000ms) — reusing the entry-timeframe slice as its input
+   is only valid for TF='1d' runs. Fixed: `regime` candidates are now
+   filtered out of the candidate list entirely for TF='1h' runs, rather
+   than silently measuring a mislabeled 20/100/200-HOUR "regime".
+2. A fold shorter than the configured EMA period makes
+   `buildDailyRegimeFilter` fail OPEN (always allow, per its own designed
+   convention) — correct behavior, but silent, so a short fold (plausible
+   in `candidates` mode's 40 browsable symbols with as few as ~300 bars)
+   could measure identically to the unfiltered baseline with no indication
+   the gate was never actually exercised. Fixed: warns once per
+   (candidate, symbol) when this happens, rather than silently no-op'ing.
+
+**Not yet run for real** — needs the actual `measure-stocks.yml` workflow
+(has the Alpaca secrets this session doesn't hold) triggered and its
+results read before any conclusion, per "measure, don't guess."
+
+Full gate green: tsc clean, 877 vitest (873 + 4 new), vite build ok.
+
 ## STAGE 6: live position exits built (2026-09-02)
 David asked to sort out both remaining gaps ("סדר את שניהם", "מסודר"): live
 exits, and the stocks strategy. This entry covers the first.
