@@ -58,16 +58,43 @@ function sleep(ms: number): Promise<void> {
 }
 
 function buildConfirmationMessage(intent: OrderIntent): string {
-  const side = intent.side === 'buy' ? 'קנייה' : 'מכירה';
+  if (intent.side === 'sell') return buildExitConfirmationMessage(intent);
   const a = intent.assessment;
   return (
     `🔔 מחכה לאישור שלך — עסקה בכסף אמיתי\n\n` +
-    `${side} ${intent.symbol}\n` +
+    `קנייה ${intent.symbol}\n` +
     `כמות: ${intent.quantity} · מחיר: ${intent.limitPrice}\n` +
     `סטופ: ${intent.stopLoss} · יעד: ${intent.takeProfit}\n` +
     `סיכון: ${a.riskPercentage.toFixed(2)}% מהתיק (${a.riskAmount.toFixed(2)}) · ` +
     `יחס סיכוי/סיכון ${a.rewardRiskRatio.toFixed(1)}:1\n` +
     `חשיפת תיק לאחר העסקה: ${a.portfolioExposure.toFixed(1)}%\n\n` +
+    `לחץ למטה כדי לאשר או לדחות. ללא לחיצה — שום דבר לא יקרה.`
+  );
+}
+
+/**
+ * A sell intent CLOSES an existing position — `intent.assessment` here is
+ * that position's entry assessment (see `server/liveExitFlow.mts`'s
+ * `buildLiveExitIntent`), kept for traceability, not a fresh risk proposal.
+ * Showing the entry's risk%/reward-ratio numbers as if they applied to THIS
+ * decision would be actively misleading, so this renders what's actually
+ * true of an exit: which position, at what price, and the resulting
+ * profit/loss versus its entry price (`assessment.entry`).
+ *
+ * `assessment.entry` here MUST be the real fill price, not merely the
+ * originally proposed one — `recordLiveEntryFill` (`server/liveExitFlow.mts`)
+ * overrides it to the real `avgFillPrice` for exactly this reason (a filled
+ * order can slip). Do not construct a sell `OrderIntent` any other way.
+ */
+function buildExitConfirmationMessage(intent: OrderIntent): string {
+  const entryPrice = intent.assessment.entry;
+  const pnl = (intent.limitPrice - entryPrice) * intent.quantity;
+  const sign = pnl >= 0 ? '+' : '';
+  return (
+    `🔔 מחכה לאישור שלך — סגירת פוזיציה בכסף אמיתי\n\n` +
+    `מכירה ${intent.symbol}\n` +
+    `כמות: ${intent.quantity} · מחיר יציאה: ${intent.limitPrice} (נכנס ב-${entryPrice})\n` +
+    `רווח/הפסד משוער: ${sign}${pnl.toFixed(2)}\n\n` +
     `לחץ למטה כדי לאשר או לדחות. ללא לחיצה — שום דבר לא יקרה.`
   );
 }

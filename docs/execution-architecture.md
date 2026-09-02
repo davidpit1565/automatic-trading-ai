@@ -100,9 +100,9 @@ An engaged kill switch forces every in-flight intent to `cancelled`.
       `runLiveOrderFlow` chains kill-switch check → mandatory symbol
       verification → `ConfirmationGate` → `BrokerAdapter.submit`, as tested,
       reusable machinery. `buildLiveOrderIntent` maps an already
-      risk-approved `TradeRiskAssessment` (buy/entry side only — deciding
-      when to exit a real, filled position is a materially different
-      problem, intentionally not built here) to a live `OrderIntent`.
+      risk-approved `TradeRiskAssessment` (buy/entry side only) to a live
+      `OrderIntent`. The exit side (below) reuses this exact same function —
+      `runLiveOrderFlow` is side-agnostic, buy or sell.
       **Every refusal path is audited**, not just the eventual
       approve/reject/submit, and the symbol check is MANDATORY whenever
       `brokerAdapter.mode === 'live'` — `runLiveOrderFlow` refuses outright
@@ -131,6 +131,39 @@ session doesn't hold. This is exactly what `listTradablePairs()` checks for
 real at runtime — a live order for an asset Revolut X doesn't quote in EUR
 will correctly refuse as `'unknown-symbol'` rather than guessing a
 different currency, which is safe, not broken.
+
+- [x] **Live position exits** (`server/liveExitFlow.mts`,
+      `src/core/autopilot/exitDecision.ts`, 2026-09-02) — the entry-side
+      wiring above only opens positions; nothing tracked when to CLOSE one
+      until now.
+  - `exitDecision.ts`: extracted `decideExit` — the exact stop-loss /
+    trailing-stop / trend-exit / take-profit logic `paperAutoPilot.ts` used
+    inline, now shared pure code. Paper trading was refactored to call it
+    (behavior-preserving — its own 45 tests still pass unchanged); live
+    exits (`decideLiveExit`) call the SAME function. This is what "paper
+    and live are the same pipeline" (property 3, above) actually requires:
+    shared decision logic, not two implementations that could drift.
+  - `liveExitFlow.mts`: `recordLiveEntryFill` persists a filled BUY's real
+    stop/target/fill-price the moment it fills — the broker's own
+    `fetchPositions()` has no idea what WE consider this position's stop or
+    target, only local state does (mirrors what paper trading gets for
+    free from its local `PortfolioEngine`). `buildLiveExitIntent` then
+    builds a SELL `OrderIntent` that goes through the EXACT SAME
+    `runLiveOrderFlow` safety chain as any entry — kill-switch, mandatory
+    symbol check, human confirmation, only then `submit`. Nothing
+    special-cases exits past the confirmation gate.
+  - `telegramConfirmationGate.mts`'s confirmation message now branches on
+    `intent.side`: a sell renders which position, at what price, and the
+    real P&L — showing the entry's risk%/reward-ratio numbers (as if they
+    applied to an exit decision) would be actively misleading.
+  - **Red-team review before committing caught a real bug**: the exit P&L
+    was computed against the originally PROPOSED entry price, not the real
+    fill price — wrong whenever an entry fills with any slippage. Fixed:
+    `recordLiveEntryFill` overrides the tracked position's
+    `entryAssessment.entry` to the real `avgFillPrice`, so the exit's math
+    is honest about what was actually paid.
+  - **Still NOT wired into any workflow**, same posture as the entry side —
+    tested, reusable machinery, not a running feature.
 
 Until something explicitly decides to generate real signals and feed them
 through this machinery: the platform reads market data, analyses, and

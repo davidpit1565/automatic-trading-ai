@@ -20,13 +20,13 @@
 import type { MarketDataSource } from '../data/revolutClient';
 import type { KeyValueStore } from '../data/storage';
 import type { ExecutionMode } from '../execution/types';
-import { ema } from '../indicators/ema';
+import { decideExit } from './exitDecision';
 import { MONITOR_INTERVALS, type MonitorInterval, type Scheduler } from '../monitor/scheduler';
 import type { PortfolioEngine } from '../position/portfolioEngine';
 import type { PositionEngine } from '../position/positionEngine';
 import type { ExitReason } from '../position/tradeJournal';
 import { assessTrade, confidenceScaledRiskPct, DEFAULT_RISK_LIMITS, type RiskLimits } from '../risk/riskEngine';
-import { trailingStopPrice, type TrailingConfig } from '../risk/trailingStop';
+import type { TrailingConfig } from '../risk/trailingStop';
 import { scanCandles, scanMarket, type ScanResult } from '../scan/marketScanner';
 import { applyHigherTimeframeGate } from '../signal/multiTimeframe';
 import { DEFAULT_SIGNAL_CRITERIA, evaluateScan, MAX_CONFIDENCE, type SignalDecision } from '../signal/signalEngine';
@@ -440,32 +440,20 @@ export class PaperAutoPilot {
       marketPrices[position.symbol] = price;
       this.options.positions.updateMarketPrice(position.symbol, price, timestamp);
 
-      // Trailing stop: ratchet the stop up as the trade runs in profit. Uses
-      // the best price seen so the stop only rises. position.stopLoss stays the
-      // ORIGINAL stop (never mutated), so this is a pure, stateless derivation.
-      const stopLoss = this.options.trailing
-        ? trailingStopPrice({
-            entryPrice: position.entryPrice,
-            initialStop: position.stopLoss,
-            highestPrice: Math.max(position.highestPrice, price),
-            config: this.options.trailing,
-          })
-        : position.stopLoss;
-
-      let reason: ExitReason | null = null;
-      if (price <= stopLoss) {
-        reason = 'stop-loss';
-      } else if (this.options.trendExit) {
-        // Same rule as livePipeline.ts's trendExit: close below a trailing
-        // EMA computed over this position's own recently-fetched candles —
-        // replaces the fixed take-profit entirely while configured. Logged
-        // as 'signal-exit' (not a new ExitReason value): the closest existing
-        // bucket for "a price-action rule, not a fixed level, closed this".
-        const level = ema(candles.value.map((c) => c.close), this.options.trendExit.emaPeriod).at(-1) ?? null;
-        if (level !== null && price < level) reason = 'signal-exit';
-      } else if (price >= position.takeProfit) {
-        reason = 'take-profit';
-      }
+      // Exit decision is shared with the live path (decideExit,
+      // exitDecision.ts) — same call given the same inputs, per this
+      // project's "paper and live are the same pipeline" rule.
+      const reason: ExitReason | null = decideExit(
+        {
+          entryPrice: position.entryPrice,
+          stopLoss: position.stopLoss,
+          takeProfit: position.takeProfit,
+          highestPrice: position.highestPrice,
+        },
+        price,
+        candles.value.map((c) => c.close),
+        { trailing: this.options.trailing, trendExit: this.options.trendExit },
+      );
       if (reason === null) continue;
 
       const exitFee = position.quantity * price * costRate;

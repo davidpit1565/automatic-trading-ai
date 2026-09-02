@@ -20,6 +20,48 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## STAGE 6: live position exits built (2026-09-02)
+David asked to sort out both remaining gaps ("סדר את שניהם", "מסודר"): live
+exits, and the stocks strategy. This entry covers the first.
+
+`src/core/autopilot/exitDecision.ts` extracts `decideExit` — the exact
+stop-loss/trailing-stop/trend-exit/take-profit logic `paperAutoPilot.ts` had
+inline — into shared, pure code. `paperAutoPilot.ts` now calls it instead of
+duplicating the logic (its own 45 tests still pass unchanged — confirmed
+behavior-preserving before touching anything downstream). This is what
+"paper and live are the same pipeline" actually requires: one decision
+function, not two that could quietly drift apart.
+
+`server/liveExitFlow.mts`: `recordLiveEntryFill` persists a filled BUY's
+real stop/target/fill-price — the broker's `fetchPositions()` has no idea
+what WE consider a position's stop or target, only local state does (paper
+trading gets this for free from its local `PortfolioEngine`).
+`decideLiveExit` is a thin pass-through to the shared `decideExit`.
+`buildLiveExitIntent` builds a SELL `OrderIntent` that goes through the
+EXACT SAME `runLiveOrderFlow` safety chain as any entry (`liveOrchestrator.
+mts` is fully side-agnostic — no changes needed there at all) — kill-switch,
+mandatory symbol check, human confirmation, only then submit.
+
+`server/telegramConfirmationGate.mts`'s confirmation message now branches
+on `intent.side`: a sell shows which position, at what price, and the real
+P&L, instead of the entry's risk%/reward-ratio numbers (which would be
+actively misleading for a decision to close, not open, a position).
+
+**Red-team review before committing caught two real issues, both fixed**:
+1. The exit P&L was computed against the originally PROPOSED entry price
+   (`assessment.entry`), not the real fill price — wrong whenever an entry
+   fills with slippage. Fixed: `recordLiveEntryFill` overrides the tracked
+   position's `entryAssessment.entry` to the real `avgFillPrice`.
+2. `recordLiveEntryFill` never checked that the `OrderStatusReport` it was
+   given actually belonged to the `OrderIntent` passed alongside it — a
+   mismatched report would silently corrupt a position's tracked
+   price/quantity. Fixed: refuses (returns `false`) on an intentId mismatch.
+
+**Still NOT wired into any workflow** — same posture as the entry side from
+earlier tonight: tested, reusable machinery, not a running feature.
+
+Full gate green: tsc clean, 873 vitest (853 + 20 new), vite build ok.
+
 ## STAGE 6: ConfirmationGate → BrokerAdapter wiring built (2026-09-02)
 David approved continuing Stage 6 overnight ("אני מאשר. תמשיך") after being
 told the adapter existed but nothing wired it up. `server/liveOrchestrator.mts`
