@@ -20,6 +20,65 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Crypto: 2 real years of Kraken daily data unlocked, but doesn't resolve the BTC gap yet (2026-09-02)
+David asked to look for the best way to close the crypto BTC-buy-and-hold
+gap. Found (and verified directly against the live API) that Kraken's
+public OHLC endpoint caps at ~720 bars PER CALL regardless of interval —
+nothing about that cap is specific to the 1h/4h timeframes every crypto
+measurement has used so far. Requesting `interval=1440` (daily) instead
+returns **721 real daily bars — ~2 years of genuine BTC history**, for
+free, no auth, right now. This is exactly the kind of long-horizon sample
+Alpaca gives stocks; crypto measurement never had it because nobody had
+requested that interval as an ENTRY timeframe before (`loadDaily()` in
+`sweepAutopilot.mts` already used daily bars, but only for the regime
+filter, at a 400-bar limit, never as the entries themselves).
+
+Added a third entry-timeframe permutation to `scripts/sweepAutopilot.mts`
+(`['1d', '1w', ...]`, alongside the existing 1h/4h pair) — reused the
+entire existing sweep harness unchanged (it already generalizes over any
+entry/confirm timeframe pair). Ran it for real against live Kraken data.
+
+**Real result: inconclusive again, for a NEW reason.** Over 570 usable
+daily bars (~1.9 years), almost every one of the 30 configs — including
+every trend-exit variant — took only **1-2 trades total**. The existing
+signal engine's entry criteria (RSI period, momentum thresholds, EMA
+periods) are implicitly tuned for HOURLY noise; on smoothed daily bars the
+same thresholds essentially never fire. This is the same "sample too thin
+to trust" problem as the original 30-day measurement, but caused by
+signal/timeframe mismatch rather than by data scarcity — the daily data
+itself is real and plentiful now, but naively replaying the hourly-tuned
+signal on it doesn't produce a usable trade count.
+
+**Also surfaced, independent of the above**: over this real ~2-year window,
+**BTC buy-and-hold itself returned -29.34%** — a real decline, not the
+"strong bull run" framing the shorter recent window (used for the ~20%-gap
+finding) suggested. The 2-year picture and the 30-day picture disagree on
+what regime BTC has even been in. This matters for how the "beat BTC"
+readiness criterion should be interpreted, but can't be acted on without a
+signal that actually trades enough on this timeframe to measure honestly.
+
+**Conclusion: the BTC gap is not closed tonight.** What IS real and
+reusable: free access to ~2 years of genuine Kraken daily history for any
+future crypto research, and a working sweep harness permutation to use it.
+What's still needed before that data can answer anything about trend-exit
+or the BTC-gap specifically: a signal properly recalibrated for daily-bar
+behavior (different indicator periods, not the same hourly-tuned ones) —
+a real research task, not something to guess at tonight. Nothing changed
+in production; nothing promoted.
+
+## Stocks: fixed a stale "LIVE defaults" label in measureStocks.mts (2026-09-02)
+Found while investigating the crypto trend-exit precedent: `stocksRunner.
+mts` has run `INTERIM_MIN_CONFIDENCE=40` AND `trendExit: {emaPeriod: 50}`
+since 2026-08-31, but `measureStocks.mts`'s `'LIVE stocks (defaults)'`
+candidate still used `minConfidence: 20` with no `trendExit` — stale since
+that date. Every conclusion actually drawn (tonight's regime-filter
+measurement, 2026-07-29's trend-exit result) already compared correctly
+against a real `trend-exit EMA50` row, so nothing already reported was
+wrong — but the labeled "LIVE" baseline itself was stale and would have
+misled a future comparison. Renamed/fixed: `'LIVE stocks (current prod)'`
+now carries both real settings; the old row kept as `'conf 20 (old
+default, no trendExit)'` for historical continuity rather than deleted.
+
 ## Regime filter measured on real Alpaca data: does not help, not adopted (2026-09-02)
 Ran the 3 new regime candidates (below) for real via `measure-stocks.yml` on
 branch `claude/market-scan-integration-r9lck1` — 10 traded majors, 1251 1d

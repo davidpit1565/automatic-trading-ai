@@ -264,7 +264,17 @@ async function replay(
 const daily = await loadDaily();
 const topTraderRatios = await loadTopTraderRatios();
 
-for (const [entryTf, confirmTf, label] of [['1h', '4h', '1h entry / 30 days'], ['4h', '1d', '4h entry / 120 days']] as const) {
+for (const [entryTf, confirmTf, label] of [
+  ['1h', '4h', '1h entry / 30 days'],
+  ['4h', '1d', '4h entry / 120 days'],
+  // Kraken's public OHLC endpoint caps at ~720 bars PER CALL regardless of
+  // interval (confirmed empirically) — nothing about that cap is specific to
+  // 1h/4h. Requesting interval=1d instead gives ~720 REAL daily bars (~2
+  // years), the same trick Alpaca's daily bars give stocks for free. This is
+  // the missing long-horizon sample that made the 2026-08-31 crypto
+  // trend-exit measurement "inconclusive" (5-6 trades on a 30-day window).
+  ['1d', '1w', '2-year daily entries (real Kraken history)'],
+] as const) {
   const { e, c } = await load(entryTf, confirmTf);
   // Any symbol can fail to fetch transiently, so anchor the timeline on the
   // longest series we actually got rather than assuming the first one loaded.

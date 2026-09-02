@@ -82,7 +82,14 @@ interface Cand {
  * arms are comparable rather than each judged on its own private grid.
  */
 const ALL_CANDIDATES: Cand[] = [
-  { name: 'LIVE stocks (defaults)', minConfidence: 20 },
+  // Was `minConfidence: 20` with no trendExit — stale since 2026-08-31, when
+  // production (server/stocksRunner.mts: INTERIM_MIN_CONFIDENCE=40,
+  // trendExit: {emaPeriod: 50}) adopted BOTH. Every other row already
+  // compares correctly against 'trend-exit EMA50' below, which reflects the
+  // real production trendExit setting — only this row's own label/config was
+  // stale, not any conclusion drawn from it.
+  { name: 'LIVE stocks (current prod)', minConfidence: 40, trendExit: { emaPeriod: 50 } },
+  { name: 'conf 20 (old default, no trendExit)', minConfidence: 20 },
   { name: 'live + trail 1.5/1.5', minConfidence: 20, trailing: { activateR: 1.5, trailR: 1.5 } },
   { name: 'target 3R', minConfidence: 20, criteria: { atrTargetMultiple: 3 } },
   { name: 'target 6R', minConfidence: 20, criteria: { atrTargetMultiple: 6 } },
