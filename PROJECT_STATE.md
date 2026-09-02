@@ -20,6 +20,24 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Real-money readiness: the "beat benchmark" bar no longer gates crypto (2026-09-02)
+Follow-up to the structural BTC-gap finding below: `assessRealMoneyReadiness`
+required `vsBenchmarkPct >= 0` to reach READY, with no way to distinguish
+"not measured yet" from "structurally can't happen." For a strategy that
+carries a stop-loss (crypto), that criterion was permanently unpassable
+regardless of trading quality — likely the actual reason readiness has
+stayed NOT READY for months even as other criteria improved.
+
+Added `gateOnBenchmark?: boolean` (default `true`, so existing behavior is
+unchanged unless a caller opts out) to `RealMoneyReadinessInput`. When
+`false`, the benchmark comparison is still computed and shown (with an
+"informational" note) but can no longer block `ready`/appear in `unmet`.
+`server/autopilotRunner.mts` (crypto) now passes `gateOnBenchmark: false`,
+citing the structural proof below. `server/stocksRunner.mts` keeps the
+default (`true`): now that the real stocks account is passive buy-and-hold
+(no stop-loss), its basket-vs-SPY comparison is a fair, achievable one, not
+a structurally-blocked one — so it should keep gating there.
+
 ## Stocks: real account pivoted to passive buy-and-hold (2026-09-02)
 Following the crypto structural argument below, David asked to fix the same
 underlying problem for stocks: `sweepAutopilot.mts`/`measureStocks.mts` have

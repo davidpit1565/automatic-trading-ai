@@ -818,6 +818,11 @@ async function recordEquity(
     maxDrawdownPct: Math.max(analytics.maxDrawdownPct, liveDrawdownPct),
     vsBenchmarkPct: benchmark ? benchmark.portfolioPct - benchmark.assetPct : null,
     daysRunning: (now - firstAt) / DAY_MS,
+    // This arm keeps a stop-loss (unlike the stocks arm's passive pivot), so
+    // beating 100% buy-and-hold BTC in an uptrend is structurally impossible
+    // by construction (see PROJECT_STATE.md, 2026-09-02) — accepted as a
+    // conscious trade-off of capital protection, not a blocking bar.
+    gateOnBenchmark: false,
   });
   store.set(READINESS_KEY, readiness);
 }
