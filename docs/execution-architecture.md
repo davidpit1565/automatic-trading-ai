@@ -95,9 +95,35 @@ An engaged kill switch forces every in-flight intent to `cancelled`.
       translation to Revolut X's actual quoted pairs is wiring-layer work,
       not yet done — do not wire this adapter to a live orchestrator without
       resolving it first.
-- [ ] **Wiring**: nothing yet calls `TelegramConfirmationGate` →
-      `RevolutXBrokerAdapter` (or the paper one) as a live orchestrator loop —
-      today they are tested, working machinery, not a running feature.
+- [x] **Wiring** (`server/liveOrchestrator.mts`, 2026-09-02) —
+      `runLiveOrderFlow` chains kill-switch check → mandatory symbol
+      verification → `ConfirmationGate` → `BrokerAdapter.submit`, as tested,
+      reusable machinery. `buildLiveOrderIntent` maps an already
+      risk-approved `TradeRiskAssessment` (buy/entry side only — deciding
+      when to exit a real, filled position is a materially different
+      problem, intentionally not built here) to a live `OrderIntent`.
+      **Every refusal path is audited**, not just the eventual
+      approve/reject/submit, and the symbol check is MANDATORY whenever
+      `brokerAdapter.mode === 'live'` — `runLiveOrderFlow` refuses outright
+      (`'missing-symbol-check'`) rather than silently placing an order with
+      no real-instrument verification if the check is missing.
+      **This closes the checklist item as tested code — it is NOT invoked
+      by any scheduled workflow.** Nothing in `.github/workflows/*.yml`
+      calls this file; no cron job generates live signals or feeds them
+      through it. Turning continuous live trading on — which live signal
+      source feeds this, which asset universe, on what schedule — is a
+      separate, larger decision not made here.
+      **The known open question from the Revolut X adapter is still not
+      resolved and now has a name**: `verifySymbolExists` cannot simply be
+      `RevolutXBrokerAdapter.listTradablePairs()` — that returns Revolut
+      X's own pair symbols (`'BTC-USD'`) while `intent.symbol` today is this
+      project's internal asset code (`'BTCEUR'`, from
+      `TradeRiskAssessment.asset`). Wiring it directly, without a
+      translation layer, would refuse every real order forever as
+      `'unknown-symbol'` — safe (never a wrong-symbol trade) but silently
+      non-functional. Resolving the translation is the actual remaining
+      blocker before this machinery could ever place a real order.
 
-Until the last two items: the platform reads market data, analyses, and
+Until the last item is resolved and something explicitly decides to
+generate real signals: the platform reads market data, analyses, and
 simulates — nothing it does can reach a real account.

@@ -20,6 +20,43 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## STAGE 6: ConfirmationGate → BrokerAdapter wiring built (2026-09-02)
+David approved continuing Stage 6 overnight ("אני מאשר. תמשיך") after being
+told the adapter existed but nothing wired it up. `server/liveOrchestrator.mts`
+closes the last unchecked checklist item: `runLiveOrderFlow` chains
+kill-switch check → mandatory symbol verification → `ConfirmationGate` →
+`BrokerAdapter.submit`; `buildLiveOrderIntent` maps a risk-approved
+`TradeRiskAssessment` to a live buy `OrderIntent`. Deliberately buy/entry
+side only — live exits are a different, harder problem, not built.
+
+**Red-team review before committing caught three real issues, all fixed**:
+1. The symbol-verification check was optional and not tied to
+   `brokerAdapter.mode`, so a live broker could silently skip it if a caller
+   forgot to pass `verifySymbolExists`. Fixed: mandatory whenever
+   `mode === 'live'`, refuses outright (`'missing-symbol-check'`) otherwise.
+2. Two refusal paths (kill-switch-blocked, unknown-symbol) left no audit
+   trail at all, unlike every other terminal state. Fixed: both are now
+   audited.
+3. `RevolutXBrokerAdapter.listTradablePairs()`'s pair-parsing accepted
+   array-shaped/malformed responses as if they were real symbols, and threw
+   uncaught on a network failure instead of returning `[]` like its sibling
+   methods. Both fixed, with new tests (malformed response, thrown fetch).
+
+**Explicitly NOT done, on purpose**: this is not wired into any GitHub
+Actions workflow — no cron job feeds it real signals. Also surfaced by
+review: `verifySymbolExists` cannot simply be `listTradablePairs()` as
+originally documented — Revolut X's own pair symbols (`'BTC-USD'`) don't
+match this project's internal asset codes (`'BTCEUR'`) without a
+translation layer that doesn't exist yet. Wiring it directly would refuse
+every real order forever (safe, but non-functional) — resolving that
+translation is the actual remaining blocker before any real order could
+ever be placed, not a symbol-existence question research could answer
+(confirmed: public Revolut X docs are inconsistent/contradictory on which
+EUR pairs exist, and the authoritative check needs the authenticated
+`/configuration/pairs` call this session has no credentials to make).
+
+Full gate green: tsc clean, 850 vitest (836 + 14 new), vite build ok.
+
 ## STAGE 6: real Revolut X broker adapter built (2026-09-02), still not wired
 David created a Spot-trade-only Revolut X API key (Ed25519, withdraw
 disabled) via the Revolut X web app (not available in the mobile app),

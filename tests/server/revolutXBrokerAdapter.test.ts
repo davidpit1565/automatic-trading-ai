@@ -246,4 +246,40 @@ describe('RevolutXBrokerAdapter', () => {
 
     expect(await adapter.fetchPositions()).toEqual([]);
   });
+
+  it('lists the real tradable pair symbols, for verifying a symbol before ever proposing it', async () => {
+    const { fetchFn, calls } = fakeFetch([
+      { status: 200, body: { data: { 'BTC-USD': { active: true }, 'ETH-USD': { active: true } } } },
+    ]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    const pairs = await adapter.listTradablePairs();
+
+    expect(pairs).toEqual(['BTC-USD', 'ETH-USD']);
+    expect(calls[0]).toMatchObject({ method: 'GET', url: 'https://revx.revolut.com/api/1.0/configuration/pairs' });
+    expect(verifiesAgainstRealRequest(calls[0]!)).toBe(true);
+  });
+
+  it('returns no pairs when the configuration request fails, rather than reporting a stale/wrong list', async () => {
+    const { fetchFn } = fakeFetch([{ status: 500, body: { error: 'down' } }]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    expect(await adapter.listTradablePairs()).toEqual([]);
+  });
+
+  it('returns no pairs (never throws) when the request itself throws, e.g. a timeout', async () => {
+    const throwingFetch = (async () => {
+      throw new Error('network timeout');
+    }) as typeof fetch;
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), throwingFetch);
+
+    await expect(adapter.listTradablePairs()).resolves.toEqual([]);
+  });
+
+  it('ignores a malformed pairs response (e.g. an array) rather than reporting bogus symbols', async () => {
+    const { fetchFn } = fakeFetch([{ status: 200, body: { data: ['BTC-USD', 'ETH-USD'] } }]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    expect(await adapter.listTradablePairs()).toEqual([]);
+  });
 });

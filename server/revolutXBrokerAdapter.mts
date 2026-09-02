@@ -76,6 +76,22 @@ function readVenueOrderId(json: unknown): string | null {
   return first.venue_order_id;
 }
 
+/** Mirrors RevolutXClient.getInstruments()'s own parsing of the same
+ * endpoint (src/core/data/revolutClient.ts) — response maps symbols to pair
+ * configuration, e.g. { "BTC-USD": { ... } }, optionally wrapped in { data }.
+ * Only keys that actually split into a base and quote asset (e.g.
+ * 'BTC-USD') are reported; a malformed or unexpectedly-shaped response
+ * (e.g. an array) yields no symbols rather than bogus ones. */
+function readPairSymbols(json: unknown): string[] {
+  if (!isRecord(json)) return [];
+  const body = isRecord(json.data) && !Array.isArray(json.data) ? json.data : json;
+  if (Array.isArray(body)) return [];
+  return Object.keys(body).filter((symbol) => {
+    const [base, quote] = symbol.split('-');
+    return Boolean(base && quote);
+  });
+}
+
 function readBalances(json: unknown): { currency: string; total: number }[] {
   if (!Array.isArray(json)) return [];
   const balances: { currency: string; total: number }[] = [];
@@ -257,6 +273,24 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
         // state knows entry price. Reconciliation compares quantity only.
         avgCost: 0,
       }));
+  }
+
+  /**
+   * Real, current pair symbols Revolut X trades (e.g. 'BTC-USD') — the
+   * authoritative source for whether a symbol this project wants to trade
+   * actually exists here, and in what form. Callers building a live
+   * `OrderIntent` should verify against this before ever submitting one,
+   * and refuse rather than guess when a symbol isn't found — see
+   * `server/liveOrchestrator.mts`.
+   */
+  async listTradablePairs(): Promise<string[]> {
+    try {
+      const result = await this.request('GET', '/configuration/pairs');
+      if (!result.ok) return [];
+      return readPairSymbols(result.json);
+    } catch {
+      return [];
+    }
   }
 
   private reportAndAudit(
