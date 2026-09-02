@@ -33,6 +33,7 @@ import {
 } from '../src/core/data/alpacaStocks';
 import { runLivePipelineBacktest, type LivePipelineTrade } from '../src/core/backtest/livePipeline';
 import { meanReversionSignal, breakoutSignal } from '../src/core/signal/alternativeSignals';
+import { buildDailyRegimeFilter } from '../src/core/signal/regimeFilter';
 import type { ScanResult } from '../src/core/scan/marketScanner';
 import type { SignalDecision } from '../src/core/signal/signalEngine';
 import type { Candle, Timeframe } from '../src/core/types';
@@ -69,6 +70,10 @@ interface Cand {
   readonly evaluate?: (scan: ScanResult, floor: number) => SignalDecision;
   readonly trailing?: { activateR: number; trailR: number };
   readonly trendExit?: { emaPeriod: number };
+  /** Daily-EMA regime gate (src/core/signal/regimeFilter.ts) — only allow new
+   * entries when the daily close sits above this period's EMA. Only makes
+   * sense for TF='1d' runs, which is the default this script measures. */
+  readonly regime?: { period: number };
 }
 
 /**
@@ -76,7 +81,7 @@ interface Cand {
  * the same families and geometries the crypto arm was measured on, so the two
  * arms are comparable rather than each judged on its own private grid.
  */
-const CANDIDATES: Cand[] = [
+const ALL_CANDIDATES: Cand[] = [
   { name: 'LIVE stocks (defaults)', minConfidence: 20 },
   { name: 'live + trail 1.5/1.5', minConfidence: 20, trailing: { activateR: 1.5, trailR: 1.5 } },
   { name: 'target 3R', minConfidence: 20, criteria: { atrTargetMultiple: 3 } },
@@ -95,7 +100,25 @@ const CANDIDATES: Cand[] = [
   { name: 'trend-exit EMA50', minConfidence: 20, trendExit: { emaPeriod: 50 } },
   { name: 'trend-exit EMA20 rsi65', minConfidence: 20, criteria: { maxRsiForLong: 65 }, trendExit: { emaPeriod: 20 } },
   { name: 'trend-exit EMA20 conf40', minConfidence: 40, trendExit: { emaPeriod: 20 } },
+  // Entry-side regime gate (2026-07-29's stated untested lever: "the entries
+  // are still the bottleneck, not the exits" -- trend-exit only touched WHEN
+  // to take profit, never WHETHER to enter). Same entries/exits as LIVE,
+  // additionally blocked while the daily close sits below a long-period EMA
+  // -- reuses signal/regimeFilter.ts, already live for crypto, never applied
+  // to stocks. Only meaningful for TF='1d' runs (this script's default).
+  { name: 'regime EMA100', minConfidence: 20, regime: { period: 100 } },
+  { name: 'regime EMA200', minConfidence: 20, regime: { period: 200 } },
+  { name: 'regime EMA100 + trend-exit EMA50', minConfidence: 20, regime: { period: 100 }, trendExit: { emaPeriod: 50 } },
 ];
+
+/**
+ * `regime` candidates reuse the entry-timeframe slice AS the daily-candle
+ * source for `buildDailyRegimeFilter` (below) — only valid when that slice
+ * genuinely IS daily-spaced, i.e. TF === '1d'. Rather than silently measure
+ * a mislabeled 20/100/200-HOUR "regime" for a TF='1h' run, those candidates
+ * are excluded entirely when TF isn't '1d'.
+ */
+const CANDIDATES: Cand[] = TF === '1d' ? ALL_CANDIDATES : ALL_CANDIDATES.filter((c) => !c.regime);
 
 const data: { symbol: string; bars: Candle[] }[] = [];
 for (const inst of INSTRUMENTS) {
@@ -136,6 +159,36 @@ function basket(from: number, to: number): number {
  * gets its own WARMUP prefix so the scanner is warm inside the fold rather than
  * borrowing bars the fold is meant to exclude.
  */
+/**
+ * `buildDailyRegimeFilter`'s EMA(period) is `null` (fail-open — always
+ * allow) until the series has at least `period` bars (src/core/indicators/
+ * ema.ts). A fold shorter than the configured period would then measure
+ * identically to the unfiltered baseline with no error — exactly the
+ * "looks measured but wasn't actually exercised" trap this project's rules
+ * exist to prevent. Warns once per (candidate, symbol) rather than
+ * silently no-op'ing, so a suspicious result is at least flagged in the log.
+ */
+const warnedRegimeTooShort = new Set<string>();
+function regimeFilterOrWarn(
+  c: Cand,
+  slice: readonly Candle[],
+  symbol: string,
+): ((atTimestamp: number) => boolean) | undefined {
+  if (!c.regime) return undefined;
+  if (slice.length < c.regime.period) {
+    const key = `${c.name}:${symbol}`;
+    if (!warnedRegimeTooShort.has(key)) {
+      warnedRegimeTooShort.add(key);
+      console.error(
+        `WARNING: ${c.name}/${symbol}: fold has only ${slice.length} bars, ` +
+          `less than the configured EMA(${c.regime.period}) — this fold's regime ` +
+          `gate fails OPEN (never rejects) and is NOT actually being tested.`,
+      );
+    }
+  }
+  return buildDailyRegimeFilter(slice, { period: c.regime.period });
+}
+
 function measure(c: Cand, from: number, to: number, cost: number): { pf: number; ret: number; trades: number; winPct: number; dd: number } {
   let gp = 0;
   let gl = 0;
@@ -156,6 +209,13 @@ function measure(c: Cand, from: number, to: number, cost: number): { pf: number;
       ...(c.trailing ? { trailing: c.trailing } : {}),
       ...(c.evaluate ? { evaluate: c.evaluate } : {}),
       ...(c.trendExit ? { trendExit: c.trendExit } : {}),
+      // The slice itself IS the daily-candle series here — only valid
+      // because CANDIDATES filters `regime` candidates out entirely unless
+      // TF === '1d' (see below): buildDailyRegimeFilter assumes genuinely
+      // ~24h-apart bars (it gates on elapsed 86_400_000ms), so reusing an
+      // hourly slice would silently treat a 20/100/200-HOUR EMA as if it
+      // were a 20/100/200-TRADING-DAY one.
+      ...(c.regime ? { regimeFilter: regimeFilterOrWarn(c, slice, d.symbol) } : {}),
     });
     retSum += res.totalReturnPct;
     ddSum += res.maxDrawdownPct;

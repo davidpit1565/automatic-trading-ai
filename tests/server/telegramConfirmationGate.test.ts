@@ -38,6 +38,23 @@ function intent(id = 'BTCEUR:1:0'): OrderIntent {
   };
 }
 
+/** A sell/exit intent closing a position — assessment is the position's
+ * ORIGINAL entry assessment (entry: 100), not a fresh proposal. */
+function sellIntent(id = 'BTCEUR:1:0:exit', exitPrice = 110): OrderIntent {
+  return {
+    id,
+    createdAt: 2_000,
+    mode: 'live',
+    symbol: 'BTCEUR',
+    side: 'sell',
+    quantity: 2,
+    limitPrice: exitPrice,
+    stopLoss: 95,
+    takeProfit: 115,
+    assessment: approvedAssessment(),
+  };
+}
+
 /** Routes the one fetchFn Telegram's client uses across sendMessage /
  * getUpdates / answerCallbackQuery, based on the endpoint in the URL —
  * mirrors how one real bot token talks to all three. */
@@ -94,6 +111,25 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     expect(sent).toHaveLength(1);
     expect(sent[0]).toContain('BTCEUR');
     expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation', 'confirmed']);
+  });
+
+  it('renders a sell/exit confirmation with the real P&L against the entry price, not the entry-side risk numbers', async () => {
+    const { fetchFn, sent } = fakeTelegram([
+      [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:approve:BTCEUR:1:0:exit' } }],
+    ]);
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+
+    await gate.requestConfirmation(sellIntent('BTCEUR:1:0:exit', 110));
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toContain('מכירה');
+    expect(sent[0]).toContain('סגירת פוזיציה');
+    // entry 100, exit 110, qty 2 -> +20.00 P&L.
+    expect(sent[0]).toContain('+20.00');
+    expect(sent[0]).not.toContain('סיכון');
+    expect(sent[0]).not.toContain('חשיפת תיק');
   });
 
   it('resolves approved: false on a reject tap', async () => {

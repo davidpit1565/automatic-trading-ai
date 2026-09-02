@@ -20,6 +20,134 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Regime filter measured on real Alpaca data: does not help, not adopted (2026-09-02)
+Ran the 3 new regime candidates (below) for real via `measure-stocks.yml` on
+branch `claude/market-scan-integration-r9lck1` — 10 traded majors, 1251 1d
+bars, 3 folds, live cost (0.10%/side):
+
+| Candidate | f1 PF | f2 PF | f3 PF | folds | all PF | ret% | basket | trades |
+|---|---|---|---|---|---|---|---|---|
+| LIVE stocks (defaults) | 1.22 | 1.98 | 1.43 | 3/3 | 1.77 | 7.36 | 170.38 | 203 |
+| regime EMA100 | 1.22 | 1.99 | 1.42 | 3/3 | 1.77 | 7.36 | 170.38 | 203 |
+| regime EMA200 | 1.09 | 1.98 | 1.42 | **2/3** | 1.73 | 6.92 | 170.38 | 201 |
+| regime EMA100 + trend-exit EMA50 | 1.89 | 3.42 | 1.91 | 3/3 | 2.68 | 8.49 | 170.38 | 110 |
+
+**regime EMA100 is statistically identical to LIVE defaults** (same trade
+count, same return to 2 decimals) — the daily-EMA(100) gate essentially
+never engages for these 10 mega-caps over this window, because the basket
+itself returned +170% (a dominant, sustained bull run): they are almost
+always above their own 100-day EMA anyway. **regime EMA200 is slightly
+worse** and drops a fold below the PF>1.2 bar (2/3, was 3/3). **Combined
+with trend-exit EMA50, the regime gate makes that candidate marginally
+WORSE** than trend-exit EMA50 alone (8.49% vs the already-measured 8.81%
+from 2026-07-29), not better.
+
+**Conclusion: entry-frequency/selectivity via a simple long-EMA regime gate
+is not the missing lever either, and is not adopted.** This was the one
+remaining untested idea named on 2026-07-29 ("the entries are still the
+bottleneck... entry frequency/selectivity itself... has not been
+measured") — now it has been, and it doesn't move the needle, for a
+structural reason: a regime filter built to sit out downtrends can't help
+when the underlying assets barely have one to sit out during the measured
+window. The best performer across every stocks measurement this project
+has run remains **trend-exit EMA50** (2026-07-29): PF 2.75, +8.81%, 3/3
+folds — still only ~5% of the +170-174% basket, still failing "beats
+buy-and-hold." Nothing is promoted; `CURATED_STOCK_INSTRUMENTS`'s live
+config is unchanged.
+
+**Where this leaves the stocks arm**: every lever this project has
+measured — target width, RSI ceiling, confidence floor, trailing stop,
+alternative signal families (mean-reversion, breakout), trend-following
+exits, and now entry-side regime gating — has been tried on real Alpaca
+history and none clears the bar. The honest read is that beating a
+buy-and-hold basket of ten hyper-growth mega-caps during a historic bull
+run with an active, risk-limited, long-only strategy may not be achievable
+without either a fundamentally different edge (not yet identified) or
+accepting materially more drawdown/volatility than this project's capital-
+protection rules allow. Further tuning within the current strategy family
+is very unlikely to close an ~8x gap.
+
+## Stocks strategy: regime-filter candidates added to measureStocks.mts (2026-09-02)
+David asked to sort out both gaps ("סדר את שניהם"); this is the stocks half
+(live exits is the entry above). The 2026-07-29 trend-exit measurement
+concluded "the entries are still the bottleneck, not the exits... the
+remaining untested lever is entry frequency/selectivity itself" — this had
+not been measured. `signal/regimeFilter.ts`'s `buildDailyRegimeFilter`
+(daily-EMA entry gate, already live for crypto) was never applied to
+stocks, and `src/core/backtest/livePipeline.ts`'s own `regimeFilter` option
+(the integration point, not just the pure filter function) had ZERO test
+coverage before this — a real gap, closed with 4 new tests in
+`tests/backtest/livePipeline.test.ts` before trusting a real measurement
+built on it.
+
+Added 3 regime-gated candidates to `scripts/measureStocks.mts`'s
+CANDIDATES: `regime EMA100`, `regime EMA200`, `regime EMA100 + trend-exit
+EMA50` (combining both untested levers). Sanity-verified the script still
+parses/imports correctly for both `1d` and `1h` invocation modes (fake
+credentials — real measurement needs the real Alpaca secrets, only present
+in `measure-stocks.yml`'s CI run).
+
+**Red-team review before committing caught two real issues, both fixed**:
+1. `buildDailyRegimeFilter` assumes genuinely ~24h-apart bars (gates on
+   elapsed 86,400,000ms) — reusing the entry-timeframe slice as its input
+   is only valid for TF='1d' runs. Fixed: `regime` candidates are now
+   filtered out of the candidate list entirely for TF='1h' runs, rather
+   than silently measuring a mislabeled 20/100/200-HOUR "regime".
+2. A fold shorter than the configured EMA period makes
+   `buildDailyRegimeFilter` fail OPEN (always allow, per its own designed
+   convention) — correct behavior, but silent, so a short fold (plausible
+   in `candidates` mode's 40 browsable symbols with as few as ~300 bars)
+   could measure identically to the unfiltered baseline with no indication
+   the gate was never actually exercised. Fixed: warns once per
+   (candidate, symbol) when this happens, rather than silently no-op'ing.
+
+**Run for real** the same night via `measure-stocks.yml` — see the entry
+above this one for the actual result (does not help, not adopted).
+
+Full gate green: tsc clean, 877 vitest (873 + 4 new), vite build ok.
+
+## STAGE 6: live position exits built (2026-09-02)
+David asked to sort out both remaining gaps ("סדר את שניהם", "מסודר"): live
+exits, and the stocks strategy. This entry covers the first.
+
+`src/core/autopilot/exitDecision.ts` extracts `decideExit` — the exact
+stop-loss/trailing-stop/trend-exit/take-profit logic `paperAutoPilot.ts` had
+inline — into shared, pure code. `paperAutoPilot.ts` now calls it instead of
+duplicating the logic (its own 45 tests still pass unchanged — confirmed
+behavior-preserving before touching anything downstream). This is what
+"paper and live are the same pipeline" actually requires: one decision
+function, not two that could quietly drift apart.
+
+`server/liveExitFlow.mts`: `recordLiveEntryFill` persists a filled BUY's
+real stop/target/fill-price — the broker's `fetchPositions()` has no idea
+what WE consider a position's stop or target, only local state does (paper
+trading gets this for free from its local `PortfolioEngine`).
+`decideLiveExit` is a thin pass-through to the shared `decideExit`.
+`buildLiveExitIntent` builds a SELL `OrderIntent` that goes through the
+EXACT SAME `runLiveOrderFlow` safety chain as any entry (`liveOrchestrator.
+mts` is fully side-agnostic — no changes needed there at all) — kill-switch,
+mandatory symbol check, human confirmation, only then submit.
+
+`server/telegramConfirmationGate.mts`'s confirmation message now branches
+on `intent.side`: a sell shows which position, at what price, and the real
+P&L, instead of the entry's risk%/reward-ratio numbers (which would be
+actively misleading for a decision to close, not open, a position).
+
+**Red-team review before committing caught two real issues, both fixed**:
+1. The exit P&L was computed against the originally PROPOSED entry price
+   (`assessment.entry`), not the real fill price — wrong whenever an entry
+   fills with slippage. Fixed: `recordLiveEntryFill` overrides the tracked
+   position's `entryAssessment.entry` to the real `avgFillPrice`.
+2. `recordLiveEntryFill` never checked that the `OrderStatusReport` it was
+   given actually belonged to the `OrderIntent` passed alongside it — a
+   mismatched report would silently corrupt a position's tracked
+   price/quantity. Fixed: refuses (returns `false`) on an intentId mismatch.
+
+**Still NOT wired into any workflow** — same posture as the entry side from
+earlier tonight: tested, reusable machinery, not a running feature.
+
+Full gate green: tsc clean, 873 vitest (853 + 20 new), vite build ok.
+
 ## STAGE 6: ConfirmationGate → BrokerAdapter wiring built (2026-09-02)
 David approved continuing Stage 6 overnight ("אני מאשר. תמשיך") after being
 told the adapter existed but nothing wired it up. `server/liveOrchestrator.mts`
