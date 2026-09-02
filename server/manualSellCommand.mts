@@ -17,7 +17,13 @@
 import type { KeyValueStore } from '../src/core/data/storage';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import type { Timeframe } from '../src/core/types';
-import { buildLiveExitIntent, forgetLivePosition, openLivePositions, type LiveOpenPosition } from './liveExitFlow.mts';
+import {
+  buildLiveExitIntent,
+  forgetLivePosition,
+  markExitSubmitted,
+  openLivePositions,
+  type LiveOpenPosition,
+} from './liveExitFlow.mts';
 import { runLiveOrderFlow, type LiveOrderFlowParams, type LiveOrderFlowResult } from './liveOrchestrator.mts';
 import {
   pollAllTelegramUpdates,
@@ -44,6 +50,7 @@ export function parseSellCommand(text: string): string | null {
 export type ManualSellOutcome =
   | { readonly symbol: string; readonly outcome: 'no-open-position' }
   | { readonly symbol: string; readonly outcome: 'no-price-data' }
+  | { readonly symbol: string; readonly outcome: 'exit-already-submitted' }
   | ({ readonly symbol: string } & LiveOrderFlowResult);
 
 function findBySymbol(positions: readonly LiveOpenPosition[], symbol: string): LiveOpenPosition | undefined {
@@ -112,6 +119,21 @@ export async function checkManualSellRequests(
       store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
       continue;
     }
+    // A previous /sell for this SAME position already reached a real
+    // broker submission (found in an independent review, 2026-09-02): once
+    // that happens, the stable intent id's confirmation record is resolved,
+    // so a later /sell would be treated as a brand-new request and could
+    // submit a SECOND real sell order while the first is still resting
+    // (not yet filled). Refuse instead — the position stays tracked and
+    // protected either way, and a genuinely filled first sell will have
+    // already forgotten the position, so this branch never blocks a
+    // legitimate re-sell of a position that's actually still open.
+    if (position.outstandingExitSubmittedAt !== undefined) {
+      outcomes.push({ symbol, outcome: 'exit-already-submitted' });
+      pendingSymbols.delete(symbol);
+      store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
+      continue;
+    }
     const candles = await source.getCandles(position.entryAssessment.asset, entryTimeframe, 2);
     if (!candles.ok || candles.value.length === 0) {
       outcomes.push({ symbol, outcome: 'no-price-data' });
@@ -125,13 +147,20 @@ export async function checkManualSellRequests(
     const result = await runLiveOrderFlow({ ...flowParams, intent });
     outcomes.push({ symbol, ...result });
     if (result.outcome !== 'pending') pendingSymbols.delete(symbol);
-    // A genuinely FILLED sell must stop being tracked as an open position —
-    // otherwise a later /sell for the same symbol would find it again and
-    // could submit a second real sell order for a position already closed.
-    // 'submitted' alone is NOT enough (the broker may only have accepted a
-    // resting order, not yet filled it) — only a confirmed fill forgets it.
-    if (result.outcome === 'submitted' && result.report.state === 'filled') {
-      forgetLivePosition(store, position.id);
+    if (result.outcome === 'submitted') {
+      // A REAL order now exists at the broker regardless of fill state —
+      // mark it immediately so a later /sell for this symbol refuses
+      // instead of risking a second real sell order (see
+      // `outstandingExitSubmittedAt`'s doc comment).
+      markExitSubmitted(store, position.id, now);
+      // A genuinely FILLED sell must stop being tracked as an open
+      // position — otherwise it would still look "open" to everything
+      // else (decideLiveExit, a future /sell). 'submitted' alone is NOT
+      // enough (the broker may only have accepted a resting order, not yet
+      // filled it) — only a confirmed fill forgets it.
+      if (result.report.state === 'filled') {
+        forgetLivePosition(store, position.id);
+      }
     }
     store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
   }

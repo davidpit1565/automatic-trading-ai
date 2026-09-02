@@ -524,7 +524,7 @@ export async function pollAllTelegramUpdates(
         result?: readonly {
           update_id: number;
           message?: { text?: string; chat?: { id?: number | string } };
-          callback_query?: { id: string; data?: string };
+          callback_query?: { id: string; data?: string; message?: { chat?: { id?: number | string } } };
         }[];
       };
       let nextOffset = offset;
@@ -533,7 +533,14 @@ export async function pollAllTelegramUpdates(
         if (u.message?.text && String(u.message.chat?.id ?? '') === String(config.chatId)) {
           freshMessages.push({ updateId: u.update_id, text: u.message.text });
         }
-        if (u.callback_query?.data) {
+        // A button tap's callback_query carries the chat of the message the
+        // button is attached to — checked for the same reason text messages
+        // are: a real-money confirmation tap must never be honored from any
+        // chat but the one configured, even though this bot is only ever
+        // meant to talk to one person (found in an independent review,
+        // 2026-09-02 — this check was missing here while present for text
+        // messages, a real asymmetry in a security-sensitive path).
+        if (u.callback_query?.data && String(u.callback_query.message?.chat?.id ?? '') === String(config.chatId)) {
           freshCallbacks.push({ id: u.callback_query.id, data: u.callback_query.data });
         }
       }

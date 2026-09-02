@@ -236,16 +236,26 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
       const message = cause instanceof Error ? cause.message : String(cause);
       // A network failure here (timeout, dropped connection) means the
       // RESPONSE was lost, not necessarily the order — Revolut X may have
-      // already accepted and be filling it. Reporting this as a plain
-      // 'rejected' would be a lie of omission: there is no OrderState value
-      // for "unknown, don't assume" (see PROJECT_STATE.md, 2026-09-02 — a
-      // real order-status reconciliation mechanism is still needed), so
-      // this at minimum says so explicitly rather than implying certainty
-      // this project doesn't have.
+      // already accepted and be filling it. Checked directly against
+      // Revolut X's own API docs (2026-09-02): there is no way to look up
+      // an order by client_order_id, only by the venue_order_id a
+      // SUCCESSFUL placement response returns — which this branch, by
+      // definition, never received. So this project genuinely cannot
+      // verify what happened here from documented capabilities alone; a
+      // plain 'rejected' would be a lie of omission (there is no OrderState
+      // value for "unknown, don't assume" either). Rather than guess,
+      // this auto-engages the kill switch — halting all further live
+      // trading until a human manually checks Revolut X directly and
+      // explicitly /resume's — since automated certainty isn't available,
+      // the safe fallback is mandatory human involvement, not a hopeful
+      // assumption in either direction.
+      this.killSwitch.engage(
+        `order ${intent.id}: network failure before a response was received (${message}) — Revolut X may or may not have placed it; verify manually in the Revolut X app before /resume`,
+      );
       return this.reportAndAudit(
         intent.id,
         'rejected',
-        `order request failed before a response was received (${message}) — Revolut X may still have received it; verify manually rather than assuming this never happened`,
+        `order request failed before a response was received (${message}) — Revolut X may still have received it; kill switch engaged automatically, verify manually before resuming`,
       );
     }
     if (!placed.ok) {

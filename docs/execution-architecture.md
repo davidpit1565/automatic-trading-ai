@@ -215,6 +215,41 @@ different currency, which is safe, not broken.
       now-dangerous per-consumer offset functions were removed entirely
       (not just deprecated) so the mistake can't quietly resurface.
 
+- [x] **Independent re-review of the above, and its own findings fixed**
+      (2026-09-02) — David asked for the fix to be complete, not partial,
+      and to keep checking. Found and fixed: `manualKillSwitchCommand.mts`
+      stashed only once at the very end (an exception mid-loop would still
+      lose a whole cycle's updates — the same bug shape, relocated);
+      `callback_query` updates weren't filtered by chat id at all (a
+      real-money confirmation tap from any chat would have been honored,
+      now checks `callback_query.message.chat.id`); and a resting
+      (not-yet-filled) manual sell could be double-submitted, since the
+      stable intent id's confirmation record resolves after the first
+      attempt, so a second `/sell` looked brand-new. Fixed with
+      `LiveOpenPosition.outstandingExitSubmittedAt`
+      (`markExitSubmitted`/`liveExitFlow.mts`): set the moment ANY exit
+      reaches `'submitted'` (filled or still resting), checked by
+      `manualSellCommand.mts` before ever building a new exit intent for
+      the same position.
+- [x] **Honest fail-safe for the one truly unverifiable case**
+      (`revolutXBrokerAdapter.mts`, 2026-09-02) — checked Revolut X's own
+      API docs directly: there is no way to look up an order by
+      `client_order_id`, only by the `venue_order_id` a SUCCESSFUL
+      placement response returns. So a network failure during `POST
+      /orders` (response lost, order status unknown) genuinely cannot be
+      resolved with the documented API surface — not a gap this project
+      chose to leave, an external fact. Rather than guess in either
+      direction, `submit()` now auto-engages the kill switch on this exact
+      failure, halting all further live trading until a human manually
+      verifies in the Revolut X app and explicitly `/resume`s.
+- [ ] **Still not built, and still needs a scheduler that doesn't exist
+      yet**: a periodic order-status reconciliation loop (catching up a
+      resting or partially-filled order to its eventual final state via
+      repeated `fetchOrderDetail`/`fetchPositions()` checks). Everything
+      that could be fixed WITHOUT that scheduler has been; this genuinely
+      needs one, and is squarely part of "the actual live-wiring" decision,
+      not something to bolt on with no caller to run it periodically.
+
 Until something explicitly decides to generate real signals and feed them
 through this machinery: the platform reads market data, analyses, and
 simulates — nothing it does can reach a real account.

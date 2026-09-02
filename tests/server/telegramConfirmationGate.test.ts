@@ -71,7 +71,14 @@ function fakeTelegram(getUpdatesResponses: { update_id: number; callback_query?:
     if (url.includes('/getUpdates')) {
       const batch = getUpdatesResponses[updatesCallIndex] ?? [];
       updatesCallIndex++;
-      return new Response(JSON.stringify({ ok: true, result: batch }), { status: 200 });
+      // callback_query is only honored from the configured chat (found in
+      // an independent review, 2026-09-02) — every fixture here implicitly
+      // comes from chat 'C', so stamp it on rather than repeating it at
+      // every call site.
+      const stamped = batch.map((u) =>
+        u.callback_query ? { ...u, callback_query: { ...u.callback_query, message: { chat: { id: 'C' } } } } : u,
+      );
+      return new Response(JSON.stringify({ ok: true, result: stamped }), { status: 200 });
     }
     if (url.includes('/answerCallbackQuery')) {
       answered.push(JSON.parse(init!.body!).callback_query_id);
@@ -291,7 +298,10 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
             ok: true,
             result: [
               { update_id: 1, message: { text: '/sell ETHEUR', chat: { id: 'C' } } },
-              { update_id: 2, callback_query: { id: 'cb1', data: 'confirm:approve:BTCEUR:1:0' } },
+              {
+                update_id: 2,
+                callback_query: { id: 'cb1', data: 'confirm:approve:BTCEUR:1:0', message: { chat: { id: 'C' } } },
+              },
             ],
           }),
           { status: 200 },

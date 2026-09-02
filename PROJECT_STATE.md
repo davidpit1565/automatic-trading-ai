@@ -20,6 +20,57 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Real-money go-live: independent re-review + fixed everything fixable (2026-09-02)
+David asked for the shared-Telegram-cursor fix and partial-fill tracking to
+be "fully fixed, not partial", and to keep checking until 100% confident a
+real wallet can be connected. Ran an independent adversarial review of
+tonight's own shared-poller redesign (not just the original bug) — it found
+3 more real issues, all fixed now, plus confirmed one genuine, honest limit:
+
+**Fixed:**
+1. **`manualKillSwitchCommand.mts` stashed only once, at the very end**, after
+   the loop that calls `killSwitch.engage/disengage` and `audit.append` — an
+   exception partway through would lose every update fetched that cycle
+   (the exact same "lost update" bug shape, just relocated). Fixed: separate
+   recognised commands from everything else FIRST, stash the everything-else
+   immediately, then act on the commands — matching the ordering
+   `manualSellCommand.mts` already used correctly.
+2. **`callback_query` updates were never filtered by chat id** — only text
+   messages were. A real-money confirmation button tap from any chat would
+   have been honored. Fixed: `pollAllTelegramUpdates` now checks
+   `callback_query.message.chat.id` too.
+3. **A resting (not-yet-filled) manual sell could be double-submitted**: once
+   an exit reached `runLiveOrderFlow`'s `'submitted'` outcome, the stable
+   intent id's confirmation record was already resolved, so a SECOND `/sell`
+   for the same symbol would be treated as brand-new and could place a real
+   second sell order while the first was still open on the exchange. Fixed:
+   `LiveOpenPosition.outstandingExitSubmittedAt` (set by the new
+   `markExitSubmitted`, `liveExitFlow.mts`) now blocks a second exit attempt
+   for the same position until it's actually resolved (filled → forgotten,
+   or otherwise reconciled) — `manualSellCommand.mts` checks this before
+   ever building a new exit intent, reporting `'exit-already-submitted'`
+   instead of submitting again.
+
+**Also added**: `revolutXBrokerAdapter.mts`'s submit() now auto-engages the
+kill switch on a network failure during order placement — checked directly
+against Revolut X's own API docs and confirmed there is NO way to look up
+an order by `client_order_id` (only by a `venue_order_id` a successful
+response provides, which this failure path by definition never receives).
+Automated certainty about what happened is genuinely unavailable from
+documented capabilities, so instead of guessing either way, this halts all
+further live trading until a human manually verifies in the Revolut X app
+and explicitly `/resume`s.
+
+**Honest remaining limit, not a code gap**: a full broker-side order-status
+RECONCILIATION LOOP (periodically re-checking a resting or partially-filled
+order's eventual final state) still doesn't exist — it needs a scheduled
+caller, which doesn't exist yet either (nothing runs this live-execution
+code on a cron; that's the deliberate next decision, "the actual wiring").
+Everything that COULD be fixed without that scheduler now is: the
+capability to safely refuse a duplicate submission, the capability to
+recognize a partial fill, and a hard stop (kill switch) for the one failure
+mode with no automated answer at all. Tests: 920 passing, full gate green.
+
 ## Real-money go-live: closed both remaining findings (2026-09-02)
 David asked to fix the 2 open findings from the prior deep review, and to
 keep checking for more while at it. Both closed now:

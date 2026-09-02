@@ -47,6 +47,18 @@ export interface LiveOpenPosition {
    * for the exit's own confirmation message/audit traceability, not reused
    * as a fresh risk decision. */
   readonly entryAssessment: TradeRiskAssessment;
+  /**
+   * Set by `markExitSubmitted` the moment an exit for this position reaches
+   * `runLiveOrderFlow`'s `'submitted'` outcome — regardless of whether the
+   * broker's report says `'filled'` or a still-resting `'submitted'`. A
+   * position with this set has a REAL order already placed at the broker;
+   * a caller (`manualSellCommand.mts`) must check this before proposing
+   * another exit for the same position, or a resting (not yet filled)
+   * order plus a second human `/sell` could result in two real sell orders
+   * for one position (found in an independent review, 2026-09-02). Cleared
+   * implicitly by `forgetLivePosition` once the position is actually gone.
+   */
+  readonly outstandingExitSubmittedAt?: number;
 }
 
 function readPositions(store: KeyValueStore): Record<string, LiveOpenPosition> {
@@ -133,6 +145,23 @@ export function forgetLivePosition(store: KeyValueStore, positionId: string): vo
   const positions = readPositions(store);
   if (!(positionId in positions)) return;
   delete positions[positionId];
+  store.set(LIVE_OPEN_POSITIONS_KEY, positions);
+}
+
+/**
+ * Marks a position as having a real, already-submitted exit order at the
+ * broker — call this the moment `runLiveOrderFlow` reports `'submitted'`
+ * for an exit intent, BEFORE checking whether that report says `'filled'`.
+ * A resting (not yet filled) sell order is exactly the case a second
+ * exit-trigger (another `/sell`, or a future automatic re-check) must not
+ * blindly submit another order for — see `LiveOpenPosition.outstandingExitSubmittedAt`.
+ * No-ops for an untracked position id.
+ */
+export function markExitSubmitted(store: KeyValueStore, positionId: string, now: number): void {
+  const positions = readPositions(store);
+  const existing = positions[positionId];
+  if (!existing) return;
+  positions[positionId] = { ...existing, outstandingExitSubmittedAt: now };
   store.set(LIVE_OPEN_POSITIONS_KEY, positions);
 }
 

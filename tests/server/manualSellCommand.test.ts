@@ -241,6 +241,56 @@ describe('checkManualSellRequests', () => {
     expect(second).toEqual([{ symbol: 'XBTEUR', outcome: 'no-open-position' }]);
   });
 
+  it('refuses a second /sell while the first is still a RESTING (not yet filled) order — never two real sell orders for one position', async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const killSwitch = new PersistedKillSwitch(store);
+    recordLiveEntryFill(store, buyIntent(), filledReport(), 5000);
+
+    // The broker accepts the order but it's only 'submitted' — resting,
+    // not yet filled (e.g. a limit order sitting on the book).
+    const restingReport: OrderStatusReport = {
+      intentId: 'entry-1:manual-sell',
+      state: 'submitted',
+      filledQuantity: 0,
+      avgFillPrice: null,
+      detail: 'resting on the book',
+    };
+    const flowParams = {
+      confirmationGate: fakeConfirmationGate({ intentId: 'entry-1:manual-sell', approved: true, decidedAt: 1, decidedBy: 'david' }),
+      brokerAdapter: fakeBrokerAdapter(restingReport),
+      killSwitch,
+      audit,
+      verifySymbolExists: async () => true,
+    };
+
+    const first = await checkManualSellRequests(
+      store,
+      { token: 'T', chatId: 'C', fetchFn: seedTelegram([{ update_id: 1, message: { text: '/sell XBTEUR', chat: { id: 'C' } } }]) },
+      fakeSource(95),
+      '1h',
+      flowParams,
+      9000,
+    );
+    expect(first).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: restingReport }]);
+    // Still tracked (real exposure, order not yet filled) — but now marked
+    // as having an outstanding exit.
+    expect(openLivePositions(store)).toHaveLength(1);
+    expect(openLivePositions(store)[0]!.outstandingExitSubmittedAt).toBe(9000);
+
+    // A second /sell must NOT submit another real order while the first is
+    // still outstanding.
+    const second = await checkManualSellRequests(
+      store,
+      { token: 'T', chatId: 'C', fetchFn: seedTelegram([{ update_id: 2, message: { text: '/sell XBTEUR', chat: { id: 'C' } } }]) },
+      fakeSource(95),
+      '1h',
+      flowParams,
+      9500,
+    );
+    expect(second).toEqual([{ symbol: 'XBTEUR', outcome: 'exit-already-submitted' }]);
+  });
+
   it('respects the kill switch — a manual sell cannot bypass it either', async () => {
     const store = new MemoryStore();
     const audit = new PersistedAuditLog(store);
@@ -350,7 +400,15 @@ describe('checkManualSellRequests', () => {
       // resumed confirmation instead of a brand-new one.
       const cycle2Responses = [
         { ok: true, result: [] },
-        { ok: true, result: [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:approve:entry-1:manual-sell' } }] },
+        {
+          ok: true,
+          result: [
+            {
+              update_id: 10,
+              callback_query: { id: 'cb1', data: 'confirm:approve:entry-1:manual-sell', message: { chat: { id: 'C' } } },
+            },
+          ],
+        },
       ];
       let call2 = 0;
       const fetchFn2 = (async (url: string) => {

@@ -509,7 +509,7 @@ describe('pollAllTelegramUpdates / stashUnclaimedTelegramUpdates (the shared cur
         JSON.stringify({
           ok: true,
           result: [
-            { update_id: 5, callback_query: { id: 'cb1', data: 'confirm:approve:X' } },
+            { update_id: 5, callback_query: { id: 'cb1', data: 'confirm:approve:X', message: { chat: { id: 'C' } } } },
             { update_id: 6, message: { text: '/sell XBTEUR', chat: { id: 'C' } } },
           ],
         }),
@@ -542,6 +542,25 @@ describe('pollAllTelegramUpdates / stashUnclaimedTelegramUpdates (the shared cur
       )) as unknown as typeof fetch;
     const { messages } = await pollAllTelegramUpdates(store, { token: 'T', chatId: 'C', fetchFn: fakeFetch });
     expect(messages).toEqual([]);
+  });
+
+  it('ignores a button tap (callback_query) from any chat other than the configured one — a real-money confirmation must never be honored from elsewhere', async () => {
+    const store = new MemoryStore();
+    const fakeFetch = (async () =>
+      new Response(
+        JSON.stringify({
+          ok: true,
+          result: [
+            {
+              update_id: 5,
+              callback_query: { id: 'cb1', data: 'confirm:approve:X', message: { chat: { id: 'someone-else' } } },
+            },
+          ],
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    const { callbacks } = await pollAllTelegramUpdates(store, { token: 'T', chatId: 'C', fetchFn: fakeFetch });
+    expect(callbacks).toEqual([]);
   });
 
   it('returns nothing new and leaves the offset unchanged without credentials, on HTTP failure, or on a network error', async () => {

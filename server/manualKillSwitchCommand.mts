@@ -60,15 +60,26 @@ export async function checkManualKillSwitchCommands(
   // any message that isn't /pause or /resume) is stashed back immediately
   // so other consumers can still find it.
   const polled = await pollAllTelegramUpdates(store, telegram);
+
+  // Separate recognised commands from everything else and stash the
+  // "everything else" back BEFORE acting on any command — engage/disengage
+  // and audit.append are effectively synchronous here, but a mid-loop
+  // exception (a storage failure, say) must never lose already-fetched
+  // updates just because it happened partway through. Found in an
+  // independent review, 2026-09-02: stashing only once at the very end
+  // reintroduced the same "lost update" shape of bug this file exists to
+  // avoid, just relocated.
   const unclaimedMessages: TelegramTextMessage[] = [];
-  const outcomes: ManualKillSwitchOutcome[] = [];
+  const commands: { message: TelegramTextMessage; command: ManualKillSwitchCommand }[] = [];
   for (const message of polled.messages) {
     const command = parseKillSwitchCommand(message.text);
-    if (!command) {
-      unclaimedMessages.push(message);
-      continue;
-    }
+    if (command) commands.push({ message, command });
+    else unclaimedMessages.push(message);
+  }
+  stashUnclaimedTelegramUpdates(store, { messages: unclaimedMessages, callbacks: polled.callbacks });
 
+  const outcomes: ManualKillSwitchOutcome[] = [];
+  for (const { command } of commands) {
     if (command === 'pause') {
       const applied = !killSwitch.isEngaged();
       if (applied) {
@@ -97,6 +108,5 @@ export async function checkManualKillSwitchCommands(
       outcomes.push({ command, applied });
     }
   }
-  stashUnclaimedTelegramUpdates(store, { messages: unclaimedMessages, callbacks: polled.callbacks });
   return outcomes;
 }
