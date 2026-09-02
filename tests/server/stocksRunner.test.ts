@@ -13,18 +13,15 @@ import { FileStore } from '../../server/fileStore.mts';
 import {
   buildAlpacaSourceFromEnv,
   recordEquity,
+  runPassiveHoldCycle,
   runStocksCycle,
   updateMarketSnapshot,
   type MarketSnapshotEntry,
 } from '../../server/stocksRunner.mts';
-import { PaperAutoPilot } from '../../src/core/autopilot/paperAutoPilot';
-import { PersistedAuditLog } from '../../src/core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../../src/core/autopilot/killSwitch';
 import { PortfolioEngine } from '../../src/core/position/portfolioEngine';
 import { PositionEngine } from '../../src/core/position/positionEngine';
 import { TradeJournal } from '../../src/core/position/tradeJournal';
-import { DailyLossTracker } from '../../src/core/risk/dailyLoss';
-import { DEFAULT_RISK_LIMITS } from '../../src/core/risk/riskEngine';
 import type { MarketDataSource } from '../../src/core/data/revolutClient';
 import type { Candle, Instrument } from '../../src/core/types';
 
@@ -129,26 +126,60 @@ describe('recordEquity', () => {
   });
 });
 
-function buildAutopilot(
-  source: MarketDataSource,
-): { autopilot: PaperAutoPilot; portfolio: PortfolioEngine; journal: TradeJournal } {
+function buildPortfolio(): { killSwitch: PersistedKillSwitch; portfolio: PortfolioEngine; journal: TradeJournal } {
   const journal = new TradeJournal(store);
   const positions = new PositionEngine(store, journal);
   const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
-  const autopilot = new PaperAutoPilot({
-    source,
-    symbols: ['AAPL'],
-    timeframe: '1h',
-    scheduler: { start() {}, stop() {}, isRunning: () => false, intervalMs: () => null },
-    portfolio,
-    positions,
-    killSwitch: new PersistedKillSwitch(store),
-    audit: new PersistedAuditLog(store),
-    getDailyLoss: () => new DailyLossTracker(store).lossToday(Date.now()),
-    riskLimits: DEFAULT_RISK_LIMITS,
-  });
-  return { autopilot, portfolio, journal };
+  const killSwitch = new PersistedKillSwitch(store);
+  return { killSwitch, portfolio, journal };
 }
+
+describe('runPassiveHoldCycle', () => {
+  it('equal-weights available cash across symbols not yet held', () => {
+    const { killSwitch, portfolio } = buildPortfolio();
+    const cycle = runPassiveHoldCycle(portfolio, killSwitch, ['AAPL', 'MSFT'], { AAPL: 100, MSFT: 200 }, 1000);
+    expect(cycle.halted).toBe(false);
+    expect(cycle.opened.map((o) => o.symbol).sort()).toEqual(['AAPL', 'MSFT']);
+    // Each leg gets ~half the cash (minus its own fee), regardless of price.
+    const aapl = cycle.opened.find((o) => o.symbol === 'AAPL')!;
+    const msft = cycle.opened.find((o) => o.symbol === 'MSFT')!;
+    expect(aapl.quantity * 100).toBeCloseTo(msft.quantity * 200, 0);
+    expect(portfolio.openPositions()).toHaveLength(2);
+  });
+
+  it('never sells and skips symbols already held, even across repeated calls', () => {
+    const { killSwitch, portfolio } = buildPortfolio();
+    runPassiveHoldCycle(portfolio, killSwitch, ['AAPL'], { AAPL: 100 }, 1000);
+    const afterFirst = portfolio.openPositions();
+    expect(afterFirst).toHaveLength(1);
+
+    const cycle = runPassiveHoldCycle(portfolio, killSwitch, ['AAPL'], { AAPL: 110 }, 2000);
+    expect(cycle.opened).toHaveLength(0);
+    expect(cycle.closed).toHaveLength(0);
+    expect(portfolio.openPositions()).toEqual(afterFirst);
+  });
+
+  it('tops up symbols still unheld on a later cycle (partial-fill catch-up)', () => {
+    const { killSwitch, portfolio } = buildPortfolio();
+    // First cycle only sees AAPL priced — MSFT missing from the price map
+    // (e.g. a transient fetch gap), so only AAPL is bought.
+    runPassiveHoldCycle(portfolio, killSwitch, ['AAPL', 'MSFT'], { AAPL: 100 }, 1000);
+    expect(portfolio.openPositions().map((p) => p.symbol)).toEqual(['AAPL']);
+
+    const cycle = runPassiveHoldCycle(portfolio, killSwitch, ['AAPL', 'MSFT'], { AAPL: 100, MSFT: 200 }, 2000);
+    expect(cycle.opened.map((o) => o.symbol)).toEqual(['MSFT']);
+    expect(portfolio.openPositions().map((p) => p.symbol).sort()).toEqual(['AAPL', 'MSFT']);
+  });
+
+  it('respects the kill switch and buys nothing while engaged', () => {
+    const { killSwitch, portfolio } = buildPortfolio();
+    killSwitch.engage('test');
+    const cycle = runPassiveHoldCycle(portfolio, killSwitch, ['AAPL'], { AAPL: 100 }, 1000);
+    expect(cycle.halted).toBe(true);
+    expect(cycle.opened).toHaveLength(0);
+    expect(portfolio.openPositions()).toHaveLength(0);
+  });
+});
 
 describe('updateMarketSnapshot', () => {
   it('anchors each symbol to its first price of the UTC day and reports 0% change', () => {
@@ -183,9 +214,9 @@ describe('updateMarketSnapshot', () => {
 describe('runStocksCycle', () => {
   it('runs a cycle, records a heartbeat, and records an equity point', async () => {
     const source = fakeSource();
-    const { autopilot, portfolio, journal } = buildAutopilot(source);
+    const { killSwitch, portfolio, journal } = buildPortfolio();
     const telegram = { token: '', chatId: '' };
-    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], 5_000_000);
+    await runStocksCycle(store, source, killSwitch, portfolio, journal, telegram, ['AAPL'], 5_000_000);
 
     const lastRun = store.get<{ at: number; source: string }>('autopilot-last-run');
     expect(lastRun?.source).toBe('fake stocks');
@@ -198,9 +229,9 @@ describe('runStocksCycle', () => {
 
   it('also snapshots the wider browsable list (not just the traded symbols), without duplicating AAPL', async () => {
     const source = fakeSource();
-    const { autopilot, portfolio, journal } = buildAutopilot(source);
+    const { killSwitch, portfolio, journal } = buildPortfolio();
     const telegram = { token: '', chatId: '' };
-    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], 5_000_000);
+    await runStocksCycle(store, source, killSwitch, portfolio, journal, telegram, ['AAPL'], 5_000_000);
 
     const snap = store.get<{ at: number; symbols: MarketSnapshotEntry[] }>('market-snapshot');
     const symbols = snap!.symbols.map((s) => s.symbol);
@@ -211,15 +242,17 @@ describe('runStocksCycle', () => {
     expect(symbols.filter((s) => s === 'AAPL')).toHaveLength(1);
   });
 
-  it('does not send a Telegram message when nothing traded', async () => {
+  it('does not send a Telegram message when nothing to buy (already fully held)', async () => {
     const source = fakeSource();
-    const { autopilot, portfolio, journal } = buildAutopilot(source);
+    const { killSwitch, portfolio, journal } = buildPortfolio();
+    // Already holding AAPL — the passive-hold cycle has nothing left to buy.
+    portfolio.open({ symbol: 'AAPL', quantity: 1, entryPrice: 100, stopLoss: 1, takeProfit: 1000, timestamp: 0 });
     const fetchFn = vi.fn();
     const telegram = { token: 'T', chatId: 'C' };
     const originalFetch = globalThis.fetch;
     (globalThis as { fetch?: typeof fetch }).fetch = fetchFn as unknown as typeof fetch;
     try {
-      await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], 5_000_000);
+      await runStocksCycle(store, source, killSwitch, portfolio, journal, telegram, ['AAPL'], 5_000_000);
       expect(fetchFn).not.toHaveBeenCalled();
     } finally {
       globalThis.fetch = originalFetch;
@@ -228,10 +261,10 @@ describe('runStocksCycle', () => {
 
   it('respects the stagger delay between the browsable-only price requests', async () => {
     const source = fakeSource();
-    const { autopilot, portfolio, journal } = buildAutopilot(source);
+    const { killSwitch, portfolio, journal } = buildPortfolio();
     const telegram = { token: '', chatId: '' };
     const start = Date.now();
-    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], 5_000_000, 5);
+    await runStocksCycle(store, source, killSwitch, portfolio, journal, telegram, ['AAPL'], 5_000_000, 5);
     const elapsed = Date.now() - start;
     // ~39 browsable-only symbols (BROWSABLE minus the 1 traded symbol) at 5ms
     // each is a real, if small, floor — proves the delay is actually awaited
@@ -241,9 +274,9 @@ describe('runStocksCycle', () => {
 
   it('runs the long-term investing shadow wallet alongside the main cycle', async () => {
     const source = fakeSource();
-    const { autopilot, portfolio, journal } = buildAutopilot(source);
+    const { killSwitch, portfolio, journal } = buildPortfolio();
     const telegram = { token: '', chatId: '' };
-    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], 5_000_000);
+    await runStocksCycle(store, source, killSwitch, portfolio, journal, telegram, ['AAPL'], 5_000_000);
 
     const shadow = store.get<{ at: number; standings: { key: string }[] }>('shadow-standings');
     expect(shadow?.standings.map((s) => s.key)).toEqual(['long-term']);
@@ -253,21 +286,21 @@ describe('runStocksCycle', () => {
 
   it('only runs the long-term shadow wallet once per UTC day, not every cycle', async () => {
     const source = fakeSource();
-    const { autopilot, portfolio, journal } = buildAutopilot(source);
+    const { killSwitch, portfolio, journal } = buildPortfolio();
     const telegram = { token: '', chatId: '' };
     const morning = Date.UTC(2026, 0, 15, 10, 0, 0);
     const laterSameDay = Date.UTC(2026, 0, 15, 18, 0, 0);
     const nextDay = Date.UTC(2026, 0, 16, 10, 0, 0);
 
-    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], morning);
+    await runStocksCycle(store, source, killSwitch, portfolio, journal, telegram, ['AAPL'], morning);
     const firstRun = store.get<{ at: number }>('shadow-standings');
     expect(firstRun?.at).toBe(morning);
 
-    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], laterSameDay);
+    await runStocksCycle(store, source, killSwitch, portfolio, journal, telegram, ['AAPL'], laterSameDay);
     const stillSameDay = store.get<{ at: number }>('shadow-standings');
     expect(stillSameDay?.at).toBe(morning); // unchanged — same UTC day, skipped
 
-    await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, ['AAPL'], nextDay);
+    await runStocksCycle(store, source, killSwitch, portfolio, journal, telegram, ['AAPL'], nextDay);
     const newDay = store.get<{ at: number }>('shadow-standings');
     expect(newDay?.at).toBe(nextDay); // a new day runs it again
   });

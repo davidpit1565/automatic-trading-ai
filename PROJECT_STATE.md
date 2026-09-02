@@ -20,6 +20,65 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Stocks: real account pivoted to passive buy-and-hold (2026-09-02)
+Following the crypto structural argument below, David asked to fix the same
+underlying problem for stocks: `sweepAutopilot.mts`/`measureStocks.mts` have
+never found a signal-driven config that gets within an order of magnitude of
+simply holding the curated basket (see "Stocks measured" 2026-07-29 and every
+regime/trend-exit measurement since) — an ~8x gap, not a tuning problem.
+
+Decided: stop researching a strategy that structurally can't win and make
+the real stocks account BE the benchmark instead of chasing it. `runPassive
+HoldCycle` (`server/stocksRunner.mts`) replaces `autopilot.runCycleOnce()`
+for the real account: equal-weights whatever cash is on hand across the
+curated symbols not yet held, buys once per symbol, never sells. No signal
+evaluation, no stop-loss/take-profit (required by `OpenInput` but set to
+inert sentinels — nothing here ever exits a position), no risk-per-trade
+sizing. `main()` no longer constructs a `PaperAutoPilot` for the real
+account at all. The isolated, zero-real-risk long-term shadow wallet
+(`runStocksShadow`, daily bars + trend-exit) is untouched — still forward-
+testing in case a genuinely different edge shows up later; nothing promotes
+it to the real account automatically.
+
+Equal-weight split is computed over ALL symbols still unheld (from the full
+curated list), not just the ones with a price this cycle — a symbol missing
+a price on one cycle (transient fetch gap) keeps its full share of cash
+reserved for a later cycle instead of it being silently redirected to its
+neighbors. Naturally idempotent: a symbol already held is skipped forever,
+so a retried/overlapping cycle only tops up symbols still at zero position.
+Verified the live account was flat (no open positions, $10,040.68 cash)
+before this shipped — nothing to reconcile. Full gate green (tsc, 881
+tests, build); new tests cover equal-weight buying, never-sell, kill-switch
+respect, and the partial-fill catch-up case.
+
+## Crypto: the BTC gap is structural, not a research gap — accepted (2026-09-02)
+David asked which of two paths to take: (1) keep researching until some
+config beats BTC buy-and-hold, or (2) accept the gap as a conscious
+trade-off. Agreed to try (1) first and only fall back to (2) if truly stuck.
+
+The answer turned out to be provable, not just "not found yet": **any
+strategy that carries a stop-loss/exit cannot beat 100% buy-and-hold of the
+same asset during a monotonic uptrend.** A stop-loss means some capital is,
+by construction, not in the trade at every moment the asset is rising past
+where the last stop was set (else it isn't a stop-loss at all) — a
+risk-managed strategy's return over a pure uptrend is a probability-weighted
+mix of "fully in" and "stopped out, sitting in cash while price keeps
+climbing," which is mathematically bounded above by the buy-and-hold return
+itself, not able to exceed it. The only ways to beat buy-and-hold in an
+uptrend are leverage or 100%-concentrated no-stop holding — both directly
+contradict this project's non-negotiable capital-protection rule (CLAUDE.md).
+So path (1) was never a research gap to close with more data or a better
+signal; it's a structural property of having risk management at all.
+
+David accepted this and confirmed moving to (2): the BTC-gap is a conscious,
+accepted trade-off of trading with capital protection, not a bug to keep
+chasing. No code change follows from this by itself — the readiness gate
+already reports `vsBenchmarkPct` honestly; what changes is that "beat BTC"
+is no longer treated as a blocking bar for crypto real-money readiness. (The
+`assessRealMoneyReadiness` criteria themselves have not been touched yet —
+next actionable step if this needs to be reflected in the actual go/no-go
+logic rather than just decided in principle.)
+
 ## Crypto: 2 real years of Kraken daily data unlocked, but doesn't resolve the BTC gap yet (2026-09-02)
 David asked to look for the best way to close the crypto BTC-buy-and-hold
 gap. Found (and verified directly against the live API) that Kraken's

@@ -5,19 +5,22 @@
  * state file, its own portfolio (USD), its own GitHub Actions workflow.
  * Nothing here can affect the crypto agent that already works.
  *
- * Reuses the exact same core engines as crypto (scanner -> signal -> risk ->
- * paper autopilot) unchanged — they were already asset-agnostic. SIMULATED
- * money only, same as crypto: there is no live-order path anywhere in core.
+ * SIMULATED money only, same as crypto: there is no live-order path anywhere
+ * in core.
  *
- * Strategy constants below are the engine's permissive defaults (except
- * `minConfidence`, see `INTERIM_MIN_CONFIDENCE`), NOT a measured tuning —
- * unlike the crypto side's `AUTOPILOT_MIN_CONFIDENCE` / `AUTOPILOT_MAX_RSI_FOR_LONG`
- * / `AUTOPILOT_TRAILING` (each backed by a real sweep on Kraken history),
- * there is no real Alpaca data to measure against yet. Do not read these as
- * "production-tuned for stocks" — they are a deliberately conservative
- * starting point pending `scripts/sweepStrategy.mts` run against real stock
- * history, once ALPACA_API_KEY_ID/ALPACA_API_SECRET_KEY are live. This is a
- * "measure, don't guess" gap, not an oversight.
+ * **PASSIVE BUY-AND-HOLD, not signal-driven trading (decided 2026-09-02).**
+ * Every lever measured across many sessions — parameter tuning, alternative
+ * signal families, regime filters, trend-following exits — failed to close
+ * an ~8x gap to simply holding the same 10 curated majors (see
+ * PROJECT_STATE.md). Rather than keep researching a strategy that
+ * structurally can't win, the real account now holds an equal-weighted
+ * basket and never sells (`runPassiveHoldCycle`) — it IS the benchmark, by
+ * construction, not an attempt to beat it. No signal evaluation, no
+ * risk-per-trade sizing, no stop-loss/take-profit. The signal-driven
+ * `PaperAutoPilot` engine (still fully asset-agnostic, shared with crypto)
+ * is kept ONLY for the isolated, zero-real-risk shadow evaluations below —
+ * if a genuinely different edge is found there later, it can be promoted
+ * deliberately; nothing here does that automatically.
  */
 
 import { execSync } from 'node:child_process';
@@ -26,9 +29,8 @@ import { AlpacaStockSource, CURATED_STOCK_INSTRUMENTS, BROWSABLE_STOCK_INSTRUMEN
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import { CachingSource } from '../src/core/data/cachingSource';
 import { isUsMarketOpen } from '../src/core/data/marketHours';
-import { PersistedAuditLog } from '../src/core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../src/core/autopilot/killSwitch';
-import { PaperAutoPilot } from '../src/core/autopilot/paperAutoPilot';
+import type { CycleResult } from '../src/core/autopilot/paperAutoPilot';
 import { runShadowCycle, type ShadowCandidate } from '../src/core/autopilot/shadowEvaluator';
 import { PositionEngine } from '../src/core/position/positionEngine';
 import { PortfolioEngine } from '../src/core/position/portfolioEngine';
@@ -36,8 +38,6 @@ import { TradeJournal } from '../src/core/position/tradeJournal';
 import { tradeAnalytics } from '../src/core/position/analytics';
 import { maxDrawdownPct } from '../src/core/backtest/metrics';
 import { assessRealMoneyReadiness } from '../src/core/feedback/realMoneyReadiness';
-import { DailyLossTracker } from '../src/core/risk/dailyLoss';
-import { DEFAULT_RISK_LIMITS } from '../src/core/risk/riskEngine';
 import { FileStore } from './fileStore.mts';
 import { buildStockCycleMessage, sendTelegramMessage } from './telegram.mts';
 
@@ -123,11 +123,12 @@ function persistStateToGit(label: string): void {
     console.error('persistStateToGit failed:', cause instanceof Error ? cause.message : cause);
   }
 }
-// No real Alpaca history exists yet to measure a stocks-specific floor via
-// sweepStrategy.mts (see the file-header note). Borrowing crypto's measured
-// AUTOPILOT_MIN_CONFIDENCE (40) as a conservative interim floor — capital
-// protection over waiting for enough stock data to measure properly. Revisit
-// once a real sweep can be run against Alpaca history.
+// Since 2026-09-02 this floor gates ONLY the isolated shadow candidate below
+// (STOCKS_SHADOW_CANDIDATES) — the real account is passive buy-and-hold and
+// no longer evaluates any signal at all. Kept as the measured value
+// (2026-08-31 sweepStrategy.mts run against real Alpaca history) so the
+// shadow keeps forward-testing under the same conditions it was measured
+// under, in case a genuinely different edge is found later.
 const INTERIM_MIN_CONFIDENCE = 40;
 
 /**
@@ -341,6 +342,71 @@ export async function recordEquity(
 }
 
 /**
+ * One passive buy-and-hold pass for the real stocks account (see this file's
+ * header): equal-weight whatever cash is on hand across curated symbols not
+ * already held, and never sell. A symbol already held (from a prior cycle,
+ * or a partial run that bought some but not all symbols) is skipped, so
+ * re-running this on a retry/overlap/next cycle only tops up symbols still
+ * at zero position — naturally idempotent, no separate lock needed.
+ * `stopLoss`/`takeProfit` are required by `OpenInput` but never checked
+ * against here (nothing in this file exits a passive position), so they're
+ * set to inert sentinels far outside any real price move.
+ */
+export function runPassiveHoldCycle(
+  portfolio: PortfolioEngine,
+  killSwitch: PersistedKillSwitch,
+  symbols: readonly string[],
+  prices: Readonly<Record<string, number>>,
+  now: number,
+): CycleResult {
+  const opened: CycleResult['opened'] = [];
+  const skipped: CycleResult['skipped'] = [];
+  if (killSwitch.isEngaged()) {
+    return { timestamp: now, halted: true, opened, closed: [], skipped };
+  }
+
+  const held = new Set(portfolio.openPositions().map((p) => p.symbol));
+  const unheld = symbols.filter((s) => !held.has(s));
+  if (unheld.length === 0) return { timestamp: now, halted: false, opened, closed: [], skipped };
+
+  // Split evenly across every symbol still unheld (not just the ones priced
+  // THIS cycle) — a symbol missing a price today (a transient fetch gap)
+  // must not have its share of cash silently redirected to its neighbors;
+  // it simply waits for a later cycle with its equal share still intact.
+  // Sized to also cover this buy's fee (see COST_RATE) so the resulting
+  // cost never exceeds its share of cash.
+  const cashPerSymbol = portfolio.cash() / unheld.length;
+  for (const symbol of unheld) {
+    const price = prices[symbol];
+    if (price === undefined || !(price > 0)) {
+      skipped.push({ symbol, reason: 'no price available this cycle' });
+      continue;
+    }
+    const quantity = cashPerSymbol / (price * (1 + COST_RATE));
+    if (!(quantity > 0)) {
+      skipped.push({ symbol, reason: 'insufficient cash for this cycle' });
+      continue;
+    }
+    const result = portfolio.open({
+      symbol,
+      quantity,
+      entryPrice: price,
+      stopLoss: price * 0.01,
+      takeProfit: price * 100,
+      timestamp: now,
+      fee: quantity * price * COST_RATE,
+      notes: 'passive buy-and-hold',
+    });
+    if (result.ok) {
+      opened.push({ id: result.value.id, symbol, quantity, entry: price });
+    } else {
+      skipped.push({ symbol, reason: result.error });
+    }
+  }
+  return { timestamp: now, halted: false, opened, closed: [], skipped };
+}
+
+/**
  * One full cycle: trade, heartbeat, then a Telegram notification for any
  * trades. Returns true if a trade opened or closed (mirrors the crypto
  * runner's return-value contract for the same reason: so a caller can choose
@@ -349,7 +415,7 @@ export async function recordEquity(
 export async function runStocksCycle(
   store: FileStore,
   source: MarketDataSource,
-  autopilot: PaperAutoPilot,
+  killSwitch: PersistedKillSwitch,
   portfolio: PortfolioEngine,
   journal: TradeJournal,
   telegram: { token: string; chatId: string },
@@ -360,7 +426,14 @@ export async function runStocksCycle(
    * `main()` passes the real constant for actual cloud runs. */
   snapshotStaggerMs = 0,
 ): Promise<boolean> {
-  const cycle = await autopilot.runCycleOnce(now);
+  const symbolPrices: Record<string, number> = {};
+  for (const symbol of symbols) {
+    const candles = await source.getCandles(symbol, ENTRY_TF, 2);
+    if (candles.ok && candles.value.length > 0) {
+      symbolPrices[symbol] = candles.value[candles.value.length - 1]!.close;
+    }
+  }
+  const cycle = runPassiveHoldCycle(portfolio, killSwitch, symbols, symbolPrices, now);
   console.log(
     `Stocks cycle done via ${source.name}: opened ${cycle.opened.length}, ` +
       `closed ${cycle.closed.length}, skipped ${cycle.skipped.length}` +
@@ -402,13 +475,6 @@ export async function runStocksCycle(
     }
   }
 
-  const symbolPrices: Record<string, number> = {};
-  for (const symbol of symbols) {
-    const candles = await source.getCandles(symbol, ENTRY_TF, 2);
-    if (candles.ok && candles.value.length > 0) {
-      symbolPrices[symbol] = candles.value[candles.value.length - 1]!.close;
-    }
-  }
   await recordEquity(store, source, portfolio, journal, now, symbolPrices);
   await runStocksShadow(store, source, now);
 
@@ -444,28 +510,7 @@ async function main(): Promise<void> {
   const journal = new TradeJournal(store);
   const positions = new PositionEngine(store, journal);
   const portfolio = new PortfolioEngine(store, positions, { initialCash: INITIAL_CASH, baseCurrency: 'USD' });
-  const autopilot = new PaperAutoPilot({
-    source,
-    symbols,
-    timeframe: ENTRY_TF,
-    scheduler: { start() {}, stop() {}, isRunning: () => false, intervalMs: () => null },
-    portfolio,
-    positions,
-    killSwitch: new PersistedKillSwitch(store),
-    audit: new PersistedAuditLog(store),
-    getDailyLoss: () => new DailyLossTracker(store).lossToday(Date.now()),
-    onRealizedPnl: (pnl, ts) => new DailyLossTracker(store).record(pnl, ts),
-    costRate: COST_RATE,
-    riskLimits: DEFAULT_RISK_LIMITS,
-    minConfidence: INTERIM_MIN_CONFIDENCE,
-    // Measured 2026-08-31 via sweepAutopilot.mts on real Alpaca history:
-    // trend-exit (close below a trailing EMA instead of a fixed take-profit)
-    // pooled PF 1.62 vs 1.23 on 459 vs 778 trades across 41 symbols/3 folds
-    // at live cost — a credible, large-sample improvement. Crypto's own
-    // measurement was inconclusive (single-digit trade counts) and is
-    // intentionally left unchanged.
-    trendExit: { emaPeriod: 50 },
-  });
+  const killSwitch = new PersistedKillSwitch(store);
 
   const telegram = {
     token: process.env['TELEGRAM_BOT_TOKEN'] ?? '',
@@ -481,7 +526,7 @@ async function main(): Promise<void> {
     }
     let traded = false;
     try {
-      traded = await runStocksCycle(store, source, autopilot, portfolio, journal, telegram, symbols, now, SNAPSHOT_STAGGER_MS);
+      traded = await runStocksCycle(store, source, killSwitch, portfolio, journal, telegram, symbols, now, SNAPSHOT_STAGGER_MS);
     } catch (cause) {
       // Never let one bad cycle kill the whole run — log and keep looping.
       console.error('Stocks cycle failed:', cause instanceof Error ? cause.message : cause);
