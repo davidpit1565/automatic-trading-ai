@@ -1,0 +1,114 @@
+/**
+ * Manual kill-switch override via Telegram (David asked for this
+ * 2026-09-02): `/pause` immediately halts every live order this project can
+ * place — new entries AND exits alike, since `runLiveOrderFlow` checks
+ * `killSwitch.isEngaged()` before anything else regardless of side — and
+ * `/resume` lifts it. Independent of the algorithm's own automatic safety
+ * triggers (drawdown breaker etc.): a human can engage or lift this
+ * regardless of what those currently think, at any time.
+ *
+ * Called every cycle by `server/autopilotRunner.mts`'s `runLiveMirror` — but
+ * that caller is itself a no-op unless `REAL_MONEY_ENABLED=true` AND real
+ * broker credentials are configured (see its doc comment), so this stays
+ * dormant until a human deliberately turns real money on.
+ */
+
+import type { KeyValueStore } from '../src/core/data/storage';
+import type { AuditLog, KillSwitch } from '../src/core/execution/types';
+import {
+  pollAllTelegramUpdates,
+  stashUnclaimedTelegramUpdates,
+  type TelegramConfig,
+  type TelegramTextMessage,
+} from './telegram.mts';
+
+export type ManualKillSwitchCommand = 'pause' | 'resume';
+
+/** Parses `/pause` or `/resume` (case-insensitive, surrounding whitespace
+ * tolerated). Anything else — including a typo'd or partial command — is
+ * null, never guessed at. */
+export function parseKillSwitchCommand(text: string): ManualKillSwitchCommand | null {
+  const trimmed = text.trim().toLowerCase();
+  if (trimmed === '/pause') return 'pause';
+  if (trimmed === '/resume') return 'resume';
+  return null;
+}
+
+export interface ManualKillSwitchOutcome {
+  readonly command: ManualKillSwitchCommand;
+  /** false when the switch was already in the requested state — a no-op,
+   * not an error (e.g. `/pause` while already paused). */
+  readonly applied: boolean;
+}
+
+/**
+ * Polls for new `/pause`/`/resume` commands since the last check and
+ * applies each in order. `decidedBy` is the audit trail's record of WHO —
+ * same contract as `ConfirmationDecision.decidedBy` elsewhere in this
+ * project — pass the configured Telegram chat id (the only chat this ever
+ * accepts a command from, per `pollAllTelegramUpdates`).
+ */
+export async function checkManualKillSwitchCommands(
+  store: KeyValueStore,
+  telegram: TelegramConfig,
+  killSwitch: KillSwitch,
+  audit: AuditLog,
+  decidedBy: string,
+  now: number,
+): Promise<readonly ManualKillSwitchOutcome[]> {
+  // Shared poller (telegram.mts) — never poll Telegram directly here with a
+  // private offset (a real bug, fixed 2026-09-02: see PROJECT_STATE.md).
+  // Anything this function doesn't recognise (every callback_query, plus
+  // any message that isn't /pause or /resume) is stashed back immediately
+  // so other consumers can still find it.
+  const polled = await pollAllTelegramUpdates(store, telegram);
+
+  // Separate recognised commands from everything else and stash the
+  // "everything else" back BEFORE acting on any command — engage/disengage
+  // and audit.append are effectively synchronous here, but a mid-loop
+  // exception (a storage failure, say) must never lose already-fetched
+  // updates just because it happened partway through. Found in an
+  // independent review, 2026-09-02: stashing only once at the very end
+  // reintroduced the same "lost update" shape of bug this file exists to
+  // avoid, just relocated.
+  const unclaimedMessages: TelegramTextMessage[] = [];
+  const commands: { message: TelegramTextMessage; command: ManualKillSwitchCommand }[] = [];
+  for (const message of polled.messages) {
+    const command = parseKillSwitchCommand(message.text);
+    if (command) commands.push({ message, command });
+    else unclaimedMessages.push(message);
+  }
+  stashUnclaimedTelegramUpdates(store, { messages: unclaimedMessages, callbacks: polled.callbacks });
+
+  const outcomes: ManualKillSwitchOutcome[] = [];
+  for (const { command } of commands) {
+    if (command === 'pause') {
+      const applied = !killSwitch.isEngaged();
+      if (applied) {
+        killSwitch.engage(`manual /pause via Telegram (${decidedBy})`);
+        audit.append({
+          timestamp: now,
+          intentId: 'manual-kill-switch',
+          event: 'kill-switch-engaged',
+          mode: 'live',
+          detail: `kill switch engaged manually by ${decidedBy}`,
+        });
+      }
+      outcomes.push({ command, applied });
+    } else {
+      const applied = killSwitch.isEngaged();
+      if (applied) {
+        killSwitch.disengage(decidedBy);
+        audit.append({
+          timestamp: now,
+          intentId: 'manual-kill-switch',
+          event: 'kill-switch-disengaged',
+          mode: 'live',
+          detail: `kill switch disengaged manually by ${decidedBy}`,
+        });
+      }
+      outcomes.push({ command, applied });
+    }
+  }
+  return outcomes;
+}

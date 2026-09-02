@@ -101,12 +101,33 @@ describe('recordLiveEntryFill', () => {
     expect(openLivePositions(store)).toEqual([]);
   });
 
-  it('does not track anything for a buy that has not actually filled', () => {
+  it('does not track anything for a buy that has not filled at all yet', () => {
     const store = new MemoryStore();
-    const recorded = recordLiveEntryFill(store, buyIntent(), filledReport({ state: 'submitted' }), 5000);
+    const recorded = recordLiveEntryFill(
+      store,
+      buyIntent(),
+      filledReport({ state: 'submitted', filledQuantity: 0 }),
+      5000,
+    );
 
     expect(recorded).toBe(false);
     expect(openLivePositions(store)).toEqual([]);
+  });
+
+  it('tracks a PARTIAL fill (state submitted, but a nonzero filledQuantity) — real exposure must not go untracked', () => {
+    const store = new MemoryStore();
+    const recorded = recordLiveEntryFill(
+      store,
+      buyIntent(),
+      filledReport({ state: 'submitted', filledQuantity: 0.8, avgFillPrice: 100 }),
+      5000,
+    );
+
+    expect(recorded).toBe(true);
+    const position = openLivePositions(store)[0]!;
+    // Tracks only the quantity that ACTUALLY filled, not the originally
+    // requested quantity (buyIntent() asked for 2).
+    expect(position.quantity).toBe(0.8);
   });
 
   it('never trusts a report for a DIFFERENT intent than the one passed', () => {

@@ -2,13 +2,13 @@
  * Live order flow — wires `ConfirmationGate` → `BrokerAdapter` together
  * (docs/execution-architecture.md, "What Stage 6 must add", item "Wiring").
  *
- * This closes the last unchecked item on that checklist as TESTED,
- * REUSABLE machinery — it is NOT invoked by any scheduled workflow.
- * Nothing in `.github/workflows/*.yml` calls this file. Turning continuous
- * live trading on (which live signal source feeds it, which asset universe,
- * on what schedule) is a separate, larger decision this file deliberately
- * does not make — David asked to continue building Stage 6's wiring, not to
- * start autonomous live trading tonight.
+ * This closes the last unchecked item on that checklist as TESTED, REUSABLE
+ * machinery. `runLiveOrderFlow` is called every cycle now (via
+ * `liveEntryMirror.mts`/`liveExitMirror.mts` → `server/autopilotRunner.mts`'s
+ * `runLiveMirror`) — but that caller is itself a no-op unless
+ * `REAL_MONEY_ENABLED=true` AND real broker credentials are configured (see
+ * `runLiveMirror`'s doc comment), so no order actually reaches a real
+ * account until a human deliberately turns that on.
  *
  * Every order still goes through the full non-negotiable chain: kill-switch
  * check, symbol verified against the broker's OWN real instrument list
@@ -52,6 +52,7 @@ export type LiveOrderFlowResult =
   | { readonly outcome: 'unknown-symbol'; readonly detail: string }
   | { readonly outcome: 'pending' }
   | { readonly outcome: 'rejected'; readonly decidedBy: string }
+  | { readonly outcome: 'stale-after-approval'; readonly reason: string }
   | { readonly outcome: 'submitted'; readonly report: OrderStatusReport };
 
 export interface LiveOrderFlowParams {
@@ -73,6 +74,20 @@ export interface LiveOrderFlowParams {
    * already validates against local state and never runs in `'live'` mode).
    */
   readonly verifySymbolExists?: (symbol: string) => Promise<boolean>;
+  /**
+   * Optional final check run AFTER a human approves, BEFORE the order
+   * reaches the broker (David asked for this 2026-09-02: "after I approve,
+   * check again that it's still good"). The gap between a confirmation
+   * being SENT and a human tapping approve can be long (up to the gate's
+   * own expiry window) — this lets a caller re-verify the price/signal is
+   * still valid right before committing, so an approval given minutes ago
+   * doesn't blindly execute against a since-invalidated setup. Returning
+   * `{ok:false}` refuses the order (audited) instead of submitting.
+   * **This can only ADD a refusal, never remove the human's own gate** —
+   * it never runs, and never matters, unless `decision.approved` is
+   * already `true`.
+   */
+  readonly revalidate?: () => Promise<{ readonly ok: boolean; readonly reason?: string }>;
 }
 
 /**
@@ -109,7 +124,7 @@ export function buildLiveOrderIntent(
 }
 
 export async function runLiveOrderFlow(params: LiveOrderFlowParams): Promise<LiveOrderFlowResult> {
-  const { intent, confirmationGate, brokerAdapter, killSwitch, audit, verifySymbolExists } = params;
+  const { intent, confirmationGate, brokerAdapter, killSwitch, audit, verifySymbolExists, revalidate } = params;
 
   if (killSwitch.isEngaged()) {
     audit.append({
@@ -155,6 +170,21 @@ export async function runLiveOrderFlow(params: LiveOrderFlowParams): Promise<Liv
 
   if (!decision.approved) {
     return { outcome: 'rejected', decidedBy: decision.decidedBy };
+  }
+
+  if (revalidate) {
+    const check = await revalidate();
+    if (!check.ok) {
+      const reason = check.reason ?? 'no longer valid';
+      audit.append({
+        timestamp: Date.now(),
+        intentId: intent.id,
+        event: 'rejected',
+        mode: intent.mode,
+        detail: `approved by ${decision.decidedBy}, but refused at re-validation: ${reason}`,
+      });
+      return { outcome: 'stale-after-approval', reason };
+    }
   }
 
   const report = await brokerAdapter.submit(intent);

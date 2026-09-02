@@ -27,14 +27,24 @@ import type { ConfirmationDecision, ConfirmationGate, OrderIntent } from '../src
 import type { KeyValueStore } from '../src/core/data/storage';
 import {
   answerCallbackQuery,
-  getTelegramUpdates,
+  pollAllTelegramUpdates,
   sendTelegramMessage,
+  stashUnclaimedTelegramUpdates,
   type TelegramConfig,
 } from './telegram.mts';
 
 const STORAGE_KEY = 'confirmation-gate-pending';
 const POLL_ATTEMPTS = 5;
 const POLL_INTERVAL_MS = 3000;
+/**
+ * How long a sent confirmation stays awaiting a reply before it auto-expires
+ * (David asked for this 2026-09-02): the order is a LIMIT order at the price
+ * that was current when the message was sent (see the broker adapter) — the
+ * crypto autopilot cron fires roughly every 30 minutes, so a much later tap
+ * would submit at a price with no relation to the market by then. Expiring
+ * instead of submitting stale is the safe default; nothing auto-approves.
+ */
+const MAX_PENDING_MS = 20 * 60 * 1000;
 
 const APPROVE_PREFIX = 'confirm:approve:';
 const REJECT_PREFIX = 'confirm:reject:';
@@ -50,15 +60,32 @@ export class ConfirmationPendingError extends Error {
 
 interface PendingRecord {
   readonly sentAt: number;
-  readonly updateOffset: number;
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function buildConfirmationMessage(intent: OrderIntent): string {
-  if (intent.side === 'sell') return buildExitConfirmationMessage(intent);
+/** HH:MM in the project's default Hebrew-user timezone (matches the daily
+ * digest's own default in `autopilotRunner.mts`) — an absolute clock time,
+ * not a relative countdown: Telegram already timestamps the message itself,
+ * and a bot can't tick a live countdown down between polls anyway (runs are
+ * ~30 minutes apart), so a fixed deadline is the honest thing to show. */
+function formatDeadline(deadlineMs: number): string {
+  return new Intl.DateTimeFormat('he-IL', {
+    timeZone: 'Asia/Jerusalem',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(deadlineMs);
+}
+
+function expiryLine(deadlineMs: number): string {
+  const minutes = Math.round(MAX_PENDING_MS / 60000);
+  return `⏱ בתוקף עד ${formatDeadline(deadlineMs)} (${minutes} דקות) — אחרי זה מתבטל אוטומטית.`;
+}
+
+function buildConfirmationMessage(intent: OrderIntent, deadlineMs: number): string {
+  if (intent.side === 'sell') return buildExitConfirmationMessage(intent, deadlineMs);
   const a = intent.assessment;
   return (
     `🔔 מחכה לאישור שלך — עסקה בכסף אמיתי\n\n` +
@@ -68,6 +95,7 @@ function buildConfirmationMessage(intent: OrderIntent): string {
     `סיכון: ${a.riskPercentage.toFixed(2)}% מהתיק (${a.riskAmount.toFixed(2)}) · ` +
     `יחס סיכוי/סיכון ${a.rewardRiskRatio.toFixed(1)}:1\n` +
     `חשיפת תיק לאחר העסקה: ${a.portfolioExposure.toFixed(1)}%\n\n` +
+    `${expiryLine(deadlineMs)}\n\n` +
     `לחץ למטה כדי לאשר או לדחות. ללא לחיצה — שום דבר לא יקרה.`
   );
 }
@@ -86,7 +114,7 @@ function buildConfirmationMessage(intent: OrderIntent): string {
  * overrides it to the real `avgFillPrice` for exactly this reason (a filled
  * order can slip). Do not construct a sell `OrderIntent` any other way.
  */
-function buildExitConfirmationMessage(intent: OrderIntent): string {
+function buildExitConfirmationMessage(intent: OrderIntent, deadlineMs: number): string {
   const entryPrice = intent.assessment.entry;
   const pnl = (intent.limitPrice - entryPrice) * intent.quantity;
   const sign = pnl >= 0 ? '+' : '';
@@ -95,6 +123,7 @@ function buildExitConfirmationMessage(intent: OrderIntent): string {
     `מכירה ${intent.symbol}\n` +
     `כמות: ${intent.quantity} · מחיר יציאה: ${intent.limitPrice} (נכנס ב-${entryPrice})\n` +
     `רווח/הפסד משוער: ${sign}${pnl.toFixed(2)}\n\n` +
+    `${expiryLine(deadlineMs)}\n\n` +
     `לחץ למטה כדי לאשר או לדחות. ללא לחיצה — שום דבר לא יקרה.`
   );
 }
@@ -119,8 +148,30 @@ export class TelegramConfirmationGate implements ConfirmationGate {
     const pendingAll = this.store.get<Record<string, PendingRecord>>(STORAGE_KEY) ?? {};
     let pending = pendingAll[intent.id];
 
+    if (pending && Date.now() - pending.sentAt > MAX_PENDING_MS) {
+      delete pendingAll[intent.id];
+      this.store.set(STORAGE_KEY, pendingAll);
+      const minutes = Math.round(MAX_PENDING_MS / 60000);
+      const decision: ConfirmationDecision = {
+        intentId: intent.id,
+        approved: false,
+        decidedAt: Date.now(),
+        decidedBy: 'system',
+        note: `auto-expired after ${minutes}m without a reply — the quoted price is likely stale`,
+      };
+      this.audit.append({
+        timestamp: decision.decidedAt,
+        intentId: intent.id,
+        event: 'rejected',
+        mode: intent.mode,
+        detail: decision.note!,
+      });
+      return decision;
+    }
+
     if (!pending) {
-      const result = await sendTelegramMessage(buildConfirmationMessage(intent), this.telegram, {
+      const sentAt = Date.now();
+      const result = await sendTelegramMessage(buildConfirmationMessage(intent, sentAt + MAX_PENDING_MS), this.telegram, {
         inline_keyboard: [
           [
             { text: '✅ אשר', callback_data: `${APPROVE_PREFIX}${intent.id}` },
@@ -128,9 +179,6 @@ export class TelegramConfirmationGate implements ConfirmationGate {
           ],
         ],
       });
-      pending = { sentAt: Date.now(), updateOffset: 0 };
-      pendingAll[intent.id] = pending;
-      this.store.set(STORAGE_KEY, pendingAll);
       this.audit.append({
         timestamp: Date.now(),
         intentId: intent.id,
@@ -140,38 +188,62 @@ export class TelegramConfirmationGate implements ConfirmationGate {
           ? 'confirmation request sent to Telegram'
           : `Telegram send failed: ${result.reason} — will retry next run`,
       });
+      // Only lock in "already sent" once the send actually succeeded — a
+      // failed send that still persisted `pending` would permanently skip
+      // this branch on every future call, so the human would never actually
+      // be notified (a real bug: the audit detail claimed "will retry next
+      // run" but nothing did). A failed send instead falls straight through
+      // as pending (never polled — there is nothing to poll for yet), so
+      // the NEXT call re-enters this branch and genuinely retries the send.
+      if (!result.sent) {
+        throw new ConfirmationPendingError(intent.id);
+      }
+      pending = { sentAt };
+      pendingAll[intent.id] = pending;
+      this.store.set(STORAGE_KEY, pendingAll);
     }
 
     for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
-      const { updates, nextOffset } = await getTelegramUpdates(this.telegram, pending.updateOffset);
-      pending = { ...pending, updateOffset: nextOffset };
-      pendingAll[intent.id] = pending;
-      this.store.set(STORAGE_KEY, pendingAll);
-
-      const match = updates.find(
+      // Shared poller (telegram.mts) — see its doc comment for why this
+      // must never call Telegram's own getUpdates with a private offset:
+      // that was a real bug (an update another consumer needed could be
+      // silently discarded forever). Every attempt MUST stash back
+      // whatever it doesn't use, in every branch below, or the same bug
+      // returns in a new shape.
+      const polled = await pollAllTelegramUpdates(this.store, this.telegram);
+      const matchIndex = polled.callbacks.findIndex(
         (u) => u.data === `${APPROVE_PREFIX}${intent.id}` || u.data === `${REJECT_PREFIX}${intent.id}`,
       );
-      if (match) {
-        await answerCallbackQuery(match.id, this.telegram);
-        const approved = match.data === `${APPROVE_PREFIX}${intent.id}`;
-        delete pendingAll[intent.id];
-        this.store.set(STORAGE_KEY, pendingAll);
-        const decision: ConfirmationDecision = {
-          intentId: intent.id,
-          approved,
-          decidedAt: Date.now(),
-          decidedBy: this.telegram.chatId,
-        };
-        this.audit.append({
-          timestamp: decision.decidedAt,
-          intentId: intent.id,
-          event: approved ? 'confirmed' : 'rejected',
-          mode: intent.mode,
-          detail: approved ? 'approved via Telegram' : 'rejected via Telegram',
-        });
-        return decision;
+
+      if (matchIndex === -1) {
+        stashUnclaimedTelegramUpdates(this.store, polled);
+        if (attempt < POLL_ATTEMPTS - 1) await sleep(POLL_INTERVAL_MS);
+        continue;
       }
-      if (attempt < POLL_ATTEMPTS - 1) await sleep(POLL_INTERVAL_MS);
+
+      const match = polled.callbacks[matchIndex]!;
+      stashUnclaimedTelegramUpdates(this.store, {
+        messages: polled.messages,
+        callbacks: polled.callbacks.filter((_, i) => i !== matchIndex),
+      });
+      await answerCallbackQuery(match.id, this.telegram);
+      const approved = match.data === `${APPROVE_PREFIX}${intent.id}`;
+      delete pendingAll[intent.id];
+      this.store.set(STORAGE_KEY, pendingAll);
+      const decision: ConfirmationDecision = {
+        intentId: intent.id,
+        approved,
+        decidedAt: Date.now(),
+        decidedBy: this.telegram.chatId,
+      };
+      this.audit.append({
+        timestamp: decision.decidedAt,
+        intentId: intent.id,
+        event: approved ? 'confirmed' : 'rejected',
+        mode: intent.mode,
+        detail: approved ? 'approved via Telegram' : 'rejected via Telegram',
+      });
+      return decision;
     }
     throw new ConfirmationPendingError(intent.id);
   }

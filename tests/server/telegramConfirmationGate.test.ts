@@ -4,6 +4,7 @@ import { PersistedAuditLog } from '../../src/core/autopilot/auditLog';
 import type { OrderIntent } from '../../src/core/execution/types';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
 import { ConfirmationPendingError, TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
+import { pollAllTelegramUpdates, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
 
 function approvedAssessment(): TradeRiskAssessment {
   return {
@@ -70,7 +71,14 @@ function fakeTelegram(getUpdatesResponses: { update_id: number; callback_query?:
     if (url.includes('/getUpdates')) {
       const batch = getUpdatesResponses[updatesCallIndex] ?? [];
       updatesCallIndex++;
-      return new Response(JSON.stringify({ ok: true, result: batch }), { status: 200 });
+      // callback_query is only honored from the configured chat (found in
+      // an independent review, 2026-09-02) — every fixture here implicitly
+      // comes from chat 'C', so stamp it on rather than repeating it at
+      // every call site.
+      const stamped = batch.map((u) =>
+        u.callback_query ? { ...u, callback_query: { ...u.callback_query, message: { chat: { id: 'C' } } } } : u,
+      );
+      return new Response(JSON.stringify({ ok: true, result: stamped }), { status: 200 });
     }
     if (url.includes('/answerCallbackQuery')) {
       answered.push(JSON.parse(init!.body!).callback_query_id);
@@ -96,6 +104,31 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     await expect(gate.requestConfirmation(intent())).rejects.toThrow(/credentials/);
   });
 
+  it('genuinely retries the send on a later call after a failed Telegram send, instead of silently treating it as already-sent', async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+
+    // First run: the send itself fails (e.g. rate-limited).
+    const failingFetch = (async (url: string) => {
+      if (url.includes('/sendMessage')) return new Response('{}', { status: 500 });
+      throw new Error(`unexpected Telegram endpoint: ${url}`);
+    }) as unknown as typeof fetch;
+    const gateRun1 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: failingFetch }, audit);
+    await expect(gateRun1.requestConfirmation(intent())).rejects.toThrow(ConfirmationPendingError);
+    expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation']);
+    expect(audit.entries()[0]!.detail).toContain('Telegram send failed');
+
+    // A later run must actually attempt to send again — not silently poll
+    // for a button tap on a message the human never received.
+    const { fetchFn: secondFetch, sent } = fakeTelegram([
+      [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:approve:BTCEUR:1:0' } }],
+    ]);
+    const gateRun2 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: secondFetch }, audit);
+    const decision = await gateRun2.requestConfirmation(intent());
+    expect(sent).toHaveLength(1);
+    expect(decision.approved).toBe(true);
+  });
+
   it('sends one Telegram message with approve/reject buttons and resolves approved on a matching tap', async () => {
     const { fetchFn, sent } = fakeTelegram([
       [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:approve:BTCEUR:1:0' } }],
@@ -111,6 +144,22 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     expect(sent).toHaveLength(1);
     expect(sent[0]).toContain('BTCEUR');
     expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation', 'confirmed']);
+  });
+
+  it('shows the fixed expiry deadline (clock time + minutes) in the sent message, so the human knows exactly how long they have', async () => {
+    vi.setSystemTime(0);
+    const empty = Array.from({ length: 5 }, () => [] as never[]);
+    const { fetchFn, sent } = fakeTelegram(empty);
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+    const promise = gate.requestConfirmation(intent());
+    const assertion = expect(promise).rejects.toThrow(ConfirmationPendingError);
+    await vi.runAllTimersAsync();
+    await assertion;
+
+    expect(sent[0]).toContain('20 דקות');
+    expect(sent[0]).toContain('בתוקף עד');
   });
 
   it('renders a sell/exit confirmation with the real P&L against the entry price, not the entry-side risk numbers', async () => {
@@ -179,6 +228,109 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     const gateRun2 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: second.fetchFn }, audit);
     const decision = await gateRun2.requestConfirmation(intent());
     expect(second.sent).toHaveLength(0);
+    expect(decision.approved).toBe(true);
+  });
+
+  it('auto-expires a resumed call once 20 minutes have passed without a reply, instead of submitting at a stale price', async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    vi.setSystemTime(0);
+    const empty = Array.from({ length: 5 }, () => [] as never[]);
+    const first = fakeTelegram(empty);
+    const gateRun1 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: first.fetchFn }, audit);
+    const p1 = gateRun1.requestConfirmation(intent());
+    const p1Assertion = expect(p1).rejects.toThrow(ConfirmationPendingError);
+    await vi.runAllTimersAsync();
+    await p1Assertion;
+    expect(first.sent).toHaveLength(1);
+
+    // A later run, 21 minutes on: no re-send, no polling — expired outright.
+    vi.setSystemTime(21 * 60 * 1000);
+    const second = fakeTelegram([]);
+    const gateRun2 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: second.fetchFn }, audit);
+    const decision = await gateRun2.requestConfirmation(intent());
+
+    expect(decision).toMatchObject({ approved: false, decidedBy: 'system' });
+    expect(decision.note).toContain('expired');
+    expect(second.sent).toHaveLength(0);
+    expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation', 'rejected']);
+  });
+
+  it('does not expire a resumed call still within the pending window', async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    vi.setSystemTime(0);
+    const empty = Array.from({ length: 5 }, () => [] as never[]);
+    const first = fakeTelegram(empty);
+    const gateRun1 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: first.fetchFn }, audit);
+    const p1 = gateRun1.requestConfirmation(intent());
+    const p1Assertion = expect(p1).rejects.toThrow(ConfirmationPendingError);
+    await vi.runAllTimersAsync();
+    await p1Assertion;
+
+    // 5 minutes later — well within the 20-minute window: still waits, no re-send.
+    vi.setSystemTime(5 * 60 * 1000);
+    const second = fakeTelegram([
+      [{ update_id: 20, callback_query: { id: 'cb2', data: 'confirm:approve:BTCEUR:1:0' } }],
+    ]);
+    const gateRun2 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: second.fetchFn }, audit);
+    const decision = await gateRun2.requestConfirmation(intent());
+    expect(second.sent).toHaveLength(0);
+    expect(decision.approved).toBe(true);
+  });
+
+  it('does not lose an approval tap even when a DIFFERENT Telegram consumer polls first in the same batch (the shared-offset bug this fixes)', async () => {
+    // Before 2026-09-02, every consumer (this gate, the manual /sell and
+    // /pause commands) tracked its OWN independent Telegram offset and
+    // called getUpdates directly — but getUpdates(offset) is a single
+    // GLOBAL cursor per bot token, so whichever consumer polled first
+    // would permanently discard updates the others hadn't read yet. This
+    // proves the fix: a callback_query meant for THIS gate survives being
+    // read first by an unrelated consumer (simulated here directly against
+    // the shared primitives, since manualSellCommand.mts's own poll would
+    // be the real-world other consumer).
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const batchFetch = (async (url: string) => {
+      if (url.includes('/getUpdates')) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            result: [
+              { update_id: 1, message: { text: '/sell ETHEUR', chat: { id: 'C' } } },
+              {
+                update_id: 2,
+                callback_query: { id: 'cb1', data: 'confirm:approve:BTCEUR:1:0', message: { chat: { id: 'C' } } },
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      throw new Error(`unexpected Telegram endpoint in this step: ${url}`);
+    }) as unknown as typeof fetch;
+
+    // A different consumer (simulating manualSellCommand.mts) polls FIRST,
+    // takes only the /sell message it cares about, and must stash back the
+    // callback_query it doesn't understand.
+    const polledByOtherConsumer = await pollAllTelegramUpdates(store, { token: 'T', chatId: 'C', fetchFn: batchFetch });
+    expect(polledByOtherConsumer.messages).toEqual([{ updateId: 1, text: '/sell ETHEUR' }]);
+    stashUnclaimedTelegramUpdates(store, { messages: [], callbacks: polledByOtherConsumer.callbacks });
+
+    // The confirmation gate, polling afterward with no further Telegram
+    // traffic, must still find the approval — it was never actually lost.
+    const noMoreUpdates = (async (url: string) => {
+      if (url.includes('/getUpdates')) return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
+      if (url.includes('/answerCallbackQuery')) return new Response('{}', { status: 200 });
+      throw new Error(`unexpected Telegram endpoint: ${url}`);
+    }) as unknown as typeof fetch;
+    const { fetchFn: sendFetch } = fakeTelegram([]);
+    const combinedFetch = (async (url: string, init?: { body?: string }) => {
+      if (url.includes('/sendMessage')) return sendFetch(url, init);
+      return noMoreUpdates(url);
+    }) as unknown as typeof fetch;
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: combinedFetch }, audit);
+    const decision = await gate.requestConfirmation(intent());
     expect(decision.approved).toBe(true);
   });
 

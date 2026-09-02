@@ -20,6 +20,354 @@
   decision pipeline on history; `scripts/sweepStrategy.mts` +
   `validateStrategy.mts` = the measurement scoreboard.
 
+## Real-money go-live: building the actual entry wiring (2026-09-02, in progress)
+With the safety layer independently reviewed twice and everything fixable
+fixed, David asked to start building the actual connection. First pieces,
+all tested, full gate green:
+
+- **Post-approval re-validation** (`runLiveOrderFlow`, `liveOrchestrator.mts`)
+  — the check David asked for earlier tonight ("after I approve, check
+  again it's still good") finally built: an optional `revalidate` hook
+  runs AFTER a human approves, BEFORE the broker ever sees the order. It
+  can only ADD a refusal (`'stale-after-approval'`) — it never runs unless
+  `decision.approved` is already true, so it can't remove the human gate,
+  only strengthen it.
+- **`server/liveLedger.mts`** (new) — a minimal local cash ledger for the
+  REAL account. There is no `PortfolioEngine` for live money (that class
+  simulates fills; a live fill is real, from the broker) — this is the
+  smallest equivalent: `initLiveCash` (idempotent — never resets an
+  already-moving balance), `debitLiveCash`/`creditLiveCash` on real fills,
+  `liveEquity` = cash + mark-to-market of tracked open live positions. Not
+  a full `PortfolioEngine` port (no daily-return anchor, no journal) — the
+  live account only needs "how much can I safely risk right now."
+- **`server/liveEntryMirror.mts`** (new) — mirrors a paper-approved crypto
+  entry into a real order, SIZED INDEPENDENTLY against the live account's
+  own equity (never the paper account's $10,000): re-runs `assessTrade` on
+  the same underlying `TradeOpportunity` (entry/stop/target/confidence
+  don't depend on account size) against live equity/positions. Reuses the
+  exact queue-with-stable-id-until-terminal pattern already proven correct
+  in `manualSellCommand.mts`'s fix (a paper-approved entry is a one-time
+  event per symbol, same "lost forever if not resumed" risk). Also guards
+  against the SAME double-submission risk found there: a resting
+  (submitted, not-yet-filled) entry marks its symbol "outstanding" and
+  refuses a second attempt until `clearOutstandingEntry` is called once
+  that symbol's position is later confirmed closed — a resting order that
+  never resolves stays outstanding forever (no reconciliation poller
+  exists yet), which is the safe direction to fail in, not a bug.
+- **`DailyLossTracker` reuse note for whoever finishes the wiring**: it
+  keys its storage under a fixed `'daily-loss'` key already used by the
+  crypto PAPER autopilot on the same store — instantiate it against a
+  `PrefixedStore(store, 'live')` (already exists, `src/core/data/
+  prefixedStore.ts`, used by the shadow evaluator for the same reason) for
+  live money, never the raw store directly, or paper and live losses would
+  conflate into one circuit breaker.
+
+**Still to build**: the automatic EXIT-side mirror (checking `decideLiveExit`
+against tracked live positions each cycle, not just the manual `/sell`
+override), the actual `autopilotRunner.mts` integration point, the
+`REAL_MONEY_ENABLED` opt-in flag, and — separately, on David's side —
+generating fresh Revolut X API credentials. Continuing next.
+
+## Real-money go-live: entry-mirror bug fix + the full wiring (2026-09-02)
+Self-review of the entry mirror just written above caught a real bug in it
+before it ever shipped: `mirrorApprovedEntries`'s `'submitted'` branch marked
+the symbol outstanding but never called `recordLiveEntryFill`/
+`debitLiveCash` — a real, successfully filled BUY would never actually be
+tracked as an open position. No stop-loss/take-profit enforcement, invisible
+to the new exit mirror, invisible to `liveEquity`. The exact same
+"invisible real exposure" class already fixed once tonight at the
+broker-adapter level (partial fills), reintroduced here at the caller level.
+Fixed the same way; a new test asserts `openLivePositions`/`liveCash`
+actually update after a submitted+filled outcome (the previous 8 tests did
+not check this — exactly how it went unnoticed).
+
+Then built the rest, all tested, full gate green:
+- **`server/liveExitMirror.mts`** (new) — the automatic counterpart to
+  `manualSellCommand.mts`: each cycle, checks every tracked live position
+  against the SAME `decideLiveExit` paper trading uses, and proposes a real
+  exit through the same `runLiveOrderFlow` chain when it fires. No separate
+  pending-queue needed (unlike the entry mirror) — the tracked position
+  itself is the persistent retry trigger, so a `'pending'` confirmation just
+  gets retried next cycle against the same stable id
+  (`${position.id}:auto-exit`, distinct from manual-sell's `:manual-sell`
+  suffix). Shares the same `outstandingExitSubmittedAt` guard, so an
+  automatic exit and a manual `/sell` can never race into two real sell
+  orders for one position.
+- **The actual `autopilotRunner.mts` integration** (`runLiveMirror`, called
+  once per cycle) — wires everything built tonight together: the manual
+  `/pause`/`/resume` kill switch and `/sell` override are checked FIRST (a
+  human's own command always takes effect before this cycle's automatic
+  mirroring), then this cycle's newly paper-approved entries are mirrored,
+  then every tracked live position is checked for an automatic exit. A
+  failure anywhere in this function is caught and logged, never allowed to
+  take down the paper cycle that already completed. `CycleResult['opened']`
+  gained an optional `opportunity` field (the underlying `TradeOpportunity`,
+  populated where paper decides an entry) so the runner can hand this
+  cycle's approved entries to the live mirror without re-deciding anything.
+- **`REAL_MONEY_ENABLED` opt-in flag** — off by construction. `runLiveMirror`
+  no-ops unless `REAL_MONEY_ENABLED=true` (repo Variable) AND real Revolut X
+  credentials (`REVOLUT_X_API_KEY`/`REVOLUT_X_PRIVATE_KEY_PEM`, repo
+  secrets) are BOTH configured, AND Telegram is configured (every live order
+  still needs a human tap). Missing any of these is silent, never an error —
+  this repo stays exactly the simulated-money-only system it has always
+  been until a human deliberately turns it on. `.github/workflows/
+  autopilot.yml` now passes these through (secrets stay secrets, per this
+  project's rule — only in GitHub Actions, never elsewhere).
+- **Live-scoped `DailyLossTracker`, kill switch, audit log, and Telegram
+  poller state** — all built against `new PrefixedStore(store, 'live')`, not
+  the raw store, so nothing about real money conflates with the paper
+  autopilot's own state on the same underlying file. This is deliberately
+  the ONLY code in the project that ever polls Telegram, so namespacing its
+  offset/pending-confirmation state under `'live:'` too costs nothing (no
+  other consumer to keep in sync with) and keeps every trace of real-money
+  state in one place.
+- **`LIVE_STARTING_CASH_EUR`** (repo Variable, defaults to 100 in code) —
+  David's confirmed starting real capital: 100€.
+
+**Still needed before this can actually go live**: David's own action —
+generate fresh Revolut X API credentials (Ed25519 keypair) and add
+`REVOLUT_X_API_KEY`/`REVOLUT_X_PRIVATE_KEY_PEM` as GitHub Actions secrets,
+then deliberately set the `REAL_MONEY_ENABLED` repo Variable to `true`. Until
+then this is tested, reusable machinery that the scheduled workflow calls
+every cycle but that stays a complete no-op.
+
+## Real-money go-live: independent re-review + fixed everything fixable (2026-09-02)
+David asked for the shared-Telegram-cursor fix and partial-fill tracking to
+be "fully fixed, not partial", and to keep checking until 100% confident a
+real wallet can be connected. Ran an independent adversarial review of
+tonight's own shared-poller redesign (not just the original bug) — it found
+3 more real issues, all fixed now, plus confirmed one genuine, honest limit:
+
+**Fixed:**
+1. **`manualKillSwitchCommand.mts` stashed only once, at the very end**, after
+   the loop that calls `killSwitch.engage/disengage` and `audit.append` — an
+   exception partway through would lose every update fetched that cycle
+   (the exact same "lost update" bug shape, just relocated). Fixed: separate
+   recognised commands from everything else FIRST, stash the everything-else
+   immediately, then act on the commands — matching the ordering
+   `manualSellCommand.mts` already used correctly.
+2. **`callback_query` updates were never filtered by chat id** — only text
+   messages were. A real-money confirmation button tap from any chat would
+   have been honored. Fixed: `pollAllTelegramUpdates` now checks
+   `callback_query.message.chat.id` too.
+3. **A resting (not-yet-filled) manual sell could be double-submitted**: once
+   an exit reached `runLiveOrderFlow`'s `'submitted'` outcome, the stable
+   intent id's confirmation record was already resolved, so a SECOND `/sell`
+   for the same symbol would be treated as brand-new and could place a real
+   second sell order while the first was still open on the exchange. Fixed:
+   `LiveOpenPosition.outstandingExitSubmittedAt` (set by the new
+   `markExitSubmitted`, `liveExitFlow.mts`) now blocks a second exit attempt
+   for the same position until it's actually resolved (filled → forgotten,
+   or otherwise reconciled) — `manualSellCommand.mts` checks this before
+   ever building a new exit intent, reporting `'exit-already-submitted'`
+   instead of submitting again.
+
+**Also added**: `revolutXBrokerAdapter.mts`'s submit() now auto-engages the
+kill switch on a network failure during order placement — checked directly
+against Revolut X's own API docs and confirmed there is NO way to look up
+an order by `client_order_id` (only by a `venue_order_id` a successful
+response provides, which this failure path by definition never receives).
+Automated certainty about what happened is genuinely unavailable from
+documented capabilities, so instead of guessing either way, this halts all
+further live trading until a human manually verifies in the Revolut X app
+and explicitly `/resume`s.
+
+**Honest remaining limit, not a code gap**: a full broker-side order-status
+RECONCILIATION LOOP (periodically re-checking a resting or partially-filled
+order's eventual final state) still doesn't exist — it needs a scheduled
+caller, which doesn't exist yet either (nothing runs this live-execution
+code on a cron; that's the deliberate next decision, "the actual wiring").
+Everything that COULD be fixed without that scheduler now is: the
+capability to safely refuse a duplicate submission, the capability to
+recognize a partial fill, and a hard stop (kill switch) for the one failure
+mode with no automated answer at all. Tests: 920 passing, full gate green.
+
+## Real-money go-live: closed both remaining findings (2026-09-02)
+David asked to fix the 2 open findings from the prior deep review, and to
+keep checking for more while at it. Both closed now:
+
+**#3 fixed — shared Telegram update cursor.** The real fix, not a patch:
+added `pollAllTelegramUpdates`/`stashUnclaimedTelegramUpdates` (`telegram.mts`)
+as the ONE place allowed to call Telegram's real `getUpdates` with an
+advancing offset. Migrated all three consumers (`TelegramConfirmationGate`,
+`manualSellCommand.mts`, `manualKillSwitchCommand.mts`) to it — each now
+polls both `message` and `callback_query` types, acts on what it recognises,
+and stashes everything else back so a DIFFERENT consumer can still find it.
+Deleted the old per-consumer `getTelegramUpdates`/`getTelegramMessages`
+entirely (not deprecated — removed) so the same mistake can't quietly
+resurface later. New regression tests prove the actual scenario: a
+confirmation-gate approval survives a different consumer polling first
+(`telegramConfirmationGate.test.ts`), and a `/pause` survives
+`checkManualSellRequests` polling first and not recognising it
+(`manualKillSwitchCommand.test.ts`).
+
+**#4 partially fixed, partially still open by design.**
+- `liveExitFlow.mts`'s `recordLiveEntryFill` now also tracks a PARTIALLY
+  filled buy (`state: 'submitted'` with `filledQuantity > 0`, which is how
+  `RevolutXBrokerAdapter` maps Revolut X's `partially_filled`) — tracking
+  whatever quantity genuinely filled is strictly safer than tracking
+  nothing, even though the untracked remainder still has no poller
+  watching it if it fills more later.
+- `revolutXBrokerAdapter.mts`'s network-failure-during-submit path now says
+  explicitly that the order MAY have reached Revolut X despite the lost
+  response, instead of a flat "rejected" that implied false certainty.
+- **Still genuinely open, by design, not attempted tonight**: a real
+  order-status reconciliation mechanism (periodic `fetchPositions()`
+  cross-check against locally tracked state, or a poller that catches up a
+  resting/partially-filled order to its eventual final state) does not
+  exist anywhere in this codebase. Building it in isolation, with no
+  orchestrator yet to run it periodically, risks building into a vacuum —
+  this belongs with the actual live-wiring work, not before it.
+
+Tests: 918 passing. Full gate green.
+
+## Real-money go-live: deep review — 2 fixed, 2 real gaps still open (2026-09-02)
+David asked for an even deeper check specifically on "are we really ready
+for this" (real money). Ran the `code-review` skill at max effort against
+the full Stage 6 live-execution path. Five findings; two fixed now, two
+left genuinely OPEN (must be resolved before wiring goes live), one
+(the Telegram offset issue) is the most architecturally significant.
+
+**FIXED:**
+1. **`telegramConfirmationGate.mts`**: a failed Telegram send (rate limit,
+   transient 5xx) still persisted the "pending" record, so the `if
+   (!pending)` send path was never re-entered — the human would NEVER
+   actually be notified, yet the audit log claimed "will retry next run"
+   and the order would silently auto-expire as rejected 20 minutes later
+   with no real message ever delivered. Fixed: only persist `pending` once
+   `sendTelegramMessage` actually reports `sent: true`; a failed send now
+   genuinely retries the send itself on the next call.
+2. **`manualSellCommand.mts`**: never called `forgetLivePosition` after a
+   filled sell, so a symbol stayed tracked as "open" even after being sold
+   — a second `/sell` for the same symbol would find it again and could
+   submit a real duplicate sell order. Fixed: `forgetLivePosition` is now
+   called once `result.report.state === 'filled'` (not merely
+   `'submitted'` — a resting, not-yet-filled order must stay tracked).
+   Also fixed a related robustness gap the reviewer found: the pending-
+   symbols queue was only persisted once at the very end of the whole
+   batch, so an exception partway through processing multiple queued
+   symbols could roll back an already-resolved symbol's outcome back into
+   the queue — now persisted immediately after each symbol is resolved.
+
+**STILL OPEN — must be resolved before this goes live:**
+3. **Shared Telegram `getUpdates` offset collision (architectural).**
+   `telegramConfirmationGate.mts` (one offset PER pending intent),
+   `manualSellCommand.mts`, and `manualKillSwitchCommand.mts` each
+   maintain their OWN persisted "last seen update_id" cursor and poll
+   independently — but Telegram's `getUpdates(offset)` is a single GLOBAL
+   cursor per bot token: calling it with a higher offset from ANY one of
+   these permanently discards every not-yet-read update below that point
+   for ALL the others too, regardless of `allowed_updates` filtering.
+   Concretely: if the confirmation gate's poll advances past a `/pause` or
+   `/sell` message the manual-command pollers haven't read yet, that
+   message is gone forever — silently, with no error. This wasn't
+   introduced tonight (the confirmation gate's per-intent-offset design is
+   older), but adding more independent pollers made it a live risk. Needs
+   a real fix before the actual live-wiring PR: one shared cursor, one
+   `getUpdates` call per cycle covering both `message` and
+   `callback_query` types, dispatched to whichever consumer cares — not a
+   quick patch, a genuine (if contained) redesign of the polling layer.
+4. **`revolutXBrokerAdapter.mts` has no order-status reconciliation.**
+   (a) A network failure during `submit()` (timeout, dropped connection)
+   is unconditionally reported as `rejected` with no check for whether
+   Revolut X actually accepted the order before the response was lost —
+   a real fill could exist at the broker with zero local tracking (no
+   stop-loss/target, invisible to `decideLiveExit` and the kill switch's
+   per-position awareness) while our own records say it never happened.
+   (b) A partially-filled order maps to `state: 'submitted'`, which
+   `recordLiveEntryFill` correctly does NOT track (by design — only a
+   genuine `'filled'` is tracked) — but nothing ever polls the order again
+   afterward to catch it up once it eventually fills, so a partial live
+   fill can go completely untracked indefinitely. Both need an actual
+   reconciliation mechanism (periodic `fetchPositions()` cross-check
+   against locally tracked state) that doesn't exist anywhere yet — a
+   real, separate piece of work, not a quick fix, and squarely a capital-
+   protection gap per this project's own priority order.
+
+Tests: 915 passing (11 + 10 in the two touched test files). Full gate
+green. Findings 3 and 4 are reported here as genuinely unresolved — real
+money should not move through this path until they are.
+
+## Real-money go-live: manual /sell could silently lose a request (2026-09-02)
+David asked for a broad audit ("look for anything to improve, in any area")
+of the whole project. The most severe finding was a real bug in the manual
+`/sell` feature shipped earlier tonight: `checkManualSellRequests`
+(`server/manualSellCommand.mts`) built the exit intent's id as
+`` `${position.id}:manual-sell:${now}` `` — wall-clock-suffixed — and
+consumed the Telegram message's offset (marking `/sell` as "read") BEFORE
+the order actually resolved. `TelegramConfirmationGate` can only resume
+polling a not-yet-answered confirmation by being called again with the
+EXACT SAME intent id (documented in its own header). Since the id changed
+every cycle and the triggering message was already gone, a `/sell` that
+wasn't approved within the ~15s a single cycle actively polls would vanish
+permanently — even tapping the still-visible Telegram button later did
+nothing, because nothing was polling for it anymore. This directly
+undermined the feature's whole point ("sell whenever you want").
+
+Fixed: the intent id is now stable (`${position.id}:manual-sell`, no
+timestamp), and a new persisted `manual-sell-pending-symbols` set keeps a
+request queued across cycles until it reaches a TERMINAL outcome
+(submitted/rejected/blocked/unknown-symbol/no-matching-position) —
+`'pending'` (nobody answered yet) and `'no-price-data'` (a transient fetch
+failure) both keep it queued instead of dropping it. Combined with the
+20-minute confirmation expiry (above), a queued request now always resolves
+eventually: either a real human decision, or an honest auto-expiry, never a
+silent disappearance. New test exercises the actual bug end-to-end with the
+real `TelegramConfirmationGate` (not a fake) across two simulated cycles —
+proven to fail against the old code (asserts `/sendMessage` is never called
+on the resumed cycle; the old, unstable id would have forced a re-send).
+
+Also worth flagging for whoever builds the (not yet started) AUTOMATIC exit
+wiring: `buildLiveExitIntent`'s caller must always pass a STABLE `exitId`
+for the same reason — the function itself doesn't generate the id, so this
+specific bug can't recur inside it, but a future caller could reintroduce
+the same mistake by constructing one from wall-clock time again.
+
+## Real-money go-live: expiry deadline shown + manual kill-switch (2026-09-02)
+Two more follow-ups from David after the confirmation-expiry/manual-sell PR:
+(1) show how much time is actually left to respond, in the message itself —
+`telegramConfirmationGate.mts` now prints a fixed HH:MM deadline (Asia/
+Jerusalem) plus the window length, computed once when the message is first
+sent. A live countdown would be dishonest here: the bot only polls every
+~30 minutes, so a "countdown" would jump in ~30-minute steps, not tick by
+the second. (2) protection gap found while answering "what else needs
+protecting": the kill switch could only ever engage automatically — David
+had no way to halt everything himself. New `server/manualKillSwitchCommand.mts`:
+`/pause`/`/resume` Telegram commands, same pattern as the manual-sell
+override (own `getTelegramMessages` offset), audited either way, a no-op
+(not an error) if already in the requested state. Both tested (10 + 9 new
+tests), neither wired into any scheduled workflow yet.
+
+## Real-money go-live: confirmation expiry + manual sell override (2026-09-02)
+David gave the go-ahead to start wiring real-money execution: manual
+approval on every trade (entries AND exits), starting capital 100€ (checked
+Revolut X's public API docs — `min_order_size_quote` is $0.01, so 100€ is
+nowhere near any exchange minimum; the earlier worry was unfounded). Two
+follow-up questions before the actual entry/exit wiring: how long does he
+have to approve, and can he sell whenever he wants (not just when the
+algorithm proposes an exit)? Neither was true yet as built — fixed both:
+
+- **Confirmation expiry** (`telegramConfirmationGate.mts`): a resumed
+  confirmation now auto-expires (`approved: false`, audited) after 20
+  minutes with no reply, instead of resuming to poll forever. The order is
+  a LIMIT order at the price current when the message was sent — a much
+  later tap would submit at a stale price with no relation to the market by
+  then. Nothing auto-*approves*; this only ever produces a rejection.
+- **Manual sell override** (`server/manualSellCommand.mts`, new file): a
+  `/sell <SYMBOL>` Telegram command now works alongside the algorithm's own
+  exit logic, not instead of it — a new `getTelegramMessages` (`telegram.mts`,
+  separate offset from the button-tap polling, filtered to the configured
+  chat id only) detects the command; `checkManualSellRequests` builds an
+  exit intent at the current price for the matching tracked live position
+  and runs it through the EXACT SAME `runLiveOrderFlow` chain as an
+  automatic exit (kill-switch, symbol check, confirmation tap) — this only
+  changes what TRIGGERS the exit, nothing bypasses the safety chain.
+
+Both are tested (9 + 8 new tests) but, like the rest of Stage 6's execution
+machinery, NOT called from any scheduled workflow yet — still building
+toward the actual entry/exit wiring (translating live signals into real
+orders sized for the 100€ account), which is the next piece.
+
 ## Real-money readiness: stocks trade-count/consistency no longer gate either (2026-09-02)
 Follow-up, found while checking live state right after the stocks pivot
 shipped: `assessRealMoneyReadiness`'s `trades`/`consistency` criteria read

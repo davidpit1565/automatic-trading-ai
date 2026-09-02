@@ -4,8 +4,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { answerCallbackQuery, buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, getTelegramUpdates, readinessLineHe, sendTelegramMessage } from '../../server/telegram.mts';
+import { answerCallbackQuery, buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, pollAllTelegramUpdates, readinessLineHe, sendTelegramMessage, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
 import { assessRealMoneyReadiness, READINESS_THRESHOLDS } from '../../src/core/feedback/realMoneyReadiness';
+import { MemoryStore } from '../../src/core/data/storage';
 
 describe('buildStockCycleMessage', () => {
   it('returns null when the cycle opened and closed nothing', () => {
@@ -500,41 +501,101 @@ describe('sendTelegramMessage with an inline keyboard (confirmation-gate buttons
   });
 });
 
-describe('getTelegramUpdates (short poll for confirmation-gate button taps)', () => {
-  it('returns callback queries and advances the offset past the highest update_id seen', async () => {
+describe('pollAllTelegramUpdates / stashUnclaimedTelegramUpdates (the shared cursor fix, 2026-09-02)', () => {
+  it('returns both messages and callbacks from one poll, and advances the shared offset past the highest update_id seen', async () => {
+    const store = new MemoryStore();
     const fakeFetch = (async () =>
       new Response(
         JSON.stringify({
           ok: true,
           result: [
-            { update_id: 5, callback_query: { id: 'cb1', data: 'confirm:approve:X' } },
-            { update_id: 6, message: { text: 'irrelevant, no callback_query' } },
+            { update_id: 5, callback_query: { id: 'cb1', data: 'confirm:approve:X', message: { chat: { id: 'C' } } } },
+            { update_id: 6, message: { text: '/sell XBTEUR', chat: { id: 'C' } } },
           ],
         }),
         { status: 200 },
       )) as unknown as typeof fetch;
-    const { updates, nextOffset } = await getTelegramUpdates({ token: 'T', chatId: 'C', fetchFn: fakeFetch }, 0);
-    expect(updates).toEqual([{ id: 'cb1', data: 'confirm:approve:X' }]);
-    expect(nextOffset).toBe(7);
+    const result = await pollAllTelegramUpdates(store, { token: 'T', chatId: 'C', fetchFn: fakeFetch });
+    expect(result.callbacks).toEqual([{ id: 'cb1', data: 'confirm:approve:X' }]);
+    expect(result.messages).toEqual([{ updateId: 6, text: '/sell XBTEUR' }]);
+
+    // A later call must not re-fetch the same updates — proves the shared
+    // offset (not a per-caller one) actually advanced.
+    let sawOffset: string | null = null;
+    const capturingFetch = (async (url: string) => {
+      sawOffset = new URL(url).searchParams.get('offset');
+      return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    await pollAllTelegramUpdates(store, { token: 'T', chatId: 'C', fetchFn: capturingFetch });
+    expect(sawOffset).toBe('7');
   });
 
-  it('returns no updates and keeps the offset unchanged without credentials, on HTTP failure, or on a network error', async () => {
-    const noCreds = await getTelegramUpdates({ token: '', chatId: '' }, 3);
-    expect(noCreds).toEqual({ updates: [], nextOffset: 3 });
+  it('ignores a message from any chat other than the configured one', async () => {
+    const store = new MemoryStore();
+    const fakeFetch = (async () =>
+      new Response(
+        JSON.stringify({
+          ok: true,
+          result: [{ update_id: 5, message: { text: '/sell XBTEUR', chat: { id: 'someone-else' } } }],
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    const { messages } = await pollAllTelegramUpdates(store, { token: 'T', chatId: 'C', fetchFn: fakeFetch });
+    expect(messages).toEqual([]);
+  });
+
+  it('ignores a button tap (callback_query) from any chat other than the configured one — a real-money confirmation must never be honored from elsewhere', async () => {
+    const store = new MemoryStore();
+    const fakeFetch = (async () =>
+      new Response(
+        JSON.stringify({
+          ok: true,
+          result: [
+            {
+              update_id: 5,
+              callback_query: { id: 'cb1', data: 'confirm:approve:X', message: { chat: { id: 'someone-else' } } },
+            },
+          ],
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    const { callbacks } = await pollAllTelegramUpdates(store, { token: 'T', chatId: 'C', fetchFn: fakeFetch });
+    expect(callbacks).toEqual([]);
+  });
+
+  it('returns nothing new and leaves the offset unchanged without credentials, on HTTP failure, or on a network error', async () => {
+    const store = new MemoryStore();
+    expect(await pollAllTelegramUpdates(store, { token: '', chatId: '' })).toEqual({ messages: [], callbacks: [] });
 
     const httpFail = (async () => new Response('{}', { status: 500 })) as unknown as typeof fetch;
-    expect(await getTelegramUpdates({ token: 'T', chatId: 'C', fetchFn: httpFail }, 3)).toEqual({
-      updates: [],
-      nextOffset: 3,
+    expect(await pollAllTelegramUpdates(store, { token: 'T', chatId: 'C', fetchFn: httpFail })).toEqual({
+      messages: [],
+      callbacks: [],
     });
 
     const networkError = (async () => {
       throw new Error('offline');
     }) as unknown as typeof fetch;
-    expect(await getTelegramUpdates({ token: 'T', chatId: 'C', fetchFn: networkError }, 3)).toEqual({
-      updates: [],
-      nextOffset: 3,
+    expect(await pollAllTelegramUpdates(store, { token: 'T', chatId: 'C', fetchFn: networkError })).toEqual({
+      messages: [],
+      callbacks: [],
     });
+  });
+
+  it('resurfaces stashed-but-unclaimed updates on a later poll, so a DIFFERENT consumer can still find them', async () => {
+    const store = new MemoryStore();
+    // Nothing new arrives from Telegram this time...
+    const emptyFetch = (async () =>
+      new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 })) as unknown as typeof fetch;
+    // ...but an earlier consumer stashed a /pause message and a callback it
+    // didn't act on (e.g. the confirmation gate, not the kill-switch handler).
+    stashUnclaimedTelegramUpdates(store, {
+      messages: [{ updateId: 9, text: '/pause' }],
+      callbacks: [{ id: 'cb9', data: 'confirm:approve:other-order' }],
+    });
+    const result = await pollAllTelegramUpdates(store, { token: 'T', chatId: 'C', fetchFn: emptyFetch });
+    expect(result.messages).toEqual([{ updateId: 9, text: '/pause' }]);
+    expect(result.callbacks).toEqual([{ id: 'cb9', data: 'confirm:approve:other-order' }]);
   });
 });
 

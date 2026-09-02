@@ -28,6 +28,7 @@ import {
   AUTOPILOT_RISK_LIMITS,
   AUTOPILOT_TRAILING,
   PaperAutoPilot,
+  type CycleResult,
 } from '../src/core/autopilot/paperAutoPilot';
 import { buildDailyRegimeFilter } from '../src/core/signal/regimeFilter';
 import { isWhaleFlowBearish } from '../src/core/signal/whaleFlow';
@@ -35,9 +36,10 @@ import { buildTopTraderGate } from '../src/core/signal/topTraderGate';
 import { getTopTraderPositionRatio, toOkxSwapInstId } from '../src/core/data/okxPositioning';
 import { isAiJudgmentBearish, type AiJudgmentInput } from '../src/core/signal/aiJudgment';
 import { scanCandles } from '../src/core/scan/marketScanner';
-import type { Timeframe } from '../src/core/types';
+import type { Instrument, Timeframe } from '../src/core/types';
 import type { RecentTrade } from '../src/core/data/krakenPublic';
 import type { Result } from '../src/core/types';
+import { PrefixedStore } from '../src/core/data/prefixedStore';
 import { PositionEngine } from '../src/core/position/positionEngine';
 import { PortfolioEngine } from '../src/core/position/portfolioEngine';
 import { TradeJournal } from '../src/core/position/tradeJournal';
@@ -58,6 +60,13 @@ import {
   type RealMoneyReadiness,
 } from '../src/core/feedback/realMoneyReadiness';
 import { FileStore } from './fileStore.mts';
+import { checkManualKillSwitchCommands } from './manualKillSwitchCommand.mts';
+import { checkManualSellRequests } from './manualSellCommand.mts';
+import { mirrorApprovedEntries } from './liveEntryMirror.mts';
+import { checkAutomaticExits } from './liveExitMirror.mts';
+import { initLiveCash } from './liveLedger.mts';
+import { RevolutXBrokerAdapter, type RevolutXCredentials } from './revolutXBrokerAdapter.mts';
+import { TelegramConfirmationGate } from './telegramConfirmationGate.mts';
 import {
   buildAllClearMessage,
   buildCycleMessage,
@@ -99,6 +108,39 @@ const LOOP_INTERVAL_MS = Number(process.env['LOOP_INTERVAL_MS']) || 300_000;
 /** Persist state to git every N cycles during the run (0 = only at run end). */
 const STATE_COMMIT_EVERY = Math.max(0, Number(process.env['STATE_COMMIT_EVERY']) || 0);
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Real-money opt-in (2026-09-02). Off by construction: this must stay
+ * simulated-only until a human deliberately flips it AND real broker
+ * credentials exist — either one missing is silently a no-op (see
+ * `runLiveMirror`), never an error, so this repo keeps working exactly as
+ * before for anyone who never sets these. Every real order still goes
+ * through the full mandatory chain (kill switch, broker symbol
+ * verification, human confirmation via Telegram) regardless of this flag —
+ * it only controls whether that chain is ever reached at all.
+ */
+// Read fresh on every call (not a frozen module-level const), same rationale
+// as getSummaryTimezone()/getStocksStatePath() below — so a test can flip
+// this via process.env regardless of what it was at module-import time.
+function realMoneyEnabled(): boolean {
+  return process.env['REAL_MONEY_ENABLED'] === 'true';
+}
+/** David's confirmed starting real capital (2026-09-02): 100€. Only used the
+ * FIRST time the live ledger is ever initialized — never resets a real,
+ * already-moving balance on a later run (see `initLiveCash`). */
+function liveStartingCashEur(): number {
+  return Number(process.env['LIVE_STARTING_CASH_EUR']) || 100;
+}
+
+/** Real Revolut X API credentials, configured only in GitHub Actions
+ * secrets (per this project's non-negotiable secrets rule) — never
+ * fabricated or defaulted. `null` until David generates and adds them. */
+function liveCredentials(): RevolutXCredentials | null {
+  const apiKey = process.env['REVOLUT_X_API_KEY'];
+  const privateKeyPem = process.env['REVOLUT_X_PRIVATE_KEY_PEM'];
+  if (!apiKey || !privateKeyPem) return null;
+  return { apiKey, privateKeyPem };
+}
 
 /**
  * Commit + push the state file mid-run so trades persist promptly and survive
@@ -494,7 +536,7 @@ async function main(): Promise<void> {
     if (i > 0) await sleep(LOOP_INTERVAL_MS);
     let traded = false;
     try {
-      traded = await runCycle(store, source, autopilot, portfolio, journal, telegram, symbols);
+      traded = await runCycle(store, source, autopilot, portfolio, journal, telegram, symbols, instruments.value);
     } catch (cause) {
       // Never let one bad cycle kill the whole run — log and keep looping.
       console.error('Cycle failed:', cause instanceof Error ? cause.message : cause);
@@ -522,6 +564,7 @@ async function runCycle(
   journal: TradeJournal,
   telegram: { token: string; chatId: string },
   symbols: readonly string[],
+  instruments: readonly Instrument[],
 ): Promise<boolean> {
   const now = Date.now();
   const cycle = await autopilot.runCycleOnce(now);
@@ -617,6 +660,7 @@ async function runCycle(
   // One price fetch per cycle, shared by the shadows and the equity record —
   // each fetching its own would double the requests for identical data.
   const cyclePrices = await latestPrices(source, symbols);
+  await runLiveMirror(store, source, instruments, telegram, cycle.opened, cyclePrices, now);
   await runShadows(store, source, symbols, now, cyclePrices);
   await runLongTermShadow(store, source, symbols, now);
   await recordEquity(store, source, portfolio, journal, now, cyclePrices);
@@ -625,6 +669,74 @@ async function runCycle(
   await maybeSendAllClear(store, telegram, now);
 
   return cycle.opened.length > 0 || cycle.closed.length > 0;
+}
+
+/**
+ * The actual real-money connection (2026-09-02) — David asked to build this
+ * once the safety layer underneath was independently reviewed twice with
+ * nothing left to fix. A no-op unless BOTH `REAL_MONEY_ENABLED=true` AND
+ * real Revolut X credentials are configured — missing either is silent, by
+ * design (see `REAL_MONEY_ENABLED`'s doc comment), so this stays exactly the
+ * simulated-money-only system it has always been until a human deliberately
+ * turns it on. Also requires Telegram to be configured, since EVERY live
+ * order (entry or exit) requires a human tap — no Telegram, no orders.
+ *
+ * Everything here reads/writes ONLY through `liveStore`, a `PrefixedStore`
+ * namespaced under `'live'` — including the shared Telegram poller's own
+ * offset/pending-confirmation state, not just the trading state. This is the
+ * ONLY code in this project that ever polls Telegram, so there is no other
+ * consumer to keep in sync with; namespacing it too keeps every trace of
+ * real-money state (cash, positions, kill switch, audit, pending
+ * confirmations) cleanly separated from the paper autopilot's own state on
+ * the exact same underlying store, per PROJECT_STATE.md's note on why
+ * `DailyLossTracker` needed the same treatment.
+ *
+ * Order matters: a human's own manual commands (`/pause`, `/resume`,
+ * `/sell`) are checked FIRST, so they always take effect before this same
+ * cycle's automatic mirroring — a human pausing or manually selling must
+ * never be raced by an automatic entry/exit decided in the same tick.
+ */
+export async function runLiveMirror(
+  store: FileStore,
+  source: MarketDataSource,
+  instruments: readonly Instrument[],
+  telegram: { token: string; chatId: string },
+  cycleOpened: CycleResult['opened'],
+  prices: Readonly<Record<string, number>>,
+  now: number,
+): Promise<void> {
+  if (!realMoneyEnabled() || !telegram.token || !telegram.chatId) return;
+  const credentials = liveCredentials();
+  if (!credentials) return;
+
+  const liveStore = new PrefixedStore(store, 'live');
+  initLiveCash(liveStore, liveStartingCashEur());
+  const killSwitch = new PersistedKillSwitch(liveStore);
+  const audit = new PersistedAuditLog(liveStore);
+  const brokerAdapter = new RevolutXBrokerAdapter(liveStore, audit, killSwitch, credentials);
+  const confirmationGate = new TelegramConfirmationGate(liveStore, telegram, audit);
+  const flowParams = {
+    confirmationGate,
+    brokerAdapter,
+    killSwitch,
+    audit,
+    verifySymbolExists: async (symbol: string) => (await brokerAdapter.listTradablePairs()).includes(symbol),
+  };
+
+  try {
+    await checkManualKillSwitchCommands(liveStore, telegram, killSwitch, audit, 'david', now);
+    await checkManualSellRequests(liveStore, telegram, source, ENTRY_TF, flowParams, now);
+    const newlyApproved = cycleOpened
+      .map((o) => o.opportunity)
+      .filter((o): o is NonNullable<typeof o> => o !== undefined);
+    await mirrorApprovedEntries(liveStore, newlyApproved, instruments, prices, flowParams, now);
+    await checkAutomaticExits(liveStore, source, ENTRY_TF, { trailing: AUTOPILOT_TRAILING }, flowParams, now);
+  } catch (cause) {
+    // Never let a live-money problem take down the paper cycle that already
+    // completed above — log and retry next cycle, same contract as every
+    // other best-effort side-channel in this file (shadows, summaries).
+    console.error('Live-money mirror failed:', cause instanceof Error ? cause.message : cause);
+  }
 }
 
 const SHADOW_STANDINGS_KEY = 'shadow-standings';

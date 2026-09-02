@@ -8,6 +8,7 @@
  */
 
 import type { CycleResult } from '../src/core/autopilot/paperAutoPilot';
+import type { KeyValueStore } from '../src/core/data/storage';
 import { SHADOW_MEANINGFUL_TRADES, type ShadowStanding } from '../src/core/autopilot/shadowEvaluator';
 import type { ReadinessKey, RealMoneyReadiness } from '../src/core/feedback/realMoneyReadiness';
 
@@ -416,9 +417,9 @@ export function buildStockCycleMessage(
 }
 
 /** An inline button row, e.g. one "Approve" / "Reject" pair. `callback_data` is
- * what comes back on `getTelegramUpdates` when the human taps it — max 64
- * bytes per Telegram's own limit, so callers must keep it short (an intent id,
- * not a whole payload). */
+ * what comes back via `pollAllTelegramUpdates` when the human taps it — max
+ * 64 bytes per Telegram's own limit, so callers must keep it short (an
+ * intent id, not a whole payload). */
 export interface InlineKeyboardButton {
   readonly text: string;
   readonly callback_data: string;
@@ -457,39 +458,114 @@ export interface TelegramCallbackQuery {
   readonly data: string;
 }
 
+export interface TelegramTextMessage {
+  readonly updateId: number;
+  readonly text: string;
+}
+
+export interface TelegramUpdates {
+  readonly messages: readonly TelegramTextMessage[];
+  readonly callbacks: readonly TelegramCallbackQuery[];
+}
+
+const SHARED_UPDATE_OFFSET_KEY = 'telegram-shared-update-offset';
+const UNCLAIMED_MESSAGES_KEY = 'telegram-unclaimed-messages';
+const UNCLAIMED_CALLBACKS_KEY = 'telegram-unclaimed-callbacks';
+const UNCLAIMED_CAP = 200;
+
 /**
- * Short-poll for pending button taps (callback queries) since the last-seen
- * update id. `timeout: 0` (no Telegram-side long-poll) is deliberate — this
- * runs inside a GitHub Actions job with its own wall-clock budget, so the
- * caller controls polling cadence itself rather than blocking one HTTP call
- * for minutes.
+ * The ONE function in this project allowed to call Telegram's real
+ * `getUpdates` with an advancing offset. `getUpdates(offset)` is a single
+ * GLOBAL cursor per bot token: calling it with a higher offset from ANY
+ * caller PERMANENTLY discards every update below that point for every
+ * OTHER caller too, regardless of `allowed_updates` filtering — Telegram
+ * has no concept of independent per-consumer cursors.
+ *
+ * Before 2026-09-02, `TelegramConfirmationGate` (one offset PER pending
+ * intent), the manual `/sell` command, and the manual `/pause`/`/resume`
+ * commands each tracked their OWN independent offset and called
+ * `getUpdates` directly — a real bug: whichever one happened to poll
+ * first could silently, permanently discard an update none of the others
+ * had read yet (a human's `/pause` could vanish with no error at all). See
+ * PROJECT_STATE.md for the full writeup.
+ *
+ * Fixed by centralizing here: every poll requests BOTH `message` and
+ * `callback_query` updates, advances the ONE shared offset, and returns
+ * everything (fresh + previously unclaimed) to the caller. `timeout: 0`
+ * (no Telegram-side long-poll) is deliberate — this runs inside a GitHub
+ * Actions job with its own wall-clock budget, so the caller controls
+ * polling cadence itself.
+ *
+ * **Every caller MUST follow this with `stashUnclaimedTelegramUpdates`**,
+ * passing back everything it did NOT act on — the raw Telegram update is
+ * already gone by the time anyone looks again, so anything not stashed
+ * here is lost for every other consumer, not just silently re-fetchable
+ * later.
  */
-export async function getTelegramUpdates(
+export async function pollAllTelegramUpdates(
+  store: KeyValueStore,
   config: TelegramConfig,
-  offset: number,
-): Promise<{ updates: readonly TelegramCallbackQuery[]; nextOffset: number }> {
-  if (!config.token) return { updates: [], nextOffset: offset };
+): Promise<TelegramUpdates> {
+  const unclaimedMessages = store.get<TelegramTextMessage[]>(UNCLAIMED_MESSAGES_KEY) ?? [];
+  const unclaimedCallbacks = store.get<TelegramCallbackQuery[]>(UNCLAIMED_CALLBACKS_KEY) ?? [];
+  if (!config.token) return { messages: unclaimedMessages, callbacks: unclaimedCallbacks };
+
+  const offset = store.get<number>(SHARED_UPDATE_OFFSET_KEY) ?? 0;
   const doFetch = config.fetchFn ?? ((input, init) => fetch(input, init));
+  const freshMessages: TelegramTextMessage[] = [];
+  const freshCallbacks: TelegramCallbackQuery[] = [];
   try {
     const response = await doFetch(
-      `https://api.telegram.org/bot${config.token}/getUpdates?offset=${offset}&timeout=0&allowed_updates=%5B%22callback_query%22%5D`,
+      `https://api.telegram.org/bot${config.token}/getUpdates?offset=${offset}&timeout=0&allowed_updates=%5B%22message%22%2C%22callback_query%22%5D`,
       { method: 'GET' },
     );
-    if (!response.ok) return { updates: [], nextOffset: offset };
-    const payload = (await response.json()) as {
-      result?: readonly { update_id: number; callback_query?: { id: string; data?: string } }[];
-    };
-    const results = payload.result ?? [];
-    const updates: TelegramCallbackQuery[] = [];
-    let nextOffset = offset;
-    for (const u of results) {
-      nextOffset = Math.max(nextOffset, u.update_id + 1);
-      if (u.callback_query?.data) updates.push({ id: u.callback_query.id, data: u.callback_query.data });
+    if (response.ok) {
+      const payload = (await response.json()) as {
+        result?: readonly {
+          update_id: number;
+          message?: { text?: string; chat?: { id?: number | string } };
+          callback_query?: { id: string; data?: string; message?: { chat?: { id?: number | string } } };
+        }[];
+      };
+      let nextOffset = offset;
+      for (const u of payload.result ?? []) {
+        nextOffset = Math.max(nextOffset, u.update_id + 1);
+        if (u.message?.text && String(u.message.chat?.id ?? '') === String(config.chatId)) {
+          freshMessages.push({ updateId: u.update_id, text: u.message.text });
+        }
+        // A button tap's callback_query carries the chat of the message the
+        // button is attached to — checked for the same reason text messages
+        // are: a real-money confirmation tap must never be honored from any
+        // chat but the one configured, even though this bot is only ever
+        // meant to talk to one person (found in an independent review,
+        // 2026-09-02 — this check was missing here while present for text
+        // messages, a real asymmetry in a security-sensitive path).
+        if (u.callback_query?.data && String(u.callback_query.message?.chat?.id ?? '') === String(config.chatId)) {
+          freshCallbacks.push({ id: u.callback_query.id, data: u.callback_query.data });
+        }
+      }
+      if (nextOffset !== offset) store.set(SHARED_UPDATE_OFFSET_KEY, nextOffset);
     }
-    return { updates, nextOffset };
   } catch {
-    return { updates: [], nextOffset: offset };
+    /* leave fresh empty — offset untouched, nothing was confirmed */
   }
+  return {
+    messages: [...unclaimedMessages, ...freshMessages],
+    callbacks: [...unclaimedCallbacks, ...freshCallbacks],
+  };
+}
+
+/**
+ * Persists whatever a caller did NOT act on from a `pollAllTelegramUpdates`
+ * result, so a DIFFERENT consumer can still find it on its own next check.
+ * Always pass the full remaining set (not just newly-unclaimed items) —
+ * this overwrites, it doesn't merge. Capped at `UNCLAIMED_CAP` per kind to
+ * bound growth if something is never claimed (e.g. a stray message matching
+ * no known command).
+ */
+export function stashUnclaimedTelegramUpdates(store: KeyValueStore, unclaimed: TelegramUpdates): void {
+  store.set(UNCLAIMED_MESSAGES_KEY, unclaimed.messages.slice(-UNCLAIMED_CAP));
+  store.set(UNCLAIMED_CALLBACKS_KEY, unclaimed.callbacks.slice(-UNCLAIMED_CAP));
 }
 
 /** Clears the button's "loading" spinner in the Telegram client. Best-effort — a

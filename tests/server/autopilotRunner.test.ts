@@ -23,6 +23,7 @@ import {
   maybeSendPeriodicReports,
   maybeSendSummaries,
   readStocksSummary,
+  runLiveMirror,
 } from '../../server/autopilotRunner.mts';
 import { PortfolioEngine } from '../../src/core/position/portfolioEngine';
 import { PositionEngine } from '../../src/core/position/positionEngine';
@@ -35,6 +36,9 @@ const DAY_MS = 86_400_000;
 let dir: string;
 let store: FileStore;
 const ORIGINAL_SUMMARY_TIMEZONE = process.env['SUMMARY_TIMEZONE'];
+const ORIGINAL_REAL_MONEY_ENABLED = process.env['REAL_MONEY_ENABLED'];
+const ORIGINAL_REVOLUT_X_API_KEY = process.env['REVOLUT_X_API_KEY'];
+const ORIGINAL_REVOLUT_X_PRIVATE_KEY_PEM = process.env['REVOLUT_X_PRIVATE_KEY_PEM'];
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'autopilot-runner-'));
@@ -49,6 +53,12 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
   if (ORIGINAL_SUMMARY_TIMEZONE === undefined) delete process.env['SUMMARY_TIMEZONE'];
   else process.env['SUMMARY_TIMEZONE'] = ORIGINAL_SUMMARY_TIMEZONE;
+  if (ORIGINAL_REAL_MONEY_ENABLED === undefined) delete process.env['REAL_MONEY_ENABLED'];
+  else process.env['REAL_MONEY_ENABLED'] = ORIGINAL_REAL_MONEY_ENABLED;
+  if (ORIGINAL_REVOLUT_X_API_KEY === undefined) delete process.env['REVOLUT_X_API_KEY'];
+  else process.env['REVOLUT_X_API_KEY'] = ORIGINAL_REVOLUT_X_API_KEY;
+  if (ORIGINAL_REVOLUT_X_PRIVATE_KEY_PEM === undefined) delete process.env['REVOLUT_X_PRIVATE_KEY_PEM'];
+  else process.env['REVOLUT_X_PRIVATE_KEY_PEM'] = ORIGINAL_REVOLUT_X_PRIVATE_KEY_PEM;
 });
 
 describe('localDayAndHour', () => {
@@ -395,5 +405,47 @@ describe('maybeSendPeriodicReports — elapsed-time gating survives a coverage g
     // 10:00 Asia/Jerusalem — before the evening-only gate.
     await maybeSendPeriodicReports(store, fakeSource(), portfolio, journal, telegram, Date.parse('2026-07-20T07:00:00Z'));
     expect(fetchFn).not.toHaveBeenCalled();
+  });
+});
+
+describe('runLiveMirror (real-money wiring stays off until deliberately turned on)', () => {
+  // A stub covering every Telegram call this cycle could make (getUpdates,
+  // sendMessage) — always the empty/ok shape so nothing this test cares
+  // about (a manual command, a new entry, an exit signal) is ever found.
+  const fetchFn = (async () => new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 })) as unknown as typeof fetch;
+  const telegram = { token: 'T', chatId: 'C', fetchFn };
+
+  it('does nothing when REAL_MONEY_ENABLED is unset (the default)', async () => {
+    delete process.env['REAL_MONEY_ENABLED'];
+    process.env['REVOLUT_X_API_KEY'] = 'key';
+    process.env['REVOLUT_X_PRIVATE_KEY_PEM'] = 'pem';
+    await runLiveMirror(store, fakeSource(), [btcInstrument], telegram, [], {}, 1000);
+    expect(store.get('live:live-cash-eur')).toBeUndefined();
+  });
+
+  it('does nothing when enabled but Revolut X credentials are not configured', async () => {
+    process.env['REAL_MONEY_ENABLED'] = 'true';
+    delete process.env['REVOLUT_X_API_KEY'];
+    delete process.env['REVOLUT_X_PRIVATE_KEY_PEM'];
+    await runLiveMirror(store, fakeSource(), [btcInstrument], telegram, [], {}, 1000);
+    expect(store.get('live:live-cash-eur')).toBeUndefined();
+  });
+
+  it('does nothing when enabled and credentialed but Telegram is not configured (every live order needs a human tap)', async () => {
+    process.env['REAL_MONEY_ENABLED'] = 'true';
+    process.env['REVOLUT_X_API_KEY'] = 'key';
+    process.env['REVOLUT_X_PRIVATE_KEY_PEM'] = 'pem';
+    await runLiveMirror(store, fakeSource(), [btcInstrument], { token: '', chatId: '' }, [], {}, 1000);
+    expect(store.get('live:live-cash-eur')).toBeUndefined();
+  });
+
+  it('initializes the live cash ledger, namespaced under "live:", once enabled and credentialed', async () => {
+    process.env['REAL_MONEY_ENABLED'] = 'true';
+    process.env['REVOLUT_X_API_KEY'] = 'key';
+    process.env['REVOLUT_X_PRIVATE_KEY_PEM'] = 'pem';
+    process.env['LIVE_STARTING_CASH_EUR'] = '100';
+    await runLiveMirror(store, fakeSource(), [btcInstrument], telegram, [], {}, 1000);
+    expect(store.get('live:live-cash-eur')).toBe(100);
+    delete process.env['LIVE_STARTING_CASH_EUR'];
   });
 });

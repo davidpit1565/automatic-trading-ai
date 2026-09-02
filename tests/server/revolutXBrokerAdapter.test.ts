@@ -168,6 +168,27 @@ describe('RevolutXBrokerAdapter', () => {
     expect(report.detail).toContain('venue-3');
   });
 
+  it('is explicit that a network failure during placement is AMBIGUOUS, not a confirmed rejection, and auto-engages the kill switch', async () => {
+    const throwingFetch = (async () => {
+      throw new Error('timeout');
+    }) as unknown as typeof fetch;
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), throwingFetch);
+
+    expect(killSwitch.isEngaged()).toBe(false);
+    const report = await adapter.submit(intent());
+
+    expect(report.state).toBe('rejected');
+    // No OrderState value exists for "unknown, don't assume" — but the
+    // detail must never imply certainty this project doesn't have.
+    expect(report.detail).toContain('may still have received it');
+    expect(report.detail).toContain('verify manually');
+    // Revolut X's API has no order lookup by client_order_id (only by a
+    // venue_order_id this branch never received) — automated certainty is
+    // genuinely unavailable, so this must halt further live trading rather
+    // than silently guess either way.
+    expect(killSwitch.isEngaged()).toBe(true);
+  });
+
   it('rejects when Revolut X refuses the order placement itself', async () => {
     const { fetchFn } = fakeFetch([{ status: 400, body: { error: 'insufficient funds' } }]);
     const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);

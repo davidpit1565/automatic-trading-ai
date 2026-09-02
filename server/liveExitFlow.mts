@@ -18,10 +18,10 @@
  * symbol check, human confirmation via `ConfirmationGate`, only then
  * `BrokerAdapter.submit`) — nothing here bypasses confirmation for an exit.
  *
- * Like `liveOrchestrator.mts`, this is tested, reusable machinery. Nothing
- * calls it from any scheduled workflow yet — see that file's header for the
- * full rationale (David asked to build Stage 6's wiring, not to start
- * autonomous live trading).
+ * Like `liveOrchestrator.mts`, this is called every cycle now (via
+ * `liveEntryMirror.mts`/`liveExitMirror.mts` → `autopilotRunner.mts`'s
+ * `runLiveMirror`) — see that function's doc comment for why it's still a
+ * no-op until `REAL_MONEY_ENABLED=true` and real broker credentials exist.
  */
 
 import type { KeyValueStore } from '../src/core/data/storage';
@@ -47,6 +47,18 @@ export interface LiveOpenPosition {
    * for the exit's own confirmation message/audit traceability, not reused
    * as a fresh risk decision. */
   readonly entryAssessment: TradeRiskAssessment;
+  /**
+   * Set by `markExitSubmitted` the moment an exit for this position reaches
+   * `runLiveOrderFlow`'s `'submitted'` outcome — regardless of whether the
+   * broker's report says `'filled'` or a still-resting `'submitted'`. A
+   * position with this set has a REAL order already placed at the broker;
+   * a caller (`manualSellCommand.mts`) must check this before proposing
+   * another exit for the same position, or a resting (not yet filled)
+   * order plus a second human `/sell` could result in two real sell orders
+   * for one position (found in an independent review, 2026-09-02). Cleared
+   * implicitly by `forgetLivePosition` once the position is actually gone.
+   */
+  readonly outstandingExitSubmittedAt?: number;
 }
 
 function readPositions(store: KeyValueStore): Record<string, LiveOpenPosition> {
@@ -54,9 +66,23 @@ function readPositions(store: KeyValueStore): Record<string, LiveOpenPosition> {
 }
 
 /**
- * Call after `runLiveOrderFlow` reports a BUY intent's `OrderStatusReport`
- * as `state: 'filled'`. No-ops (returns `false`) for anything else — a sell
- * intent, a buy that hasn't actually filled yet, or a report for a
+ * Call after `runLiveOrderFlow` reports a BUY intent's `OrderStatusReport`.
+ * Tracks the position on a genuine `'filled'` report AND on a
+ * `'submitted'` report that already carries a nonzero `filledQuantity` —
+ * `RevolutXBrokerAdapter` maps Revolut X's own `partially_filled` status to
+ * `'submitted'` (it never fabricates `'filled'` for a partial fill), and a
+ * partially-filled real position is still real capital exposure: tracking
+ * NOTHING for it would mean the resulting position has no stop-loss/target
+ * enforcement and never surfaces to `decideLiveExit` at all (found in a
+ * pre-go-live review, 2026-09-02 — see PROJECT_STATE.md). Tracking whatever
+ * quantity genuinely filled is strictly safer than tracking nothing, even
+ * though the remaining unfilled portion of the order (if any) still has no
+ * follow-up poller watching it — that residual gap needs the broker-level
+ * reconciliation mechanism noted in PROJECT_STATE.md, not something this
+ * function alone can fully close.
+ *
+ * No-ops (returns `false`) for anything else — a sell intent, a buy that
+ * hasn't filled AT ALL yet (`filledQuantity` is 0), or a report for a
  * DIFFERENT intent than the one passed (never trusts a mismatched report's
  * price/quantity onto this intent's position).
  */
@@ -66,8 +92,10 @@ export function recordLiveEntryFill(
   report: OrderStatusReport,
   now: number,
 ): boolean {
-  if (intent.side !== 'buy' || report.state !== 'filled') return false;
+  if (intent.side !== 'buy') return false;
   if (report.intentId !== intent.id) return false;
+  const genuinelyFilled = report.state === 'filled' || (report.state === 'submitted' && report.filledQuantity > 0);
+  if (!genuinelyFilled) return false;
   const positions = readPositions(store);
   const entryPrice = report.avgFillPrice ?? intent.limitPrice;
   positions[intent.id] = {
@@ -117,6 +145,23 @@ export function forgetLivePosition(store: KeyValueStore, positionId: string): vo
   const positions = readPositions(store);
   if (!(positionId in positions)) return;
   delete positions[positionId];
+  store.set(LIVE_OPEN_POSITIONS_KEY, positions);
+}
+
+/**
+ * Marks a position as having a real, already-submitted exit order at the
+ * broker — call this the moment `runLiveOrderFlow` reports `'submitted'`
+ * for an exit intent, BEFORE checking whether that report says `'filled'`.
+ * A resting (not yet filled) sell order is exactly the case a second
+ * exit-trigger (another `/sell`, or a future automatic re-check) must not
+ * blindly submit another order for — see `LiveOpenPosition.outstandingExitSubmittedAt`.
+ * No-ops for an untracked position id.
+ */
+export function markExitSubmitted(store: KeyValueStore, positionId: string, now: number): void {
+  const positions = readPositions(store);
+  const existing = positions[positionId];
+  if (!existing) return;
+  positions[positionId] = { ...existing, outstandingExitSubmittedAt: now };
   store.set(LIVE_OPEN_POSITIONS_KEY, positions);
 }
 
