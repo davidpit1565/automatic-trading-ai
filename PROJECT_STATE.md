@@ -3898,3 +3898,79 @@ inside the loop rather than once before it, so a run spanning market close
 degrades to cheap no-ops instead of exiting early. This does not fix the
 structural performance ceiling — it fixes how often the (unchanged)
 strategy actually gets to run.
+
+## Full-system safety audit + two live untracked positions (2026-09-03)
+
+David reported `/sell XBTEUR` and a Telegram confirm-tap getting zero
+response for hours. Root-caused (and fixed, in order): (1) three external
+fetches with no timeout (telegram.mts, okxPositioning.ts,
+autopilotRunner.mts's callGemini/callClaude) — any could cause a
+multi-hour cycle hang; (2) a dual-Telegram-offset bug — manual command
+handlers and TelegramConfirmationGate polled through the `live:`-prefixed
+store while every other handler used the shared unprefixed one, so a
+command captured by the wrong side vanished forever; (3) confirmation
+callback_data embedded `${sentAt}:${intent.id}` directly — an exit
+intent's id (original entry id + its own `:exit:<ts>` suffix) can exceed
+Telegram's 64-byte callback_data limit, silently failing the ENTIRE
+sendMessage call (an exit confirmation for a real open position never
+reached Telegram at all). Fixed with a short hash-based
+`confirmationToken` (telegramConfirmationGate.mts).
+
+David then asked for a full audit, "0 mistakes." Four parallel review
+passes found and fixed: two more missing-timeout fetches
+(blackoutCalendar.mts, workflowWatchdog.mts); the crypto/stocks runners'
+FINAL loop cycle skipped the safe git dirty-key merge, relying on the
+workflow YAML's weaker whole-file `git rebase -X theirs` fallback — now
+every cycle including the last uses the same safe merge; a raw float
+quantity/price was sent to Revolut X (`String(intent.quantity)`) instead
+of a rounded value close to what the human actually approved in the
+Telegram confirmation — added `safeDecimalString`
+(revolutXBrokerAdapter.mts).
+
+**The most serious finding was live, not hypothetical.** A real ADAEUR
+buy (~42 ADA, confirmed filled directly in the Revolut X app) went
+completely untracked internally — no stop-loss/target, invisible to
+`/sell`, its outstanding-entry guard never recorded either — because the
+follow-up order-status read failed right after a successful placement,
+and `submit()` reported `state:'submitted', filledQuantity:0`,
+indistinguishable from a genuinely-read "nothing filled yet" resting
+order. Fixed: both this case AND a "duplicate client_order_id" rejection
+(strong evidence an earlier attempt already went through — Revolut X has
+no order lookup by client_order_id to confirm either way) now
+auto-engage the kill switch and force manual verification, instead of
+silently treating an unknown outcome as safe.
+
+**This exact gap then bit a SECOND time within the hour** — this time
+because cancelling a stuck/slow workflow run (to deploy the fixes above)
+killed the process mid-cycle, after a manual `/buy ADAEUR` retry had
+already placed a real order and notified Telegram, but before
+`runCycle`'s end-of-loop git persist ever ran. Root cause: per-cycle
+persistence only helps once a WHOLE cycle completes, and `runLiveMirror`
+can place several real orders (sell, manual buy, auto-entry, automatic
+exit) inside one cycle. Fixed: `persistStateToGit` now runs immediately
+after each of those four action points inside `runLiveMirror`, not only
+once at the very end (autopilotRunner.mts).
+
+**Still owed, not yet done**: manual reconciliation of (at least) two
+real Revolut X positions this gap left untracked tonight — an ADAEUR buy
+from the first incident (~42 ADA, exact fill price/quantity not
+independently confirmed) and a second ADAEUR order (venue id
+`8bcdef64-8727-4c50-be06-ac5b47078a8b`, last known status `new`/resting)
+from the second incident. Neither was hand-added to
+`live-open-positions` — deliberately, rather than guessing exact
+numbers into a real-money state file without a source of truth to check
+against (this project has no Revolut X credentials available outside
+GitHub Actions secrets). Whoever picks this up next: check the real
+Revolut X app for the account's actual current ADAEUR holding and cost
+basis, then reconcile `state/autopilot-state.json`'s
+`live:live-open-positions` (and `live:live-entry-outstanding-symbols`,
+which likely still needs `ADAEUR` added/cleared correctly) to match
+reality before further ADAEUR activity.
+
+Also learned operationally: cancelling a live GitHub Actions run to
+deploy a fix is not free — if a cycle is mid-flight past its own real
+action but before persistence, cancelling can itself cause the exact
+"real fill, lost bookkeeping" bug this session spent hours fixing. Now
+mitigated by the fix above (persist after every action point, not just
+per-cycle), but still worth checking a run isn't mid-cycle-with-recent-
+Telegram-activity before cancelling it, not just "it looks stuck."
