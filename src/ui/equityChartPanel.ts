@@ -146,7 +146,10 @@ export function mountEquityChartPanel(
     ).join('');
 
     container.innerHTML = `
-      <div class="hero">
+      <!-- hero-bare matches Home's balance treatment: same dominant-figure
+           pattern for this sub-screen (shared by Crypto's and Stocks' History
+           tab), not a secondary boxed widget. -->
+      <div class="hero hero-bare">
         <div class="hero-label">Now <span class="tag-sim">SIMULATED</span></div>
         <div class="hero-value">${currency}${formatPrice(last)}</div>
         <div class="hero-change ${up ? 'up' : 'down'}">${formatPct(ret)} · ${rangeKey}</div>

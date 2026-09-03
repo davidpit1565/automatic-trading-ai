@@ -63,7 +63,10 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     </div>
     <div class="hub-panel" data-hub-panel="market"></div>
     <div class="hub-panel" data-hub-panel="profit">
-      <section class="hero">
+      <!-- hero-bare matches Home's balance treatment: same dominant-figure
+           pattern for this sub-screen (shared by Crypto's and Stocks' Profit
+           tab), not a secondary boxed widget. -->
+      <section class="hero hero-bare">
         <div class="hero-label">Total return</div>
         <div class="hero-value" id="hub-return">—</div>
         <div class="hero-bench" id="hub-bench" hidden></div>

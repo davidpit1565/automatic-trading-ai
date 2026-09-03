@@ -25,7 +25,11 @@ export function renderPortfolioView(container: HTMLElement, data: ActiveDataSour
     <h2 class="view-title">Paper Portfolio</h2>
     <p class="view-sub">Simulated trading with virtual money — practice without risk. Nothing here touches a real account.</p>
 
-    <section class="hero" id="pp-hero">
+    <!-- hero-bare matches Home's balance treatment: this equity figure is
+         THE dominant element of this screen (same as Home's balance is
+         Home's), so it gets the same bare, un-boxed, giant-scale treatment
+         rather than sitting in a bordered card like a secondary widget. -->
+    <section class="hero hero-bare" id="pp-hero">
       <div class="hero-label">Equity <span class="tag-sim">SIMULATED</span></div>
       <div class="hero-value" id="pp-equity">—</div>
       <div class="hero-change" id="pp-change"></div>

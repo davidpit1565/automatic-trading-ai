@@ -1,5 +1,34 @@
 # PROJECT_STATE
 
+## Extending true-black: every dominant-balance hero goes bare, not just Home's (2026-09-03)
+Continuing the true-black direction (previous entry) — David said this is an
+ongoing target, so kept going rather than treating #133 as one-shot. Found
+that `hero-bare` (the "balance sits directly on the page, no card chrome"
+treatment) had only ever been applied to Home's Crypto-Overview balance,
+even though the identical dominant-figure pattern exists on five other
+screens: Paper Portfolio's Equity, Stocks' Overview balance, the shared
+Profit tab's "Total return" (used by both Crypto's and Stocks' hub —
+`assetHubView.ts`), the shared History tab's "Now" figure
+(`equityChartPanel.ts`, also shared by both hubs), and Stocks' Long-term
+wallet balance. Each of these is genuinely the dominant element of its own
+screen, exactly the situation `hero-bare` was designed for — so each now
+gets the identical one-added-class treatment Home's hero got in #133.
+`src/ui/views/portfolioView.ts`, `stocksOverviewPanel.ts`,
+`stocksLongTermPanel.ts`, `assetHubView.ts`, `equityChartPanel.ts` — one
+class added per file, no other changes.
+
+Verified visually: dev server + Playwright at 400x860 (`?demo=1`) — Paper
+Portfolio, Stocks Overview, Stocks Long-Term, and both hubs' Profit tab all
+now render their balance bare and centered like Home's, instead of the old
+boxed card. Full gate green: tsc, vitest (1002 tests, none touched), build.
+
+Deliberately NOT touched in this pass (real component-level work, not a
+free token win, left for a future increment): Grid Sim, Backtest and
+Validation tool panels already read as fully consistent with the true-black
+palette purely from the token change (verified visually) — their
+inputs/buttons/pills inherit correctly and none of them has a dominant-
+balance hero to convert, so there's no cheap win left there.
+
 ## True-black Revolut X theme landed — supersedes PR #117 (2026-09-03)
 David: "do the direction of #117, this is your next target now." PR #117
 (`claude/market-scan-integration-r9lck1`) proposed the true-black theme but
