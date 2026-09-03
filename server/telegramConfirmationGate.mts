@@ -28,6 +28,7 @@ import type { KeyValueStore } from '../src/core/data/storage';
 import {
   answerCallbackQuery,
   editTelegramMessage,
+  getSummaryTimezone,
   pollAllTelegramUpdates,
   sendTelegramMessage,
   stashUnclaimedTelegramUpdates,
@@ -71,14 +72,18 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** HH:MM in the project's default Hebrew-user timezone (matches the daily
- * digest's own default in `autopilotRunner.mts`) — an absolute clock time,
- * not a relative countdown: Telegram already timestamps the message itself,
- * and a bot can't tick a live countdown down between polls anyway (runs are
- * ~30 minutes apart), so a fixed deadline is the honest thing to show. */
+/** HH:MM in `getSummaryTimezone()` — the SAME shared timezone the daily
+ * digests use (telegram.mts), not a second independent clock. Real bug,
+ * found 2026-09-03: this used to hardcode 'Asia/Jerusalem' directly, so
+ * while David was travelling (digests already correctly on Europe/Brussels
+ * via SUMMARY_TIMEZONE) this deadline alone stayed an hour off. An absolute
+ * clock time, not a relative countdown: Telegram already timestamps the
+ * message itself, and a bot can't tick a live countdown down between polls
+ * anyway (runs are ~30 minutes apart), so a fixed deadline is the honest
+ * thing to show. */
 function formatDeadline(deadlineMs: number): string {
   return new Intl.DateTimeFormat('he-IL', {
-    timeZone: 'Asia/Jerusalem',
+    timeZone: getSummaryTimezone(),
     hour: '2-digit',
     minute: '2-digit',
   }).format(deadlineMs);

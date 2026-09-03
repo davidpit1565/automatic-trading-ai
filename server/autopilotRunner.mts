@@ -80,6 +80,7 @@ import {
   buildRiskHaltAlert,
   buildSafetyAlert,
   buildTestMessage,
+  getSummaryTimezone,
   killSwitchKeyboard,
   maybeSendEducationTip,
   sendTelegramMessage,
@@ -216,21 +217,6 @@ export function breakerEngaged(store: FileStore): boolean {
 const MAX_OPEN_POSITIONS = DEFAULT_RISK_LIMITS.maxOpenPositions;
 const ALLCLEAR_KEY = 'allclear-last-at';
 const ALLCLEAR_INTERVAL_MS = 14 * 24 * 60 * 60 * 1000;
-/**
- * Timezone the digests are scheduled in. Overridable via the SUMMARY_TIMEZONE
- * repo variable without a code change; DST is handled automatically by Intl.
- * Read fresh on every call (not a frozen module-level const) so an override
- * takes effect immediately and tests can pin their own expected timezone
- * regardless of what the hardcoded fallback below currently is.
- *
- * TEMPORARY: fallback set to Europe/Brussels for a trip (2026-08-10) — revert
- * to 'Asia/Jerusalem' once back home, or set SUMMARY_TIMEZONE instead so this
- * fallback never has to move again.
- */
-function getSummaryTimezone(): string {
-  return process.env['SUMMARY_TIMEZONE'] || 'Europe/Brussels';
-}
-
 /** Local date parts (in the given timezone) used to schedule digests. */
 export function localDayAndHour(
   now: number,

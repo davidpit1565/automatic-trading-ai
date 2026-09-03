@@ -1,5 +1,36 @@
 # PROJECT_STATE
 
+## The confirmation-message deadline clock disagreed with the digest clock (2026-09-03)
+David pointed out the confirmation message's "בתוקף עד HH:MM" deadline still
+showed Israel time while he's travelling. Root cause: two independent
+timezone sources existed — `autopilotRunner.mts`'s digest scheduling
+already defaults to `Europe/Brussels` for his trip (overridable via the
+`SUMMARY_TIMEZONE` repo variable), but `telegramConfirmationGate.mts`'s
+`formatDeadline` hardcoded `'Asia/Jerusalem'` directly and never read that
+override — so the two clocks disagreed by an hour. This likely explains
+some of the earlier "the time doesn't match my phone" reports too, not
+just phone/DST quirks.
+
+Fixed: moved `getSummaryTimezone()` into `telegram.mts` (a shared module
+both files already import, avoiding a circular import between
+`autopilotRunner.mts` and `telegramConfirmationGate.mts`) and pointed the
+confirmation deadline at the same shared function the digests use — one
+timezone source now, not two.
+
+Also confirmed (from a real order this morning): the UUID `client_order_id`
+fix is fully verified working — Revolut X now evaluates orders on their
+real merits instead of bouncing every one with "Invalid client order ID".
+The next rejection was a legitimate business one ("Estimated amount for
+order is too small") — an expected consequence of the real account's tiny
+balance (now correctly synced, see the cash-reconciliation entry below),
+not a bug: any properly-sized position against a ~€0.11 balance is below
+Revolut X's minimum order size. No code change needed there — it resolves
+once the account is funded further.
+
+Tests: a regression setting `SUMMARY_TIMEZONE` to a timezone far from both
+Jerusalem and Brussels and confirming the confirmation deadline actually
+reflects it. Full gate green (tsc server+app, 1003 tests, build).
+
 ## Extending true-black: every dominant-balance hero goes bare, not just Home's (2026-09-03)
 Continuing the true-black direction (previous entry) — David said this is an
 ongoing target, so kept going rather than treating #133 as one-shot. Found
