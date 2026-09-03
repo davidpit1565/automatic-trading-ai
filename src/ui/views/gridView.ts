@@ -13,8 +13,8 @@ const CANDLE_LIMIT = 300;
 
 export function renderGridView(container: HTMLElement, data: ActiveDataSource): void {
   container.innerHTML = `
-    <h2>Grid Simulation</h2>
-    <p class="status-line">
+    <h2 class="view-title">Grid Simulation</h2>
+    <p class="view-sub">
       Buys fixed amounts as price falls through grid levels and sells them as it
       recovers. Works in ranges; loses in sustained downtrends — the simulation
       shows both honestly.

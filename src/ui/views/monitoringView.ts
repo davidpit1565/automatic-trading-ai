@@ -60,41 +60,51 @@ export function renderMonitoringView(container: HTMLElement, data: ActiveDataSou
   });
 
   container.innerHTML = `
-    <h2>Monitoring</h2>
-    <p class="status-line">
+    <h2 class="view-title">Monitoring</h2>
+    <p class="view-sub">
       Continuous scheduled scans through the verified pipeline: scanner → signal engine →
       risk engine → validation. Analysis only — nothing is ever traded automatically.
     </p>
-    <div class="controls">
-      <label class="control">Interval
-        <select id="mon-interval">
-          ${(['5m', '15m', '30m', '1h', '4h', '1d'] as MonitorInterval[])
-            .map((i) => `<option value="${i}" ${i === '15m' ? 'selected' : ''}>${i}</option>`)
-            .join('')}
-        </select>
-      </label>
-      <button class="primary" id="mon-start">Start monitoring</button>
-      <button class="secondary" id="mon-stop">Stop</button>
-      <button class="secondary" id="mon-scan-now">Scan now</button>
-      <button class="secondary" id="mon-notify-perm">Enable browser notifications</button>
-    </div>
-    <div class="status-line" id="mon-status">Monitoring stopped.</div>
-    <h3>Current opportunities</h3>
-    <div id="mon-opportunities"><p class="status-line">No scan has run yet.</p></div>
-    <h3>Watchlist</h3>
-    <div class="controls">
-      <label class="control">Add symbol
-        <select id="mon-watch-symbol">
-          ${data.instruments.map((i) => `<option value="${escapeHtml(i.symbol)}">${escapeHtml(i.symbol)}</option>`).join('')}
-        </select>
-      </label>
-      <button class="secondary" id="mon-watch-add">Add to watchlist</button>
-    </div>
-    <div id="mon-watchlist"></div>
-    <h3>Opportunity history</h3>
-    <div id="mon-history"></div>
-    <h3>Alert history</h3>
-    <div id="mon-alerts"></div>
+    <section class="block">
+      <div class="controls">
+        <label class="control">Interval
+          <select id="mon-interval">
+            ${(['5m', '15m', '30m', '1h', '4h', '1d'] as MonitorInterval[])
+              .map((i) => `<option value="${i}" ${i === '15m' ? 'selected' : ''}>${i}</option>`)
+              .join('')}
+          </select>
+        </label>
+        <button class="primary" id="mon-start">Start monitoring</button>
+        <button class="secondary" id="mon-stop">Stop</button>
+        <button class="secondary" id="mon-scan-now">Scan now</button>
+        <button class="secondary" id="mon-notify-perm">Enable browser notifications</button>
+      </div>
+      <div class="status-line" id="mon-status">Monitoring stopped.</div>
+    </section>
+    <section class="block">
+      <div class="block-head"><h2>Current opportunities</h2></div>
+      <div id="mon-opportunities"><div class="empty">No scan has run yet.</div></div>
+    </section>
+    <section class="block">
+      <div class="block-head"><h2>Watchlist</h2></div>
+      <div class="controls">
+        <label class="control">Add symbol
+          <select id="mon-watch-symbol">
+            ${data.instruments.map((i) => `<option value="${escapeHtml(i.symbol)}">${escapeHtml(i.symbol)}</option>`).join('')}
+          </select>
+        </label>
+        <button class="secondary" id="mon-watch-add">Add to watchlist</button>
+      </div>
+      <div id="mon-watchlist"></div>
+    </section>
+    <section class="block">
+      <div class="block-head"><h2>Opportunity history</h2></div>
+      <div id="mon-history"></div>
+    </section>
+    <section class="block">
+      <div class="block-head"><h2>Alert history</h2></div>
+      <div id="mon-alerts"></div>
+    </section>
     <p class="disclaimer">
       Alerts flag technical evidence for review — they are not trade instructions and not
       financial advice.
@@ -157,13 +167,13 @@ export function renderMonitoringView(container: HTMLElement, data: ActiveDataSou
 function renderOpportunities(element: Element, engine: MonitoringEngine): void {
   const result = engine.status().lastResult;
   if (!result) {
-    element.innerHTML = '<p class="status-line">No scan has run yet.</p>';
+    element.innerHTML = '<div class="empty">No scan has run yet.</div>';
     return;
   }
   const qualified = result.outcomes.filter((o) => o.outcome === 'qualified');
   if (qualified.length === 0) {
     element.innerHTML =
-      '<p class="status-line">No qualified opportunities in the last scan — refusing weak setups is the system protecting capital.</p>';
+      '<div class="empty">No qualified opportunities in the last scan — refusing weak setups is the system protecting capital.</div>';
     return;
   }
   element.innerHTML = `
@@ -199,7 +209,7 @@ function renderWatchlist(
 ): void {
   const entries = engine.watchlistEntries();
   if (entries.length === 0) {
-    element.innerHTML = '<p class="status-line">Watchlist is empty.</p>';
+    element.innerHTML = '<div class="empty">Watchlist is empty.</div>';
     return;
   }
   element.innerHTML = `
@@ -245,7 +255,7 @@ function renderWatchlist(
 function renderHistory(element: Element, engine: MonitoringEngine): void {
   const records = [...engine.opportunityHistory()].reverse().slice(0, 25);
   if (records.length === 0) {
-    element.innerHTML = '<p class="status-line">No opportunities recorded yet.</p>';
+    element.innerHTML = '<div class="empty">No opportunities recorded yet.</div>';
     return;
   }
   element.innerHTML = `
@@ -281,7 +291,7 @@ function renderHistory(element: Element, engine: MonitoringEngine): void {
 function renderAlerts(element: Element, engine: MonitoringEngine): void {
   const alerts = [...engine.alertHistory()].reverse().slice(0, 25);
   if (alerts.length === 0) {
-    element.innerHTML = '<p class="status-line">No alerts yet.</p>';
+    element.innerHTML = '<div class="empty">No alerts yet.</div>';
     return;
   }
   element.innerHTML = `

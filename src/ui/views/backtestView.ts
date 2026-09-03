@@ -14,8 +14,8 @@ const CANDLE_LIMIT = 300;
 
 export function renderBacktestView(container: HTMLElement, data: ActiveDataSource): void {
   container.innerHTML = `
-    <h2>Backtesting Lab</h2>
-    <p class="status-line">
+    <h2 class="view-title">Backtesting Lab</h2>
+    <p class="view-sub">
       Compare strategies over the same history, fees included, liquidation at the end.
       Past performance never guarantees future results.
     </p>

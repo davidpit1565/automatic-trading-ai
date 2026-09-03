@@ -47,8 +47,8 @@ function buildRiskContext(): RiskContext {
 
 export function renderMarketScanView(container: HTMLElement, data: ActiveDataSource): void {
   container.innerHTML = `
-    <h2>Market Scan</h2>
-    <p class="status-line">
+    <h2 class="view-title">Market Scan</h2>
+    <p class="view-sub">
       Scores each market from −100 (strong bearish evidence) to +100 (strong bullish
       evidence) using trend, momentum, MACD, stochastic and volume. Click a row for the
       full breakdown.
