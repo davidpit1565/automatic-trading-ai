@@ -183,7 +183,22 @@ export async function mirrorApprovedEntries(
       store.set(PENDING_KEY, pending);
       continue;
     }
-    const intent = buildLiveOrderIntent(`live-entry:${symbol}`, assessment, now, brokerSymbol);
+    // 2026-09-03 real incident: Revolut X rejected a genuinely NEW /buy
+    // attempt as a duplicate ("client_order_id ... has already been placed")
+    // because deterministicClientOrderId (revolutXBrokerAdapter.mts) derives
+    // purely from intent.id, and intent.id used to be just `live-entry:
+    // ${symbol}` — identical for EVERY attempt ever made on this symbol, not
+    // only retries of the SAME attempt. Embedding this pending entry's own
+    // queuedAt keeps retries of ONE attempt stable (queuedAt is set once when
+    // first queued above and doesn't change until this entry resolves and is
+    // deleted from `pending`) while giving a genuinely later, separate
+    // attempt for the same symbol a fresh id.
+    const intent = buildLiveOrderIntent(
+      `live-entry:${symbol}:${pending[symbol]!.queuedAt}`,
+      assessment,
+      now,
+      brokerSymbol,
+    );
     const result = await runLiveOrderFlow({ ...flowParams, intent });
     outcomes.push({ symbol, ...result });
     if (result.outcome !== 'pending') delete pending[symbol];

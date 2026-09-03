@@ -38,12 +38,18 @@ function fakeConfirmationGate(outcome: ConfirmationDecision): ConfirmationGate {
   };
 }
 
+/** intentId always mirrors the real submitted intent.id, never the
+ * caller-supplied report.intentId — see liveEntryMirror.test.ts's own
+ * fakeBrokerAdapter for why (2026-09-03: intent.id now embeds the pending
+ * entry's own queuedAt, so a stale hardcoded id would silently stop
+ * matching and recordLiveEntryFill's own intentId check would reject the
+ * fill). */
 function fakeBrokerAdapter(report: OrderStatusReport): BrokerAdapter {
   return {
     name: 'fake-broker',
     mode: 'live',
-    async submit() {
-      return report;
+    async submit(intent) {
+      return { ...report, intentId: intent.id };
     },
     async cancel(): Promise<OrderStatusReport> {
       throw new Error('not used');
@@ -115,8 +121,9 @@ describe('checkManualBuyRequests', () => {
       chatId: 'C',
       fetchFn: seedTelegram([{ update_id: 1, message: { text: '/buy XBTEUR', chat: { id: 'C' } } }]),
     };
+    // Freshly queued at now=1000 (price available immediately) -> queuedAt=1000.
     const report: OrderStatusReport = {
-      intentId: 'live-entry:XBTEUR',
+      intentId: 'live-entry:XBTEUR:1000',
       state: 'filled',
       filledQuantity: 0.01,
       avgFillPrice: 100,
@@ -168,9 +175,12 @@ describe('checkManualBuyRequests', () => {
     expect(first).toEqual([]);
 
     // A later cycle, no new Telegram message, but the queued symbol is
-    // retried and this time price data is available.
+    // retried and this time price data is available — the FIRST time
+    // mirrorApprovedEntries actually runs for it (no price meant no
+    // opportunity, so no live-entry-pending record, on the first call
+    // above), so queuedAt is this call's own now=1500.
     const report: OrderStatusReport = {
-      intentId: 'live-entry:XBTEUR',
+      intentId: 'live-entry:XBTEUR:1500',
       state: 'filled',
       filledQuantity: 0.01,
       avgFillPrice: 100,
