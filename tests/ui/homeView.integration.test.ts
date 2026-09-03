@@ -121,6 +121,68 @@ describe('Home view (DOM integration)', () => {
     expect(card.querySelector('.readiness-list li.no')).not.toBeNull();
   });
 
+  it('hides the real-money section entirely when the live ledger has never been initialized', async () => {
+    const raw = { 'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'EUR' } };
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: true, json: () => Promise.resolve(raw) }));
+
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderHomeView(container, await makeData());
+
+    await waitFor(() => container.querySelector('#home-status')?.textContent !== 'Loading the cloud agent…');
+    expect(container.querySelector<HTMLElement>('#home-live-hero')!.hidden).toBe(true);
+    expect(container.querySelector<HTMLElement>('#home-live-positions-wrap')!.hidden).toBe(true);
+  });
+
+  it('shows the real-money account (equity, cash, open positions) once the live ledger exists, distinctly labeled from the simulated one', async () => {
+    const raw = {
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'EUR' },
+      'live:live-cash-eur': 50,
+      'live:live-open-positions': {
+        'live-entry:BTCUSD': {
+          symbol: 'BTC/USD',
+          quantity: 0.01,
+          entryPrice: 100,
+          stopLoss: 90,
+          takeProfit: 120,
+          openedAt: 1_000,
+          entryAssessment: { asset: 'BTC/USD' },
+        },
+      },
+      'live:kill-switch': { engaged: false, reason: null },
+    };
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: true, json: () => Promise.resolve(raw) }));
+
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderHomeView(container, await makeData());
+
+    await waitFor(() => container.querySelector<HTMLElement>('#home-live-hero')?.hidden === false);
+    expect(container.querySelector('#home-live-hero')!.textContent).toContain('Real money');
+    expect(container.querySelector('.tag-live')).not.toBeNull();
+    expect(container.querySelector<HTMLElement>('#home-live-positions-wrap')!.hidden).toBe(false);
+    await waitFor(() => container.querySelectorAll('#home-live-positions .row').length > 0);
+    expect(container.querySelector('#home-live-positions')!.textContent).toContain('BTC/USD');
+    expect(container.querySelector<HTMLElement>('#hv-kill-switch')!.hidden).toBe(true);
+  });
+
+  it('shows a paused banner when the kill switch is engaged on the real account', async () => {
+    const raw = {
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'EUR' },
+      'live:live-cash-eur': 50,
+      'live:kill-switch': { engaged: true, reason: 'manual pause' },
+    };
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: true, json: () => Promise.resolve(raw) }));
+
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderHomeView(container, await makeData());
+
+    await waitFor(() => container.querySelector<HTMLElement>('#hv-kill-switch')?.hidden === false);
+    expect(container.querySelector('#hv-kill-switch')!.textContent).toContain('paused');
+    expect(container.querySelector('#hv-kill-switch')!.textContent).toContain('manual pause');
+  });
+
   it('clears the "vs Bitcoin" banner if a later cycle cannot price BTC (no stale comparison shown as current)', async () => {
     const raw = {
       'portfolio-engine': { cash: 5000, initialCash: 10000, baseCurrency: 'EUR' },

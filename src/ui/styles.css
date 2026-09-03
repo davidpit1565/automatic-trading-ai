@@ -840,6 +840,14 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .hero-label { color: var(--text-dim); font-size: 0.85rem; font-weight: 550; display: flex; align-items: center; gap: 0.5rem; }
 .tag-sim { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; background: var(--accent-tint);
   color: var(--accent-text); border: 1px solid rgba(255, 255, 255, 0.4); padding: 0.12rem 0.45rem; border-radius: var(--r-xs); }
+/* The REAL account's badge is deliberately a different color from
+   .tag-sim (--cold, not --accent) — the two must never read as the same
+   kind of thing at a glance. */
+.tag-live { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; background: var(--cold-tint);
+  color: var(--cold); border: 1px solid rgba(242, 109, 125, 0.4); padding: 0.12rem 0.45rem; border-radius: var(--r-xs); }
+.kill-switch-banner { display: flex; align-items: center; gap: 0.5rem; background: var(--warn-tint);
+  color: var(--warn); border: 1px solid rgba(245, 185, 61, 0.4); border-radius: var(--r-md);
+  padding: 0.6rem 0.75rem; font-size: 0.85rem; font-weight: 650; margin-top: 0.6rem; }
 .hero-value { display: flex; align-items: baseline; gap: 0.06em; font-weight: 750; letter-spacing: -0.02em;
   margin: 0.3rem 0 0.1rem; font-variant-numeric: tabular-nums; }
 .hero-value-currency { font-size: 1.7rem; }

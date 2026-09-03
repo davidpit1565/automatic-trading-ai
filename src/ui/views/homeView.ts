@@ -51,6 +51,27 @@ async function livePrices(data: ActiveDataSource, symbols: string[]): Promise<Re
 
 export function renderHomeView(container: HTMLElement, data: ActiveDataSource): ViewHandle {
   container.innerHTML = '';
+  // The REAL Revolut X account — separate section, hidden entirely until
+  // the live ledger has ever been initialized (state.live !== null), so a
+  // stocks view or a fresh crypto deploy with no live account yet never
+  // shows a misleading "€0.00 real money" card.
+  const liveHero = el('section', 'hero');
+  liveHero.id = 'home-live-hero';
+  liveHero.hidden = true;
+  liveHero.innerHTML = `
+    <div class="hero-label">Real money <span class="tag-live">REAL</span></div>
+    <div class="hero-value" id="hv-live-equity"><span class="hero-value-major">—</span></div>
+    <div class="hero-split"><span id="hv-live-cash"></span></div>
+    <div class="kill-switch-banner" id="hv-kill-switch" hidden></div>
+  `;
+  const livePosWrap = el('section', 'block');
+  livePosWrap.id = 'home-live-positions-wrap';
+  livePosWrap.hidden = true;
+  livePosWrap.innerHTML = `<div class="block-head"><h2>Real open positions</h2></div>`;
+  const livePosList = el('div', 'stack stack-card');
+  livePosList.id = 'home-live-positions';
+  livePosWrap.appendChild(livePosList);
+
   const hero = el('section', 'hero tappable');
   hero.dataset['nav'] = 'value';
   hero.innerHTML = `
@@ -100,7 +121,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   const status = el('p', 'muted-line', 'Loading the cloud agent…');
   status.id = 'home-status';
 
-  container.append(hero, posWrap, marketsWrap, moversWrap, readyWrap, actWrap, status);
+  container.append(liveHero, livePosWrap, hero, posWrap, marketsWrap, moversWrap, readyWrap, actWrap, status);
   attachCoinLogoFallback(container);
 
   let state: CloudState | null = null;
@@ -179,6 +200,46 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     }
   }
 
+  function renderLiveAccount(prices: Record<string, number>): void {
+    const live = state?.live;
+    liveHero.hidden = !live;
+    livePosWrap.hidden = !live;
+    if (!live) return;
+
+    const invested = live.positions.reduce((s, p) => s + p.quantity * (prices[p.symbol] ?? p.entryPrice), 0);
+    const equity = live.cash + invested;
+    const { major, minor } = formatPriceSplit(equity);
+    const equityEl = liveHero.querySelector<HTMLElement>('#hv-live-equity')!;
+    equityEl.innerHTML = `<span class="hero-value-currency">€</span><span class="hero-value-major">${major}</span><span class="hero-value-minor">.${minor}</span>`;
+    liveHero.querySelector<HTMLElement>('#hv-live-cash')!.textContent = `Cash ${euro(live.cash)}`;
+
+    const banner = liveHero.querySelector<HTMLElement>('#hv-kill-switch')!;
+    if (live.killSwitchEngaged) {
+      banner.hidden = false;
+      banner.textContent = `⏸ Real-money trading paused${live.killSwitchReason ? ` — ${live.killSwitchReason}` : ''}`;
+    } else {
+      banner.hidden = true;
+    }
+
+    livePosList.innerHTML = '';
+    if (live.positions.length === 0) {
+      livePosList.appendChild(el('div', 'empty', 'No real positions open — holding cash.'));
+    } else {
+      for (const p of live.positions) {
+        const price = prices[p.symbol] ?? p.entryPrice;
+        const movePct = p.entryPrice > 0 ? ((price - p.entryPrice) / p.entryPrice) * 100 : 0;
+        const up = movePct >= 0;
+        const row = el('div', 'row');
+        row.innerHTML = `
+          <div class="row-main">${coinLogoHtml(baseFor(data, p.symbol))}<div><div class="row-title">${p.symbol}</div>
+            <div class="row-sub">entry ${euro(p.entryPrice)}</div></div></div>
+          <div class="row-side"><span class="row-title">${euro(p.quantity * price)}</span>
+            <span class="chg ${up ? 'up' : 'down'}">${formatPct(movePct)}</span></div>`;
+        livePosList.appendChild(row);
+      }
+    }
+  }
+
   function renderHeroSpark(): void {
     const spark = container.querySelector<HTMLElement>('#hv-spark');
     if (!spark) return;
@@ -249,9 +310,11 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   async function refreshPrices(): Promise<void> {
     if (!state) return;
     const symbols = state.positions.map((p) => p.symbol);
+    for (const p of state.live?.positions ?? []) symbols.push(p.symbol);
     const btc = findBtcSymbol(data);
     if (btc) symbols.push(btc);
     const prices = await livePrices(data, symbols);
+    renderLiveAccount(prices);
 
     const invested = state.positions.reduce((s, p) => s + p.quantity * (prices[p.symbol] ?? p.entryPrice), 0);
     const equity = state.cash + invested;

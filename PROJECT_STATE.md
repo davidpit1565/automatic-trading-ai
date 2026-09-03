@@ -1,5 +1,35 @@
 # PROJECT_STATE
 
+## The website now shows the REAL Revolut X account, not just the simulated one (2026-09-03)
+David asked why the website "still shows the money as demo" even though
+real money is live — correct: `homeView.ts`'s hero card only ever read the
+SIMULATED paper-trading state (`portfolio-engine`, `open-positions`, etc.),
+never the real account. The real data was already being tracked and
+committed server-side (`server/liveLedger.mts`'s `live-cash-eur`,
+`server/liveExitFlow.mts`'s `live-open-positions`, all under the
+`live:`-prefixed keys `autopilotRunner.mts` writes via `PrefixedStore`) —
+the UI simply never read them.
+
+Added: `cloudState.ts` now also parses the `live:` keys into a new
+`CloudState.live` field (cash, open positions by internal symbol, kill-
+switch state, recent real filled/rejected events) — `null` until the live
+ledger has ever been initialized, so the stocks state file (no live
+account) or a fresh deploy never shows a misleading "€0.00 real account".
+`homeView.ts` renders it as a distinct "Real money" card (red `.tag-live`
+badge, deliberately never the same color as the existing `.tag-sim`
+badge), with its own open-positions list, and a paused banner when the
+kill switch is engaged. Verified visually in a real browser (Playwright,
+`?demo=1`): the card and the kill-switch-paused state both render
+correctly, and no infrastructure exists yet to test this against the live
+GitHub-hosted state directly, but the parsing is unit-tested against the
+exact committed shape.
+
+Tests: `cloudState.test.ts` (parses cash/positions/kill-switch/recent
+events; null when uninitialized; safe defaults when partially absent),
+`homeView.integration.test.ts` (hidden when no live account; shown with
+correct equity/positions; kill-switch banner). Full gate green (tsc
+server+app, 999 tests, build).
+
 ## client_order_id must be a real UUID — the colon fix was incomplete (2026-09-03)
 The earlier fix tonight (sanitizing `:` → `-` in `client_order_id`) was not
 enough: the very next live order still got `HTTP 400 — "Invalid client
