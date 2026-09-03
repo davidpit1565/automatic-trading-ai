@@ -88,6 +88,35 @@ export interface CloudState {
   readonly marketSnapshot: MarketSnapshotEntry[];
   /** Shadow-portfolio candidate standings, or empty if none have run yet. */
   readonly shadowStandings: CloudShadowStanding[];
+  /** The REAL Revolut X account — separate from everything else above,
+   * which is all SIMULATED. Null until the live ledger has ever been
+   * initialized (e.g. the stocks state file, which has no live account). */
+  readonly live: LiveAccountState | null;
+}
+
+/** One currently open REAL position — `symbol` is this project's internal
+ * instrument code (e.g. 'XBTEUR'), read from the position's own entry
+ * assessment, not the broker-native pair symbol it's stored under. */
+export interface LiveOpenPosition {
+  readonly symbol: string;
+  readonly quantity: number;
+  readonly entryPrice: number;
+  readonly stopLoss: number;
+  readonly takeProfit: number;
+  readonly openedAt: number;
+}
+
+/** The real Revolut X account's current state, mirrored from the same
+ * committed file the cloud agent (server/liveLedger.mts, liveExitFlow.mts)
+ * writes to under its 'live:'-prefixed keys. */
+export interface LiveAccountState {
+  readonly cash: number;
+  readonly positions: LiveOpenPosition[];
+  readonly killSwitchEngaged: boolean;
+  readonly killSwitchReason: string | null;
+  /** Real (not simulated) trade outcomes — filled or broker-rejected —
+   * newest first, capped to a short recent list. */
+  readonly recentEvents: { at: number; event: string; detail: string }[];
 }
 
 interface RawState {
@@ -118,6 +147,20 @@ interface RawState {
       startedAt?: number;
     }>;
   };
+  'live:live-cash-eur'?: number;
+  'live:live-open-positions'?: Record<string, RawLivePosition> | null;
+  'live:kill-switch'?: { engaged?: boolean; reason?: string | null };
+  'live:audit-log'?: Array<{ timestamp?: number; event?: string; detail?: string }>;
+}
+
+interface RawLivePosition {
+  symbol?: string;
+  quantity?: number;
+  entryPrice?: number;
+  stopLoss?: number;
+  takeProfit?: number;
+  openedAt?: number;
+  entryAssessment?: { asset?: string };
 }
 
 /**
@@ -133,6 +176,39 @@ interface RawState {
  */
 export function tidyNoteNumbers(note: string): string {
   return note.replace(/\d+\.\d{5,}/g, (n) => formatPrice(Number(n)));
+}
+
+/** Real account state is null (not an all-zero object) until the live
+ * ledger has ever been initialized — e.g. the stocks state file, which
+ * carries no 'live:' keys at all, must not render an empty "€0.00" real
+ * account that never existed. */
+function parseLiveAccountState(raw: RawState): LiveAccountState | null {
+  const cash = raw['live:live-cash-eur'];
+  if (typeof cash !== 'number') return null;
+  const rawPositions = raw['live:live-open-positions'];
+  const positions: LiveOpenPosition[] = rawPositions
+    ? Object.values(rawPositions).map((p) => ({
+        symbol: p.entryAssessment?.asset ?? p.symbol ?? '',
+        quantity: p.quantity ?? 0,
+        entryPrice: p.entryPrice ?? 0,
+        stopLoss: p.stopLoss ?? 0,
+        takeProfit: p.takeProfit ?? 0,
+        openedAt: p.openedAt ?? 0,
+      }))
+    : [];
+  const killSwitch = raw['live:kill-switch'];
+  const recentEvents = (raw['live:audit-log'] ?? [])
+    .filter((e) => e.event === 'filled' || e.event === 'rejected')
+    .map((e) => ({ at: e.timestamp ?? 0, event: e.event ?? '', detail: tidyNoteNumbers(e.detail ?? '') }))
+    .sort((a, b) => b.at - a.at)
+    .slice(0, 5);
+  return {
+    cash,
+    positions,
+    killSwitchEngaged: killSwitch?.engaged === true,
+    killSwitchReason: killSwitch?.reason ?? null,
+    recentEvents,
+  };
 }
 
 /** Parse "paper entry/exit SYMBOL: qty @ price (note)" into a trade. */
@@ -237,6 +313,7 @@ async function fetchCloudStateOnce(fetchFn: typeof fetch, stateUrl: string): Pro
           openPositions: s.openPositions,
           startedAt: s.startedAt,
         })),
+      live: parseLiveAccountState(raw),
     };
   } catch {
     return null;

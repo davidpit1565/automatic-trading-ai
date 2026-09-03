@@ -139,6 +139,60 @@ describe('shadow-standings parsing', () => {
   });
 });
 
+describe('live account state parsing (the real Revolut X account, separate from the simulated one above)', () => {
+  it('is null when the live ledger has never been initialized (e.g. the stocks state file)', async () => {
+    const state = await fetchCloudState(okFetch(stateFile([])));
+    expect(state!.live).toBeNull();
+  });
+
+  it('parses cash, open positions (by internal symbol from entryAssessment.asset), kill-switch state, and recent real trade outcomes', async () => {
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'live:live-cash-eur': 100.15,
+      'live:live-open-positions': {
+        'live-entry:XBTEUR': {
+          symbol: 'BTC/EUR',
+          quantity: 0.001,
+          entryPrice: 95_000,
+          stopLoss: 90_000,
+          takeProfit: 105_000,
+          openedAt: 1_000,
+          entryAssessment: { asset: 'XBTEUR' },
+        },
+      },
+      'live:kill-switch': { engaged: true, reason: 'network failure before a response was received' },
+      'live:audit-log': [
+        { timestamp: 2_000, event: 'awaiting-confirmation', detail: 'confirmation request sent to Telegram' },
+        { timestamp: 3_000, event: 'rejected', detail: "Revolut X rejected the order: HTTP 400 — Invalid client order ID" },
+      ],
+    });
+    const state = await fetchCloudState(okFetch(body));
+    expect(state!.live).toEqual({
+      cash: 100.15,
+      positions: [{ symbol: 'XBTEUR', quantity: 0.001, entryPrice: 95_000, stopLoss: 90_000, takeProfit: 105_000, openedAt: 1_000 }],
+      killSwitchEngaged: true,
+      killSwitchReason: 'network failure before a response was received',
+      // Only real outcome events (filled/rejected) — 'awaiting-confirmation' is excluded.
+      recentEvents: [{ at: 3_000, event: 'rejected', detail: "Revolut X rejected the order: HTTP 400 — Invalid client order ID" }],
+    });
+  });
+
+  it('defaults an absent kill-switch/positions/audit-log to a safe empty state, not a crash', async () => {
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'live:live-cash-eur': 50,
+    });
+    const state = await fetchCloudState(okFetch(body));
+    expect(state!.live).toEqual({
+      cash: 50,
+      positions: [],
+      killSwitchEngaged: false,
+      killSwitchReason: null,
+      recentEvents: [],
+    });
+  });
+});
+
 describe('fetchStocksState', () => {
   it('reads the separate stocks state file, not the crypto one', async () => {
     const seen: string[] = [];
