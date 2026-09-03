@@ -36,6 +36,15 @@ range switch shows the fade curve above, not a snap. Full gate green: `tsc`,
 marketsView range/mode-switch tests, all passing unchanged since they
 already awaited the repaint), `npm run build`.
 
+## The production site had been frozen for ~11 hours — every real PR since #115 never actually deployed (2026-09-03)
+David's screenshots showed the "Real money" card missing the BTC breakdown and equity chart just shipped in a previous entry — checked whether it was a UI bug (it wasn't) before checking Vercel directly. Found: the live production alias (`automatic-trading-ai-dp1565-project.vercel.app`) was still serving the build from **PR #115** (merged 02:38 UTC) — confirmed by fetching the alias's actual deployment record AND by curling its served JS/CSS bundle hashes, which matched neither a fresh local build nor anything since. Every `target: production` deployment since then — dozens, spanning PR #116 through tonight's redesign and bugfix PRs — shows as `CANCELED` in the Vercel API.
+
+Root cause: `vercel.json`'s `ignoreCommand` (added earlier to skip building on the autopilot's own frequent `Autopilot state (mid-run cycle N/70)` commits, so its ~5-minute state-only pushes wouldn't burn a deploy each time) is logically correct on its own, but Vercel's default GitHub behavior cancels an in-progress/queued deployment the instant a NEWER push lands for the same branch — and since those state commits land roughly every 5 minutes, a real PR's merge-to-main deployment gets raced out before it ever reaches the point of running its own build (or even its own ignoreCommand check): the next state commit's push pre-empts it first. PR #115 apparently just got lucky with a wide-enough gap; nothing since has.
+
+Fixed: added `"github": {"autoJobCancelation": false}` to `vercel.json` — Vercel now builds every push in sequence instead of cancelling one for the next to arrive. Combined with the existing `ignoreCommand`, autopilot-state pushes still skip near-instantly (no real backlog), but a genuine code push finally gets to run its own check and build instead of being perpetually raced out by the next commit.
+
+Consequence checked: this explains a real chunk of tonight's "why doesn't the site reflect what you did" confusion — it wasn't (only) the tab-visibility bug fixed earlier; the whole redesign, the real-money UI, and both fixes in the previous entries had never reached the live site at all. This same commit (once merged) is the first real test of the fix — it should be the first production deployment to actually go READY since 02:38, verified after merge via the Vercel API and by re-curling the live site's bundle hash.
+
 ## Chart polish: leftover pre-true-black pill glow, and a misleading EMA line on the equity chart (2026-09-03)
 Continuing David's "keep improving the charts" request, scoped to `charts.ts`
 + `equityChartPanel.ts` + `styles.css` only. Two real, concrete defects found
