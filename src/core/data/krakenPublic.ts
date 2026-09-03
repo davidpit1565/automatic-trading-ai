@@ -40,10 +40,10 @@ const INTERVAL_MINUTES: Record<Timeframe, number> = {
 /**
  * Curated majors, EUR-quoted. Kraken names Bitcoin XBT; we display BTC.
  * TRADED by the agent (`server/autopilotRunner.mts` trades exactly
- * `instruments.slice(0, 16)`) — this order is load-bearing. Do NOT reorder
+ * `instruments.slice(0, 20)`) — this order is load-bearing. Do NOT reorder
  * or insert above this line; broadening the browsable universe happens by
  * appending more instruments after it (see `getInstruments` below), never by
- * changing what these first 16 are.
+ * changing what these first 20 are.
  *
  * The first 10 (XBT…AVAX) are the original measured majors. UNI/FIL/AAVE/
  * ATOM/XLM/ALGO were added 2026-09-03 after measuring each candidate on real
@@ -56,6 +56,23 @@ const INTERVAL_MINUTES: Record<Timeframe, number> = {
  * out; BCH/TRX measured only marginally positive on very few trades (5 and 3)
  * — too thin to call either way — and were left out pending more data rather
  * than included on a coin-flip sample.
+ *
+ * HNT/VELO/AERO/ENA were added 2026-09-03 (same day, second batch) after
+ * David asked why the agent hadn't caught that day's biggest small-cap
+ * gainers (HNT/FORTH/AERGO/GHST/VELO/XPL/ARB/ENA/HIGH/AERO, all 10-35%+ on
+ * the day) — measured the 8 of those with a Kraken EUR pair the same way:
+ * HNT +1.49% (PF 1.38, 11t), VELO +3.98% (PF 1.87, 12t), AERO +2.57%
+ * (PF 1.95, 10t) and ENA +1.61% (PF 1.73, 6t — thinner sample, included as
+ * borderline-acceptable, not a strong signal on its own) all net-positive
+ * on a real sample. GHST (-1.47%, PF 0.18) and XPL (-0.19%, PF 0.95)
+ * measured net-negative and were left out. FORTH (+1.86%, but only 3
+ * trades) and ARB (+6.02%/100% win, but only 5 trades — the exact
+ * small-sample "100% win rate" pattern that isn't a real signal) were
+ * excluded on the same too-thin-to-call basis as BCH/TRX above, despite
+ * ARB's flashy headline number — chasing a single day's biggest gainers by
+ * their raw daily % move is a known losing pattern (buying the pump); only
+ * the four that held up over ~720 hours of real decision-pipeline replay
+ * were added.
  */
 const CURATED_INSTRUMENTS: Instrument[] = [
   { symbol: 'XBTEUR', base: 'BTC', quote: 'EUR' },
@@ -74,6 +91,10 @@ const CURATED_INSTRUMENTS: Instrument[] = [
   { symbol: 'ATOMEUR', base: 'ATOM', quote: 'EUR' },
   { symbol: 'XLMEUR', base: 'XLM', quote: 'EUR' },
   { symbol: 'ALGOEUR', base: 'ALGO', quote: 'EUR' },
+  { symbol: 'HNTEUR', base: 'HNT', quote: 'EUR' },
+  { symbol: 'VELOEUR', base: 'VELO', quote: 'EUR' },
+  { symbol: 'AEROEUR', base: 'AERO', quote: 'EUR' },
+  { symbol: 'ENAEUR', base: 'ENA', quote: 'EUR' },
 ];
 
 /**
