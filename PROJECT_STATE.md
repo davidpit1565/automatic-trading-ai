@@ -1,5 +1,34 @@
 # PROJECT_STATE
 
+## The live confirmation message left David unsure what to approve (2026-09-03)
+He sent `/buy XBTEUR`, got the confirmation prompt, and asked me mid-decision
+what it meant and whether to approve — he has near-zero trading background
+and the message ("כמות: 0.0001185722175581053", "סיכון: 0.30%", "יחס
+סיכוי/סיכון 2.0:1") gave him raw numbers with no explanation of what they
+mean in practice. Asked for the message itself to explain automatically
+going forward, not have to ask each time.
+
+Two real things fixed in `telegramConfirmationGate.mts`'s message builders
+(buy and sell/exit):
+1. **Every figure now carries a short plain-language gloss** — "מוכר
+   אוטומטית אם המחיר יורד לכאן, כדי לעצור הפסד" next to the stop-loss,
+   "הכי הרבה שאפשר להפסיד בעסקה הזו" next to the risk amount, "אם זה
+   מצליח, הרווח הפוטנציאלי גדול פי X מהסיכון" next to the reward/risk
+   ratio, etc. — without dropping any of the original numbers.
+2. **A real quantity-formatting bug**: `intent.quantity` was interpolated
+   raw into the message — exactly the "raw 15-decimal float" class of bug
+   `tidyNoteNumbers` already exists to prevent elsewhere, just never
+   applied here. Exported `telegram.mts`'s existing `formatQty` and used
+   it in both messages instead.
+
+The sell/exit message also got the same treatment: the P&L line now reads
+"+€20.00 (ברווח ✅)" instead of a bare signed number.
+
+Tests: both messages' plain-language phrases are present; the raw
+15-decimal quantity never appears verbatim, `formatQty`'s rounded form
+does; the exit message's P&L format updated to match (`+€20.00`, was
+`+20.00`). Full gate green (tsc, 1026 tests, build).
+
 ## Chart crosshair tooltip ran off-screen near either edge (2026-09-03)
 Continuing the chart-polish pass (follow-up to #139/#141). `src/ui/charts.ts`
 + `src/ui/equityChartPanel.ts` + `src/ui/views/marketsView.ts` only.

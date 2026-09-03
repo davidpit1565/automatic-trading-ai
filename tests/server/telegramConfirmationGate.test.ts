@@ -24,7 +24,7 @@ function approvedAssessment(): TradeRiskAssessment {
   };
 }
 
-function intent(id = 'BTCEUR:1:0'): OrderIntent {
+function intent(id = 'BTCEUR:1:0', overrides: Partial<OrderIntent> = {}): OrderIntent {
   return {
     id,
     createdAt: 1_000,
@@ -36,6 +36,7 @@ function intent(id = 'BTCEUR:1:0'): OrderIntent {
     stopLoss: 95,
     takeProfit: 115,
     assessment: approvedAssessment(),
+    ...overrides,
   };
 }
 
@@ -163,6 +164,43 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     expect(edited).toEqual([{ messageId: 1, text: expect.stringContaining('אישרת'), keyboardCleared: true }]);
   });
 
+  // David has near-zero trading background and asked (2026-09-03), mid a
+  // real confirmation, for the message itself to explain what the numbers
+  // mean rather than having to ask each time.
+  it('explains each figure in plain language, not just raw numbers', async () => {
+    const empty = Array.from({ length: 5 }, () => [] as never[]);
+    const { fetchFn, sent } = fakeTelegram(empty);
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+    const assertion = expect(gate.requestConfirmation(intent())).rejects.toThrow(ConfirmationPendingError);
+    await vi.runAllTimersAsync();
+    await assertion;
+
+    const msg = sent[0]!;
+    expect(msg).toContain('מכל הכסף שיש לך בחשבון');
+    expect(msg).toContain('מוכר אוטומטית אם המחיר יורד');
+    expect(msg).toContain('מוכר אוטומטית אם המחיר עולה');
+    expect(msg).toContain('הכי הרבה שאפשר להפסיד');
+    expect(msg).toContain('אם זה מצליח, הרווח הפוטנציאלי גדול פי');
+  });
+
+  it('never shows a raw 15-decimal quantity float — a real production message that leaked one, 2026-09-03', async () => {
+    const empty = Array.from({ length: 5 }, () => [] as never[]);
+    const { fetchFn, sent } = fakeTelegram(empty);
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+    const assertion = expect(
+      gate.requestConfirmation(intent('BTCEUR:1:0', { quantity: 0.0001185722175581053 })),
+    ).rejects.toThrow(ConfirmationPendingError);
+    await vi.runAllTimersAsync();
+    await assertion;
+
+    expect(sent[0]).not.toContain('0.0001185722175581053');
+    expect(sent[0]).toContain('0.00011857'); // formatQty's rounding for a sub-0.01 quantity
+  });
+
   it('shows the fixed expiry deadline (clock time + minutes) in the sent message, so the human knows exactly how long they have', async () => {
     vi.setSystemTime(0);
     const empty = Array.from({ length: 5 }, () => [] as never[]);
@@ -222,7 +260,8 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     expect(sent[0]).toContain('מכירה');
     expect(sent[0]).toContain('סגירת פוזיציה');
     // entry 100, exit 110, qty 2 -> +20.00 P&L.
-    expect(sent[0]).toContain('+20.00');
+    expect(sent[0]).toContain('+€20.00');
+    expect(sent[0]).toContain('ברווח');
     expect(sent[0]).not.toContain('סיכון');
     expect(sent[0]).not.toContain('חשיפת תיק');
   });
