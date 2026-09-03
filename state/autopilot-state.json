@@ -1622,7 +1622,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788443467586,
+    "at": 1788443783386,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1638,10 +1638,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1786651483591,
-      "equity": 9568.52
-    },
     {
       "at": 1786651794471,
       "equity": 9568.52
@@ -21637,6 +21633,10 @@
     {
       "at": 1788443467586,
       "equity": 10230.62
+    },
+    {
+      "at": 1788443783386,
+      "equity": 10234.26
     }
   ],
   "trade-journal": [
@@ -22861,7 +22861,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -18.10% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -17.80% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -22959,13 +22959,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1788443467586,
+    "at": 1788443783386,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10605.849309897585,
-        "returnPct": 6.058493098975851,
+        "equity": 10609.62342945426,
+        "returnPct": 6.096234294542591,
         "trades": 25,
         "winRatePct": 60,
         "profitFactor": 1.9658779582181563,
@@ -22975,8 +22975,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10605.849309897585,
-        "returnPct": 6.058493098975851,
+        "equity": 10609.62342945426,
+        "returnPct": 6.096234294542591,
         "trades": 25,
         "winRatePct": 60,
         "profitFactor": 1.9658779582181563,
@@ -22986,8 +22986,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10605.849309897585,
-        "returnPct": 6.058493098975851,
+        "equity": 10609.62342945426,
+        "returnPct": 6.096234294542591,
         "trades": 25,
         "winRatePct": 60,
         "profitFactor": 1.9658779582181563,
@@ -23008,8 +23008,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9335.378439628752,
-        "returnPct": -6.6462156037124815,
+        "equity": 9331.059267490378,
+        "returnPct": -6.689407325096218,
         "trades": 65,
         "winRatePct": 38.46153846153847,
         "profitFactor": 0.5745074535618775,
@@ -23019,8 +23019,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9814.979725466314,
-        "returnPct": -1.8502027453368646,
+        "equity": 9806.08380786594,
+        "returnPct": -1.939161921340601,
         "trades": 140,
         "winRatePct": 39.285714285714285,
         "profitFactor": 1.1335549974332315,
@@ -23030,8 +23030,8 @@
       {
         "key": "whale-flow",
         "label": "Refuses entries during heavy net selling by large traders",
-        "equity": 10720.39789039248,
-        "returnPct": 7.203978903924798,
+        "equity": 10724.212772364797,
+        "returnPct": 7.2421277236479735,
         "trades": 16,
         "winRatePct": 68.75,
         "profitFactor": 2.6304126705653164,
@@ -23052,8 +23052,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10413.887402983,
-        "returnPct": 4.138874029830004,
+        "equity": 10417.593212386866,
+        "returnPct": 4.175932123868661,
         "trades": 13,
         "winRatePct": 61.53846153846154,
         "profitFactor": 1.9104569916599419,
@@ -28126,6 +28126,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused XBTEUR: no exposure headroom: 5938.13 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1788443783386,
+      "intentId": "XBTEUR:1788443783386",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused XBTEUR: no exposure headroom: 5926.38 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -40481,7 +40488,7 @@
   },
   "longterm-shadow-last-run-day": "2026-09-03",
   "live:live-cash-eur": 40.04,
-  "live:telegram-shared-update-offset": 447904552,
+  "live:telegram-shared-update-offset": 447904554,
   "live:telegram-unclaimed-messages": [
     {
       "updateId": 447904465,
@@ -40764,6 +40771,27 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1788443791690,
+      "intentId": "live-entry:XBTEUR",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1788443811027,
+      "intentId": "live-entry:XBTEUR",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram"
+    },
+    {
+      "timestamp": 1788443811340,
+      "intentId": "live-entry:XBTEUR",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "Revolut X rejected the order: HTTP 400 — {\"message\":\"An order with the client_order_id '3323a671-869f-5448-bd6f-c4bfae3fb081' has already been placed.\",\"error_id\":\"5155ddea-ebaf-4639-a7cd-2c4f73c86d62\",\"timestamp\":1788443811299}"
     }
   ],
   "live:confirmation-gate-pending": {},
@@ -40806,6 +40834,10 @@
     {
       "at": 1788443467586,
       "equity": 101
+    },
+    {
+      "at": 1788443783386,
+      "equity": 100.86
     }
   ]
 }
