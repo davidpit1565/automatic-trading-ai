@@ -68,6 +68,38 @@ interface PendingRecord {
    * Telegram's response genuinely omitted it — editing is then skipped
    * rather than guessing a message to edit. */
   readonly messageId?: number;
+  /** Undefined only for a record persisted before this field existed —
+   * `requestConfirmation` then falls back to reconstructing the legacy
+   * `${sentAt}:${intent.id}` token so an already-in-flight confirmation from
+   * before this fix can still be matched. See `confirmationToken`'s doc
+   * comment for why every NEW record gets a short token instead. */
+  readonly token?: string;
+}
+
+/**
+ * A short, deterministic per-request token embedded in a confirmation's
+ * inline-keyboard callback_data. Telegram enforces a strict 64-byte limit on
+ * callback_data — `intent.id` can be arbitrarily long (an exit intent embeds
+ * the ORIGINAL entry's own id plus its own timestamp, e.g.
+ * 'live-entry:XBTEUR:1788446384199:exit:1788476199224', 52 chars), so
+ * embedding it directly (as this code used to, as `${sentAt}:${intent.id}`)
+ * silently made the confirmation's own `sendMessage` call fail with HTTP 400
+ * for exactly this shape of intent — a real incident, 2026-09-03: David
+ * never even SAW the exit confirmation for a real open position, because it
+ * was never actually delivered to Telegram at all.
+ *
+ * `sentAt` alone already guarantees uniqueness per confirmation INSTANCE
+ * (the callback_data-must-be-unique-per-instance fix from earlier the same
+ * day); folding in a short hash of `intent.id` additionally guards against
+ * the astronomically-unlikely case of two different intents being sent in
+ * the exact same millisecond.
+ */
+export function confirmationToken(sentAt: number, intentId: string): string {
+  let hash = 0;
+  for (let i = 0; i < intentId.length; i++) {
+    hash = (Math.imul(hash, 31) + intentId.charCodeAt(i)) | 0;
+  }
+  return `${sentAt.toString(36)}.${(hash >>> 0).toString(36)}`;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -233,17 +265,10 @@ export class TelegramConfirmationGate implements ConfirmationGate {
 
     if (!pending) {
       const sentAt = Date.now();
-      // callback_data MUST be unique per confirmation instance, not just per
-      // symbol/intent.id — a real incident (2026-09-03): intent.id for a
-      // live entry is deterministic per symbol ('live-entry:XBTEUR', the
-      // same string every single time that symbol is requested), so a stale
-      // tap on an EARLIER, already-expired confirmation for the same symbol
-      // sat in the unclaimed-callbacks store and was then matched by a
-      // brand-new, never-tapped confirmation — auto-"approving" a trade the
-      // human never touched. Embedding this request's own sentAt makes each
-      // button's data one-time-only: an old callback can never match a
-      // different pending record again.
-      const token = `${sentAt}:${intent.id}`;
+      // Short, opaque per-instance token — see `confirmationToken`'s doc
+      // comment for why this must never embed intent.id directly (Telegram's
+      // 64-byte callback_data limit, a real incident 2026-09-03).
+      const token = confirmationToken(sentAt, intent.id);
       const result = await sendTelegramMessage(
         buildConfirmationMessage(intent, sentAt + MAX_PENDING_MS, liveCash(this.store)),
         this.telegram,
@@ -275,7 +300,7 @@ export class TelegramConfirmationGate implements ConfirmationGate {
       if (!result.sent) {
         throw new ConfirmationPendingError(intent.id);
       }
-      pending = { sentAt, messageId: result.messageId };
+      pending = { sentAt, messageId: result.messageId, token };
       pendingAll[intent.id] = pending;
       this.store.set(STORAGE_KEY, pendingAll);
     }
@@ -288,7 +313,10 @@ export class TelegramConfirmationGate implements ConfirmationGate {
       // whatever it doesn't use, in every branch below, or the same bug
       // returns in a new shape.
       const polled = await pollAllTelegramUpdates(this.telegramStore, this.telegram);
-      const token = `${pending.sentAt}:${intent.id}`;
+      // Legacy fallback for a PendingRecord persisted before `token` existed
+      // (an in-flight confirmation sent right before this fix deployed) —
+      // see PendingRecord's doc comment.
+      const token = pending.token ?? `${pending.sentAt}:${intent.id}`;
       const matchIndex = polled.callbacks.findIndex(
         (u) => u.data === `${APPROVE_PREFIX}${token}` || u.data === `${REJECT_PREFIX}${token}`,
       );

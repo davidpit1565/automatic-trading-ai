@@ -3,7 +3,7 @@ import { MemoryStore } from '../../src/core/data/storage';
 import { PersistedAuditLog } from '../../src/core/autopilot/auditLog';
 import type { OrderIntent } from '../../src/core/execution/types';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
-import { ConfirmationPendingError, TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
+import { ConfirmationPendingError, confirmationToken, TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
 import { getSummaryTimezone, pollAllTelegramUpdates, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
 import { initLiveCash } from '../../server/liveLedger.mts';
 
@@ -136,7 +136,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     // A later run must actually attempt to send again — not silently poll
     // for a button tap on a message the human never received.
     const { fetchFn: secondFetch, sent } = fakeTelegram([
-      [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:approve:0:BTCEUR:1:0' } }],
+      [{ update_id: 10, callback_query: { id: 'cb1', data: `confirm:approve:${confirmationToken(0, 'BTCEUR:1:0')}`} }],
     ]);
     const gateRun2 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: secondFetch }, audit);
     const decision = await gateRun2.requestConfirmation(intent());
@@ -146,7 +146,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
 
   it('sends one Telegram message with approve/reject buttons and resolves approved on a matching tap', async () => {
     const { fetchFn, sent, edited } = fakeTelegram([
-      [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:approve:0:BTCEUR:1:0' } }],
+      [{ update_id: 10, callback_query: { id: 'cb1', data: `confirm:approve:${confirmationToken(0, 'BTCEUR:1:0')}`} }],
     ]);
     const store = new MemoryStore();
     const audit = new PersistedAuditLog(store);
@@ -308,7 +308,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
 
   it('renders a sell/exit confirmation with the real P&L against the entry price, not the entry-side risk numbers', async () => {
     const { fetchFn, sent } = fakeTelegram([
-      [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:approve:0:BTCEUR:1:0:exit' } }],
+      [{ update_id: 10, callback_query: { id: 'cb1', data: `confirm:approve:${confirmationToken(0, 'BTCEUR:1:0:exit')}`} }],
     ]);
     const store = new MemoryStore();
     const audit = new PersistedAuditLog(store);
@@ -326,9 +326,27 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     expect(sent[0]).not.toContain('חשיפת תיק');
   });
 
+  it('keeps callback_data within Telegram\'s 64-byte limit even for a long, realistic exit intent id, and still resolves the tap correctly (real incident, 2026-09-03: the confirmation sendMessage itself failed with HTTP 400 for exactly this shape of intent, so the human never even saw it)', async () => {
+    const longId = 'live-entry:XBTEUR:1788446384199:exit:1788476199224'; // 52 chars, the real production id that triggered this
+    const token = confirmationToken(0, longId);
+    const approveData = `confirm:approve:${token}`;
+    expect(Buffer.byteLength(approveData, 'utf8')).toBeLessThanOrEqual(64);
+
+    const { fetchFn, sent } = fakeTelegram([
+      [{ update_id: 10, callback_query: { id: 'cb1', data: approveData } }],
+    ]);
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+    const decision = await gate.requestConfirmation(sellIntent(longId, 110));
+
+    expect(decision.approved).toBe(true);
+    expect(sent).toHaveLength(1);
+  });
+
   it('resolves approved: false on a reject tap', async () => {
     const { fetchFn, edited } = fakeTelegram([
-      [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:reject:0:BTCEUR:1:0' } }],
+      [{ update_id: 10, callback_query: { id: 'cb1', data: `confirm:reject:${confirmationToken(0, 'BTCEUR:1:0')}`} }],
     ]);
     const store = new MemoryStore();
     const audit = new PersistedAuditLog(store);
@@ -342,7 +360,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
   it('ignores a callback tap for a different intent and keeps polling for the right one', async () => {
     const { fetchFn } = fakeTelegram([
       [{ update_id: 10, callback_query: { id: 'cb-other', data: 'confirm:approve:SOMETHING-ELSE' } }],
-      [{ update_id: 11, callback_query: { id: 'cb1', data: 'confirm:approve:0:BTCEUR:1:0' } }],
+      [{ update_id: 11, callback_query: { id: 'cb1', data: `confirm:approve:${confirmationToken(0, 'BTCEUR:1:0')}`} }],
     ]);
     const store = new MemoryStore();
     const audit = new PersistedAuditLog(store);
@@ -369,7 +387,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     // Second run (simulating the next scheduled invocation), same store: the
     // pending record already exists, so this must not send a second message.
     const second = fakeTelegram([
-      [{ update_id: 20, callback_query: { id: 'cb2', data: 'confirm:approve:0:BTCEUR:1:0' } }],
+      [{ update_id: 20, callback_query: { id: 'cb2', data: `confirm:approve:${confirmationToken(0, 'BTCEUR:1:0')}`} }],
     ]);
     const gateRun2 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: second.fetchFn }, audit);
     const decision = await gateRun2.requestConfirmation(intent());
@@ -420,7 +438,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     // 5 minutes later — well within the 20-minute window: still waits, no re-send.
     vi.setSystemTime(5 * 60 * 1000);
     const second = fakeTelegram([
-      [{ update_id: 20, callback_query: { id: 'cb2', data: 'confirm:approve:0:BTCEUR:1:0' } }],
+      [{ update_id: 20, callback_query: { id: 'cb2', data: `confirm:approve:${confirmationToken(0, 'BTCEUR:1:0')}`} }],
     ]);
     const gateRun2 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: second.fetchFn }, audit);
     const decision = await gateRun2.requestConfirmation(intent());
@@ -449,7 +467,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
               { update_id: 1, message: { text: '/sell ETHEUR', chat: { id: 'C' } } },
               {
                 update_id: 2,
-                callback_query: { id: 'cb1', data: 'confirm:approve:0:BTCEUR:1:0', message: { chat: { id: 'C' } } },
+                callback_query: { id: 'cb1', data: `confirm:approve:${confirmationToken(0, 'BTCEUR:1:0')}`, message: { chat: { id: 'C' } } },
               },
             ],
           }),

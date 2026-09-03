@@ -16,7 +16,7 @@ import type { Candle, Instrument } from '../../src/core/types';
 import { openLivePositions, recordLiveEntryFill } from '../../server/liveExitFlow.mts';
 import { checkManualSellRequests, parseSellCommand } from '../../server/manualSellCommand.mts';
 import { stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
-import { TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
+import { confirmationToken, TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
 
 function approvedAssessment(): TradeRiskAssessment {
   return {
@@ -446,7 +446,11 @@ describe('checkManualSellRequests', () => {
           result: [
             {
               update_id: 10,
-              callback_query: { id: 'cb1', data: 'confirm:approve:0:entry-1:exit:9000', message: { chat: { id: 'C' } } },
+              callback_query: {
+                id: 'cb1',
+                data: `confirm:approve:${confirmationToken(0, 'entry-1:exit:9000')}`,
+                message: { chat: { id: 'C' } },
+              },
             },
           ],
         },
