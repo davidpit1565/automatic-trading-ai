@@ -161,7 +161,7 @@ describe('Home view (DOM integration)', () => {
     expect(container.querySelector('#home-live-hero')!.textContent).toContain('Real money');
     expect(container.querySelector('.tag-live')).not.toBeNull();
     expect(container.querySelector<HTMLElement>('#home-live-positions-wrap')!.hidden).toBe(false);
-    await waitFor(() => container.querySelectorAll('#home-live-positions .row').length > 0);
+    await waitFor(() => container.querySelectorAll('#home-live-positions tbody tr').length > 0);
     expect(container.querySelector('#home-live-positions')!.textContent).toContain('BTC/USD');
     expect(container.querySelector<HTMLElement>('#hv-kill-switch')!.hidden).toBe(true);
   });

@@ -1240,6 +1240,31 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .stack-card .empty { border: none; background: transparent; border-radius: 0; }
 .muted-line { color: var(--text-dim); font-size: 0.75rem; text-align: center; margin-top: 1.1rem; }
 
+/* Holdings table (Home's "Open positions"/"Real open positions") — Revolut X
+   shows a real Cash/Crypto table (Total/Price/Value/Allocation/Unrealised
+   P&L), not a bare list. Total/Price/Allocation are desktop-only (.col-*):
+   on a phone the row keeps showing exactly what it always did — name, value,
+   P&L — the extra columns appear once there's room for them (matches the
+   860px sidebar breakpoint used everywhere else on this page). */
+.holdings-table { width: 100%; border-collapse: collapse; }
+.holdings-table th, .holdings-table td {
+  padding: 0.7rem 0.5rem; text-align: right; font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--border);
+}
+.holdings-table th:first-child, .holdings-table td:first-child { text-align: left; padding-inline-start: 1.1rem; }
+.holdings-table th:last-child, .holdings-table td:last-child { padding-inline-end: 1.1rem; }
+.holdings-table thead th {
+  color: var(--text-dim); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding-top: 0.9rem;
+}
+.holdings-table tbody td { font-size: 0.92rem; font-weight: var(--fw-semibold); }
+.holdings-table tbody tr:last-child td { border-bottom: none; padding-bottom: 0.9rem; }
+.holdings-table .holdings-id { display: flex; align-items: center; gap: 0.6rem; }
+.holdings-table .col-total, .holdings-table .col-price, .holdings-table .col-alloc { display: none; }
+@media (min-width: 860px) {
+  .holdings-table .col-total, .holdings-table .col-price, .holdings-table .col-alloc { display: table-cell; }
+}
+
 /* Tools grid - responsive columns */
 .tools-group-title { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
   color: var(--text-dim); margin: 1.4rem 0 0.55rem; }
@@ -1347,9 +1372,15 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 
 /* ===== LARGE DESKTOP: ≥1400px ===== */
 @media (min-width: 1400px) {
+  /* Revolut X runs genuinely full-bleed (chart/table area stretches to fill
+     whatever the sidebar leaves) — capping .content at 1200px here instead
+     left a large dead strip of pure background on an actual wide monitor
+     (confirmed 2026-09-03: David's own screenshot, ~2000px wide, showed a
+     ~600px empty gap past the rail). Drop the cap; the ≥860px rule's
+     `calc(100% - 210px)` already governs every width from there up, and the
+     rail's own fixed column width is what keeps IT from stretching. */
   .content {
     padding: 2rem;
-    max-width: 1200px;
   }
   .tools-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; }
   .home-grid.active { grid-template-columns: minmax(0, 1fr) 360px; gap: 2rem; }

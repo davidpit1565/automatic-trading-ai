@@ -38,6 +38,90 @@ function baseFor(data: ActiveDataSource, symbol: string): string {
   return (inst?.base ?? symbol.replace(/EUR$|USD$/, '')).toUpperCase();
 }
 
+interface PositionLike {
+  readonly symbol: string;
+  readonly entryPrice: number;
+  readonly quantity: number;
+}
+
+/** One row of the Revolut-style holdings table: identity + Total/Price/
+ * Allocation (desktop-only columns, see .col-total/.col-price/.col-alloc in
+ * styles.css) + Value/Unrealised P&L (shown at every width). */
+interface HoldingRow {
+  readonly logoHtml: string;
+  readonly name: string;
+  readonly sub: string;
+  /** null for the Cash row — it has no quantity/price of its own. */
+  readonly qty: string | null;
+  readonly price: string | null;
+  readonly value: number;
+  readonly allocationPct: number;
+  readonly pnl: { readonly abs: number; readonly pct: number } | null;
+}
+
+/** Cash + every open position, as real portfolio-table rows (Revolut X's own
+ * Home shows a "Cash"/"Crypto" holdings table, not a bare list) — shared by
+ * the SIMULATED and REAL (live) position tables since both have the same
+ * cash + positions shape. */
+function buildHoldingsRows(
+  cash: number,
+  positions: readonly PositionLike[],
+  prices: Record<string, number>,
+  equity: number,
+  baseOf: (symbol: string) => string,
+): HoldingRow[] {
+  const rows: HoldingRow[] = [
+    {
+      logoHtml: coinLogoHtml('EUR'),
+      name: 'Cash',
+      sub: 'Available balance',
+      qty: null,
+      price: null,
+      value: cash,
+      allocationPct: equity > 0 ? (cash / equity) * 100 : 0,
+      pnl: null,
+    },
+  ];
+  for (const p of positions) {
+    const price = prices[p.symbol] ?? p.entryPrice;
+    const value = p.quantity * price;
+    const movePct = p.entryPrice > 0 ? ((price - p.entryPrice) / p.entryPrice) * 100 : 0;
+    rows.push({
+      logoHtml: coinLogoHtml(baseOf(p.symbol)),
+      name: p.symbol,
+      sub: `entry ${euro(p.entryPrice)}`,
+      qty: p.quantity.toLocaleString('en-US', { maximumFractionDigits: 4 }),
+      price: euro(price),
+      value,
+      allocationPct: equity > 0 ? (value / equity) * 100 : 0,
+      pnl: { abs: (price - p.entryPrice) * p.quantity, pct: movePct },
+    });
+  }
+  return rows;
+}
+
+function holdingsTableHtml(rows: readonly HoldingRow[]): string {
+  const body = rows
+    .map((r) => {
+      const pnlCell = r.pnl
+        ? `<span class="chg ${r.pnl.abs >= 0 ? 'up' : 'down'}">${euro(r.pnl.abs)} (${formatPct(r.pnl.pct)})</span>`
+        : '—';
+      return `<tr>
+        <td class="holdings-id">${r.logoHtml}<div><div class="row-title">${r.name}</div><div class="row-sub">${r.sub}</div></div></td>
+        <td class="col-total">${r.qty ?? '—'}</td>
+        <td class="col-price">${r.price ?? '—'}</td>
+        <td>${euro(r.value)}</td>
+        <td class="col-alloc">${r.allocationPct.toFixed(1)}%</td>
+        <td>${pnlCell}</td>
+      </tr>`;
+    })
+    .join('');
+  return `<table class="holdings-table">
+    <thead><tr><th></th><th class="col-total">Total</th><th class="col-price">Price</th><th>Value</th><th class="col-alloc">Allocation</th><th>Unrealised P&L</th></tr></thead>
+    <tbody>${body}</tbody>
+  </table>`;
+}
+
 async function livePrices(data: ActiveDataSource, symbols: string[]): Promise<Record<string, number>> {
   const prices: Record<string, number> = {};
   await Promise.all(
@@ -196,26 +280,13 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       posList.appendChild(el('div', 'empty', 'No open positions — holding cash and waiting for a good setup.'));
       return;
     }
-    const cashRow = el('div', 'row');
-    cashRow.innerHTML = `
-      <div class="row-main">${coinLogoHtml('EUR')}<div><div class="row-title">Cash</div><div class="row-sub">Available balance</div></div></div>
-      <div class="row-side"><span class="row-title">${euro(state.cash)}</span></div>`;
-    posList.appendChild(cashRow);
+    const invested = state.positions.reduce((s, p) => s + p.quantity * (prices[p.symbol] ?? p.entryPrice), 0);
+    const equity = state.cash + invested;
+    posList.innerHTML = holdingsTableHtml(
+      buildHoldingsRows(state.cash, state.positions, prices, equity, (sym) => baseFor(data, sym)),
+    );
     if (state.positions.length === 0) {
       posList.appendChild(el('div', 'empty', 'Holding cash and waiting for a good setup.'));
-      return;
-    }
-    for (const p of state.positions) {
-      const price = prices[p.symbol] ?? p.entryPrice;
-      const movePct = p.entryPrice > 0 ? ((price - p.entryPrice) / p.entryPrice) * 100 : 0;
-      const up = movePct >= 0;
-      const row = el('div', 'row');
-      row.innerHTML = `
-        <div class="row-main">${coinLogoHtml(baseFor(data, p.symbol))}<div><div class="row-title">${p.symbol}</div>
-          <div class="row-sub">entry ${euro(p.entryPrice)}</div></div></div>
-        <div class="row-side"><span class="row-title">${euro(p.quantity * price)}</span>
-          <span class="chg ${up ? 'up' : 'down'}">${formatPct(movePct)}</span></div>`;
-      posList.appendChild(row);
     }
   }
 
@@ -248,22 +319,11 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       banner.hidden = true;
     }
 
-    livePosList.innerHTML = '';
+    livePosList.innerHTML = holdingsTableHtml(
+      buildHoldingsRows(live.cash, live.positions, prices, equity, (sym) => baseFor(data, sym)),
+    );
     if (live.positions.length === 0) {
       livePosList.appendChild(el('div', 'empty', 'No real positions open — holding cash.'));
-    } else {
-      for (const p of live.positions) {
-        const price = prices[p.symbol] ?? p.entryPrice;
-        const movePct = p.entryPrice > 0 ? ((price - p.entryPrice) / p.entryPrice) * 100 : 0;
-        const up = movePct >= 0;
-        const row = el('div', 'row');
-        row.innerHTML = `
-          <div class="row-main">${coinLogoHtml(baseFor(data, p.symbol))}<div><div class="row-title">${p.symbol}</div>
-            <div class="row-sub">entry ${euro(p.entryPrice)}</div></div></div>
-          <div class="row-side"><span class="row-title">${euro(p.quantity * price)}</span>
-            <span class="chg ${up ? 'up' : 'down'}">${formatPct(movePct)}</span></div>`;
-        livePosList.appendChild(row);
-      }
     }
   }
 
