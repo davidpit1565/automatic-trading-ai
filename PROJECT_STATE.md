@@ -1,5 +1,57 @@
 # PROJECT_STATE
 
+## Adversarial review of the live-money wiring (PRs #107-#110) — 3 real bugs fixed (2026-09-03)
+Real funds are now live (100.15€), so a full adversarial review (not a
+formality) was run against `liveEntryMirror.mts`/`liveExitMirror.mts`/
+`liveOrchestrator.mts`/`liveLedger.mts`/`autopilotRunner.mts`'s `runLiveMirror`
+and the manual override commands. Three confirmed, fixed:
+
+1. **Stale equity/open-positions across multiple entries in one cycle**
+   (`liveEntryMirror.mts`) — `mirrorApprovedEntries` snapshotted `equity`/
+   `openPositions` ONCE before its retry loop, then reused that snapshot for
+   every pending symbol. The paper autopilot can approve more than one entry
+   in a single scan, so a fill from an earlier symbol in the same loop
+   (debited cash, a new tracked position) was invisible to a later symbol's
+   risk sizing — two entries could jointly blow past
+   `maxOpenPositions`/`maxTotalExposurePct`/per-asset caps that each looked
+   fine in isolation, and `debitLiveCash` has no floor check. Fixed: both are
+   now re-read fresh at the top of every loop iteration.
+2. **The `revalidate` post-approval re-check was never wired up** —
+   `runLiveOrderFlow` grew an optional `revalidate` hook earlier tonight
+   specifically for "after I approve, check again it's still good", but
+   `runLiveMirror`'s `flowParams` never set it — the feature did nothing on
+   the real trading path. Fixed with the one check available without
+   plumbing a fresh price fetch through several signatures: re-checks
+   `killSwitch.isEngaged()` right before submission, so a `/pause` that lands
+   while a confirmation is already pending is honored even if a stale
+   approval tap comes in afterward. (Re-validating the PRICE itself would
+   need `source`/candle plumbing through `liveEntryMirror`/`liveExitMirror`/
+   both manual commands — left as a follow-up, not attempted here.)
+3. **The live daily-loss circuit breaker was never wired at all** —
+   PROJECT_STATE already flagged (2026-09-02) that `DailyLossTracker` needed
+   a live-scoped instance; `runLiveMirror` never actually created one, so
+   `dailyLossSoFar` was always 0 and the `dailyLossLimitPct` check inside
+   `assessTrade` could never engage for real money regardless of how much
+   was actually lost in a day. Fixed: a `DailyLossTracker` over
+   `PrefixedStore(store, 'live')` now feeds `dailyLossSoFar` into every live
+   entry attempt (mirrored and manual `/buy`) and records realized P&L on
+   every genuinely filled live exit (automatic and manual `/sell`).
+
+**Flagged but NOT auto-fixed** (real, smaller-impact, needs a design call):
+live entries size at the flat `maxRiskPerTradePct` ceiling regardless of the
+opportunity's confidence, while the paper account scales risk 0.5%-1% by
+confidence for the same signal — a real mismatch with this module's own
+"same risk sizing" claim, though the euro impact on a 100€ account is small.
+Also: a partially-filled live SELL (`state: 'submitted'`, `filledQuantity >
+0`) neither credits the partial proceeds nor reduces the tracked quantity
+(only a genuine `'filled'` does) — asymmetric with how a partial BUY is
+already handled, and a real (if narrow) gap until the broker-level
+reconciliation loop noted below exists.
+
+Tests: 2 new regression tests (the multi-entry sizing race,
+`liveEntryMirror.test.ts`; the daily-loss block, `autopilotRunner.test.ts`).
+Full gate green (tsc, 963 tests, build).
+
 ## Vercel deploys re-enabled, skipping only the noisy state commits (2026-09-03)
 `vercel.json` had `deploymentEnabled: false` since 2026-08-19 — David disabled
 it deliberately because every ~15-minute "Autopilot state (mid-run cycle
@@ -15,7 +67,6 @@ exhaustion — never trigger a build at all. GitHub Pages
 (davidpit1565.github.io/automatic-trading-ai) remains the primary,
 continuously-updated deployment either way; Vercel is now a working SECOND
 mirror, not the noisy one it was before 2026-08-19.
-
 ## Real money is now LIVE (2026-09-03)
 David generated real Revolut X trading credentials, funded the account
 (100.15€), and set `REAL_MONEY_ENABLED=true` as a repo Variable. The

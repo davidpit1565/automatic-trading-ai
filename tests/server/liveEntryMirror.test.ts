@@ -121,6 +121,52 @@ describe('mirrorApprovedEntries', () => {
     expect(liveCash(store)).toBe(100 - 0.01 * 100);
   });
 
+  it('re-checks equity/open-positions AFTER each fill within one call, not once before the loop (regression, 2026-09-03)', async () => {
+    // Two symbols approved in the SAME cycle, `maxOpenPositions: 1`. Before
+    // this fix, `equity`/`openPositions` were snapshotted ONCE before the
+    // loop, so the second symbol's risk assessment never saw the first
+    // symbol's fill — both looked like "0 open positions" and both would
+    // have been approved, jointly blowing past the 1-open-position cap.
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const ETH: Instrument = { symbol: 'ETHEUR', base: 'ETH', quote: 'EUR' };
+    const params = {
+      confirmationGate: fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' }),
+      brokerAdapter: {
+        name: 'fake-broker',
+        mode: 'live' as const,
+        async submit(intent: OrderIntent): Promise<OrderStatusReport> {
+          return { intentId: intent.id, state: 'filled', filledQuantity: intent.quantity, avgFillPrice: intent.limitPrice, detail: 'ok' };
+        },
+        async cancel(): Promise<OrderStatusReport> {
+          throw new Error('not used');
+        },
+        async fetchPositions(): Promise<BrokerPosition[]> {
+          return [];
+        },
+      },
+      killSwitch,
+      audit,
+      verifySymbolExists: async () => true,
+    };
+
+    const outcomes = await mirrorApprovedEntries(
+      store,
+      [opportunity({ symbol: 'XBTEUR' }), opportunity({ symbol: 'ETHEUR' })],
+      [XBT, ETH],
+      { XBTEUR: 100, ETHEUR: 100 },
+      params,
+      1000,
+      { riskLimits: { maxRiskPerTradePct: 1, maxPositionPct: 20, maxTotalExposurePct: 60, maxOpenPositions: 1, maxExposurePerAssetPct: 20, dailyLossLimitPct: 3, minRewardRisk: 1.5, maxRewardRisk: 20, minStopDistancePct: 0.25 } },
+    );
+
+    expect(outcomes[0]).toMatchObject({ symbol: 'XBTEUR', outcome: 'submitted' });
+    expect(outcomes[1]).toMatchObject({ symbol: 'ETHEUR', outcome: 'not-approved' });
+    expect(openLivePositions(store)).toHaveLength(1);
+  });
+
   it('refuses (not-approved) rather than submitting when 100€ genuinely cannot support the risk-engine sizing', async () => {
     const store = new MemoryStore();
     initLiveCash(store, 100);

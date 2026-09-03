@@ -123,16 +123,25 @@ export async function mirrorApprovedEntries(
   store.set(PENDING_KEY, pending);
   if (Object.keys(pending).length === 0) return outcomes;
 
-  const openPositions = openLivePositions(store).map((p) => ({
-    symbol: p.entryAssessment.asset,
-    quantity: p.quantity,
-    entryPrice: p.entryPrice,
-    currentPrice: prices[p.entryAssessment.asset] ?? p.entryPrice,
-  }));
-  const equity = liveEquity(store, prices);
-
   for (const symbol of Object.keys(pending)) {
     const { opportunity } = pending[symbol]!;
+    // Re-read equity/open-positions FRESH on every iteration, not once before
+    // the loop — a real bug found in review (2026-09-03): when a cycle has
+    // MULTIPLE symbols pending at once (the paper autopilot can approve
+    // several entries in one scan), a fill from an EARLIER symbol in this
+    // same loop (debited cash, a new tracked position) must be visible to
+    // the NEXT symbol's risk assessment. Sizing every pending symbol against
+    // the SAME stale pre-loop snapshot let two entries jointly blow past
+    // maxOpenPositions/maxTotalExposurePct/per-asset caps that each looked
+    // fine in isolation, and could size a second buy against cash the first
+    // buy had already spent.
+    const openPositions = openLivePositions(store).map((p) => ({
+      symbol: p.entryAssessment.asset,
+      quantity: p.quantity,
+      entryPrice: p.entryPrice,
+      currentPrice: prices[p.entryAssessment.asset] ?? p.entryPrice,
+    }));
+    const equity = liveEquity(store, prices);
     const assessment = assessTrade(
       opportunity,
       { equity, openPositions },
