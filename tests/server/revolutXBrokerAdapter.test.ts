@@ -233,17 +233,38 @@ describe('RevolutXBrokerAdapter', () => {
     expect(report.avgFillPrice).toBeNull();
   });
 
-  it('reports submitted (not filled) when the follow-up status read fails, rather than guessing', async () => {
+  it('reports submitted (not filled) when the follow-up status read fails, and auto-engages the kill switch (real gap found 2026-09-03: a REAL order placed here can genuinely fill while its status is unreadable, and went completely untracked — no stop-loss, invisible to /sell — until a human happened to notice by checking Revolut X directly)', async () => {
     const { fetchFn } = fakeFetch([
       { status: 200, body: { data: [{ venue_order_id: 'venue-3', client_order_id: 'x', state: 'new' }] } },
       { status: 500, body: { error: 'upstream hiccup' } },
     ]);
     const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
 
+    expect(killSwitch.isEngaged()).toBe(false);
     const report = await adapter.submit(intent());
 
     expect(report.state).toBe('submitted');
     expect(report.detail).toContain('venue-3');
+    expect(report.detail).toContain('verify manually');
+    expect(killSwitch.isEngaged()).toBe(true);
+  });
+
+  it('treats a "duplicate client_order_id" rejection as AMBIGUOUS (not a clean, zero-exposure rejection) and auto-engages the kill switch — real production message, 2026-09-03: strong evidence an earlier attempt actually went through, which this project cannot look up by client_order_id to confirm', async () => {
+    const { fetchFn } = fakeFetch([
+      {
+        status: 400,
+        body: { message: "An order with the client_order_id 'abc' has already been placed.", error_id: 'x' },
+      },
+    ]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    expect(killSwitch.isEngaged()).toBe(false);
+    const report = await adapter.submit(intent());
+
+    expect(report.state).toBe('rejected');
+    expect(report.detail).toContain('already placed');
+    expect(report.detail).toContain('verify manually');
+    expect(killSwitch.isEngaged()).toBe(true);
   });
 
   it('is explicit that a network failure during placement is AMBIGUOUS, not a confirmed rejection, and auto-engages the kill switch', async () => {

@@ -323,16 +323,34 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
       );
     }
     if (!placed.ok) {
+      const rawBody = JSON.stringify(placed.json).slice(0, 500);
+      // A "duplicate client_order_id" rejection is NOT an honest rejection —
+      // it's Revolut X telling us an order under this EXACT deterministic id
+      // was already placed before (real incident, 2026-09-03: this exact
+      // message was seen live). Treating it as a plain 'rejected' (zero
+      // exposure) would be actively wrong — it's strong evidence the
+      // ORIGINAL attempt genuinely went through, and this project has no way
+      // to look up an order by client_order_id to confirm its real fill
+      // state (checked directly against Revolut X's API docs). Same
+      // reasoning as the network-failure-before-response branch below:
+      // rather than guess in either direction, force a human to check
+      // Revolut X directly.
+      if (/already been placed/i.test(rawBody)) {
+        this.killSwitch.engage(
+          `order ${intent.id}: Revolut X says this exact order was already placed (${rawBody}) — an EARLIER attempt may have genuinely filled and this project cannot look it up by client_order_id; verify manually in the Revolut X app before /resume`,
+        );
+        return this.reportAndAudit(
+          intent.id,
+          'rejected',
+          `Revolut X: order already placed under this id (${rawBody}) — kill switch engaged automatically, verify manually before resuming`,
+        );
+      }
       // Same class of bug as listTradablePairs() (found 2026-09-03): the
       // HTTP status alone tells a human nothing about WHY Revolut X
       // rejected the order (bad price precision, size below minimum,
       // insufficient balance, ...) — include the real response body so the
       // next attempt is diagnosable instead of guessed at.
-      return this.reportAndAudit(
-        intent.id,
-        'rejected',
-        `Revolut X rejected the order: HTTP ${placed.status} — ${JSON.stringify(placed.json).slice(0, 500)}`,
-      );
+      return this.reportAndAudit(intent.id, 'rejected', `Revolut X rejected the order: HTTP ${placed.status} — ${rawBody}`);
     }
     const venueOrderId = readVenueOrderId(placed.json);
     if (!venueOrderId) {
@@ -350,7 +368,19 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
     // One follow-up read for the real fill picture — no wait-loop here.
     const detail = await this.fetchOrderDetail(venueOrderId);
     if (!detail) {
-      return this.reportAndAudit(intent.id, 'submitted', `order ${venueOrderId} placed; status not yet confirmable`);
+      // Found 2026-09-03: a REAL order was placed (Revolut X accepted it and
+      // gave us a venue_order_id) but the follow-up status read failed, so
+      // this project genuinely does not know whether it's filled, partially
+      // filled, or still resting — yet the caller (mirrorApprovedEntries)
+      // has no way to distinguish this from a cleanly-read "0 filled so far"
+      // resting order, and a real fill went completely untracked (no
+      // stop-loss/take-profit, invisible to /sell) until a human noticed by
+      // checking Revolut X directly. Same "can't verify, so stop and ask a
+      // human" reasoning as the network-failure-before-response branch.
+      this.killSwitch.engage(
+        `order ${intent.id} (venue ${venueOrderId}): placed, but its fill status could not be confirmed — verify manually in the Revolut X app (and reconcile any real position this project doesn't yet track) before /resume`,
+      );
+      return this.reportAndAudit(intent.id, 'submitted', `order ${venueOrderId} placed; status not yet confirmable — kill switch engaged, verify manually`);
     }
     return this.reportAndAudit(
       intent.id,
