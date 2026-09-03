@@ -1595,7 +1595,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788402435281,
+    "at": 1788402750951,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1611,10 +1611,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1786612117452,
-      "equity": 9568.52
-    },
     {
       "at": 1786612424166,
       "equity": 9568.52
@@ -21610,6 +21606,10 @@
     {
       "at": 1788402435281,
       "equity": 10195.85
+    },
+    {
+      "at": 1788402750951,
+      "equity": 10195.85
     }
   ],
   "trade-journal": [
@@ -22833,7 +22833,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -16.54% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -16.82% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -22931,7 +22931,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1788402435281,
+    "at": 1788402750951,
     "standings": [
       {
         "key": "live-mirror",
@@ -22980,8 +22980,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9305.25117526638,
-        "returnPct": -6.947488247336205,
+        "equity": 9311.117515821265,
+        "returnPct": -6.888824841787354,
         "trades": 65,
         "winRatePct": 38.46153846153847,
         "profitFactor": 0.5745074535618775,
@@ -22991,8 +22991,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9705.529815028172,
-        "returnPct": -2.9447018497182764,
+        "equity": 9726.352915527175,
+        "returnPct": -2.7364708447282466,
         "trades": 140,
         "winRatePct": 39.285714285714285,
         "profitFactor": 1.1335549974332315,
@@ -23046,7 +23046,7 @@
       "takeProfit": 44.25125621582812,
       "feesPaid": 5.809895708659726,
       "realizedPnl": 0,
-      "highestPrice": 43.15,
+      "highestPrice": 43.29,
       "lowestPrice": 42.73,
       "confidence": 68.59736549011382,
       "validationVerdict": null,
@@ -23065,7 +23065,7 @@
       "takeProfit": 0.18191267813910308,
       "feesPaid": 5.805597766243801,
       "realizedPnl": 0,
-      "highestPrice": 0.177632,
+      "highestPrice": 0.177963,
       "lowestPrice": 0.174758,
       "confidence": 62.90400487135763,
       "validationVerdict": null,
@@ -23084,7 +23084,7 @@
       "takeProfit": 1.2177459249588467,
       "feesPaid": 5.752847885787408,
       "realizedPnl": 0,
-      "highestPrice": 1.1761,
+      "highestPrice": 1.1802,
       "lowestPrice": 1.16918,
       "confidence": 59.27326675555686,
       "validationVerdict": null,
@@ -27923,6 +27923,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry XRPEUR: 1632.305315783362 @ 1.17479 (stop 1.1533120375205765, target 1.2177459249588467, confidence 59)"
+    },
+    {
+      "timestamp": 1788402750951,
+      "intentId": "AVAXEUR:1788402750951",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AVAXEUR: no exposure headroom: 5850.01 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1788402750951,
+      "intentId": "XBTEUR:1788402750951",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused XBTEUR: no exposure headroom: 5850.01 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -40136,7 +40150,7 @@
   },
   "longterm-shadow-last-run-day": "2026-09-03",
   "live:live-cash-eur": 100.15,
-  "live:telegram-shared-update-offset": 447904474,
+  "live:telegram-shared-update-offset": 447904475,
   "live:telegram-unclaimed-messages": [
     {
       "updateId": 447904465,
@@ -40170,6 +40184,20 @@
     },
     {
       "timestamp": 1788402159199,
+      "intentId": "live-entry:XBTEUR",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "could not verify 'BTC-EUR' as a currently tradable instrument on revolut-x (either it doesn't exist there, or the check itself failed) — refusing rather than guessing a symbol mapping"
+    },
+    {
+      "timestamp": 1788402759089,
+      "intentId": "verify-symbol-exists",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "'BTC-EUR' not found among 0 tradable pairs from revolut-x; no pair with base 'BTC' listed at all"
+    },
+    {
+      "timestamp": 1788402759097,
       "intentId": "live-entry:XBTEUR",
       "event": "rejected",
       "mode": "live",
