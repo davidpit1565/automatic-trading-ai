@@ -1456,16 +1456,34 @@ Full gate green (tsc, 963 tests, build).
 it deliberately because every ~15-minute "Autopilot state (mid-run cycle
 N/70)" commit to `main` triggered its own Vercel deployment, exhausting the
 100/day account-wide quota shared by every project on the account (this one
-starved his separate Bet-El siddur app of deploys for two days). Re-enabled
-now with a targeted fix instead of a blanket one: `ignoreCommand` checks the
-latest commit's message and skips the build ONLY for `Autopilot state`/
-`Stocks autopilot state` commits (exit 0 = Vercel's own "skip this build"
-signal), so a real code change (a PR merge) still deploys normally while the
-bot's own state-persistence commits — the actual source of the quota
-exhaustion — never trigger a build at all. GitHub Pages
-(davidpit1565.github.io/automatic-trading-ai) remains the primary,
-continuously-updated deployment either way; Vercel is now a working SECOND
-mirror, not the noisy one it was before 2026-08-19.
+starved his separate Bet-El siddur app of deploys for two days). That was
+then replaced with `ignoreCommand` (skip the build for `Autopilot state`/
+`Stocks autopilot state` commit messages) on the assumption that a skipped
+build doesn't count against the quota.
+
+**That assumption was wrong (found 2026-09-03 while account-wide deploys were
+being exhausted again).** Per Vercel's own docs, `ignoreCommand` only skips
+the *build* — the deployment record is still created (as `CANCELED`) and
+still counts toward the 100/day quota. Live data confirmed it: of the most
+recent ~60 deployments on this project, ~78% were `CANCELED` autopilot/stocks
+state pushes, still eating the shared account quota exactly as before.
+
+Fixed properly now: `vercel.json` uses the per-branch form of
+`git.deploymentEnabled` to disable deployments for `main` specifically
+(`{"main": false}`), while every other branch (PR previews) is unaffected —
+branches not listed default to `true`. This means **zero** deployment records
+are created from `main` at all, whether from the bot's state commits or from
+a real PR merge. That's safe here because GitHub Pages
+(davidpit1565.github.io/automatic-trading-ai) is the actual primary,
+continuously-updated live dashboard (see README.md) — Vercel's `main`
+deployment was only ever a secondary mirror, never load-bearing. PR-branch
+preview deployments on Vercel (used for visually reviewing UI work before
+merge) keep working exactly as before.
+
+No runner/workflow changes were made — `persistStateToGit` in
+`autopilotRunner.mts`/`stocksRunner.mts` still pushes state to `main` exactly
+as before (real money went live 2026-09-03; that git-persistence path is not
+something to touch without a strong reason). This fix is Vercel-config-only.
 ## Real money is now LIVE (2026-09-03)
 David generated real Revolut X trading credentials, funded the account
 (100.15€), and set `REAL_MONEY_ENABLED=true` as a repo Variable. The
