@@ -1,15 +1,14 @@
 /**
- * Holds crypto entries the signal engine approved WHILE a Shabbat/Yom Tov
- * blackout window was active (see `blackoutCalendar.mts`) — queued instead
- * of proposed, so nothing executes unattended. Drained into one Telegram
- * summary the moment the window ends (`autopilotRunner.mts`'s
+ * Remembers crypto entries the signal engine approved WHILE a Shabbat/Yom
+ * Tov blackout window was active (see `blackoutCalendar.mts`) — the normal
+ * Telegram confirmation is still sent as always (David asked 2026-09-03:
+ * he IS sometimes available and wants to keep the option to approve), this
+ * only tracks each one so anything that never actually got answered can be
+ * summarized once the window ends (`autopilotRunner.mts`'s
  * `runLiveMirror`), re-validated against the price AT THAT MOMENT rather
- * than replayed blind.
- *
- * Only the AUTOMATIC entry path is queued here — a human's own `/buy` or
- * `/sell` is never held back by this (David's own rule from the start of
- * this feature's conversation: manual action is always available, only the
- * bot's own unattended proposals pause).
+ * than replayed blind. Anything that WAS approved and filled during the
+ * window (a genuine open position exists for it) is excluded from that
+ * summary at drain time — it doesn't need reporting as missed.
  */
 
 import type { KeyValueStore } from '../src/core/data/storage';
@@ -53,18 +52,23 @@ export function queueBlackoutEntries(
   store.set(QUEUE_KEY, queue);
 }
 
-/** Empties the queue and returns each entry re-validated against the
- * CURRENT price — never hands back stale queued numbers alone. */
+/** Empties the queue and returns each entry NOT in `alreadyHandledSymbols`
+ * (a symbol that now has a genuine open position — approved and filled
+ * during the window, so it needs no "missed" report), re-validated against
+ * the CURRENT price rather than replayed blind. */
 export function drainBlackoutQueue(
   store: KeyValueStore,
   prices: Readonly<Record<string, number>>,
+  alreadyHandledSymbols: ReadonlySet<string> = new Set(),
 ): readonly BlackoutSummaryEntry[] {
   const queue = store.get<Record<string, QueuedEntry>>(QUEUE_KEY) ?? {};
   store.set(QUEUE_KEY, {});
-  return Object.values(queue).map((q) => {
-    const currentPrice = prices[q.symbol] ?? q.entry;
-    return { ...q, currentPrice, movedPct: ((currentPrice - q.entry) / q.entry) * 100 };
-  });
+  return Object.values(queue)
+    .filter((q) => !alreadyHandledSymbols.has(q.symbol))
+    .map((q) => {
+      const currentPrice = prices[q.symbol] ?? q.entry;
+      return { ...q, currentPrice, movedPct: ((currentPrice - q.entry) / q.entry) * 100 };
+    });
 }
 
 function formatEur(value: number): string {
@@ -85,7 +89,7 @@ export function buildBlackoutSummaryMessage(entries: readonly BlackoutSummaryEnt
     );
   });
   return (
-    `🕯️ ${windowLabel} הסתיים/ה. בזמן הזה זוהו ההזדמנויות הבאות, אבל לא הוצעו לך כדי לא לבצע בלי אישור:\n\n` +
+    `🕯️ ${windowLabel} הסתיים/ה. ההזדמנויות הבאות נשלחו לאישור בזמן הזה אבל לא קיבלו תשובה:\n\n` +
     `${lines.join('\n')}\n\n` +
     `זו לא הצעה לפעולה אוטומטית — אם עדיין נראה לך רלוונטי, אפשר לפתוח ידנית עם /buy <SYMBOL>.`
   );
