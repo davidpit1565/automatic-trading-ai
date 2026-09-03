@@ -163,34 +163,61 @@ function tipStamp(ts: number, tf: Timeframe): string {
     : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-type ViewMode = 'chart' | 'table' | 'depth' | 'trades';
+type ViewMode = 'chart' | 'table' | 'depth' | 'trades' | 'trade';
 const VIEW_TABS: ReadonlyArray<{ readonly key: ViewMode; readonly label: string; readonly icon: string }> = [
   { key: 'chart', label: 'Chart', icon: '<path d="M3 17l4-5 4 3 5-7 5 4"/>' },
   { key: 'table', label: 'Order book', icon: '<rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 12h17M12 3.5v17"/>' },
   { key: 'depth', label: 'Depth', icon: '<path d="M3 20V9l5-5 4 4 4-4 5 5v11z"/>' },
   { key: 'trades', label: 'Trades', icon: '<path d="M4 6h16M4 12h16M4 18h10"/>' },
+  { key: 'trade', label: 'Trade', icon: '<path d="M7 4l-4 4 4 4"/><path d="M3 8h13"/><path d="M17 20l4-4-4-4"/><path d="M21 16H8"/>' },
 ];
 
-/** Shared across every view mode (chart/table/depth/trades): coin identity,
- * live price + change, and 24h stats already carried by `MarketRow` — no
- * extra fetch. */
-function detailHeaderHtml(m: MarketRow, price: number, changePct: number, viewMode: ViewMode, starred: boolean): string {
+/** Shared across every view mode (chart/table/depth/trades/trade): coin
+ * identity, live price + change, and 24h stats already carried by
+ * `MarketRow` — no extra fetch. `rows`/`currentIndex` back the pair-switcher
+ * menu (David asked for a "BTC-EUR ▾"-style selector like Revolut X's Trade
+ * page, so switching pairs doesn't mean going back to the list) — scoped to
+ * whatever category the user was already browsing (`detailRows`), not the
+ * full multi-hundred-market universe. */
+function detailHeaderHtml(
+  m: MarketRow,
+  price: number,
+  changePct: number,
+  viewMode: ViewMode,
+  starred: boolean,
+  rows: readonly MarketRow[],
+  currentIndex: number,
+): string {
   const up = changePct >= 0;
   const tabs = VIEW_TABS.map(
     (t) =>
       `<button class="view-tab ${t.key === viewMode ? 'active' : ''}" data-view="${t.key}" aria-label="${t.label}">` +
       `<svg viewBox="0 0 24 24" aria-hidden="true">${t.icon}</svg></button>`,
   ).join('');
+  const menuItems = rows
+    .map(
+      (r, i) =>
+        `<button class="pair-menu-item ${i === currentIndex ? 'active' : ''}" data-idx="${i}" role="option" aria-selected="${i === currentIndex}">` +
+        `${coinLogoHtml(r.base, BASE_URL)}<span class="row-title">${escapeHtml(r.label)}</span><span class="row-sub">${escapeHtml(r.symbol)}</span></button>`,
+    )
+    .join('');
   return `
     <div class="detail-head">
       <div class="detail-head-left">
         <button class="icon-btn" id="mk-back" aria-label="Back to all markets">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
         </button>
-        <div class="detail-coin">${coinLogoHtml(m.base, BASE_URL)}<div><div class="detail-name">${m.label}</div><div class="row-sub">${m.symbol} · EUR</div></div></div>
+        <div class="detail-coin">${coinLogoHtml(m.base, BASE_URL)}<div>
+          <button class="detail-name-btn" id="mk-pair-toggle" aria-haspopup="listbox" aria-expanded="false">
+            <span class="detail-name">${m.label}</span>
+            <svg class="pair-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="row-sub">${m.symbol} · EUR</div>
+        </div></div>
       </div>
       <button class="star-btn ${starred ? 'active' : ''}" id="mk-star" aria-label="Watch this market">★</button>
     </div>
+    <div class="pair-menu" id="mk-pair-menu" role="listbox" hidden>${menuItems}</div>
     <div class="detail-price-row">
       <div class="row-title big" id="mk-price">€${formatPrice(price)}</div>
       <div class="chg ${up ? 'up' : 'down'}" id="mk-change">${formatPct(changePct)}</div>
@@ -201,6 +228,26 @@ function detailHeaderHtml(m: MarketRow, price: number, changePct: number, viewMo
       <div class="dstat"><span class="dstat-label">24h Volume</span><span class="dstat-value">€${compact(m.quoteVolume)}</span></div>
     </div>
     <div class="view-tabs" id="mk-view-tabs">${tabs}</div>`;
+}
+
+/** The Trade tab: visually mirrors Revolut X's order form (Buy/Sell,
+ * amount/price fields) so the page shows what David asked for — but every
+ * field is inert. Real orders already go through the cloud agent's own
+ * safety checks (confidence gates, risk sizing, a Telegram confirmation
+ * prompt) via `/buy`/`/sell`; a direct submit button here would bypass all
+ * of that, so this deliberately only points at the real path instead of
+ * faking one. */
+function orderFormHtml(m: MarketRow): string {
+  return `
+    <div class="order-form">
+      <div class="of-toggle">
+        <button class="of-btn buy active" disabled>Buy</button>
+        <button class="of-btn sell" disabled>Sell</button>
+      </div>
+      <div class="of-field"><label>Amount</label><div class="of-input"><span>0</span><span class="of-unit">${escapeHtml(m.base)}</span></div></div>
+      <div class="of-field"><label>Price</label><div class="of-input"><span>€${formatPrice(m.price)}</span></div></div>
+      <p class="of-note">This mirrors Revolut X's order form for reference, but there's no direct submit here — every real order already goes through the cloud agent's own safety checks (confidence gates, risk sizing, a Telegram confirmation prompt). Send <code>/buy ${escapeHtml(m.symbol)}</code> or <code>/sell ${escapeHtml(m.symbol)}</code> to the Telegram bot to actually place one.</p>
+    </div>`;
 }
 
 /** Closed-orders + Stats skeleton — identical markup regardless of view
@@ -611,6 +658,24 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         const nowStarred = getWatchlist().toggle(m.symbol);
         detailView.querySelector('#mk-star')?.classList.toggle('active', nowStarred);
       });
+      const pairToggle = detailView.querySelector<HTMLButtonElement>('#mk-pair-toggle');
+      const pairMenu = detailView.querySelector<HTMLElement>('#mk-pair-menu');
+      pairToggle?.addEventListener('click', () => {
+        if (!pairMenu) return;
+        pairMenu.hidden = !pairMenu.hidden;
+        pairToggle.setAttribute('aria-expanded', String(!pairMenu.hidden));
+      });
+      pairMenu?.addEventListener('click', (event) => {
+        const item = (event.target as HTMLElement).closest<HTMLButtonElement>('.pair-menu-item');
+        if (!item) return;
+        const idx = Number(item.dataset['idx']);
+        pairMenu.hidden = true;
+        if (!Number.isInteger(idx) || idx === coin || idx < 0 || idx >= detailRows.length) return;
+        coin = idx;
+        rangeKey = '1D';
+        savedRangeKey = rangeKey;
+        void paint();
+      });
       detailView.querySelectorAll<HTMLButtonElement>('.view-tab').forEach((b) => {
         b.addEventListener('click', () => {
           const next = b.dataset['view'] as ViewMode;
@@ -654,7 +719,9 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       const src = data.source as unknown as Partial<OrderBookCapable>;
       const supportsBook = typeof src.getOrderBook === 'function' && typeof src.getRecentTrades === 'function';
       let body: string;
-      if (!supportsBook) {
+      if (viewMode === 'trade') {
+        body = orderFormHtml(m);
+      } else if (!supportsBook) {
         body = '<div class="empty">Not available for this market data source.</div>';
       } else if (viewMode === 'trades') {
         const result = await src.getRecentTrades!(m.symbol, 30);
@@ -672,7 +739,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       if (seq !== paintSeq || myGeneration !== detailGeneration) return;
 
       detailView.innerHTML =
-        detailHeaderHtml(m, m.price, m.changePct, viewMode, getWatchlist().has(m.symbol)) +
+        detailHeaderHtml(m, m.price, m.changePct, viewMode, getWatchlist().has(m.symbol), detailRows, coin) +
         `<div class="detail-nonchart">${body}</div>` +
         `<div class="detail-nav">` +
         `<button class="pager" id="mk-prev" ${coin === 0 ? 'disabled' : ''}>‹ Prev</button>` +
@@ -784,7 +851,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       ).join('');
 
       detailView.innerHTML =
-        detailHeaderHtml(m, price, changePct, viewMode, getWatchlist().has(m.symbol)) +
+        detailHeaderHtml(m, price, changePct, viewMode, getWatchlist().has(m.symbol), detailRows, coin) +
         `<div class="chart-controls">
           <div class="range-bar">${rangeBar}</div>
           <div class="chart-toggle">
