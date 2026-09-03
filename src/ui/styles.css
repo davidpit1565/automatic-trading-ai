@@ -904,6 +904,10 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .market-name { color: var(--text-dim); font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .market-price { font-weight: 750; margin: 0.28rem 0; font-variant-numeric: tabular-nums; }
 .market-spark svg, .spark { width: 100%; height: 44px; display: block; }
+/* Thinner stroke than the inline SVG default (2.5) — a restrained hairline
+   reads as "instrument", a thick one as a decorative squiggle. Overrides the
+   inline stroke-width attribute, which the CSS cascade always outranks. */
+.spark polyline { stroke-width: 2; }
 
 .chg { font-weight: 700; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
 .chg.up, .up { color: var(--hot); }
@@ -1211,8 +1215,16 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .detail-chart svg.pchart { width: 100%; height: auto; aspect-ratio: 380 / 240; touch-action: none; }
 @media (min-width: 860px) { .detail-chart svg.pchart { aspect-ratio: 480 / 260; } }
 @media (min-width: 1400px) { .detail-chart svg.pchart { aspect-ratio: 600 / 300; } }
-.pchart .pgrid { stroke: var(--border); stroke-width: 0.8; opacity: 0.45; stroke-dasharray: 2 2; }
-.pchart .paxis { fill: var(--text-dim); font-size: 9px; font-family: inherit; }
+/* Solid hairlines, not dashes — the reference charts (Investing.com,
+   Revolut X) use a flat, restrained grid; a dash pattern reads as a sketch
+   rather than a finished instrument panel. */
+.pchart .pgrid { stroke: var(--border); stroke-width: 1; opacity: 0.5; }
+/* The line-mode price chart's own polyline (candle mode draws no top-level
+   polyline, so this never touches the candlestick chart) — a hair thinner
+   than the inline default for the same restrained, instrument-panel line. */
+.pchart > polyline { stroke-width: 1.75; }
+.pchart .paxis { fill: var(--text-dim); font-size: 9.5px; font-family: inherit;
+  font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
 .pchart .pxlab { text-anchor: middle; }
 
 /* Line / Candles chart-type toggle */
@@ -1226,13 +1238,16 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .ctoggle-btn:hover { color: var(--text); }
 .ctoggle-btn.active { background: linear-gradient(155deg, var(--accent), var(--accent-2)); color: #fff; }
 
-/* Candlestick chart: green up / red down bodies + wicks */
-.pcandle .pcandle-wick { stroke-width: 1.2; opacity: 0.85; }
-.pcandle .pcandle-body { stroke-width: 0.5; rx: 1.5; ry: 1.5; }
+/* Candlestick chart: green up / red down bodies + wicks. Full-opacity,
+   crisply-stroked bodies — the semi-transparent fill in the previous pass
+   (0.8-0.88) muddied the colour, especially on down candles; professional
+   candlestick charts (Investing.com, TradingView) render solid bodies. */
+.pcandle .pcandle-wick { stroke-width: 1; opacity: 0.9; }
+.pcandle .pcandle-body { stroke-width: 0.75; rx: 1; ry: 1; }
 .pcandle.up .pcandle-wick { stroke: var(--hot); }
-.pcandle.up .pcandle-body { stroke: var(--hot); fill: var(--hot); opacity: 0.88; }
+.pcandle.up .pcandle-body { stroke: var(--hot); fill: var(--hot); }
 .pcandle.down .pcandle-wick { stroke: var(--cold); }
-.pcandle.down .pcandle-body { stroke: var(--cold); fill: var(--cold); opacity: 0.8; }
+.pcandle.down .pcandle-body { stroke: var(--cold); fill: var(--cold); }
 /* Neutral-accent live marker + crosshair dot in candle mode (bodies carry colour). */
 .pcandle-chart .pchart-now, .pcandle-chart .pchart-cross-dot { fill: var(--accent-text); }
 .pcandle-chart .pchart-now-tag rect { fill: var(--accent); border-radius: 3px; }
@@ -1252,10 +1267,15 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .pchart .pchart-cross-dot { stroke: #fff; stroke-width: 1.5; }
 
 /* Support/Resistance levels with smooth animation */
-.pchart .psr { transition: stroke 300ms ease, opacity 300ms ease; }
+.pchart .psr { transition: stroke 300ms ease, opacity 300ms ease; stroke-width: 1; opacity: 0.4; }
 .pchart .psr-resistance { stroke: rgba(76, 215, 135, 0.32); }
 .pchart .psr-support { stroke: rgba(242, 109, 125, 0.32); }
 .pchart .psr-label { font-family: inherit; font-weight: 700; letter-spacing: 0.02em; }
+
+/* Volume bars: a quiet underlay, not competing with the candles above them —
+   the inline fill/opacity in charts.ts is a low-specificity presentation
+   attribute, so this class rule wins and keeps the bars restrained. */
+.pchart .pvol-bar { opacity: 0.32; }
 
 /* OHLC readout: one compact, legible row with a scrim behind it */
 .pchart .pohlc-scrim { fill: var(--bg); opacity: 0.55; }

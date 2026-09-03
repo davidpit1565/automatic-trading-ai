@@ -1,5 +1,47 @@
 # PROJECT_STATE
 
+## UI redesign pass 1: chart visual polish (2026-09-03)
+David asked for the whole dashboard visually elevated to Revolut X / Investing.com
+polish, "especially all the graphs." First increment of that pass, scoped to
+`src/ui/styles.css` only (no `charts.ts` markup/geometry changes, no view changes) —
+smallest possible diff for a change this visible, and zero risk to the SVG
+structure the chart tests and crosshair-overlay code depend on:
+
+- Candlestick bodies/wicks: solid full-opacity fill (was 0.8/0.88, which
+  muddied the down-candle red especially) with a crisper, thinner stroke and
+  a smaller corner radius — professional charts (Investing.com/TradingView)
+  render solid bodies, not translucent ones.
+- Chart grid lines: solid hairlines instead of a dashed pattern — a dashed
+  grid reads as a sketch, not a finished instrument. Axis labels gained
+  tabular-nums and a touch of letter-spacing so ticks line up cleanly.
+- Support/resistance dashed lines and volume-bar underlay opacity now come
+  from CSS class rules (which the cascade lets win over the low-specificity
+  inline presentation attributes `charts.ts` sets) so they can be tuned
+  without touching the chart-generation code at all; volume bars dialled
+  down to a quiet underlay instead of competing visually with the candles.
+- Sparklines (`.spark polyline`, home/market cards) and the line-mode price
+  chart's polyline both got a hair thinner via the same CSS-overrides-inline-
+  attribute mechanism, for a more restrained "instrument" line vs. the
+  previous thicker default.
+
+Verified visually: ran the dev server, opened the BTC candlestick detail
+chart in a real browser at a 400px phone viewport with `?demo=1` (Playwright,
+`/opt/pw-browsers/chromium`) and inspected the screenshot — crisp solid
+candles, clean hairline grid, subtle volume bars, all rendering correctly.
+(Noted in passing, not fixed here — out of scope for a chart-only diff: the
+"Crypto" hub's portfolio-value hero and open-positions list stay in their
+loading/"waiting for the cloud agent" state in this sandbox even under
+`?demo=1`, because that data comes from a separate cloud-state fetch that
+`?demo=1` does not stub — a pre-existing sandbox network limitation, not a
+regression from this change.)
+
+Full gate green: `tsc --project tsconfig.app.json --noEmit`, `vitest run`
+(999 tests, all passing, none touched), `npm run build`. Opened as its own
+PR (branch `claude/ui-redesign-charts`) rather than folded into a larger
+diff — David asked for focused, reviewable increments, not one big unreviewable
+change. Next passes (not done here): global typography/spacing token
+refinement, then home/markets view polish.
+
 ## The website now shows the REAL Revolut X account, not just the simulated one (2026-09-03)
 David asked why the website "still shows the money as demo" even though
 real money is live — correct: `homeView.ts`'s hero card only ever read the
