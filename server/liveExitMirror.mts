@@ -68,6 +68,12 @@ export async function checkAutomaticExits(
   flowParams: Omit<LiveOrderFlowParams, 'intent'>,
   now: number,
   candleCount = 150,
+  /** Reports realized P&L on a genuinely filled exit (fill price vs. the
+   * position's own entry price) — feeds the live account's daily-loss
+   * circuit breaker (`DailyLossTracker`, see `autopilotRunner.mts`'s
+   * `runLiveMirror`). Optional so this stays callable exactly as before
+   * wherever a caller (a test, say) has no tracker to feed. */
+  onRealizedPnl?: (pnl: number, now: number) => void,
 ): Promise<readonly LiveExitOutcome[]> {
   const outcomes: LiveExitOutcome[] = [];
   for (const position of openLivePositions(store)) {
@@ -109,6 +115,7 @@ export async function checkAutomaticExits(
       if (result.report.state === 'filled') {
         const fillPrice = result.report.avgFillPrice ?? price;
         creditLiveCash(store, result.report.filledQuantity * fillPrice);
+        onRealizedPnl?.((fillPrice - refreshed.entryPrice) * result.report.filledQuantity, now);
         forgetLivePosition(store, position.id);
         // Releases this symbol for a FUTURE fresh entry — see
         // `liveEntryMirror.mts`'s `clearOutstandingEntry` doc comment.

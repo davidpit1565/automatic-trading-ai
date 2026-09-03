@@ -83,6 +83,7 @@ export async function checkManualBuyRequests(
   prices: Readonly<Record<string, number>>,
   flowParams: Omit<LiveOrderFlowParams, 'intent'>,
   now: number,
+  options: { readonly dailyLossSoFar?: number } = {},
 ): Promise<readonly LiveEntryOutcome[]> {
   // Shared poller (telegram.mts) — never poll Telegram directly here with a
   // private offset (see PROJECT_STATE.md's shared-cursor fix, 2026-09-02).
@@ -128,5 +129,5 @@ export async function checkManualBuyRequests(
   store.set(MANUAL_BUY_PENDING_KEY, [...stillPending]);
   if (opportunities.length === 0) return [];
 
-  return mirrorApprovedEntries(store, opportunities, instruments, prices, flowParams, now);
+  return mirrorApprovedEntries(store, opportunities, instruments, prices, flowParams, now, options);
 }

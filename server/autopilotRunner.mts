@@ -716,23 +716,63 @@ export async function runLiveMirror(
   const audit = new PersistedAuditLog(liveStore);
   const brokerAdapter = new RevolutXBrokerAdapter(liveStore, audit, killSwitch, credentials);
   const confirmationGate = new TelegramConfirmationGate(liveStore, telegram, audit);
+  // Live-scoped daily-loss circuit breaker (PrefixedStore, never the raw
+  // store — see PROJECT_STATE.md's note on why this must never conflate
+  // with the paper autopilot's own 'daily-loss' key on the same file). Found
+  // missing entirely in review (2026-09-03): nothing fed real-money realized
+  // P&L into it and nothing read it when sizing a live entry, so the
+  // dailyLossLimitPct check inside `assessTrade` never actually applied to
+  // real money — a losing streak in one day could never be halted by it.
+  const liveLossTracker = new DailyLossTracker(liveStore);
+  const dailyLossSoFar = liveLossTracker.lossToday(now);
+  const recordLiveRealizedPnl = (pnl: number, ts: number): void => liveLossTracker.record(pnl, ts);
   const flowParams = {
     confirmationGate,
     brokerAdapter,
     killSwitch,
     audit,
     verifySymbolExists: async (symbol: string) => (await brokerAdapter.listTradablePairs()).includes(symbol),
+    // Re-checked AFTER a human approves, BEFORE the broker sees the order
+    // (David's "after I approve, check again it's still good" ask) — this
+    // hook existed in `runLiveOrderFlow` already but was never actually
+    // passed in here, so it did nothing on the real trading path (found in
+    // review, 2026-09-03). Catches a human /pause landing while a
+    // confirmation was already pending: without this, an approval tap that
+    // arrives just after /pause would still submit a real order.
+    revalidate: async () => ({
+      ok: !killSwitch.isEngaged(),
+      reason: killSwitch.isEngaged() ? 'kill switch engaged after approval was requested' : undefined,
+    }),
   };
 
   try {
     await checkManualKillSwitchCommands(liveStore, telegram, killSwitch, audit, 'david', now);
-    await checkManualSellRequests(liveStore, telegram, source, ENTRY_TF, flowParams, now);
-    await checkManualBuyRequests(liveStore, telegram, source, ENTRY_TF, instruments, prices, flowParams, now);
+    await checkManualSellRequests(liveStore, telegram, source, ENTRY_TF, flowParams, now, recordLiveRealizedPnl);
+    await checkManualBuyRequests(
+      liveStore,
+      telegram,
+      source,
+      ENTRY_TF,
+      instruments,
+      prices,
+      flowParams,
+      now,
+      { dailyLossSoFar },
+    );
     const newlyApproved = cycleOpened
       .map((o) => o.opportunity)
       .filter((o): o is NonNullable<typeof o> => o !== undefined);
-    await mirrorApprovedEntries(liveStore, newlyApproved, instruments, prices, flowParams, now);
-    await checkAutomaticExits(liveStore, source, ENTRY_TF, { trailing: AUTOPILOT_TRAILING }, flowParams, now);
+    await mirrorApprovedEntries(liveStore, newlyApproved, instruments, prices, flowParams, now, { dailyLossSoFar });
+    await checkAutomaticExits(
+      liveStore,
+      source,
+      ENTRY_TF,
+      { trailing: AUTOPILOT_TRAILING },
+      flowParams,
+      now,
+      150,
+      recordLiveRealizedPnl,
+    );
   } catch (cause) {
     // Never let a live-money problem take down the paper cycle that already
     // completed above — log and retry next cycle, same contract as every

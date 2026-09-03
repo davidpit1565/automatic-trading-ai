@@ -448,4 +448,47 @@ describe('runLiveMirror (real-money wiring stays off until deliberately turned o
     expect(store.get('live:live-cash-eur')).toBe(100);
     delete process.env['LIVE_STARTING_CASH_EUR'];
   });
+
+  // Regression, 2026-09-03: the live account's daily-loss circuit breaker
+  // (`DailyLossTracker`) was never actually wired into `runLiveMirror` —
+  // nothing read today's real realized loss when sizing a new live entry, so
+  // `assessTrade`'s own `dailyLossLimitPct` check (3% of equity by default)
+  // could never engage for real money no matter how much was lost that day.
+  it('blocks a new live entry once today\'s recorded real losses hit the daily-loss limit', async () => {
+    process.env['REAL_MONEY_ENABLED'] = 'true';
+    process.env['REVOLUT_X_API_KEY'] = 'key';
+    process.env['REVOLUT_X_PRIVATE_KEY_PEM'] = 'pem';
+    process.env['LIVE_STARTING_CASH_EUR'] = '100';
+    // now=1000 → UTC day '1970-01-01'; seed today's live-scoped daily-loss
+    // state directly (same key/shape `DailyLossTracker` itself would write),
+    // well past the default 3%-of-equity (~3€) allowance for a 100€ account.
+    store.set('live:daily-loss', { day: '1970-01-01', loss: 10 });
+
+    const opportunity = {
+      symbol: 'BTC-EUR',
+      timeframe: '1h' as const,
+      direction: 'long' as const,
+      levels: { entry: 100, stopLoss: 95, takeProfit: 115, riskReward: 3 },
+      confidence: 70,
+      confidenceComponents: [],
+      explanation: 'test',
+      warnings: [],
+      basedOn: { score: 70, candleCount: 200 },
+    };
+    await runLiveMirror(
+      store,
+      fakeSource(),
+      [btcInstrument],
+      telegram,
+      [{ symbol: 'BTC-EUR', quantity: 0, entry: 100, opportunity }],
+      { 'BTC-EUR': 100 },
+      1000,
+    );
+
+    // Blocked before ever reaching the broker/confirmation gate — no cash
+    // moved and no position was ever tracked.
+    expect(store.get('live:live-cash-eur')).toBe(100);
+    expect(store.get('live:live-open-positions')).toBeUndefined();
+    delete process.env['LIVE_STARTING_CASH_EUR'];
+  });
 });

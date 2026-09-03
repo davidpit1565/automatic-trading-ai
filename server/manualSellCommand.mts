@@ -91,6 +91,11 @@ export async function checkManualSellRequests(
   entryTimeframe: Timeframe,
   flowParams: Omit<LiveOrderFlowParams, 'intent'>,
   now: number,
+  /** Reports realized P&L on a genuinely filled sell — feeds the live
+   * account's daily-loss circuit breaker, same as the automatic exit mirror
+   * (`liveExitMirror.mts`'s `checkAutomaticExits`). Optional so this stays
+   * callable exactly as before wherever a caller has no tracker to feed. */
+  onRealizedPnl?: (pnl: number, now: number) => void,
 ): Promise<readonly ManualSellOutcome[]> {
   // Shared poller (telegram.mts) — never poll Telegram directly here with a
   // private offset (a real bug, fixed 2026-09-02: see PROJECT_STATE.md).
@@ -165,6 +170,7 @@ export async function checkManualSellRequests(
       if (result.report.state === 'filled') {
         const fillPrice = result.report.avgFillPrice ?? price;
         creditLiveCash(store, result.report.filledQuantity * fillPrice);
+        onRealizedPnl?.((fillPrice - position.entryPrice) * result.report.filledQuantity, now);
         forgetLivePosition(store, position.id);
         // Releases this symbol for a FUTURE fresh entry — see
         // `liveEntryMirror.mts`'s `clearOutstandingEntry` doc comment.
