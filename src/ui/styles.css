@@ -160,10 +160,17 @@ body {
   color: var(--warn);
 }
 
+/* The "live" case is the normal, all-day state — not a warning — so unlike
+   the amber demo/offline banner above, this stays quiet rather than a loud
+   green band across the top of every screen (David compared this directly
+   against Revolut X, 2026-09-03: it has no such banner at all in its own
+   normal state). Kept as text, not removed entirely, since knowing which
+   real data source is live still matters — just doesn't need to shout. */
 .data-source-banner.live {
-  background: var(--hot-tint);
-  border-color: rgba(76, 215, 135, 0.4);
-  color: var(--hot);
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-dim);
+  padding-inline: 0;
 }
 
 /* ---------- Tabs ---------- */
