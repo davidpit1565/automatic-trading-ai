@@ -128,7 +128,19 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   const status = el('p', 'muted-line', 'Loading the cloud agent…');
   status.id = 'home-status';
 
-  container.append(liveHero, livePosWrap, hero, posWrap, marketsWrap, moversWrap, readyWrap, actWrap, status);
+  // Desktop gets a genuine 2-column dashboard (main column + a right rail of
+  // market widgets), matching Revolut X's Home/Analytics layout instead of a
+  // single phone-width column stretched wide — see .home-grid in styles.css.
+  // Below the desktop breakpoint `.home-grid` has no grid rule, so these are
+  // just two plain blocks and phones see Markets/Top movers after Recent
+  // activity rather than interleaved with Positions/Readiness as before —
+  // a minor mobile reordering traded for a real desktop rail.
+  const mainCol = el('div', 'home-main');
+  mainCol.append(liveHero, livePosWrap, hero, posWrap, readyWrap, actWrap, status);
+  const rail = el('div', 'home-rail');
+  rail.append(marketsWrap, moversWrap);
+  container.classList.add('home-grid');
+  container.append(mainCol, rail);
   attachCoinLogoFallback(container);
 
   let state: CloudState | null = null;
