@@ -1,5 +1,44 @@
 # PROJECT_STATE
 
+## Telegram now confirms the human's tap and the final trade outcome (2026-09-03)
+David correctly reported the approve/reject buttons felt broken — tapping
+"אשר" registered fine server-side (confirmed by the audit log), but nothing
+in the chat ever changed, and no message ever reported what happened to the
+order afterward. Two real gaps, now closed:
+
+1. **`TelegramConfirmationGate`** now edits the original prompt immediately
+   after a decision (stripping the inline keyboard, replacing the text with
+   "✅ אישרת — שולח לבורסה..." / "❌ דחית..."), and does the same on
+   auto-expiry ("⌛ פג התוקף..."). Requires storing the sent message's
+   `message_id` in the pending record (added a new `editTelegramMessage` to
+   `server/telegram.mts`, alongside `sendTelegramMessage`).
+2. **A separate follow-up message** now reports the actual broker result —
+   `server/autopilotRunner.mts`'s `runLiveMirror` now captures the
+   `LiveEntryOutcome[]` that `checkManualBuyRequests`/`mirrorApprovedEntries`
+   already returned (previously discarded entirely) and sends one message
+   per outcome that reached an actual human decision (`buildLiveEntryResultMessage`):
+   filled (qty + avg price), still-resting/not-yet-filled, broker-rejected
+   (with the real detail, e.g. the HTTP 400 body from PR #118's fix), or a
+   human decline. Outcomes that never reached a tap (`'not-approved'`,
+   `'no-broker-symbol'`, `'unknown-symbol'`, etc.) stay audit-log-only, same
+   as before — this is specifically the "I tapped a button, what happened?"
+   gap, not a general notification pass.
+
+Separately checked and ruled out: David also reported the printed expiry
+clock (`בתוקף עד HH:MM`) looked wrong relative to his phone's clock. Verified
+the server's own clock and `Asia/Jerusalem` conversion directly (`date -u`
+vs `TZ=Asia/Jerusalem date`) — both correct, and the printed deadline in the
+actual audit-logged message matches `sentAt + 20min` in real IDT exactly.
+The mismatch is on the phone's side (likely a stale/manual timezone setting
+not reflecting Israel's DST), not something this project's code can fix.
+
+Tests: `editTelegramMessage` (3 new, `tests/server/telegram.test.ts`); the
+gate's edit-on-approve/reject/expiry (extended `tests/server/
+telegramConfirmationGate.test.ts`'s shared fake-Telegram router to capture
+edits); `buildLiveEntryResultMessage`'s message selection for every outcome
+shape (5 new, `tests/server/autopilotRunner.test.ts`). Full gate green (tsc,
+981 tests, build).
+
 ## First real end-to-end confirmation worked — now blocked one step later (2026-09-03)
 The pair-key fix (previous entry below) worked immediately: the very next
 `/buy XBTEUR` produced a real Telegram confirmation prompt, David tapped

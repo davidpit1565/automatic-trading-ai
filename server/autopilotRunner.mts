@@ -64,7 +64,7 @@ import { FileStore } from './fileStore.mts';
 import { checkManualKillSwitchCommands } from './manualKillSwitchCommand.mts';
 import { checkManualSellRequests } from './manualSellCommand.mts';
 import { checkManualBuyRequests } from './manualBuyCommand.mts';
-import { mirrorApprovedEntries } from './liveEntryMirror.mts';
+import { mirrorApprovedEntries, type LiveEntryOutcome } from './liveEntryMirror.mts';
 import { checkAutomaticExits } from './liveExitMirror.mts';
 import { initLiveCash } from './liveLedger.mts';
 import { RevolutXBrokerAdapter, type RevolutXCredentials } from './revolutXBrokerAdapter.mts';
@@ -698,6 +698,48 @@ async function runCycle(
  * cycle's automatic mirroring — a human pausing or manually selling must
  * never be raced by an automatic entry/exit decided in the same tick.
  */
+/**
+ * David asked for this 2026-09-03: after tapping אשר/דחה he had no way to
+ * know what actually happened at the broker without asking me to read the
+ * audit log for him — `TelegramConfirmationGate` only knows the human's
+ * decision, not the broker's response, so this is a SEPARATE message sent
+ * once that's known. Only covers outcomes that reached an actual human
+ * decision (`'submitted'` after approval, `'rejected'` with a real
+ * `decidedBy`) — the earlier algorithmic refusals (`'not-approved'`,
+ * `'no-broker-symbol'`, `'unknown-symbol'`, etc.) never reached a tap and
+ * stay audit-log-only, same as before.
+ */
+export function buildLiveEntryResultMessage(o: LiveEntryOutcome): string | null {
+  if (o.outcome === 'rejected') {
+    return `❌ דחית את העסקה ${o.symbol} — ההזמנה לא בוצעה.`;
+  }
+  if (o.outcome !== 'submitted') return null;
+  const r = o.report;
+  if (r.state === 'filled') {
+    return (
+      `✅ העסקה בוצעה בבורסה\n\n` +
+      `${o.symbol}\n` +
+      `כמות: ${r.filledQuantity}` +
+      (r.avgFillPrice != null ? ` · מחיר ממוצע: ${r.avgFillPrice}` : '')
+    );
+  }
+  if (r.state === 'rejected' || r.state === 'cancelled') {
+    return `❌ הבורסה דחתה את ההזמנה\n\n${o.symbol}\n${r.detail}`;
+  }
+  // Still resting/open at the broker, not yet filled.
+  return `🟡 ההזמנה נשלחה לבורסה ועדיין ממתינה למילוי\n\n${o.symbol}\n${r.detail}`;
+}
+
+async function notifyLiveEntryOutcomes(
+  telegram: { token: string; chatId: string },
+  outcomes: readonly LiveEntryOutcome[],
+): Promise<void> {
+  for (const outcome of outcomes) {
+    const message = buildLiveEntryResultMessage(outcome);
+    if (message) await sendTelegramMessage(message, telegram);
+  }
+}
+
 export async function runLiveMirror(
   store: FileStore,
   source: MarketDataSource,
@@ -789,7 +831,7 @@ export async function runLiveMirror(
   try {
     await checkManualKillSwitchCommands(liveStore, telegram, killSwitch, audit, 'david', now);
     await checkManualSellRequests(liveStore, telegram, source, ENTRY_TF, flowParams, now, recordLiveRealizedPnl);
-    await checkManualBuyRequests(
+    const manualBuyOutcomes = await checkManualBuyRequests(
       liveStore,
       telegram,
       source,
@@ -800,10 +842,20 @@ export async function runLiveMirror(
       now,
       liveEntryOptions,
     );
+    await notifyLiveEntryOutcomes(telegram, manualBuyOutcomes);
     const newlyApproved = cycleOpened
       .map((o) => o.opportunity)
       .filter((o): o is NonNullable<typeof o> => o !== undefined);
-    await mirrorApprovedEntries(liveStore, newlyApproved, instruments, prices, flowParams, now, liveEntryOptions);
+    const mirroredOutcomes = await mirrorApprovedEntries(
+      liveStore,
+      newlyApproved,
+      instruments,
+      prices,
+      flowParams,
+      now,
+      liveEntryOptions,
+    );
+    await notifyLiveEntryOutcomes(telegram, mirroredOutcomes);
     await checkAutomaticExits(
       liveStore,
       source,

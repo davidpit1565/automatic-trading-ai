@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { answerCallbackQuery, buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, pollAllTelegramUpdates, readinessLineHe, sendTelegramMessage, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
+import { answerCallbackQuery, buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, editTelegramMessage, pollAllTelegramUpdates, readinessLineHe, sendTelegramMessage, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
 import { assessRealMoneyReadiness, READINESS_THRESHOLDS } from '../../src/core/feedback/realMoneyReadiness';
 import { MemoryStore } from '../../src/core/data/storage';
 
@@ -596,6 +596,30 @@ describe('pollAllTelegramUpdates / stashUnclaimedTelegramUpdates (the shared cur
     const result = await pollAllTelegramUpdates(store, { token: 'T', chatId: 'C', fetchFn: emptyFetch });
     expect(result.messages).toEqual([{ updateId: 9, text: '/pause' }]);
     expect(result.callbacks).toEqual([{ id: 'cb9', data: 'confirm:approve:other-order' }]);
+  });
+});
+
+describe('editTelegramMessage', () => {
+  it('posts the message id, new text, and an empty keyboard to strip the buttons', async () => {
+    let body: Record<string, unknown> | null = null;
+    const fakeFetch = (async (url: string, init?: { body?: string }) => {
+      body = JSON.parse(init!.body!);
+      return new Response('{}', { status: 200 });
+    }) as unknown as typeof fetch;
+    const result = await editTelegramMessage(42, '✅ אישרת', { token: 'T', chatId: 'C', fetchFn: fakeFetch });
+    expect(result).toEqual({ sent: true });
+    expect(body).toMatchObject({ chat_id: 'C', message_id: 42, text: '✅ אישרת', reply_markup: { inline_keyboard: [] } });
+  });
+
+  it('reports a failed edit instead of throwing, same as sendTelegramMessage', async () => {
+    const fakeFetch = (async () => new Response('{}', { status: 500 })) as unknown as typeof fetch;
+    const result = await editTelegramMessage(1, 'x', { token: 'T', chatId: 'C', fetchFn: fakeFetch });
+    expect(result).toEqual({ sent: false, reason: 'Telegram HTTP 500' });
+  });
+
+  it('is a graceful no-op without credentials', async () => {
+    const result = await editTelegramMessage(1, 'x', { token: '', chatId: '' });
+    expect(result).toEqual({ sent: false, reason: 'Telegram credentials not set' });
   });
 });
 
