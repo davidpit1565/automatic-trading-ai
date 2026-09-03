@@ -31,7 +31,7 @@
 import type { KeyValueStore } from '../src/core/data/storage';
 import type { Instrument } from '../src/core/types';
 import type { TradeOpportunity } from '../src/core/signal/signalEngine';
-import { assessTrade, DEFAULT_RISK_LIMITS, type RiskLimits } from '../src/core/risk/riskEngine';
+import { assessTrade, confidenceScaledRiskPct, DEFAULT_RISK_LIMITS, type RiskLimits } from '../src/core/risk/riskEngine';
 import { openLivePositions, recordLiveEntryFill } from './liveExitFlow.mts';
 import { debitLiveCash, liveEquity } from './liveLedger.mts';
 import { runLiveOrderFlow, buildLiveOrderIntent, type LiveOrderFlowParams, type LiveOrderFlowResult } from './liveOrchestrator.mts';
@@ -96,6 +96,25 @@ export type LiveEntryOutcome =
  * reconciliation poller yet — see PROJECT_STATE.md) — the safe direction
  * to fail in.
  */
+export interface MirrorApprovedEntriesOptions {
+  readonly riskLimits?: RiskLimits;
+  readonly dailyLossSoFar?: number;
+  /**
+   * Mirrors paper's own confidence-scaled risk (`confidenceRisk` on
+   * `PaperAutoPilot`/`AUTOPILOT_CONFIDENCE_RISK`) — without this, every
+   * live entry sized at the flat `riskLimits.maxRiskPerTradePct` ceiling
+   * regardless of how strong the signal was, contradicting this module's
+   * own "same risk sizing" claim (found in review, 2026-09-03). Omit to
+   * fall back to the risk engine's own flat-ceiling default.
+   */
+  readonly confidenceRisk?: {
+    readonly floorPct: number;
+    readonly ceilingPct: number;
+    readonly confidenceFloor: number;
+    readonly maxConfidence: number;
+  };
+}
+
 export async function mirrorApprovedEntries(
   store: KeyValueStore,
   newlyApproved: readonly TradeOpportunity[],
@@ -103,7 +122,7 @@ export async function mirrorApprovedEntries(
   prices: Readonly<Record<string, number>>,
   flowParams: Omit<LiveOrderFlowParams, 'intent'>,
   now: number,
-  options: { readonly riskLimits?: RiskLimits; readonly dailyLossSoFar?: number } = {},
+  options: MirrorApprovedEntriesOptions = {},
 ): Promise<readonly LiveEntryOutcome[]> {
   const riskLimits = options.riskLimits ?? DEFAULT_RISK_LIMITS;
   const outstanding = readOutstanding(store);
@@ -142,10 +161,14 @@ export async function mirrorApprovedEntries(
       currentPrice: prices[p.entryAssessment.asset] ?? p.entryPrice,
     }));
     const equity = liveEquity(store, prices);
+    const cr = options.confidenceRisk;
+    const riskPerTradePct = cr
+      ? confidenceScaledRiskPct(opportunity.confidence, cr.confidenceFloor, cr.maxConfidence, cr.floorPct, cr.ceilingPct)
+      : undefined;
     const assessment = assessTrade(
       opportunity,
       { equity, openPositions },
-      { limits: riskLimits, dailyLossSoFar: options.dailyLossSoFar },
+      { limits: riskLimits, dailyLossSoFar: options.dailyLossSoFar, riskPerTradePct },
     );
     if (!assessment.approved) {
       outcomes.push({ symbol, outcome: 'not-approved', reasons: assessment.reasons });

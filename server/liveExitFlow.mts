@@ -149,6 +149,37 @@ export function forgetLivePosition(store: KeyValueStore, positionId: string): vo
 }
 
 /**
+ * Call after a PARTIALLY filled exit (`state: 'submitted'`, a genuine
+ * nonzero `filledQuantity` less than the tracked quantity) — reduces the
+ * tracked quantity by whatever genuinely sold, so the REMAINING (still
+ * real, still open) quantity keeps being monitored for stop-loss/
+ * take-profit instead of vanishing from tracking entirely the moment ANY
+ * amount sells. Mirrors the partial-fill BUY handling in
+ * `recordLiveEntryFill` — found asymmetric in review, 2026-09-03 (a partial
+ * sell neither credited the partial proceeds nor reduced the tracked
+ * quantity, only a genuine full `'filled'` did).
+ *
+ * Deliberately does NOT clear `outstandingExitSubmittedAt` — a resting
+ * order for the unfilled remainder is still real, live exposure at the
+ * broker, so a second exit trigger must keep refusing until that order is
+ * fully resolved, exactly as it already does for a merely-resting (zero
+ * filled) exit.
+ *
+ * No-ops (returns `false`) for an untracked position id, a non-positive
+ * `soldQuantity`, or a `soldQuantity` at or above the tracked quantity —
+ * that last case is a genuine full fill and belongs to `forgetLivePosition`
+ * instead, never a partial reduction to zero/negative.
+ */
+export function reduceLivePositionQuantity(store: KeyValueStore, positionId: string, soldQuantity: number): boolean {
+  const positions = readPositions(store);
+  const existing = positions[positionId];
+  if (!existing || !(soldQuantity > 0) || soldQuantity >= existing.quantity) return false;
+  positions[positionId] = { ...existing, quantity: existing.quantity - soldQuantity };
+  store.set(LIVE_OPEN_POSITIONS_KEY, positions);
+  return true;
+}
+
+/**
  * Marks a position as having a real, already-submitted exit order at the
  * broker — call this the moment `runLiveOrderFlow` reports `'submitted'`
  * for an exit intent, BEFORE checking whether that report says `'filled'`.

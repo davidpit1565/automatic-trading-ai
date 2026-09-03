@@ -36,6 +36,7 @@ import { buildTopTraderGate } from '../src/core/signal/topTraderGate';
 import { getTopTraderPositionRatio, toOkxSwapInstId } from '../src/core/data/okxPositioning';
 import { isAiJudgmentBearish, type AiJudgmentInput } from '../src/core/signal/aiJudgment';
 import { scanCandles } from '../src/core/scan/marketScanner';
+import { MAX_CONFIDENCE } from '../src/core/signal/signalEngine';
 import type { Instrument, Timeframe } from '../src/core/types';
 import type { RecentTrade } from '../src/core/data/krakenPublic';
 import type { Result } from '../src/core/types';
@@ -726,6 +727,19 @@ export async function runLiveMirror(
   const liveLossTracker = new DailyLossTracker(liveStore);
   const dailyLossSoFar = liveLossTracker.lossToday(now);
   const recordLiveRealizedPnl = (pnl: number, ts: number): void => liveLossTracker.record(pnl, ts);
+  // Mirrors paper's own confidence-scaled risk (see AUTOPILOT_CONFIDENCE_RISK)
+  // so a live entry's position size actually reflects signal strength the
+  // same way paper's does, instead of always sizing at the flat ceiling
+  // (found in review, 2026-09-03).
+  const liveEntryOptions = {
+    dailyLossSoFar,
+    confidenceRisk: {
+      floorPct: AUTOPILOT_CONFIDENCE_RISK.floorPct,
+      ceilingPct: AUTOPILOT_CONFIDENCE_RISK.ceilingPct,
+      confidenceFloor: AUTOPILOT_MIN_CONFIDENCE,
+      maxConfidence: MAX_CONFIDENCE,
+    },
+  };
   const flowParams = {
     confirmationGate,
     brokerAdapter,
@@ -757,12 +771,12 @@ export async function runLiveMirror(
       prices,
       flowParams,
       now,
-      { dailyLossSoFar },
+      liveEntryOptions,
     );
     const newlyApproved = cycleOpened
       .map((o) => o.opportunity)
       .filter((o): o is NonNullable<typeof o> => o !== undefined);
-    await mirrorApprovedEntries(liveStore, newlyApproved, instruments, prices, flowParams, now, { dailyLossSoFar });
+    await mirrorApprovedEntries(liveStore, newlyApproved, instruments, prices, flowParams, now, liveEntryOptions);
     await checkAutomaticExits(
       liveStore,
       source,

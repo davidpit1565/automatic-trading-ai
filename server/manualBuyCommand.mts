@@ -41,7 +41,7 @@ import type { KeyValueStore } from '../src/core/data/storage';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import type { Instrument, Timeframe } from '../src/core/types';
 import type { TradeOpportunity } from '../src/core/signal/signalEngine';
-import { mirrorApprovedEntries, type LiveEntryOutcome } from './liveEntryMirror.mts';
+import { mirrorApprovedEntries, type LiveEntryOutcome, type MirrorApprovedEntriesOptions } from './liveEntryMirror.mts';
 import type { LiveOrderFlowParams } from './liveOrchestrator.mts';
 import {
   pollAllTelegramUpdates,
@@ -83,7 +83,7 @@ export async function checkManualBuyRequests(
   prices: Readonly<Record<string, number>>,
   flowParams: Omit<LiveOrderFlowParams, 'intent'>,
   now: number,
-  options: { readonly dailyLossSoFar?: number } = {},
+  options: MirrorApprovedEntriesOptions = {},
 ): Promise<readonly LiveEntryOutcome[]> {
   // Shared poller (telegram.mts) — never poll Telegram directly here with a
   // private offset (see PROJECT_STATE.md's shared-cursor fix, 2026-09-02).
