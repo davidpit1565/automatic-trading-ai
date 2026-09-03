@@ -355,6 +355,35 @@ describe('maybeSendMoveAlerts (a real spam bug: wobbling near a threshold re-ale
     await maybeSendMoveAlerts(store, priceSource(() => 90), portfolio, telegram);
     expect(fetchFn).not.toHaveBeenCalled();
   });
+
+  it('retries a new-extreme alert next cycle after a transient send failure, instead of losing it forever (found in review, 2026-09-03: every OTHER alert in this file only persists its sent flag after checking result.sent — this one recorded the new extreme unconditionally)', async () => {
+    let shouldFail = true;
+    const sent: string[] = [];
+    const fetchFn = (async (url: string | URL) => {
+      if (shouldFail) return new Response(JSON.stringify({ ok: false }), { status: 500 });
+      sent.push(String(url));
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const telegram = { token: 'T', chatId: 'C', fetchFn };
+    const journal = new TradeJournal(store);
+    const positions = new PositionEngine(store, journal);
+    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'EUR' });
+    const opened = positions.open({
+      symbol: 'XRP-EUR', quantity: 100, entryPrice: 100, stopLoss: 80, takeProfit: 130, timestamp: 0,
+    });
+    if (!opened.ok) throw new Error('open failed');
+
+    // -5.5% -> a new extreme, but Telegram is down — must not be recorded as
+    // already-alerted.
+    await maybeSendMoveAlerts(store, priceSource(() => 94.5), portfolio, telegram);
+    expect(sent).toHaveLength(0);
+
+    // Telegram recovers; the SAME extreme (price unchanged) must still be
+    // retried, not silently treated as already-handled.
+    shouldFail = false;
+    await maybeSendMoveAlerts(store, priceSource(() => 94.5), portfolio, telegram);
+    expect(sent).toHaveLength(1);
+  });
 });
 
 describe('maybeSendSummaries (the exact bug class already found once)', () => {

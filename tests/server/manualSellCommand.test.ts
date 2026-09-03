@@ -324,7 +324,7 @@ describe('checkManualSellRequests', () => {
       flowParams,
       9500,
     );
-    expect(second).toEqual([{ symbol: 'XBTEUR', outcome: 'exit-already-submitted' }]);
+    expect(second).toEqual([{ symbol: 'XBTEUR', outcome: 'outstanding-exit-already-pending' }]);
   });
 
   it('respects the kill switch — a manual sell cannot bypass it either', async () => {
@@ -434,9 +434,10 @@ describe('checkManualSellRequests', () => {
 
       // --- Cycle 2: no new /sell message, but the earlier request is still
       // queued — it must resume polling under the SAME intent id
-      // ('entry-1:manual-sell', not a fresh timestamp-suffixed one), which is
-      // the only way TelegramConfirmationGate can recognise this as a
-      // resumed confirmation instead of a brand-new one.
+      // ('entry-1:exit:9000', stable from the moment it was first queued in
+      // cycle 1 — NOT a fresh timestamp derived from cycle 2's own `now`),
+      // which is the only way TelegramConfirmationGate can recognise this as
+      // a resumed confirmation instead of a brand-new one.
       const cycle2Responses = [
         { ok: true, result: [] },
         {
@@ -444,7 +445,7 @@ describe('checkManualSellRequests', () => {
           result: [
             {
               update_id: 10,
-              callback_query: { id: 'cb1', data: 'confirm:approve:0:entry-1:manual-sell', message: { chat: { id: 'C' } } },
+              callback_query: { id: 'cb1', data: 'confirm:approve:0:entry-1:exit:9000', message: { chat: { id: 'C' } } },
             },
           ],
         },
@@ -465,7 +466,7 @@ describe('checkManualSellRequests', () => {
 
       const gate2 = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn: fetchFn2 }, audit);
       const exitReport: OrderStatusReport = {
-        intentId: 'entry-1:manual-sell',
+        intentId: 'entry-1:exit:9000',
         state: 'filled',
         filledQuantity: 2,
         avgFillPrice: 95,

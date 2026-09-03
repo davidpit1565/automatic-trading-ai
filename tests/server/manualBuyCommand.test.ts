@@ -249,4 +249,42 @@ describe('checkManualBuyRequests', () => {
     );
     expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'blocked-by-kill-switch' }]);
   });
+
+  it("submits a manual /buy even past a portfolio-capacity refusal — every manual /buy is automatically eligible for the 'buy anyway despite the warning' override (David asked for this 2026-09-03)", async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const telegram = {
+      token: 'T',
+      chatId: 'C',
+      fetchFn: seedTelegram([{ update_id: 1, message: { text: '/buy XBTEUR', chat: { id: 'C' } } }]),
+    };
+    const zeroCapacity = {
+      maxRiskPerTradePct: 1,
+      maxPositionPct: 20,
+      maxTotalExposurePct: 60,
+      maxOpenPositions: 0, // refuses ANY new entry outright
+      maxExposurePerAssetPct: 20,
+      dailyLossLimitPct: 3,
+      minRewardRisk: 1.5,
+      maxRewardRisk: 20,
+      minStopDistancePct: 0.25,
+    };
+    const report: OrderStatusReport = { intentId: 'x', state: 'filled', filledQuantity: 0.01, avgFillPrice: 100, detail: 'ok' };
+
+    const outcomes = await checkManualBuyRequests(
+      store,
+      telegram,
+      fakeSource(100),
+      '1h',
+      [XBT],
+      { XBTEUR: 100 },
+      flowParams(report, killSwitch, audit),
+      1000,
+      { riskLimits: zeroCapacity },
+    );
+    expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: { ...report, intentId: 'live-entry:XBTEUR:1000' } }]);
+    expect(openLivePositions(store)).toHaveLength(1);
+  });
 });

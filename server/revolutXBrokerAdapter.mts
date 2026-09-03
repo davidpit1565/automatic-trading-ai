@@ -356,6 +356,13 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
   }
 
   async cancel(intentId: string): Promise<OrderStatusReport> {
+    // Currently unreachable (nothing in this codebase calls cancel() yet —
+    // found in review, 2026-09-03) — closed defensively anyway, matching
+    // submit()'s own kill-switch check, so a future caller can never issue a
+    // real cancel request while the kill switch is engaged.
+    if (this.killSwitch.isEngaged()) {
+      return this.reportAndAudit(intentId, 'cancelled', 'kill switch engaged — cancel request not sent');
+    }
     const venueOrderId = this.orderMap()[intentId];
     if (!venueOrderId) {
       throw new Error(`cannot cancel order ${intentId}: no known Revolut X venue order id for it`);

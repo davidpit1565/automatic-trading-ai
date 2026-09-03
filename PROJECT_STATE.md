@@ -1,5 +1,118 @@
 # PROJECT_STATE
 
+## Full-codebase bug audit (6 parallel domains) + a real exit-side double-order race, fixed (2026-09-03)
+David asked for a thorough, domain-by-domain audit (design, code, buy/sell,
+stocks, every detail) using parallel agents, plus a specific feature: when
+he types `/buy` for a symbol the risk engine would normally refuse, show
+him WHY but still let him buy anyway if he decides to. Ran 6 parallel
+read-only audits (UI/RTL, core risk/signal/position engine, live-money
+execution, stocks pipeline, Telegram/notifications/state, tests/CI/build).
+Fixed everything CRITICAL/HIGH found; documented but deliberately deferred
+the rest (see below) — this codebase will never be "zero findings," and
+claiming otherwise would be dishonest.
+
+**CRITICAL, fixed — a real double-order race on the EXIT side:**
+`liveExitMirror.mts`'s automatic stop/target checker and `manualSellCommand.mts`'s
+`/sell` each built their OWN intent id (`${id}:auto-exit` vs
+`${id}:manual-sell`) for the SAME position, so a still-pending automatic
+exit and a human's `/sell` could each reach their own Telegram confirmation
+and, if both got approved, both reach the broker — two real sell orders for
+one position. Fixed by sharing ONE queue (`proposeLiveExit`, new in
+`liveExitMirror.mts`): whoever proposes an exit for a position first queues
+it under one stable id; a later trigger (automatic or manual, same cycle or
+later) resumes that SAME attempt instead of starting a second one. This also
+fixed two related bugs for free: (a) a rejected/cancelled exit no longer
+marks the position "outstanding" forever (mirrors the identical fix already
+shipped on the entry side) — a real position could otherwise become
+permanently unsellable through the app; (b) a human's tap on an automatic
+exit's confirmation is no longer droppable just because the exit signal
+stopped firing before the tap (the queue is now resumed every cycle
+regardless of the signal, like entries already were).
+
+**HIGH, fixed — no per-item error isolation:** one symbol/position's
+transient failure (a network blip, an unexpected broker response) used to
+abort checking every OTHER pending symbol/position that same cycle, in both
+`mirrorApprovedEntries` (entries) and `checkAutomaticExits` (exits) — a real
+stop-loss on a different symbol could go unchecked because an unrelated one
+threw. Both now wrap each item in try/catch and keep going.
+
+**LOW, fixed defensively:** `RevolutXBrokerAdapter.cancel()` had no
+kill-switch check (unlike `submit()`) — currently dead code (nothing calls
+it yet), closed anyway so a future caller can't issue a real cancel while
+paused.
+
+**Feature, shipped — manual "buy anyway" override:** `/buy` used to be a
+hard refuse-or-approve gate with no way to override. `assessTrade`
+(riskEngine.ts) gained `ignorePortfolioCapacityCaps` — skips ONLY the
+portfolio-capacity caps (max open positions, per-asset/correlated-cluster/
+total exposure; the single-position size ceiling still applies) — NEVER the
+fundamental checks (invalid stop, reward:risk bounds, the daily-loss circuit
+breaker, non-positive equity), which stay hard-refused always. Every manual
+`/buy` (never an autonomous entry) now retries with this flag when first
+refused; if that approves it, the Telegram confirmation shows the ORIGINAL
+refusal as a visible "⚠️ שים לב" warning (added to `buildConfirmationMessage`,
+which previously never showed `assessment.warnings` at all) so the human
+sees exactly what they're overriding before tapping אשר. Separately
+confirmed and answered: automatic exit monitoring for a live position
+already exists and already goes through the same human-confirmation gate
+(`liveExitMirror.mts`'s `checkAutomaticExits`, pre-existing) — no live
+position can be silently sold without a Telegram tap either way.
+
+**Telegram/notification fixes:** (1) `driverHe` didn't know about
+`applyHigherTimeframeGate`'s 4th confidence-component label — a real buy
+alert could read "...· Higher timeframe confirmation (4h), מגמה חזקה",
+raw English mid-Hebrew-sentence in the single most frequent notification;
+now translated. (2) The move-alert bucket tracker recorded a new price
+extreme unconditionally, even when the Telegram send itself failed —
+unlike every OTHER alert in this file, a transient failure right at a new
+extreme permanently lost that one alert (never retried, since the tracker
+already looked "up to date"); now only advances on a confirmed send.
+(3) `FileStore`'s corrupt-file recovery was completely silent — now logs
+what happened, since combined with the dirty-key merge fix (above,
+2026-09-03) a silent corrupt read plus a push race could overwrite origin's
+fuller history for a key with zero visibility.
+
+**Deliberately NOT fixed tonight (documented, not silently dropped):**
+- `tsconfig.json` excludes `server/` — looked like a real CI gap, but
+  verified empirically (a deliberate syntax error injected into
+  `liveExitMirror.mts` was caught by plain `tsc --noEmit`): every server
+  file touched tonight IS transitively type-checked via `tests/**` imports.
+  The `exclude` entry is still misleading and worth removing for clarity in
+  a dedicated follow-up, but it is not the silent gap it first appeared to be.
+- No workflow runs the full gate on a pull request before merge (CI only
+  confirms `main` itself still builds, post-merge) — a real process gap,
+  worth a dedicated CI workflow, not something to add as a side effect of
+  a bug-fix PR.
+- Stocks side has no operational kill-switch trigger (nothing ever calls
+  `.engage()` on its `PersistedKillSwitch` — currently dead-code protection,
+  same class of gap as the crypto side's `/pause` before that was wired up).
+- Systemic: every OTHER "send-once-a-day" gate (digest, weekly/monthly
+  report, drawdown/risk-halt alerts, all-clear, education tip) shares the
+  same underlying "two overlapping runs could both send" shape the close-
+  trade alert had — the state-loss part is now fixed (dirty-key merge), but
+  a rare double-SEND during an actual run overlap is still structurally
+  possible everywhere, not just where already found.
+- UI: a dead `data-nav="home"` back button (Value view) lands on a blank
+  screen (Home was renamed to Crypto); a wrong "leading vs Bitcoin" label
+  on the Profit tab (checks profit ≥ 0, not vs. BTC's own return, unlike the
+  identical check on Home); asset-hub tabs can get stuck on "Loading…"
+  forever on a persistent fetch failure with no error surfaced.
+- Core engine: `DailyLossTracker.isPaused` treats `dailyLossLimitPct: 0` as
+  "always paused" instead of "disabled", inconsistent with `assessTrade`'s
+  own convention (0 = off); `positionMonitor.ts`'s risk display uses the
+  stale, un-trailed stop once a trailing stop has ratcheted up (currently
+  latent — production trailing is off); `positionEngine.ts`'s full-vs-
+  partial-exit epsilon (1e-12) is an absolute tolerance that could in theory
+  leave dust on a very large-quantity position (small crypto sizes today
+  make this a non-issue).
+- Stocks: no retry for a network-exception (vs. HTTP-status) transient
+  failure in `alpacaStocks.ts` (same pre-existing gap in `krakenPublic.ts`
+  too — not new); half-day market closes (Christmas Eve etc.) aren't
+  modeled in `isUsMarketOpen` (documented, fails safe — wastes a cycle, no
+  wrong trade).
+
+Full gate green throughout (tsc, 1048 tests, build).
+
 ## Same push-race fix applied to the stocks runner (2026-09-03)
 `server/stocksRunner.mts` deliberately duplicates the crypto runner's
 `persistStateToGit` (full isolation by design — see this file's header),

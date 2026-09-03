@@ -32,8 +32,14 @@ export class FileStore implements KeyValueStore {
         for (const [key, value] of Object.entries(raw)) {
           this.map.set(key, JSON.stringify(value));
         }
-      } catch {
-        // Corrupt/partial file: start clean rather than crash the run.
+      } catch (cause) {
+        // Corrupt/partial file: start clean rather than crash the run. Logged
+        // (found silent in review, 2026-09-03) — combined with the dirty-key
+        // merge above, a corrupt read right before a push race could let
+        // this run's much-smaller rebuilt state overwrite origin's fuller
+        // history for whatever keys it touches, with zero visibility that it
+        // happened, unless this is at least surfaced in the run's own logs.
+        console.error(`FileStore: ${path} is corrupt or unreadable, starting clean:`, cause instanceof Error ? cause.message : cause);
         this.map = new Map();
       }
     }

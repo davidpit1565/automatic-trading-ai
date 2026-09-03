@@ -299,6 +299,23 @@ describe('RevolutXBrokerAdapter', () => {
     await expect(adapter.cancel('never-placed')).rejects.toThrow(/no known Revolut X venue order id/);
   });
 
+  it('never sends a real cancel request while the kill switch is engaged (found in review, 2026-09-03: unlike submit(), cancel() had no kill-switch check at all)', async () => {
+    const { fetchFn, calls } = fakeFetch([
+      { status: 200, body: { data: [{ venue_order_id: 'venue-5', client_order_id: 'x', state: 'new' }] } },
+      { status: 200, body: { data: { status: 'new' } } },
+    ]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+    await adapter.submit(intent({ id: 'to-cancel' }));
+    const callsBeforeCancel = calls.length;
+
+    killSwitch.engage('test');
+    const report = await adapter.cancel('to-cancel');
+
+    expect(report.state).toBe('cancelled');
+    expect(report.detail).toMatch(/kill switch engaged/);
+    expect(calls).toHaveLength(callsBeforeCancel); // no DELETE request was ever sent
+  });
+
   it('reports spot balances as broker positions, dropping zero balances', async () => {
     const { fetchFn, calls } = fakeFetch([
       {
