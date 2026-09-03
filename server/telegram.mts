@@ -65,7 +65,7 @@ function signedUsd(value: number): string {
 }
 
 /** Human-readable trade quantity — never the raw 15-decimal float. */
-function formatQty(qty: number): string {
+export function formatQty(qty: number): string {
   const abs = Math.abs(qty);
   const maximumFractionDigits = abs >= 1000 ? 0 : abs >= 1 ? 2 : abs >= 0.01 ? 4 : 8;
   return qty.toLocaleString('en-US', { maximumFractionDigits });

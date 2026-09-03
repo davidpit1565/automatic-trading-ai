@@ -28,6 +28,7 @@ import type { KeyValueStore } from '../src/core/data/storage';
 import {
   answerCallbackQuery,
   editTelegramMessage,
+  formatQty,
   getSummaryTimezone,
   pollAllTelegramUpdates,
   sendTelegramMessage,
@@ -94,25 +95,34 @@ function expiryLine(deadlineMs: number): string {
   return `⏱ בתוקף עד ${formatDeadline(deadlineMs)} (${minutes} דקות) — אחרי זה מתבטל אוטומטית.`;
 }
 
+/**
+ * Rewritten 2026-09-03: David has near-zero trading background and asked,
+ * mid-confirmation, for the message itself to explain the numbers in plain
+ * language rather than having to ask each time what "risk 0.30%" or
+ * "reward/risk 2:1" actually means for HIM. Every figure below now carries
+ * a short parenthetical of what it means in practice, not just the raw
+ * number, without dropping any of the original figures.
+ */
 function buildConfirmationMessage(intent: OrderIntent, deadlineMs: number): string {
   if (intent.side === 'sell') return buildExitConfirmationMessage(intent, deadlineMs);
   const a = intent.assessment;
   return (
     `🔔 מחכה לאישור שלך — עסקה בכסף אמיתי\n\n` +
-    `קנייה ${intent.symbol}\n` +
-    `כמות: ${intent.quantity} · מחיר: ${intent.limitPrice}\n` +
+    `קנייה ${intent.symbol} (כמות: ${formatQty(intent.quantity)}, במחיר נוכחי ${intent.limitPrice})\n\n` +
     // David asked (2026-09-03) to see the EUR value and % of the wallet
     // right in the message, not just implied by the risk numbers below —
     // a.positionValue is already the risk engine's own EUR sizing, and
     // a.portfolioExposure is already this trade's share of total equity
     // (there being no other open positions right now, it IS the wallet %).
-    `שווי העסקה: €${a.positionValue.toFixed(2)} (${a.portfolioExposure.toFixed(1)}% מהארנק)\n` +
-    `סטופ: ${intent.stopLoss} · יעד: ${intent.takeProfit}\n` +
-    `סיכון: ${a.riskPercentage.toFixed(2)}% מהתיק (${a.riskAmount.toFixed(2)}) · ` +
-    `יחס סיכוי/סיכון ${a.rewardRiskRatio.toFixed(1)}:1\n` +
-    `חשיפת תיק לאחר העסקה: ${a.portfolioExposure.toFixed(1)}%\n\n` +
+    `💰 סכום שיושקע: €${a.positionValue.toFixed(2)} — ${a.portfolioExposure.toFixed(1)}% מכל הכסף שיש לך בחשבון\n` +
+    `🛑 סטופ (מוכר אוטומטית אם המחיר יורד לכאן, כדי לעצור הפסד): ${intent.stopLoss}\n` +
+    `🎯 יעד (מוכר אוטומטית אם המחיר עולה לכאן, כדי לממש רווח): ${intent.takeProfit}\n` +
+    `⚠️ הכי הרבה שאפשר להפסיד בעסקה הזו אם היא נכשלת: €${a.riskAmount.toFixed(2)} ` +
+    `(${a.riskPercentage.toFixed(2)}% מכל התיק — סכום קטן בכוונה)\n` +
+    `📊 יחס סיכוי-סיכון ${a.rewardRiskRatio.toFixed(1)}:1 — אם זה מצליח, הרווח הפוטנציאלי גדול פי ${a.rewardRiskRatio.toFixed(1)} מהסיכון\n` +
+    `📌 אחרי העסקה הזו, ${a.portfolioExposure.toFixed(1)}% מהתיק יהיו קשורים בפוזיציות פתוחות\n\n` +
     `${expiryLine(deadlineMs)}\n\n` +
-    `לחץ למטה כדי לאשר או לדחות. ללא לחיצה — שום דבר לא יקרה.`
+    `לחץ למטה כדי לאשר או לדחות. ללא לחיצה — שום דבר לא קורה, ההזמנה פשוט מתבטלת לבד.`
   );
 }
 
@@ -134,13 +144,14 @@ function buildExitConfirmationMessage(intent: OrderIntent, deadlineMs: number): 
   const entryPrice = intent.assessment.entry;
   const pnl = (intent.limitPrice - entryPrice) * intent.quantity;
   const sign = pnl >= 0 ? '+' : '';
+  const verdict = pnl >= 0 ? 'ברווח ✅' : 'בהפסד';
   return (
     `🔔 מחכה לאישור שלך — סגירת פוזיציה בכסף אמיתי\n\n` +
-    `מכירה ${intent.symbol}\n` +
-    `כמות: ${intent.quantity} · מחיר יציאה: ${intent.limitPrice} (נכנס ב-${entryPrice})\n` +
-    `רווח/הפסד משוער: ${sign}${pnl.toFixed(2)}\n\n` +
+    `מכירה ${intent.symbol} (כמות: ${formatQty(intent.quantity)})\n` +
+    `נכנסת במחיר ${entryPrice}, יוצא עכשיו במחיר ${intent.limitPrice}\n\n` +
+    `💶 רווח/הפסד משוער מהעסקה הזו: ${sign}€${Math.abs(pnl).toFixed(2)} (${verdict})\n\n` +
     `${expiryLine(deadlineMs)}\n\n` +
-    `לחץ למטה כדי לאשר או לדחות. ללא לחיצה — שום דבר לא יקרה.`
+    `לחץ למטה כדי לאשר או לדחות. ללא לחיצה — שום דבר לא קורה, ההזמנה פשוט מתבטלת לבד.`
   );
 }
 
