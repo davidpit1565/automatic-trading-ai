@@ -209,9 +209,20 @@ function persistStateToGit(store: FileStore, label: string): void {
           run('git fetch origin main');
           const origin = JSON.parse(run(`git show origin/main:${STATE_PATH}`)) as Record<string, unknown>;
           for (const key of store.dirtyKeys()) origin[key] = store.get(key);
+          // Fully sync EVERYTHING to origin/main FIRST — a real incident,
+          // 2026-09-03: `git reset --soft origin/main` alone moves HEAD but
+          // leaves the index/working tree exactly as they were, so every
+          // OTHER tracked file (source code included) stayed frozen at
+          // whatever this process's OWN stale checkout had. The next commit
+          // then silently REVERTED any file origin/main had gained since —
+          // a long-running stocks workflow's stale checkout reverted a
+          // critical live-money safety fix (PR #152) straight back out of
+          // main this way. `--hard` snaps every file to origin/main's real
+          // current content; only the state file is then deliberately
+          // overwritten again with the key-merged version.
+          run('git reset --hard origin/main');
           mkdirSync(dirname(STATE_PATH), { recursive: true });
           writeFileSync(STATE_PATH, JSON.stringify(origin, null, 2));
-          run('git reset --soft origin/main');
           run(`git add ${STATE_PATH}`);
           if (hasStagedChanges()) run(`git commit -m "Autopilot state (mid-run ${label})"`);
           // else: the merged file is byte-identical to origin's — nothing of
@@ -1184,10 +1195,19 @@ export async function maybeSendMoveAlerts(
       pos = bucket;
       isNewExtreme = true;
     }
-    current[p.id] = { neg, pos };
+    // Default to the OLD extreme, not the new one — only actually advance it
+    // once the alert is confirmed sent (below). Found in review, 2026-09-03:
+    // this used to record the new extreme unconditionally, so a transient
+    // Telegram failure right when a position crossed a new extreme silently,
+    // permanently lost that alert — the next cycle would no longer see it as
+    // "new" (already recorded) and never retry, unlike every other alert in
+    // this file, which only persists its "sent" flag after checking
+    // `result.sent`.
+    current[p.id] = prevExtreme;
     if (isNewExtreme) {
       const result = await sendTelegramMessage(buildMoveAlert(p.symbol, movePct), telegram);
       console.log(result.sent ? `Move alert sent for ${p.symbol}.` : `Move alert failed: ${result.reason}`);
+      if (result.sent) current[p.id] = { neg, pos };
     }
   }
   store.set(MOVE_BUCKETS_KEY, current); // also drops closed positions

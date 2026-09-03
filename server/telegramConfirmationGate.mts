@@ -118,9 +118,17 @@ function buildConfirmationMessage(intent: OrderIntent, deadlineMs: number, cashB
   if (intent.side === 'sell') return buildExitConfirmationMessage(intent, deadlineMs);
   const a = intent.assessment;
   const cashAfter = cashBefore - a.positionValue;
+  // Shown whenever the risk engine has something non-fatal to flag — most
+  // notably David's "buy anyway despite the warning" manual override
+  // (`liveEntryMirror.mts`'s `allowCapacityOverrideFor`, 2026-09-03): the
+  // human must actually SEE why this trade was normally refused before
+  // approving it, not just get a plain buy confirmation as if nothing were
+  // unusual about it.
+  const warningsBlock = a.warnings.length > 0 ? `⚠️ שים לב:\n${a.warnings.map((w) => `• ${w}`).join('\n')}\n\n` : '';
   return (
     `🔔 מחכה לאישור שלך — עסקה בכסף אמיתי\n\n` +
     `קנייה ${intent.symbol} (כמות: ${formatQty(intent.quantity)}, במחיר נוכחי ${intent.limitPrice})\n\n` +
+    warningsBlock +
     // a.positionValue is the risk engine's own EUR sizing for this trade;
     // a.portfolioExposure is this trade's share of the ENTIRE wallet
     // (cash + every open position combined, not just what's currently

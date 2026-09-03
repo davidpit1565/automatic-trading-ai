@@ -50,10 +50,19 @@ export class DailyLossTracker {
     return this.stateFor(timestamp).loss;
   }
 
-  /** True when today's losses have consumed the configured allowance. */
+  /**
+   * True when today's losses have consumed the configured allowance.
+   * `dailyLossLimitPct: 0` means the check is DISABLED (never pauses) — the
+   * same convention `assessTrade` (riskEngine.ts) already uses for its own
+   * inline daily-loss check. Found in review, 2026-09-03: this used to
+   * treat 0 as an allowance of exactly €0, so with zero losses recorded the
+   * comparison `0 >= 0` was already true — pausing ALL trading from the
+   * first call of the day, the opposite of "disabled".
+   */
   isPaused(timestamp: number, equity: number, limits: RiskLimits): boolean {
     if (!(equity > 0)) return false;
     const allowance = equity * (limits.dailyLossLimitPct / 100);
+    if (!(allowance > 0)) return false;
     return this.lossToday(timestamp) >= allowance;
   }
 }

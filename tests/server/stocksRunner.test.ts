@@ -247,16 +247,44 @@ describe('runStocksCycle', () => {
     const { killSwitch, portfolio, journal } = buildPortfolio();
     // Already holding AAPL — the passive-hold cycle has nothing left to buy.
     portfolio.open({ symbol: 'AAPL', quantity: 1, entryPrice: 100, stopLoss: 1, takeProfit: 1000, timestamp: 0 });
-    const fetchFn = vi.fn();
+    // getUpdates is now polled every cycle (the /pause kill-switch check,
+    // 2026-09-03) even with nothing to report — only sendMessage must stay
+    // untouched.
+    const fetchFn = vi.fn(async (url: string) =>
+      url.includes('/getUpdates')
+        ? new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 })
+        : new Response('{}', { status: 200 }),
+    );
     const telegram = { token: 'T', chatId: 'C' };
     const originalFetch = globalThis.fetch;
     (globalThis as { fetch?: typeof fetch }).fetch = fetchFn as unknown as typeof fetch;
     try {
       await runStocksCycle(store, source, killSwitch, portfolio, journal, telegram, ['AAPL'], 5_000_000);
-      expect(fetchFn).not.toHaveBeenCalled();
+      expect(fetchFn.mock.calls.some(([url]) => String(url).includes('/sendMessage'))).toBe(false);
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  it("a Telegram /pause engages the stocks kill switch and halts buying that SAME cycle — found in review, 2026-09-03: nothing ever called .engage() for the stocks side, so runPassiveHoldCycle's own kill-switch check was permanently unreachable", async () => {
+    const source = fakeSource();
+    const { killSwitch, portfolio, journal } = buildPortfolio();
+    const fetchFn = (async (url: string) => {
+      if (url.includes('/getUpdates')) {
+        return new Response(
+          JSON.stringify({ ok: true, result: [{ update_id: 1, message: { text: '/pause', chat: { id: 'C' } } }] }),
+          { status: 200 },
+        );
+      }
+      return new Response('{}', { status: 200 });
+    }) as unknown as typeof fetch;
+    const telegram = { token: 'T', chatId: 'C', fetchFn };
+
+    expect(killSwitch.isEngaged()).toBe(false);
+    await runStocksCycle(store, source, killSwitch, portfolio, journal, telegram, ['AAPL'], 5_000_000);
+    expect(killSwitch.isEngaged()).toBe(true);
+    // Nothing bought this cycle — the kill switch took effect immediately.
+    expect(portfolio.openPositions()).toEqual([]);
   });
 
   it('respects the stagger delay between the browsable-only price requests', async () => {

@@ -68,4 +68,12 @@ describe('DailyLossTracker', () => {
     tracker.record(-Infinity, T);
     expect(tracker.lossToday(T)).toBe(0);
   });
+
+  it('treats dailyLossLimitPct: 0 as DISABLED, never pausing — matching assessTrade\'s own convention (found in review, 2026-09-03: 0 used to mean an allowance of exactly €0, pausing from the first call of the day with zero losses)', () => {
+    const tracker = new DailyLossTracker(new MemoryStore());
+    const limits = { ...DEFAULT_RISK_LIMITS, dailyLossLimitPct: 0 };
+    expect(tracker.isPaused(T, 10_000, limits)).toBe(false);
+    tracker.record(-5_000, T); // even a huge loss must not pause with the check disabled
+    expect(tracker.isPaused(T + 1000, 10_000, limits)).toBe(false);
+  });
 });

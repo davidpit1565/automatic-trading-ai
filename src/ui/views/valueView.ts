@@ -16,7 +16,7 @@ const REFRESH_MS = 60_000;
 
 export function renderValueView(container: HTMLElement, _data: ActiveDataSource): ViewHandle {
   container.innerHTML = `
-    <button class="tool-back" data-nav="home">← Home</button>
+    <button class="tool-back" data-nav="crypto">← Home</button>
     <h2 class="view-title">Portfolio value</h2>
     <p class="view-sub">Simulated portfolio value over time.</p>
     <div id="pv-body"><div class="empty">Loading…</div></div>`;

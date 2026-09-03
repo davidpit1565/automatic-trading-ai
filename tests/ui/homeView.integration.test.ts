@@ -417,6 +417,14 @@ describe('Value view (DOM integration)', () => {
     expect(container.querySelector('#pv-body')!.textContent!.length).toBeGreaterThan(0);
   });
 
+  it("back button targets a real primary view ('crypto', not the removed 'home' — found in review, 2026-09-03: the old target landed on a fully blank screen with no matching view or nav button)", async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderValueView(container, await makeData());
+    const back = container.querySelector<HTMLButtonElement>('.tool-back')!;
+    expect(back.dataset['nav']).toBe('crypto');
+  });
+
   it('renders an interactive chart with a range selector from equity history', async () => {
     const at0 = ANCHOR;
     const equityHistory = Array.from({ length: 30 }, (_, i) => ({

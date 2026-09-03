@@ -71,6 +71,11 @@ export interface PositionSizeInput {
   /** Combined notional of currently open positions. */
   readonly currentExposure: number;
   readonly limits?: RiskLimits;
+  /** Skips the total-exposure-cap hard rejection (still applies the
+   * single-position `maxPositionPct` cap). See `AssessTradeOptions.
+   * ignorePortfolioCapacityCaps` — set only for a human's explicit "buy
+   * anyway despite the warning" manual override, never an autonomous entry. */
+  readonly ignoreTotalExposureCap?: boolean;
 }
 
 export interface PositionSizeBreakdown {
@@ -145,7 +150,7 @@ export function calculatePositionSize(input: PositionSizeInput): Result<Position
   }
 
   const exposureHeadroom = accountEquity * (limits.maxTotalExposurePct / 100) - currentExposure;
-  if (positionValue > exposureHeadroom) {
+  if (!input.ignoreTotalExposureCap && positionValue > exposureHeadroom) {
     if (exposureHeadroom <= 0) {
       return err(
         `no exposure headroom: ${currentExposure.toFixed(2)} already deployed of the ` +
@@ -205,6 +210,19 @@ export interface AssessTradeOptions {
    * apply; omit to leave that check off.
    */
   readonly correlationTo?: (otherSymbol: string) => number;
+  /**
+   * Skips ONLY the portfolio-capacity caps (max open positions, per-asset
+   * exposure, correlated-cluster exposure, total-exposure) — never the
+   * fundamental sanity checks (positive equity, valid stop/target, minimum
+   * stop distance, reward:risk bounds, daily-loss circuit breaker). For a
+   * human-initiated manual override ("buy anyway despite the warning")
+   * ONLY — the caller must still show the human why the unrestricted
+   * assessment would have refused it. Never set this for an autonomous
+   * (paper or paper-mirrored live) entry. The single-position `maxPositionPct`
+   * cap still applies regardless — this only removes the PORTFOLIO-wide caps,
+   * never the ceiling on any one trade's own size.
+   */
+  readonly ignorePortfolioCapacityCaps?: boolean;
 }
 
 /** The final structured verdict — every field the UI needs, nothing hidden. */
@@ -306,8 +324,10 @@ export function assessTrade(
     reasons.push(`take profit ${takeProfit} must be above entry ${entry} for a long position`);
   }
 
+  const ignoreCapacity = options.ignorePortfolioCapacityCaps ?? false;
+
   // --- Portfolio capacity ------------------------------------------------------
-  if (portfolio.openPositions.length >= limits.maxOpenPositions) {
+  if (!ignoreCapacity && portfolio.openPositions.length >= limits.maxOpenPositions) {
     reasons.push(
       `maximum open positions reached (${portfolio.openPositions.length}/${limits.maxOpenPositions})`,
     );
@@ -318,7 +338,7 @@ export function assessTrade(
     .reduce((sum, p) => sum + notionalOf(p), 0);
   const assetCap = portfolio.equity * (limits.maxExposurePerAssetPct / 100);
   const assetHeadroom = assetCap - assetExposure;
-  if (assetExposure > 0 && assetHeadroom <= 0) {
+  if (!ignoreCapacity && assetExposure > 0 && assetHeadroom <= 0) {
     reasons.push(
       `${opportunity.symbol} already uses ${((assetExposure / portfolio.equity) * 100).toFixed(1)}% ` +
         `of equity — at or above the ${limits.maxExposurePerAssetPct}% per-asset cap`,
@@ -339,7 +359,7 @@ export function assessTrade(
     : 0;
   const clusterCap = hasCorrelationCap ? portfolio.equity * (limits.maxCorrelatedExposurePct! / 100) : 0;
   const clusterHeadroom = clusterCap - clusterExposure;
-  if (hasCorrelationCap && clusterExposure > 0 && clusterHeadroom <= 0) {
+  if (!ignoreCapacity && hasCorrelationCap && clusterExposure > 0 && clusterHeadroom <= 0) {
     reasons.push(
       `${opportunity.symbol}'s correlated cluster already uses ${((clusterExposure / portfolio.equity) * 100).toFixed(1)}% ` +
         `of equity — at or above the ${limits.maxCorrelatedExposurePct}% correlated-cluster cap`,
@@ -356,6 +376,7 @@ export function assessTrade(
     stopLoss,
     currentExposure,
     limits,
+    ignoreTotalExposureCap: ignoreCapacity,
   });
   if (!sizing.ok) {
     reasons.push(sizing.error);
@@ -366,7 +387,7 @@ export function assessTrade(
   // applies to a first position in the asset too, not only to a top-up: the
   // per-asset cap is independent of maxPositionPct and may be stricter than it.
   let { quantity, positionValue, maxLoss, riskPctUsed, constraintsApplied } = sizing.value;
-  if (positionValue > assetHeadroom) {
+  if (!ignoreCapacity && positionValue > assetHeadroom) {
     quantity = assetHeadroom / entry;
     positionValue = assetHeadroom;
     maxLoss = quantity * (entry - stopLoss);
@@ -378,7 +399,7 @@ export function assessTrade(
     ];
   }
   // Correlated-cluster headroom can shrink it further still.
-  if (hasCorrelationCap && clusterExposure > 0 && positionValue > clusterHeadroom) {
+  if (!ignoreCapacity && hasCorrelationCap && clusterExposure > 0 && positionValue > clusterHeadroom) {
     quantity = clusterHeadroom / entry;
     positionValue = clusterHeadroom;
     maxLoss = quantity * (entry - stopLoss);

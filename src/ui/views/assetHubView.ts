@@ -188,10 +188,22 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     returnEl.textContent = formatPct(totalReturn);
     returnEl.className = `hero-value ${totalReturn >= 0 ? 'up' : 'down'}`;
 
-    if (opts.showBenchmark && state.benchmark && state.benchmark.btc > 0 && state.benchmark.equity > 0) {
+    const btcPriceNow = state.marketSnapshot.find((m) => m.symbol === 'XBTEUR')?.price ?? 0;
+    if (
+      opts.showBenchmark &&
+      state.benchmark &&
+      btcPriceNow > 0 &&
+      state.benchmark.btc > 0 &&
+      state.benchmark.equity > 0
+    ) {
       const bot = ((equity - state.benchmark.equity) / state.benchmark.equity) * 100;
+      // "leading" means beating Bitcoin's OWN return over the same window,
+      // not merely being profitable — found in review, 2026-09-03: this used
+      // to show "leading" whenever bot >= 0, so the agent could read as
+      // "leading" while actually trailing a Bitcoin that ran up even more.
+      const btcPct = ((btcPriceNow - state.benchmark.btc) / state.benchmark.btc) * 100;
       benchEl.hidden = false;
-      benchEl.textContent = `vs Bitcoin — agent ${formatPct(bot)}${bot >= 0 ? ' · leading' : ''}`;
+      benchEl.textContent = `vs Bitcoin — agent ${formatPct(bot)} · BTC ${formatPct(btcPct)}${bot >= btcPct ? ' · leading' : ''}`;
     } else {
       benchEl.hidden = true;
     }
@@ -210,9 +222,21 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
       `<div class="block-head"><h2>Real-money readiness</h2>${badge}</div><ul class="readiness-list">${items}</ul>`;
   }
 
+  // Found in review, 2026-09-03: on a PERSISTENT fetch failure, `load()`
+  // used to just `return` — every panel here started on its own initial
+  // "Loading…"/blank skeleton and nothing ever replaced it, so it kept
+  // looking like it was still loading no matter how long the cloud agent
+  // stayed unreachable. Mirrors valueView.ts's own once-only fallback message.
+  let loadedOnce = false;
   async function load(): Promise<void> {
     const state = await opts.fetchState();
-    if (!state) return;
+    if (!state) {
+      if (!loadedOnce) {
+        historyListEl.innerHTML = '<div class="empty">Couldn\'t reach the cloud agent — retrying.</div>';
+      }
+      return;
+    }
+    loadedOnce = true;
     renderHistoryList(state);
     renderRealActivity(state);
     renderProfit(state);

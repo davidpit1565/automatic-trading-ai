@@ -31,6 +31,7 @@ import { AlpacaStockSource, CURATED_STOCK_INSTRUMENTS, BROWSABLE_STOCK_INSTRUMEN
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import { CachingSource } from '../src/core/data/cachingSource';
 import { isUsMarketOpen } from '../src/core/data/marketHours';
+import { PersistedAuditLog } from '../src/core/autopilot/auditLog';
 import { PersistedKillSwitch } from '../src/core/autopilot/killSwitch';
 import type { CycleResult } from '../src/core/autopilot/paperAutoPilot';
 import { runShadowCycle, type ShadowCandidate } from '../src/core/autopilot/shadowEvaluator';
@@ -41,6 +42,7 @@ import { tradeAnalytics } from '../src/core/position/analytics';
 import { maxDrawdownPct } from '../src/core/backtest/metrics';
 import { assessRealMoneyReadiness } from '../src/core/feedback/realMoneyReadiness';
 import { FileStore } from './fileStore.mts';
+import { checkManualKillSwitchCommands } from './manualKillSwitchCommand.mts';
 import { buildStockCycleMessage, sendTelegramMessage } from './telegram.mts';
 
 const STATE_PATH = process.env['STOCKS_STATE_PATH'] ?? 'state/stocks-state.json';
@@ -122,9 +124,20 @@ function persistStateToGit(store: FileStore, label: string): void {
           run('git fetch origin main');
           const origin = JSON.parse(run(`git show origin/main:${STATE_PATH}`)) as Record<string, unknown>;
           for (const key of store.dirtyKeys()) origin[key] = store.get(key);
+          // Fully sync EVERYTHING to origin/main FIRST — a real incident,
+          // 2026-09-03: `git reset --soft origin/main` alone moves HEAD but
+          // leaves the index/working tree exactly as they were, so every
+          // OTHER tracked file (source code included) stayed frozen at
+          // whatever this process's OWN stale checkout had. The next commit
+          // then silently REVERTED any file origin/main had gained since —
+          // this exact runner's own stale checkout reverted a critical
+          // live-money safety fix (PR #152) straight back out of main this
+          // way. `--hard` snaps every file to origin/main's real current
+          // content; only the state file is then deliberately overwritten
+          // again with the key-merged version.
+          run('git reset --hard origin/main');
           mkdirSync(dirname(STATE_PATH), { recursive: true });
           writeFileSync(STATE_PATH, JSON.stringify(origin, null, 2));
-          run('git reset --soft origin/main');
           run(`git add ${STATE_PATH}`);
           if (hasStagedChanges()) run(`git commit -m "Stocks autopilot state (mid-run ${label})"`);
         } catch (mergeFailure) {
@@ -451,6 +464,16 @@ export async function runStocksCycle(
    * `main()` passes the real constant for actual cloud runs. */
   snapshotStaggerMs = 0,
 ): Promise<boolean> {
+  // Found in review, 2026-09-03: this kill switch already gates
+  // runPassiveHoldCycle's own buying below, but nothing ever called
+  // `.engage()` for it — there was no way to actually pause the stocks side
+  // (unlike crypto's real-money `/pause`). Reuses the SAME `/pause`/`/resume`
+  // commands and the SAME Telegram bot/chat as crypto — each side polls with
+  // its own independently-tracked offset in its own (fully isolated) state
+  // file, so one human command pauses whichever sides are listening for it
+  // without the two runners sharing any state.
+  await checkManualKillSwitchCommands(store, telegram, killSwitch, new PersistedAuditLog(store), 'david', now);
+
   const symbolPrices: Record<string, number> = {};
   for (const symbol of symbols) {
     const candles = await source.getCandles(symbol, ENTRY_TF, 2);

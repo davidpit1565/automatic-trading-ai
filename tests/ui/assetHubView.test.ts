@@ -162,3 +162,75 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
     expect(breakdown.textContent).toContain('100');
   });
 });
+
+describe("renderAssetHub — Profit tab 'leading vs Bitcoin' (found in review, 2026-09-03: used to mean merely profitable, not actually beating BTC's own return)", () => {
+  function bitcoinScenario(overrides: { agentEquity: number; btcAnchor: number; btcNow: number }): CloudState {
+    return cloudState({
+      cash: overrides.agentEquity,
+      initialCash: 100,
+      equityHistory: [{ at: 1, equity: overrides.agentEquity }],
+      benchmark: { btc: overrides.btcAnchor, equity: 100 },
+      marketSnapshot: [{ symbol: 'XBTEUR', price: overrides.btcNow, changePct: 0, updatedAt: 1 }],
+    });
+  }
+
+  it("does NOT show 'leading' when the agent is profitable but Bitcoin gained even more over the same window", async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    // Agent +10% (100 -> 110), but BTC +50% (100 -> 150) over the same window.
+    renderAssetHub(container, {
+      ...baseOpts,
+      showBenchmark: true,
+      fetchState: async () => bitcoinScenario({ agentEquity: 110, btcAnchor: 100, btcNow: 150 }),
+    });
+    await flush();
+
+    const bench = container.querySelector<HTMLElement>('#hub-bench')!;
+    expect(bench.hidden).toBe(false);
+    expect(bench.textContent).toContain('agent +10');
+    expect(bench.textContent).toContain('BTC +50');
+    expect(bench.textContent).not.toContain('leading');
+  });
+
+  it("shows 'leading' only when the agent's return actually beats BTC's own return", async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    // Agent +10%, BTC only +2% over the same window.
+    renderAssetHub(container, {
+      ...baseOpts,
+      showBenchmark: true,
+      fetchState: async () => bitcoinScenario({ agentEquity: 110, btcAnchor: 100, btcNow: 102 }),
+    });
+    await flush();
+
+    const bench = container.querySelector<HTMLElement>('#hub-bench')!;
+    expect(bench.textContent).toContain('leading');
+  });
+});
+
+describe("renderAssetHub — persistent fetch failure (found in review, 2026-09-03: panels started on their own 'Loading…'/blank skeleton and nothing ever replaced it)", () => {
+  it("replaces the History tab's 'Loading…' placeholder with an error message instead of leaving it stuck forever", async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, { ...baseOpts, fetchState: async () => null });
+    await flush();
+
+    const list = container.querySelector('#hub-history-list')!;
+    expect(list.textContent).not.toContain('Loading');
+    expect(list.textContent).toContain("Couldn't reach the cloud agent");
+  });
+
+  it('recovers normally once the fetch succeeds after an earlier failure', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    let succeed = false;
+    const handle = renderAssetHub(container, { ...baseOpts, fetchState: async () => (succeed ? cloudState() : null) });
+    await flush();
+    expect(container.querySelector('#hub-history-list')!.textContent).toContain("Couldn't reach the cloud agent");
+
+    succeed = true;
+    handle.resume?.();
+    await flush();
+    expect(container.querySelector('#hub-history-list')!.textContent).toContain('No trades yet');
+  });
+});

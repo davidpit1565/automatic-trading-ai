@@ -54,6 +54,26 @@ describe('assessOpenPosition', () => {
     expect(insight.warnings.some((w) => w.includes('stop'))).toBe(true);
   });
 
+  it("uses the REAL trailing-adjusted stop, not the stale initial one, once a trailing stop has activated (found in review, 2026-09-03: distanceToStopPct/currentRisk/warnings all used to read position.stopLoss even after trailing ratcheted the actual protective stop up past it)", () => {
+    // entry 100, initial stop 90 (risk 10), peak 130 -> trail activates
+    // (runUp 30 >= activateR(1)*risk(10)) -> trailed = 130 - trailR(1)*10 = 120.
+    const pos = position({ stopLoss: 90, highestPrice: 130 });
+    const insight = assessOpenPosition(pos, {
+      price: 121, // within 1% of the REAL stop (120), NOT of the stale one (90)
+      timestamp: T + HOUR,
+      trailing: { activateR: 1, trailR: 1 },
+    });
+    expect(insight.distanceToStopPct).toBeCloseTo(((121 - 120) / 121) * 100, 8);
+    expect(insight.currentRisk).toBeCloseTo((121 - 120) * 10, 10);
+    expect(insight.warnings.some((w) => w.includes('120'))).toBe(true);
+  });
+
+  it('falls back to the fixed stopLoss when no trailing config is given (backward compatible)', () => {
+    const pos = position({ stopLoss: 90, highestPrice: 130 });
+    const insight = assessOpenPosition(pos, { price: 121, timestamp: T + HOUR });
+    expect(insight.distanceToStopPct).toBeCloseTo(((121 - 90) / 121) * 100, 8);
+  });
+
   it('warns when the stop has been breached — informational, never auto-closing', () => {
     const insight = assessOpenPosition(position(), { price: 94, timestamp: T + HOUR });
     expect(insight.warnings.some((w) => w.toLowerCase().includes('breached'))).toBe(true);

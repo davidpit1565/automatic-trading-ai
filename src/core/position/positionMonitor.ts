@@ -8,6 +8,7 @@
 
 import type { Temperature } from '../scan/marketScanner';
 import type { RobustnessVerdict } from '../validation/robustness';
+import { trailingStopPrice, type TrailingConfig } from '../risk/trailingStop';
 import type { OpenPosition } from './positionEngine';
 
 export interface PositionMarketState {
@@ -17,6 +18,16 @@ export interface PositionMarketState {
   readonly regime?: Temperature;
   /** Latest validation verdict for the symbol, when available. */
   readonly currentValidationVerdict?: RobustnessVerdict | 'not-run';
+  /**
+   * Same trailing config the exit engine is actually running with
+   * (`decideExit`'s own `options.trailing` — see exitDecision.ts). Omit
+   * for a fixed stop. Found in review, 2026-09-03: without this, every
+   * distance/risk figure and warning here was computed against
+   * `position.stopLoss` — the ORIGINAL stop — even once a trailing stop
+   * had ratcheted the REAL protective stop up past it, understating how
+   * close price actually is to the real exit level.
+   */
+  readonly trailing?: TrailingConfig;
 }
 
 export interface PositionInsight {
@@ -55,19 +66,32 @@ export function assessOpenPosition(
   const { price, timestamp } = market;
   const warnings: string[] = [];
 
+  // The REAL, currently-effective protective stop — ratcheted up by a
+  // trailing config exactly the way decideExit itself computes it. Falls
+  // back to the position's own (fixed) stopLoss when no trailing is
+  // configured, or when it hasn't activated yet.
+  const effectiveStop = market.trailing
+    ? trailingStopPrice({
+        entryPrice: position.entryPrice,
+        initialStop: position.stopLoss,
+        highestPrice: Math.max(position.highestPrice, price),
+        config: market.trailing,
+      })
+    : position.stopLoss;
+
   const unrealizedPnl = (price - position.entryPrice) * position.quantity;
   const pnlPct = ((price - position.entryPrice) / position.entryPrice) * 100;
-  const distanceToStopPct = ((price - position.stopLoss) / price) * 100;
+  const distanceToStopPct = ((price - effectiveStop) / price) * 100;
   const distanceToTargetPct = ((position.takeProfit - price) / price) * 100;
 
-  if (price <= position.stopLoss) {
+  if (price <= effectiveStop) {
     warnings.push(
-      `stop loss breached: price ${price} is at/below the ${position.stopLoss} stop — ` +
+      `stop loss breached: price ${price} is at/below the ${effectiveStop} stop — ` +
         `review this position now (informational only, nothing is closed automatically)`,
     );
   } else if (distanceToStopPct <= NEAR_STOP_PCT) {
     warnings.push(
-      `price is within ${NEAR_STOP_PCT}% of the stop loss (${position.stopLoss}) — approaching the exit level`,
+      `price is within ${NEAR_STOP_PCT}% of the stop loss (${effectiveStop}) — approaching the exit level`,
     );
   }
 
@@ -102,7 +126,7 @@ export function assessOpenPosition(
     pnlPct,
     distanceToStopPct,
     distanceToTargetPct,
-    currentRisk: Math.max(price - position.stopLoss, 0) * position.quantity,
+    currentRisk: Math.max(price - effectiveStop, 0) * position.quantity,
     currentReward: Math.max(position.takeProfit - price, 0) * position.quantity,
     timeInTradeMs: timestamp - position.openedAt,
     regime: market.regime ?? null,

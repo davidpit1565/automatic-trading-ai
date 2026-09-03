@@ -10,6 +10,12 @@
  * algorithm currently thinks. Nothing here bypasses the confirmation tap —
  * see that file's header for why an exit is never auto-approved either.
  *
+ * Actual submission goes through `liveExitMirror.mts`'s `proposeLiveExit` —
+ * SHARED with the automatic exit checker, so a still-pending automatic exit
+ * and a `/sell` for the SAME position resume the ONE queued attempt instead
+ * of each building an independent confirmation (see that function's doc
+ * comment for the real incident this fixed, 2026-09-03).
+ *
  * Called every cycle by `server/autopilotRunner.mts`'s `runLiveMirror` — but
  * that caller is itself a no-op unless `REAL_MONEY_ENABLED=true` AND real
  * broker credentials are configured (see its doc comment), so this stays
@@ -19,17 +25,9 @@
 import type { KeyValueStore } from '../src/core/data/storage';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import type { Timeframe } from '../src/core/types';
-import {
-  buildLiveExitIntent,
-  forgetLivePosition,
-  markExitSubmitted,
-  openLivePositions,
-  reduceLivePositionQuantity,
-  type LiveOpenPosition,
-} from './liveExitFlow.mts';
-import { clearOutstandingEntry } from './liveEntryMirror.mts';
-import { creditLiveCash } from './liveLedger.mts';
-import { runLiveOrderFlow, type LiveOrderFlowParams, type LiveOrderFlowResult } from './liveOrchestrator.mts';
+import { openLivePositions, type LiveOpenPosition } from './liveExitFlow.mts';
+import { proposeLiveExit } from './liveExitMirror.mts';
+import type { LiveOrderFlowParams, LiveOrderFlowResult } from './liveOrchestrator.mts';
 import {
   pollAllTelegramUpdates,
   stashUnclaimedTelegramUpdates,
@@ -55,7 +53,11 @@ export function parseSellCommand(text: string): string | null {
 export type ManualSellOutcome =
   | { readonly symbol: string; readonly outcome: 'no-open-position' }
   | { readonly symbol: string; readonly outcome: 'no-price-data' }
-  | { readonly symbol: string; readonly outcome: 'exit-already-submitted' }
+  | { readonly symbol: string; readonly outcome: 'outstanding-exit-already-pending' }
+  /** Structurally possible from `proposeLiveExit`'s shared return type, but
+   * never actually produced here — this caller always passes a non-null
+   * `reason` ('manual'). */
+  | { readonly symbol: string; readonly outcome: 'no-exit-signal' }
   | ({ readonly symbol: string } & LiveOrderFlowResult);
 
 function findBySymbol(positions: readonly LiveOpenPosition[], symbol: string): LiveOpenPosition | undefined {
@@ -73,17 +75,14 @@ function findBySymbol(positions: readonly LiveOpenPosition[], symbol: string): L
  * **A request stays queued (`manual-sell-pending-symbols`) until it reaches
  * a TERMINAL outcome** (submitted, rejected, blocked, unknown-symbol, or no
  * matching position) — `'pending'` (nobody tapped the button within this
- * cycle's short poll) and `'no-price-data'` (a transient fetch failure) both
- * keep it queued for the next cycle instead of silently dropping it. This
- * matters because the Telegram MESSAGE is consumed (offset advanced) the
- * moment it's read, long before the order resolves — without a persisted
- * queue, a `/sell` that isn't approved inside the ~15s the confirmation gate
- * actively polls would vanish forever, even if the human taps the button
- * five minutes later (a real bug caught before this shipped: the exit
- * intent's id used to include the wall-clock `now`, so a resumed call would
- * never rebuild the SAME id `TelegramConfirmationGate` needs to resume
- * polling — see PROJECT_STATE.md). The id is now stable
- * (`${position.id}:manual-sell`) for exactly this reason.
+ * cycle's short poll), `'outstanding-exit-already-pending'` (an automatic
+ * exit already owns this position's confirmation — see `proposeLiveExit`),
+ * and `'no-price-data'` (a transient fetch failure) all keep it queued for
+ * the next cycle instead of silently dropping it. This matters because the
+ * Telegram MESSAGE is consumed (offset advanced) the moment it's read, long
+ * before the order resolves — without a persisted queue, a `/sell` that
+ * isn't approved inside the ~15s the confirmation gate actively polls would
+ * vanish forever, even if the human taps the button five minutes later.
  */
 export async function checkManualSellRequests(
   store: KeyValueStore,
@@ -118,77 +117,42 @@ export async function checkManualSellRequests(
   const positions = openLivePositions(store);
   const outcomes: ManualSellOutcome[] = [];
   for (const symbol of pendingSymbols) {
-    const position = findBySymbol(positions, symbol);
-    if (!position) {
-      outcomes.push({ symbol, outcome: 'no-open-position' });
-      pendingSymbols.delete(symbol);
-      // Persisted immediately after EACH symbol, not once after the whole
-      // loop — an exception on a LATER symbol in this same pass (a network
-      // error from getCandles, say) must not roll back an earlier symbol's
-      // already-decided outcome back into the pending queue.
-      store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
-      continue;
-    }
-    // A previous /sell for this SAME position already reached a real
-    // broker submission (found in an independent review, 2026-09-02): once
-    // that happens, the stable intent id's confirmation record is resolved,
-    // so a later /sell would be treated as a brand-new request and could
-    // submit a SECOND real sell order while the first is still resting
-    // (not yet filled). Refuse instead — the position stays tracked and
-    // protected either way, and a genuinely filled first sell will have
-    // already forgotten the position, so this branch never blocks a
-    // legitimate re-sell of a position that's actually still open.
-    if (position.outstandingExitSubmittedAt !== undefined) {
-      outcomes.push({ symbol, outcome: 'exit-already-submitted' });
-      pendingSymbols.delete(symbol);
-      store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
-      continue;
-    }
-    const candles = await source.getCandles(position.entryAssessment.asset, entryTimeframe, 2);
-    if (!candles.ok || candles.value.length === 0) {
-      outcomes.push({ symbol, outcome: 'no-price-data' });
-      // Stays queued (never deleted) — retried next cycle, never silently
-      // dropped. Still persisted immediately, same reasoning as above.
-      store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
-      continue;
-    }
-    const price = candles.value[candles.value.length - 1]!.close;
-    const intent = buildLiveExitIntent(`${position.id}:manual-sell`, position, price, now);
-    const result = await runLiveOrderFlow({ ...flowParams, intent });
-    outcomes.push({ symbol, ...result });
-    if (result.outcome !== 'pending') pendingSymbols.delete(symbol);
-    if (result.outcome === 'submitted') {
-      // A REAL order now exists at the broker regardless of fill state —
-      // mark it immediately so a later /sell for this symbol refuses
-      // instead of risking a second real sell order (see
-      // `outstandingExitSubmittedAt`'s doc comment).
-      markExitSubmitted(store, position.id, now);
-      // A genuinely FILLED sell must stop being tracked as an open
-      // position — otherwise it would still look "open" to everything
-      // else (decideLiveExit, a future /sell). 'submitted' alone is NOT
-      // enough (the broker may only have accepted a resting order, not yet
-      // filled it) — only a confirmed fill forgets it.
-      const fillPrice = result.report.avgFillPrice ?? price;
-      if (result.report.state === 'filled') {
-        creditLiveCash(store, result.report.filledQuantity * fillPrice);
-        onRealizedPnl?.((fillPrice - position.entryPrice) * result.report.filledQuantity, now);
-        forgetLivePosition(store, position.id);
-        // Releases this symbol for a FUTURE fresh entry — see
-        // `liveEntryMirror.mts`'s `clearOutstandingEntry` doc comment.
-        clearOutstandingEntry(store, symbol);
-      } else if (result.report.filledQuantity > 0) {
-        // Partial fill: credit only what genuinely sold and shrink the
-        // tracked quantity by that much — the remainder is still real,
-        // still open exposure (found asymmetric with the partial-BUY
-        // handling in review, 2026-09-03). outstandingExitSubmittedAt stays
-        // set (already done above) since a resting order for the rest is
-        // still live at the broker.
-        creditLiveCash(store, result.report.filledQuantity * fillPrice);
-        onRealizedPnl?.((fillPrice - position.entryPrice) * result.report.filledQuantity, now);
-        reduceLivePositionQuantity(store, position.id, result.report.filledQuantity);
+    try {
+      const position = findBySymbol(positions, symbol);
+      if (!position) {
+        outcomes.push({ symbol, outcome: 'no-open-position' });
+        pendingSymbols.delete(symbol);
+        // Persisted immediately after EACH symbol, not once after the whole
+        // loop — an exception on a LATER symbol in this same pass (a network
+        // error from getCandles, say) must not roll back an earlier symbol's
+        // already-decided outcome back into the pending queue.
+        store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
+        continue;
       }
+      const candles = await source.getCandles(position.entryAssessment.asset, entryTimeframe, 2);
+      if (!candles.ok || candles.value.length === 0) {
+        outcomes.push({ symbol, outcome: 'no-price-data' });
+        // Stays queued (never deleted) — retried next cycle, never silently
+        // dropped. Still persisted immediately, same reasoning as above.
+        store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
+        continue;
+      }
+      const price = candles.value[candles.value.length - 1]!.close;
+      const result = await proposeLiveExit(store, position, 'manual', price, now, { flowParams, onRealizedPnl });
+      outcomes.push({ symbol, ...result });
+      if (result.outcome !== 'pending' && result.outcome !== 'outstanding-exit-already-pending') {
+        pendingSymbols.delete(symbol);
+      }
+      store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
+    } catch (cause) {
+      // One symbol's transient failure must never stop every OTHER pending
+      // /sell in this same pass from being checked (found in review,
+      // 2026-09-03) — it stays queued (not deleted) and is retried next
+      // cycle, same as a plain no-price-data outcome.
+      console.error(`checkManualSellRequests failed for ${symbol}:`, cause instanceof Error ? cause.message : cause);
+      outcomes.push({ symbol, outcome: 'no-price-data' });
+      store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
     }
-    store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);
   }
   return outcomes;
 }
