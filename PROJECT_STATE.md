@@ -1,5 +1,28 @@
 # PROJECT_STATE
 
+## Real money was invisible on the History and Profit tabs (2026-09-03)
+David reported the real wallet "still isn't reflected everywhere and still
+shows the demo money" — but nothing was stale. The real-money card had only
+ever been added to the Overview sub-tab (`homeView.ts`). History and Profit
+are rendered by the shared generic shell (`assetHubView.ts`, used by both
+Crypto's and Stocks' hubs), which only ever knew about the SIMULATED
+`CloudState` fields (`equityHistory`, `history`, `initialCash`) — it had no
+real-money awareness at all, so those two tabs kept showing only simulated
+figures with nothing beside them to say so.
+
+Fixed in `assetHubView.ts`: added a "Real activity" section to History
+(shows `state.live.recentEvents` as FILLED/REJECTED rows) and a "Real
+money" section to Profit (shows `live.cash + Σ(position qty × entryPrice)`
+as real equity). Both are hidden entirely when `state.live` is null (e.g.
+Stocks, which has no live account), matching the convention Overview
+already uses. Also labelled Profit's existing "Total return" hero
+`SIMULATED` for symmetry with the new real card, so the two are never
+mistaken for each other.
+
+Tests: hides both sections when `state.live` is null; shows real activity
+content and correct real-equity math (50 cash + 0.001×95000 = 145) once a
+live account exists. Full gate green (tsc app, 1005 tests, build).
+
 ## The confirmation-message deadline clock disagreed with the digest clock (2026-09-03)
 David pointed out the confirmation message's "בתוקף עד HH:MM" deadline still
 showed Israel time while he's travelling. Root cause: two independent

@@ -58,16 +58,35 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     </div>
     <div class="hub-panel active" data-hub-panel="overview"></div>
     <div class="hub-panel" data-hub-panel="history">
+      <!-- Real activity — hidden entirely until the live ledger has ever
+           been initialized (state.live !== null), same convention homeView.ts
+           uses, so this never appears for Stocks (no live account there)
+           and never shows a misleading empty "real" section. David reported
+           2026-09-03: this tab only ever showed the SIMULATED chart/list
+           below, with no real counterpart anywhere on it — easy to mistake
+           for "the real wallet still isn't reflected", when the real card
+           simply only existed on the Overview tab. -->
+      <section class="block" id="hub-real-activity" hidden>
+        <div class="block-head"><h2>Real activity <span class="tag-live">REAL</span></h2></div>
+        <div class="stack stack-card" id="hub-real-activity-list"></div>
+      </section>
       <div id="hub-history-chart"></div>
       <div class="stack stack-card" id="hub-history-list"><div class="empty">Loading…</div></div>
     </div>
     <div class="hub-panel" data-hub-panel="market"></div>
     <div class="hub-panel" data-hub-panel="profit">
+      <!-- Same real/simulated pairing as Overview: a boxed secondary "Real
+           money" card (not hero-bare — the simulated return below stays the
+           dominant figure on this tab), hidden until a live account exists. -->
+      <section class="hero" id="hub-real-money" hidden>
+        <div class="hero-label">Real money <span class="tag-live">REAL</span></div>
+        <div class="hero-value" id="hub-real-equity">—</div>
+      </section>
       <!-- hero-bare matches Home's balance treatment: same dominant-figure
            pattern for this sub-screen (shared by Crypto's and Stocks' Profit
            tab), not a secondary boxed widget. -->
       <section class="hero hero-bare">
-        <div class="hero-label">Total return</div>
+        <div class="hero-label">Total return <span class="tag-sim">SIMULATED</span></div>
         <div class="hero-value" id="hub-return">—</div>
         <div class="hero-bench" id="hub-bench" hidden></div>
       </section>
@@ -84,6 +103,10 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
   const benchEl = container.querySelector<HTMLElement>('#hub-bench')!;
   const readinessEl = container.querySelector<HTMLElement>('#hub-readiness')!;
   const longTermPanel = container.querySelector<HTMLElement>('[data-hub-panel="longterm"]');
+  const realActivityWrap = container.querySelector<HTMLElement>('#hub-real-activity')!;
+  const realActivityListEl = container.querySelector<HTMLElement>('#hub-real-activity-list')!;
+  const realMoneyWrap = container.querySelector<HTMLElement>('#hub-real-money')!;
+  const realEquityEl = container.querySelector<HTMLElement>('#hub-real-equity')!;
 
   const historyChart = mountEquityChartPanel(historyChartSlot, { currencySymbol: opts.currencySymbol });
 
@@ -112,6 +135,35 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
           <span class="row-sub">${new Date(t.at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></div>`;
       historyListEl.appendChild(row);
     }
+  }
+
+  function renderRealActivity(state: CloudState): void {
+    const live = state.live;
+    realActivityWrap.hidden = !live;
+    if (!live) return;
+    if (live.recentEvents.length === 0) {
+      realActivityListEl.innerHTML = '<div class="empty">No real trades yet.</div>';
+      return;
+    }
+    realActivityListEl.innerHTML = '';
+    for (const e of live.recentEvents) {
+      const filled = e.event === 'filled';
+      const row = el('div', `row trade ${filled ? 'buy' : 'sell'}`);
+      row.innerHTML = `
+        <div class="row-main"><div><div class="row-title"><span class="pill ${filled ? 'buy' : 'sell'}">${filled ? 'FILLED' : 'REJECTED'}</span></div>
+          <div class="row-sub">${e.detail}</div></div></div>
+        <div class="row-side"><span class="row-sub">${new Date(e.at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></div>`;
+      realActivityListEl.appendChild(row);
+    }
+  }
+
+  function renderRealMoney(state: CloudState): void {
+    const live = state.live;
+    realMoneyWrap.hidden = !live;
+    if (!live) return;
+    const invested = live.positions.reduce((s, p) => s + p.quantity * p.entryPrice, 0);
+    const equity = live.cash + invested;
+    realEquityEl.textContent = money(equity);
   }
 
   function renderProfit(state: CloudState): void {
@@ -146,7 +198,9 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     const state = await opts.fetchState();
     if (!state) return;
     renderHistoryList(state);
+    renderRealActivity(state);
     renderProfit(state);
+    renderRealMoney(state);
   }
 
   container.addEventListener('click', (event) => {
