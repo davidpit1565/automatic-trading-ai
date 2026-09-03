@@ -1,5 +1,52 @@
 # PROJECT_STATE
 
+## Chart polish: leftover pre-true-black pill glow, and a misleading EMA line on the equity chart (2026-09-03)
+Continuing David's "keep improving the charts" request, scoped to `charts.ts`
++ `equityChartPanel.ts` + `styles.css` only. Two real, concrete defects found
+by screenshotting the built chart (Playwright, `?demo=1`, 390×844, with
+`page.route()` intercepting the state-fetch URL with a synthetic multi-week
+equity-history fixture so the History/Profit charts actually render):
+
+1. **Leftover pre-true-black gradient + white glow on the range/toggle
+   pills.** The true-black pass (#133) flattened every active-pill background
+   and explicitly removed white outer glows app-wide (`.mk-tab.active`,
+   `.hub-tab.active` → flat `var(--surface-raised)`, no shadow) — but missed
+   the chart's own controls, which live in the shared chart panel rather than
+   a Home/Markets tab bar: `.range-btn.active` still carried the old two-tone
+   `linear-gradient(155deg, var(--accent), var(--accent-2))` **plus**
+   `box-shadow: 0 3px 10px rgba(255,255,255,.3)` (the exact glow #133's own
+   entry says was removed elsewhere), and `.ctoggle-btn.active` /
+   `.view-tab.active` (coin-detail's Candles/Line toggle and Chart/Stats/
+   Orders tabs) kept the same stale gradient without the glow. All three now
+   match `.mk-tab.active`'s flat fill, so every segmented-pill control in the
+   app is visually consistent.
+
+2. **EMA20/EMA50 + support/resistance lines on the portfolio EQUITY chart.**
+   `candleChartSvg` (shared by market/coin-detail charts AND the equity/
+   History/Profit chart via `equityChartPanel.ts`) draws these as
+   technical-analysis overlays for a tradable asset's *price*. On an equity
+   curve there's no asset to read a trend signal off — and visually it was
+   worse than just pointless: EMA20 needs 20 candles to warm up, so on any
+   range with 20-49 bucketed candles (very common — the 'All' range only
+   reaches ~30 target candles) the line rendered as a single straight
+   diagonal segment starting abruptly mid-chart with a hard corner, reading
+   as a rendering bug next to the candles' real zigzag. Same "misleading
+   overlay" reasoning as the RSI-bands/MACD-bars removal already on record
+   in `charts.test.ts` ("candleChartSvg misleading overlays removed") — this
+   is a continuation of that fix, not a new opinion. Added an `indicators`
+   option to `candleChartSvg` (default `true`, so every market-chart call
+   site is byte-for-byte unaffected) and set `indicators: false` only from
+   `equityChartPanel.ts`; also skips the always-zero-height volume bars the
+   equity chart's bucketized samples produce (no real trade volume exists
+   for an equity point), which were harmless but dead SVG. Verified
+   before/after: the stray diagonal line and "S" label are gone from the
+   History chart's candle view; `charts.test.ts`'s existing EMA-rendering
+   assertions (default-on behaviour) still pass unchanged since they exercise
+   the un-flagged call path.
+
+Full gate green: `tsc --noEmit`, `vitest run` (1012 tests, none touched —
+the new option defaults to the prior behaviour), `npm run build`.
+
 ## A real FILLED order was reported to David as rejected (2026-09-03)
 He ran `/buy XBTEUR` from Telegram, approved it, and Revolut X actually
 FILLED it (confirmed directly in the Revolut X app: Limit Buy BTC-EUR,
