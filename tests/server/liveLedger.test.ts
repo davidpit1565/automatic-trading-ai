@@ -188,6 +188,21 @@ describe('syncLiveExternalBtc (untracked BTC holding, 2026-09-03)', () => {
     await syncLiveExternalBtc(store, fakeBroker(() => Promise.reject(new Error('network timeout'))));
     expect(liveExternalBtcQuantity(store)).toBe(0.001);
   });
+
+  it("subtracts the bot's own tracked BTC position from the broker's raw balance (real incident, 2026-09-03: after the first live XBTEUR fill, the broker's total BTC balance already included the bot's own position, double-counting it as 'untracked' too)", async () => {
+    const store = new MemoryStore();
+    recordLiveEntryFill(store, buyIntent(), filledReport(), 500); // tracks a 2 BTC-EUR position
+    // Broker reports 2.5 BTC total — 2 of it is the bot's own tracked buy above.
+    await syncLiveExternalBtc(store, fakeBroker([{ symbol: 'BTC', quantity: 2.5, avgCost: 0 }]));
+    expect(liveExternalBtcQuantity(store)).toBe(0.5);
+  });
+
+  it('never reports a negative untracked quantity even if the broker balance is momentarily behind the tracked position', async () => {
+    const store = new MemoryStore();
+    recordLiveEntryFill(store, buyIntent(), filledReport(), 500); // tracks a 2 BTC-EUR position
+    await syncLiveExternalBtc(store, fakeBroker([{ symbol: 'BTC', quantity: 1, avgCost: 0 }]));
+    expect(liveExternalBtcQuantity(store)).toBe(0);
+  });
 });
 
 describe('recordLiveEquity (real account value-over-time, reporting only — 2026-09-03)', () => {
