@@ -32,6 +32,12 @@ const CACHE_KEY = 'blackout-windows-cache';
 const GEONAME_ID = 2803138; // Antwerp, Belgium
 const FETCH_HORIZON_DAYS = 120;
 const REFRESH_WHEN_UNCOVERED_DAYS = 30;
+/** Same bound every other external call in this codebase uses (telegram.mts,
+ * okxPositioning.ts, etc.) — found 2026-09-03 in a full-system audit after
+ * the earlier missing-timeout incident: this fetch runs inside the SAME
+ * live-trading cycle loop, unconditionally whenever the cache needs
+ * refreshing, with nothing to time it out if Hebcal ever stalls. */
+const FETCH_TIMEOUT_MS = 15_000;
 
 interface HebcalItem {
   readonly category: string;
@@ -73,13 +79,17 @@ async function fetchBlackoutWindows(now: number, fetchFn: typeof fetch): Promise
   const url =
     `https://www.hebcal.com/hebcal?v=1&cfg=json&maj=on&min=off&mod=off&nx=off&mf=off&ss=off` +
     `&c=on&geonameid=${GEONAME_ID}&start=${start}&end=${end}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const response = await fetchFn(url);
+    const response = await fetchFn(url, { signal: controller.signal });
     if (!response.ok) return null;
     const data = (await response.json()) as { items?: HebcalItem[] };
     return parseBlackoutWindows(data.items ?? []);
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

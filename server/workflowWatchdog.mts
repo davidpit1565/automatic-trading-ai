@@ -33,6 +33,21 @@ export interface WatchdogResult {
   readonly reason: string;
 }
 
+/** Same bound every other external call in this codebase uses — found
+ * 2026-09-03 in a full-system audit: this is the watchdog meant to catch a
+ * stuck workflow, but had no bound of its own on a stuck GitHub API call. */
+const FETCH_TIMEOUT_MS = 15_000;
+
+async function fetchWithTimeout(fetchFn: typeof fetch, url: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetchFn(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function checkAndNudgeStaleWorkflow(
   config: WatchdogConfig,
   now: number,
@@ -44,7 +59,7 @@ export async function checkAndNudgeStaleWorkflow(
 
   const authHeaders = { Authorization: `Bearer ${config.token}`, Accept: 'application/vnd.github+json' };
   const runsUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/actions/workflows/${config.workflowFile}/runs?per_page=1`;
-  const runsResponse = await fetchFn(runsUrl, { headers: authHeaders });
+  const runsResponse = await fetchWithTimeout(fetchFn, runsUrl, { headers: authHeaders });
   if (!runsResponse.ok) {
     return { nudged: false, reason: `could not read ${config.workflowFile}'s run history (HTTP ${runsResponse.status})` };
   }
@@ -63,7 +78,7 @@ export async function checkAndNudgeStaleWorkflow(
   }
 
   const dispatchUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/actions/workflows/${config.workflowFile}/dispatches`;
-  const dispatchResponse = await fetchFn(dispatchUrl, {
+  const dispatchResponse = await fetchWithTimeout(fetchFn, dispatchUrl, {
     method: 'POST',
     headers: { ...authHeaders, 'Content-Type': 'application/json' },
     body: JSON.stringify({ ref: 'main' }),
