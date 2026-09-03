@@ -24,6 +24,7 @@ import {
   forgetLivePosition,
   markExitSubmitted,
   openLivePositions,
+  reduceLivePositionQuantity,
   type LiveOpenPosition,
 } from './liveExitFlow.mts';
 import { clearOutstandingEntry } from './liveEntryMirror.mts';
@@ -167,14 +168,24 @@ export async function checkManualSellRequests(
       // else (decideLiveExit, a future /sell). 'submitted' alone is NOT
       // enough (the broker may only have accepted a resting order, not yet
       // filled it) — only a confirmed fill forgets it.
+      const fillPrice = result.report.avgFillPrice ?? price;
       if (result.report.state === 'filled') {
-        const fillPrice = result.report.avgFillPrice ?? price;
         creditLiveCash(store, result.report.filledQuantity * fillPrice);
         onRealizedPnl?.((fillPrice - position.entryPrice) * result.report.filledQuantity, now);
         forgetLivePosition(store, position.id);
         // Releases this symbol for a FUTURE fresh entry — see
         // `liveEntryMirror.mts`'s `clearOutstandingEntry` doc comment.
         clearOutstandingEntry(store, symbol);
+      } else if (result.report.filledQuantity > 0) {
+        // Partial fill: credit only what genuinely sold and shrink the
+        // tracked quantity by that much — the remainder is still real,
+        // still open exposure (found asymmetric with the partial-BUY
+        // handling in review, 2026-09-03). outstandingExitSubmittedAt stays
+        // set (already done above) since a resting order for the rest is
+        // still live at the broker.
+        creditLiveCash(store, result.report.filledQuantity * fillPrice);
+        onRealizedPnl?.((fillPrice - position.entryPrice) * result.report.filledQuantity, now);
+        reduceLivePositionQuantity(store, position.id, result.report.filledQuantity);
       }
     }
     store.set(MANUAL_SELL_PENDING_KEY, [...pendingSymbols]);

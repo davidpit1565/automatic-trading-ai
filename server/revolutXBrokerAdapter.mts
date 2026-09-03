@@ -336,9 +336,33 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
   async listTradablePairs(): Promise<string[]> {
     try {
       const result = await this.request('GET', '/configuration/pairs');
-      if (!result.ok) return [];
+      if (!result.ok) {
+        // A failure here is otherwise INVISIBLE — the caller (verifySymbolExists,
+        // liveOrchestrator.mts) can only ever report "could not verify",
+        // identical wording whether the pair genuinely doesn't exist or this
+        // call itself failed (auth, network, wrong path). Audited here with the
+        // real HTTP status/body so a silent go-live blocker is diagnosable from
+        // the committed audit log instead of a guess (found 2026-09-03: the
+        // first real attempt against production silently refused every entry
+        // with no visible reason beyond that ambiguous message).
+        this.audit.append({
+          timestamp: Date.now(),
+          intentId: 'list-tradable-pairs',
+          event: 'rejected',
+          mode: 'live',
+          detail: `GET /configuration/pairs failed: HTTP ${result.status} — ${JSON.stringify(result.json)}`,
+        });
+        return [];
+      }
       return readPairSymbols(result.json);
-    } catch {
+    } catch (cause) {
+      this.audit.append({
+        timestamp: Date.now(),
+        intentId: 'list-tradable-pairs',
+        event: 'rejected',
+        mode: 'live',
+        detail: `GET /configuration/pairs threw: ${cause instanceof Error ? cause.message : String(cause)}`,
+      });
       return [];
     }
   }

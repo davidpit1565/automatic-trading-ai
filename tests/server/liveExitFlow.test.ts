@@ -18,6 +18,7 @@ import {
   forgetLivePosition,
   openLivePositions,
   recordLiveEntryFill,
+  reduceLivePositionQuantity,
   updateLiveHighestPrice,
 } from '../../server/liveExitFlow.mts';
 
@@ -178,6 +179,41 @@ describe('forgetLivePosition', () => {
   it('no-ops for an untracked position id', () => {
     const store = new MemoryStore();
     expect(() => forgetLivePosition(store, 'unknown')).not.toThrow();
+  });
+});
+
+describe('reduceLivePositionQuantity', () => {
+  it('shrinks the tracked quantity by the sold amount, keeping the remainder tracked', () => {
+    const store = new MemoryStore();
+    recordLiveEntryFill(store, buyIntent({ quantity: 2 }), filledReport({ filledQuantity: 2 }), 5000);
+
+    const applied = reduceLivePositionQuantity(store, 'entry-1', 0.8);
+
+    expect(applied).toBe(true);
+    const positions = openLivePositions(store);
+    expect(positions).toHaveLength(1);
+    expect(positions[0]!.quantity).toBeCloseTo(1.2, 10);
+  });
+
+  it('no-ops (and returns false) for an untracked position id', () => {
+    const store = new MemoryStore();
+    expect(reduceLivePositionQuantity(store, 'unknown', 1)).toBe(false);
+  });
+
+  it('no-ops for a non-positive soldQuantity', () => {
+    const store = new MemoryStore();
+    recordLiveEntryFill(store, buyIntent({ quantity: 2 }), filledReport({ filledQuantity: 2 }), 5000);
+    expect(reduceLivePositionQuantity(store, 'entry-1', 0)).toBe(false);
+    expect(reduceLivePositionQuantity(store, 'entry-1', -1)).toBe(false);
+    expect(openLivePositions(store)[0]!.quantity).toBe(2);
+  });
+
+  it('refuses a soldQuantity at or above the tracked quantity — that is a full fill, not a partial one', () => {
+    const store = new MemoryStore();
+    recordLiveEntryFill(store, buyIntent({ quantity: 2 }), filledReport({ filledQuantity: 2 }), 5000);
+    expect(reduceLivePositionQuantity(store, 'entry-1', 2)).toBe(false);
+    expect(reduceLivePositionQuantity(store, 'entry-1', 3)).toBe(false);
+    expect(openLivePositions(store)[0]!.quantity).toBe(2);
   });
 });
 

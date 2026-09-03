@@ -143,6 +143,36 @@ describe('checkAutomaticExits', () => {
     expect(liveCash(store)).toBe(100 + 0.01 * 94);
   });
 
+  it('a PARTIALLY filled exit credits only what genuinely sold and shrinks the tracked quantity, keeping the remainder tracked (found asymmetric with partial-BUY handling in review, 2026-09-03)', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 }); // quantity 0.01
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const report: OrderStatusReport = {
+      intentId: 'entry-1:auto-exit',
+      state: 'submitted', // resting, only partially filled
+      filledQuantity: 0.004,
+      avgFillPrice: 94,
+      detail: 'partially filled',
+    };
+
+    const outcomes = await checkAutomaticExits(
+      store,
+      fakeSource(ok([candle(94)])),
+      '1h',
+      {},
+      flowParams(report, killSwitch, audit),
+      2000,
+    );
+    expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report }]);
+    const positions = openLivePositions(store);
+    expect(positions).toHaveLength(1);
+    expect(positions[0]!.quantity).toBeCloseTo(0.006, 10);
+    expect(positions[0]!.outstandingExitSubmittedAt).toBeDefined();
+    expect(liveCash(store)).toBeCloseTo(100 + 0.004 * 94, 10);
+  });
+
   it('reports no-exit-signal and keeps the position tracked when price is between stop and target', async () => {
     const store = new MemoryStore();
     initLiveCash(store, 100);

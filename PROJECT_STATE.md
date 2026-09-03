@@ -1,5 +1,51 @@
 # PROJECT_STATE
 
+## Found and fixed the real go-live blocker, plus the two flagged review gaps (2026-09-03)
+The first real `/buy XBTEUR` attempts against production went unanswered —
+no Telegram confirmation ever arrived. Root cause, found by pulling the
+committed `state/autopilot-state.json`'s `live:audit-log` directly (the
+running workflow's own logs aren't fetchable while in-progress): every
+attempt was silently refused as `'unknown-symbol'` because
+`RevolutXBrokerAdapter.listTradablePairs()`'s `GET /configuration/pairs`
+call was failing, and that failure was previously invisible — the only
+trace was an ambiguous "could not verify... either it doesn't exist there,
+or the check itself failed" message with no real HTTP status or body
+anywhere. Fixed: `listTradablePairs()` now audits the ACTUAL failure (HTTP
+status + response body, or the thrown error message) under a
+`'list-tradable-pairs'` intentId, so the next attempt's real cause is
+readable from the audit log instead of guessed at. (Diagnosis, not a
+guessed fix — the underlying cause, whatever it turns out to be signing,
+permissions, or a genuine symbol-format mismatch, will now be visible in
+the very next failed attempt.)
+
+Also fixed the two smaller gaps the earlier adversarial review flagged but
+left for a design call:
+- **Confidence-scaled risk now applies to live entries** — `liveEntryMirror.mts`'s
+  `mirrorApprovedEntries` gained an optional `confidenceRisk` option
+  (floor/ceiling %, confidence floor, max confidence); `autopilotRunner.mts`
+  passes the SAME `AUTOPILOT_CONFIDENCE_RISK`/`AUTOPILOT_MIN_CONFIDENCE`
+  paper already uses, so a live entry's size now actually reflects signal
+  strength instead of always sizing at the flat 1% ceiling. Applies
+  uniformly to mirrored AND manual `/buy` entries — the latter's fixed
+  `confidence: 0` naturally floors to the smallest (0.5%) size, a sensible
+  default for a human-triggered test entry.
+- **Partial-fill SELLs are no longer invisible** — `liveExitFlow.mts` gained
+  `reduceLivePositionQuantity`, called by both `liveExitMirror.mts` and
+  `manualSellCommand.mts` when an exit's `OrderStatusReport` says
+  `state: 'submitted'` with a genuine nonzero `filledQuantity` less than the
+  tracked quantity: credits only the partial proceeds and shrinks the
+  tracked quantity by that amount, keeping the remainder under normal
+  stop-loss/take-profit monitoring instead of vanishing from tracking
+  (mirrors the partial-fill BUY handling already fixed earlier tonight).
+  `outstandingExitSubmittedAt` deliberately stays set — a resting order for
+  the unfilled remainder is still real exposure at the broker.
+
+Tests: 3 new (`reduceLivePositionQuantity` unit tests plus its wiring in
+`liveExitMirror.test.ts`/`manualSellCommand.test.ts`), 1 new
+(confidence-scaled sizing in `liveEntryMirror.test.ts`), 2 updated
+(`revolutXBrokerAdapter.test.ts`'s failure-path tests now assert the
+diagnostic audit entry). Full gate green (tsc, 970 tests, build).
+
 ## Adversarial review of the live-money wiring (PRs #107-#110) — 3 real bugs fixed (2026-09-03)
 Real funds are now live (100.15€), so a full adversarial review (not a
 formality) was run against `liveEntryMirror.mts`/`liveExitMirror.mts`/

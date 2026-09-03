@@ -326,6 +326,56 @@ describe('mirrorApprovedEntries', () => {
     expect(third[0]!.outcome).toBe('submitted');
   });
 
+  it('scales risk by confidence when confidenceRisk is provided, instead of always sizing at the flat ceiling (found in review, 2026-09-03)', async () => {
+    function captureIntent(store: MemoryStore, confidenceRisk?: { floorPct: number; ceilingPct: number; confidenceFloor: number; maxConfidence: number }) {
+      let captured: OrderIntent | undefined;
+      const killSwitch = new PersistedKillSwitch(store);
+      const audit = new PersistedAuditLog(store);
+      const params = {
+        confirmationGate: fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' }),
+        brokerAdapter: {
+          name: 'fake-broker',
+          mode: 'live' as const,
+          async submit(intent: OrderIntent): Promise<OrderStatusReport> {
+            captured = intent;
+            return { intentId: intent.id, state: 'filled', filledQuantity: intent.quantity, avgFillPrice: intent.limitPrice, detail: 'ok' };
+          },
+          async cancel(): Promise<OrderStatusReport> {
+            throw new Error('not used');
+          },
+          async fetchPositions(): Promise<BrokerPosition[]> {
+            return [];
+          },
+        },
+        killSwitch,
+        audit,
+        verifySymbolExists: async () => true,
+      };
+      return { params, get intent() { return captured; } };
+    }
+
+    // Confidence pinned at the floor (40) — with confidenceRisk, this must
+    // size at floorPct (0.5%), half of the flat maxRiskPerTradePct (1%)
+    // ceiling it would otherwise always use regardless of signal strength.
+    const lowConfidence = opportunity({ confidence: 40 });
+
+    const withoutStore = new MemoryStore();
+    initLiveCash(withoutStore, 100);
+    const without = captureIntent(withoutStore);
+    await mirrorApprovedEntries(withoutStore, [lowConfidence], [XBT], { XBTEUR: 100 }, without.params, 1000);
+    const flatQuantity = without.intent!.quantity;
+
+    const withStore = new MemoryStore();
+    initLiveCash(withStore, 100);
+    const withScaling = captureIntent(withStore);
+    await mirrorApprovedEntries(withStore, [lowConfidence], [XBT], { XBTEUR: 100 }, withScaling.params, 1000, {
+      confidenceRisk: { floorPct: 0.5, ceilingPct: 1, confidenceFloor: 40, maxConfidence: 90 },
+    });
+    const scaledQuantity = withScaling.intent!.quantity;
+
+    expect(scaledQuantity).toBeCloseTo(flatQuantity / 2, 5);
+  });
+
   it('respects the kill switch — no live entry can bypass it', async () => {
     const store = new MemoryStore();
     initLiveCash(store, 100);

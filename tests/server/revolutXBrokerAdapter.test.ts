@@ -282,20 +282,27 @@ describe('RevolutXBrokerAdapter', () => {
     expect(verifiesAgainstRealRequest(calls[0]!)).toBe(true);
   });
 
-  it('returns no pairs when the configuration request fails, rather than reporting a stale/wrong list', async () => {
+  it('returns no pairs when the configuration request fails, rather than reporting a stale/wrong list, and audits the REAL HTTP status/body (found undiagnosable in review, 2026-09-03 — the first real go-live attempt silently refused every entry with no visible reason)', async () => {
     const { fetchFn } = fakeFetch([{ status: 500, body: { error: 'down' } }]);
     const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
 
     expect(await adapter.listTradablePairs()).toEqual([]);
+    const entry = audit.entries().find((e) => e.intentId === 'list-tradable-pairs');
+    expect(entry).toBeDefined();
+    expect(entry!.detail).toContain('HTTP 500');
+    expect(entry!.detail).toContain('down');
   });
 
-  it('returns no pairs (never throws) when the request itself throws, e.g. a timeout', async () => {
+  it('returns no pairs (never throws) when the request itself throws, e.g. a timeout, and audits the thrown error message', async () => {
     const throwingFetch = (async () => {
       throw new Error('network timeout');
     }) as typeof fetch;
     const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), throwingFetch);
 
     await expect(adapter.listTradablePairs()).resolves.toEqual([]);
+    const entry = audit.entries().find((e) => e.intentId === 'list-tradable-pairs');
+    expect(entry).toBeDefined();
+    expect(entry!.detail).toContain('network timeout');
   });
 
   it('ignores a malformed pairs response (e.g. an array) rather than reporting bogus symbols', async () => {

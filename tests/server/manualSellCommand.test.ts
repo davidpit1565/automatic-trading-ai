@@ -241,6 +241,42 @@ describe('checkManualSellRequests', () => {
     expect(second).toEqual([{ symbol: 'XBTEUR', outcome: 'no-open-position' }]);
   });
 
+  it('a PARTIALLY filled /sell shrinks the tracked quantity by what genuinely sold, keeping the remainder tracked (found asymmetric with partial-BUY handling in review, 2026-09-03)', async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const killSwitch = new PersistedKillSwitch(store);
+    recordLiveEntryFill(store, buyIntent(), filledReport(), 5000); // quantity 2
+
+    const exitReport: OrderStatusReport = {
+      intentId: 'entry-1:manual-sell',
+      state: 'submitted', // resting, only partially filled
+      filledQuantity: 0.8,
+      avgFillPrice: 95,
+      detail: 'partially filled',
+    };
+    const flowParams = {
+      confirmationGate: fakeConfirmationGate({ intentId: 'entry-1:manual-sell', approved: true, decidedAt: 1, decidedBy: 'david' }),
+      brokerAdapter: fakeBrokerAdapter(exitReport),
+      killSwitch,
+      audit,
+      verifySymbolExists: async () => true,
+    };
+
+    const outcomes = await checkManualSellRequests(
+      store,
+      { token: 'T', chatId: 'C', fetchFn: seedTelegram([{ update_id: 1, message: { text: '/sell XBTEUR', chat: { id: 'C' } } }]) },
+      fakeSource(95),
+      '1h',
+      flowParams,
+      9000,
+    );
+    expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: exitReport }]);
+    const positions = openLivePositions(store);
+    expect(positions).toHaveLength(1);
+    expect(positions[0]!.quantity).toBeCloseTo(1.2, 10);
+    expect(positions[0]!.outstandingExitSubmittedAt).toBeDefined();
+  });
+
   it('refuses a second /sell while the first is still a RESTING (not yet filled) order — never two real sell orders for one position', async () => {
     const store = new MemoryStore();
     const audit = new PersistedAuditLog(store);
