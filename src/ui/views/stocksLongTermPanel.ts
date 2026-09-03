@@ -42,7 +42,9 @@ export function renderStocksLongTermPanel(container: HTMLElement): ViewHandle {
     </section>
     <div class="stack stack-card" id="lt-waiting">${skeletonRowsHtml(2)}</div>
     <div id="lt-content" hidden>
-      <section class="hero">
+      <!-- hero-bare matches Home's balance treatment: same dominant-figure
+           pattern for this sub-screen. -->
+      <section class="hero hero-bare">
         <div class="hero-label">Long-term wallet <span class="tag-sim">SIMULATED</span></div>
         <div class="hero-value" id="lt-equity">—</div>
         <div class="hero-change" id="lt-change"></div>

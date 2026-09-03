@@ -16,7 +16,10 @@ const dollar = (v: number): string => `$${formatPrice(v)}`;
 
 export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
   container.innerHTML = `
-    <section class="hero">
+    <!-- hero-bare matches Home's balance treatment (homeView.ts): this is
+         the identical dominant-balance-of-the-screen pattern, so it gets
+         the same bare, un-boxed, giant-scale treatment. -->
+    <section class="hero hero-bare">
       <div class="hero-label">Portfolio value <span class="tag-sim">SIMULATED</span></div>
       <div class="hero-value" id="stocks-ov-equity">—</div>
       <div class="hero-change" id="stocks-ov-change"></div>
