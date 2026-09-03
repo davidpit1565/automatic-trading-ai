@@ -393,6 +393,9 @@ describe('checkManualSellRequests', () => {
 
   it('keeps a not-yet-approved manual sell queued and resumes under the SAME intent id on a later cycle, instead of losing it (the bug this fix addresses)', async () => {
     vi.useFakeTimers();
+    // Pinned so cycle 1's confirmation token (which embeds Date.now() as
+    // sentAt) is predictable for cycle 2's callback_data fixture below.
+    vi.setSystemTime(0);
     try {
       const store = new MemoryStore();
       const audit = new PersistedAuditLog(store);
@@ -441,7 +444,7 @@ describe('checkManualSellRequests', () => {
           result: [
             {
               update_id: 10,
-              callback_query: { id: 'cb1', data: 'confirm:approve:entry-1:manual-sell', message: { chat: { id: 'C' } } },
+              callback_query: { id: 'cb1', data: 'confirm:approve:0:entry-1:manual-sell', message: { chat: { id: 'C' } } },
             },
           ],
         },

@@ -1,5 +1,41 @@
 # PROJECT_STATE
 
+## CRITICAL: a trade could be "approved" without the human ever tapping anything (2026-09-03)
+David reported the exact violation of this project's core safety rule: he
+got "✅ אישרת — שולח לבורסה..." (you approved — sending to exchange) for a
+`/buy XBTEUR` he explicitly did NOT tap approve on. Root cause found and
+confirmed against the live committed state:
+
+`intent.id` for a live entry is deterministic per symbol
+(`live-entry:${symbol}` — the exact same string every single time that
+symbol is requested), and the Telegram inline button `callback_data` was
+built directly from it (`confirm:approve:live-entry:XBTEUR`), with the
+SAME value on every confirmation request for that symbol, forever. A tap
+that arrives late (e.g. after its own message already auto-expired, or a
+duplicate/retried Telegram delivery) becomes "unclaimed" and sits in the
+persisted unclaimed-callbacks store (`telegram-unclaimed-callbacks`,
+capped at 200) — where ANY future confirmation request for the same
+symbol, having the identical expected `callback_data`, matches it as if it
+were a fresh tap on the CURRENT message. Checked the live state directly:
+`live:telegram-unclaimed-callbacks` currently holds 3 stale
+`confirm:approve:live-entry:XBTEUR` entries and 1
+`confirm:reject:live-entry:XBTEUR` — exactly the poisoned leftovers from
+tonight's repeated `/buy XBTEUR` attempts.
+
+Fixed in `TelegramConfirmationGate`: `callback_data` now embeds the
+request's own `sentAt` (`confirm:approve:<sentAt>:<intent.id>`), making it
+unique per confirmation instance, not just per symbol — a stale callback
+from any earlier request can structurally never match a later one again.
+The 4 already-stale entries in production state are automatically inert
+under this fix (they'll simply never match anything going forward); no
+state edit was needed.
+
+Tests: a new regression reproducing the exact incident (a stale
+old-format unclaimed callback present before a brand-new request is
+created, asserting it does NOT resolve to an approval), plus every
+existing fixture updated to the new token format. Full gate green (tsc
+server+app, 992 tests, build).
+
 ## Revolut X rejects ':' in client_order_id — found from a live rejection (2026-09-03)
 Right after the kill-switch-keyboard/education-tips PR shipped, David's next
 real `/buy XBTEUR` got approved and actually reached the broker for the

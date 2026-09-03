@@ -185,11 +185,22 @@ export class TelegramConfirmationGate implements ConfirmationGate {
 
     if (!pending) {
       const sentAt = Date.now();
+      // callback_data MUST be unique per confirmation instance, not just per
+      // symbol/intent.id — a real incident (2026-09-03): intent.id for a
+      // live entry is deterministic per symbol ('live-entry:XBTEUR', the
+      // same string every single time that symbol is requested), so a stale
+      // tap on an EARLIER, already-expired confirmation for the same symbol
+      // sat in the unclaimed-callbacks store and was then matched by a
+      // brand-new, never-tapped confirmation — auto-"approving" a trade the
+      // human never touched. Embedding this request's own sentAt makes each
+      // button's data one-time-only: an old callback can never match a
+      // different pending record again.
+      const token = `${sentAt}:${intent.id}`;
       const result = await sendTelegramMessage(buildConfirmationMessage(intent, sentAt + MAX_PENDING_MS), this.telegram, {
         inline_keyboard: [
           [
-            { text: '✅ אשר', callback_data: `${APPROVE_PREFIX}${intent.id}` },
-            { text: '❌ דחה', callback_data: `${REJECT_PREFIX}${intent.id}` },
+            { text: '✅ אשר', callback_data: `${APPROVE_PREFIX}${token}` },
+            { text: '❌ דחה', callback_data: `${REJECT_PREFIX}${token}` },
           ],
         ],
       });
@@ -225,8 +236,9 @@ export class TelegramConfirmationGate implements ConfirmationGate {
       // whatever it doesn't use, in every branch below, or the same bug
       // returns in a new shape.
       const polled = await pollAllTelegramUpdates(this.store, this.telegram);
+      const token = `${pending.sentAt}:${intent.id}`;
       const matchIndex = polled.callbacks.findIndex(
-        (u) => u.data === `${APPROVE_PREFIX}${intent.id}` || u.data === `${REJECT_PREFIX}${intent.id}`,
+        (u) => u.data === `${APPROVE_PREFIX}${token}` || u.data === `${REJECT_PREFIX}${token}`,
       );
 
       if (matchIndex === -1) {
@@ -241,7 +253,7 @@ export class TelegramConfirmationGate implements ConfirmationGate {
         callbacks: polled.callbacks.filter((_, i) => i !== matchIndex),
       });
       await answerCallbackQuery(match.id, this.telegram);
-      const approved = match.data === `${APPROVE_PREFIX}${intent.id}`;
+      const approved = match.data === `${APPROVE_PREFIX}${token}`;
       delete pendingAll[intent.id];
       this.store.set(STORAGE_KEY, pendingAll);
       const decision: ConfirmationDecision = {
