@@ -55,4 +55,15 @@ describe('FileStore', () => {
     const fresh = new FileStore(path);
     expect(fresh.keys()).toEqual([]);
   });
+
+  it("tracks dirty keys set or removed by THIS instance — lets a concurrent-run push race merge at the key level instead of discarding a whole-file diff (found 2026-09-03)", () => {
+    new FileStore(path).set('untouched', 'from an earlier instance');
+    const store = new FileStore(path);
+    expect(store.dirtyKeys()).toEqual([]); // reading the pre-existing key alone doesn't dirty it
+    store.set('a', 1);
+    store.set('b', 2);
+    store.remove('untouched');
+    store.set('a', 3); // re-setting an already-dirty key doesn't duplicate it
+    expect(store.dirtyKeys().sort()).toEqual(['a', 'b', 'untouched']);
+  });
 });
