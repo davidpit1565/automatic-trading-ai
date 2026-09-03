@@ -116,6 +116,25 @@ export function mountEquityChartPanel(
     return pts;
   }
 
+  /** Range/mode switches used to hard-snap with no transition at all — the
+   * coin-detail market chart already fades out/in on the same kind of
+   * switch (`marketsView.ts`), so this repaints the same way for
+   * consistency: fade the current chart out, repaint, fade the new one in. */
+  function repaintWithFade(): void {
+    const chart = container.querySelector<HTMLElement>('.detail-chart');
+    chart?.classList.add('fade-out');
+    setTimeout(() => {
+      paint();
+      // `paint()` replaces the container's innerHTML, detaching `chart`
+      // above — re-query the freshly-rendered node before fading it in.
+      const freshChart = container.querySelector<HTMLElement>('.detail-chart');
+      if (freshChart) {
+        freshChart.classList.add('fade-in');
+        setTimeout(() => freshChart.classList.remove('fade-in'), 300);
+      }
+    }, 200);
+  }
+
   function paint(): void {
     if (history.length < 2) {
       container.innerHTML =
@@ -170,12 +189,12 @@ export function mountEquityChartPanel(
       <div class="detail-chart"><div class="pchart-wrap">${chart}<div class="pchart-tip" hidden></div></div></div>`;
 
     container.querySelectorAll<HTMLButtonElement>('.range-btn').forEach((b) => {
-      b.addEventListener('click', () => { rangeKey = b.dataset['range']!; paint(); });
+      b.addEventListener('click', () => { rangeKey = b.dataset['range']!; repaintWithFade(); });
     });
     container.querySelectorAll<HTMLButtonElement>('.ctoggle-btn').forEach((b) => {
       b.addEventListener('click', () => {
         const m = b.dataset['mode'];
-        if (m === 'candle' || m === 'line') { chartMode = m; paint(); }
+        if (m === 'candle' || m === 'line') { chartMode = m; repaintWithFade(); }
       });
     });
     wireCrosshair(geo, mode, candles, range);

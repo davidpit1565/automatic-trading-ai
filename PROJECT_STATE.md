@@ -1,5 +1,41 @@
 # PROJECT_STATE
 
+## Chart range/mode switches hard-snapped instead of fading (2026-09-03)
+Continuing David's chart-polish request. `src/ui/equityChartPanel.ts` +
+`src/ui/views/marketsView.ts` only.
+
+The coin-detail market chart already fades out/in on a range or Candles/Line
+switch (`.detail-chart.fade-out`/`.fade-in`, wired in `marketsView.ts`) — but
+two real gaps meant "animation smoothness on data updates" wasn't actually
+delivered anywhere it mattered most:
+
+1. **The fade-in never fired, even on the market chart.** Both handlers
+   queried `.detail-chart` once, added `fade-out`, then after the repaint
+   (`paint()` replaces `detailView.innerHTML`) reused that SAME element
+   reference to add `fade-in` — but the repaint had already detached it from
+   the document. The class landed on an orphaned node with zero visible
+   effect, so every range/mode switch actually just faded OUT then hard-
+   snapped back in, never faded in. Fixed by re-querying `.detail-chart`
+   from `detailView` after `paint()` resolves, before adding `fade-in`.
+   Confirmed via `getComputedStyle` sampling over the transition window:
+   opacity now climbs 0 → 0.46 → 0.85 → 0.97 → 1 instead of jumping straight
+   to 1 the instant the repaint lands.
+2. **The equity chart (History/Profit/the new Real-money card — all
+   `equityChartPanel.ts`) had no transition at all.** Its range-bar and
+   Candles/Line toggle just called `paint()` directly, an instant hard cut on
+   every tap — on the exact screens David actually opens most. Added a
+   `repaintWithFade()` wrapper (same 200ms fade-out / 300ms fade-in timing as
+   the market chart, and the same re-query-after-repaint fix from above) and
+   wired it to both button groups; the very first render (`setHistory`'s
+   initial `paint()`) is untouched, so there's no needless fade on first
+   load.
+
+Verified: `getComputedStyle` sampling of `.detail-chart` opacity across a
+range switch shows the fade curve above, not a snap. Full gate green: `tsc`,
+`vitest run` (1014 tests, including the existing `waitFor`-based
+marketsView range/mode-switch tests, all passing unchanged since they
+already awaited the repaint), `npm run build`.
+
 ## Chart polish: leftover pre-true-black pill glow, and a misleading EMA line on the equity chart (2026-09-03)
 Continuing David's "keep improving the charts" request, scoped to `charts.ts`
 + `equityChartPanel.ts` + `styles.css` only. Two real, concrete defects found
