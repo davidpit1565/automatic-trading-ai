@@ -1622,7 +1622,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788440369558,
+    "at": 1788440684729,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1638,10 +1638,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1786648401003,
-      "equity": 9568.52
-    },
     {
       "at": 1786648709036,
       "equity": 9568.52
@@ -21637,6 +21633,10 @@
     {
       "at": 1788440369558,
       "equity": 10221.53
+    },
+    {
+      "at": 1788440684729,
+      "equity": 10219.06
     }
   ],
   "trade-journal": [
@@ -22861,7 +22861,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -17.71% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -17.63% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -22959,13 +22959,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1788440369558,
+    "at": 1788440684729,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10596.425954422219,
-        "returnPct": 5.964259544222187,
+        "equity": 10593.870063330041,
+        "returnPct": 5.938700633300414,
         "trades": 25,
         "winRatePct": 60,
         "profitFactor": 1.9658779582181563,
@@ -22975,8 +22975,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10596.425954422219,
-        "returnPct": 5.964259544222187,
+        "equity": 10593.870063330041,
+        "returnPct": 5.938700633300414,
         "trades": 25,
         "winRatePct": 60,
         "profitFactor": 1.9658779582181563,
@@ -22986,8 +22986,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10596.425954422219,
-        "returnPct": 5.964259544222187,
+        "equity": 10593.870063330041,
+        "returnPct": 5.938700633300414,
         "trades": 25,
         "winRatePct": 60,
         "profitFactor": 1.9658779582181563,
@@ -23008,8 +23008,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9328.540701800443,
-        "returnPct": -6.714592981995575,
+        "equity": 9326.855727321936,
+        "returnPct": -6.731442726780642,
         "trades": 65,
         "winRatePct": 38.46153846153847,
         "profitFactor": 0.5745074535618775,
@@ -23019,8 +23019,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9795.859770272242,
-        "returnPct": -2.041402297277582,
+        "equity": 9789.519059254071,
+        "returnPct": -2.104809407459288,
         "trades": 140,
         "winRatePct": 39.285714285714285,
         "profitFactor": 1.1335549974332315,
@@ -23030,8 +23030,8 @@
       {
         "key": "whale-flow",
         "label": "Refuses entries during heavy net selling by large traders",
-        "equity": 10710.872757872987,
-        "returnPct": 7.108727578729868,
+        "equity": 10708.289261853759,
+        "returnPct": 7.082892618537589,
         "trades": 16,
         "winRatePct": 68.75,
         "profitFactor": 2.6304126705653164,
@@ -23052,8 +23052,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10404.634606718286,
-        "returnPct": 4.046346067182858,
+        "equity": 10402.124976299212,
+        "returnPct": 4.02124976299212,
         "trades": 13,
         "winRatePct": 61.53846153846154,
         "profitFactor": 1.9104569916599419,
@@ -40444,7 +40444,7 @@
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
-  "daily-summary": "2026-09-02",
+  "daily-summary": "2026-09-03",
   "shadow:long-term:shadow-started-at": 1788199492276,
   "shadow:long-term:portfolio-engine": {
     "cash": 10000,
@@ -40474,7 +40474,7 @@
   },
   "longterm-shadow-last-run-day": "2026-09-03",
   "live:live-cash-eur": 50.05,
-  "live:telegram-shared-update-offset": 447904549,
+  "live:telegram-shared-update-offset": 447904551,
   "live:telegram-unclaimed-messages": [
     {
       "updateId": 447904465,
@@ -40722,6 +40722,27 @@
       "event": "rejected",
       "mode": "live",
       "detail": "Revolut X rejected the order: HTTP 400 — {\"message\":\"Estimated amount for order is too small: QuoteAmount[amount=0.0214798852819070080]\",\"error_id\":\"f239f1dc-2e28-4692-ba2e-fd2506b9785c\",\"timestamp\":1788438372053}"
+    },
+    {
+      "timestamp": 1788440693374,
+      "intentId": "live-entry:XBTEUR",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1788440703226,
+      "intentId": "live-entry:XBTEUR",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram"
+    },
+    {
+      "timestamp": 1788440703783,
+      "intentId": "live-entry:XBTEUR",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "Revolut X response missing venue_order_id"
     }
   ],
   "live:confirmation-gate-pending": {},
