@@ -807,12 +807,17 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
           setTimeout(() => {
             rangeKey = b.dataset['range']!;
             savedRangeKey = rangeKey;
-            void paint();
-            if (chart) {
-              chart.classList.remove('fade-out');
-              chart.classList.add('fade-in');
-              setTimeout(() => chart.classList.remove('fade-in'), 300);
-            }
+            // `paint()` replaces `detailView.innerHTML`, so `chart` above is
+            // detached by the time it resolves — re-query the fresh node,
+            // otherwise fade-in silently no-ops on an orphaned element and
+            // the chart just hard-snaps back in after the fade-out.
+            void paint().then(() => {
+              const freshChart = detailView.querySelector<HTMLElement>('.detail-chart');
+              if (freshChart) {
+                freshChart.classList.add('fade-in');
+                setTimeout(() => freshChart.classList.remove('fade-in'), 300);
+              }
+            });
           }, 200);
         });
       });
@@ -822,12 +827,15 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
           if (chart) chart.classList.add('fade-out');
           setTimeout(() => {
             const mode = b.dataset['mode'];
-            if (mode === 'candle' || mode === 'line') { chartMode = mode; savedChartMode = mode; void paint(); }
-            if (chart) {
-              chart.classList.remove('fade-out');
-              chart.classList.add('fade-in');
-              setTimeout(() => chart.classList.remove('fade-in'), 300);
-            }
+            if (mode === 'candle' || mode === 'line') { chartMode = mode; savedChartMode = mode; }
+            // Same stale-node fix as the range-btn handler above.
+            void paint().then(() => {
+              const freshChart = detailView.querySelector<HTMLElement>('.detail-chart');
+              if (freshChart) {
+                freshChart.classList.add('fade-in');
+                setTimeout(() => freshChart.classList.remove('fade-in'), 300);
+              }
+            });
           }, 200);
         });
       });
