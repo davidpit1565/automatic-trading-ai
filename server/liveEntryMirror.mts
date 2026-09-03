@@ -187,7 +187,20 @@ export async function mirrorApprovedEntries(
     const result = await runLiveOrderFlow({ ...flowParams, intent });
     outcomes.push({ symbol, ...result });
     if (result.outcome !== 'pending') delete pending[symbol];
-    if (result.outcome === 'submitted') {
+    // Only a report that represents REAL, still-live exposure (a genuine
+    // fill, partial or full, or a resting order still open at the broker)
+    // should block future attempts for this symbol — a broker-level
+    // 'rejected'/'cancelled' report is a real 'submitted' outcome (it DID
+    // reach runLiveOrderFlow's terminal broker-call branch) but leaves
+    // NOTHING open. Found 2026-09-03: this symbol got stuck "outstanding"
+    // forever after Revolut X rejected an approved order (HTTP 400) — no
+    // position was ever opened, so `clearOutstandingEntry` (only called
+    // when a position is later confirmed closed) could never run, and
+    // every subsequent /buy for the same symbol was silently swallowed by
+    // the `outstanding.has(...)` guard at the top of this function with no
+    // Telegram response at all.
+    const hasRealExposure = result.outcome === 'submitted' && result.report.state !== 'rejected' && result.report.state !== 'cancelled';
+    if (hasRealExposure) {
       outstanding.add(symbol);
       writeOutstanding(store, outstanding);
       // A genuinely (fully or partially) filled buy must actually be

@@ -326,6 +326,45 @@ describe('mirrorApprovedEntries', () => {
     expect(third[0]!.outcome).toBe('submitted');
   });
 
+  it('does NOT block a later attempt when the broker REJECTED the order (found 2026-09-03: a rejected order got stuck "outstanding" forever, silently swallowing every future /buy for the same symbol since no position was ever opened to later clear it)', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const rejectedReport: OrderStatusReport = {
+      intentId: 'live-entry:XBTEUR',
+      state: 'rejected',
+      filledQuantity: 0,
+      avgFillPrice: null,
+      detail: 'Revolut X rejected the order: HTTP 400',
+    };
+    const first = await mirrorApprovedEntries(
+      store,
+      [opportunity()],
+      [XBT],
+      { XBTEUR: 100 },
+      flowParams(rejectedReport, killSwitch, audit),
+      1000,
+    );
+    expect(first).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: rejectedReport }]);
+
+    // No `clearOutstandingEntry` call anywhere — a genuinely different fix
+    // must have avoided marking it outstanding in the first place.
+    const second = await mirrorApprovedEntries(
+      store,
+      [opportunity()],
+      [XBT],
+      { XBTEUR: 100 },
+      flowParams(
+        { intentId: 'live-entry:XBTEUR', state: 'filled', filledQuantity: 0.01, avgFillPrice: 100, detail: 'ok' },
+        killSwitch,
+        audit,
+      ),
+      1500,
+    );
+    expect(second[0]!.outcome).toBe('submitted');
+  });
+
   it('scales risk by confidence when confidenceRisk is provided, instead of always sizing at the flat ceiling (found in review, 2026-09-03)', async () => {
     function captureIntent(store: MemoryStore, confidenceRisk?: { floorPct: number; ceilingPct: number; confidenceFloor: number; maxConfidence: number }) {
       let captured: OrderIntent | undefined;

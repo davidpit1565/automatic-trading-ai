@@ -96,6 +96,12 @@ function buildConfirmationMessage(intent: OrderIntent, deadlineMs: number): stri
     `🔔 מחכה לאישור שלך — עסקה בכסף אמיתי\n\n` +
     `קנייה ${intent.symbol}\n` +
     `כמות: ${intent.quantity} · מחיר: ${intent.limitPrice}\n` +
+    // David asked (2026-09-03) to see the EUR value and % of the wallet
+    // right in the message, not just implied by the risk numbers below —
+    // a.positionValue is already the risk engine's own EUR sizing, and
+    // a.portfolioExposure is already this trade's share of total equity
+    // (there being no other open positions right now, it IS the wallet %).
+    `שווי העסקה: €${a.positionValue.toFixed(2)} (${a.portfolioExposure.toFixed(1)}% מהארנק)\n` +
     `סטופ: ${intent.stopLoss} · יעד: ${intent.takeProfit}\n` +
     `סיכון: ${a.riskPercentage.toFixed(2)}% מהתיק (${a.riskAmount.toFixed(2)}) · ` +
     `יחס סיכוי/סיכון ${a.rewardRiskRatio.toFixed(1)}:1\n` +

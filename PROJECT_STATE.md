@@ -1,5 +1,34 @@
 # PROJECT_STATE
 
+## Found why every /buy after the first got silently swallowed (2026-09-03)
+David reported still getting no response at all to repeated `/buy XBTEUR`
+sends even after the previous fixes landed. Root cause: the very first
+approved-and-broker-rejected order (HTTP 400, earlier tonight) marked
+`XBTEUR` "outstanding" in `mirrorApprovedEntries` — and `outstanding` is only
+ever cleared by `clearOutstandingEntry`, called when a position is later
+confirmed CLOSED. Since that order was rejected, no position was ever
+opened, so nothing could ever clear the flag — every subsequent `/buy`
+(manual or mirrored) hit the `outstanding.has(symbol)` guard at the top of
+the function and was silently dropped as `'entry-already-outstanding'` with
+zero Telegram response, indistinguishable from the bot being broken.
+
+Fixed: only a report representing REAL still-live exposure (a genuine fill,
+partial or full, or a resting order still open at the broker) marks a
+symbol outstanding now — `state === 'rejected'`/`'cancelled'` no longer
+does, since nothing is actually open. Also manually cleared the live
+account's already-stuck `XBTEUR` outstanding flag directly in the committed
+state (verified first: no open position, cash untouched — purely a bug
+artifact, safe to clear) since the code fix alone can't undo already-corrupt
+persisted state.
+
+Also, David asked to see the trade's EUR value and % of the wallet directly
+in the confirmation message (he's traveling and wants the numbers spelled
+out, not implied by the risk-sizing line) — added `שווי העסקה: €X (Y%
+מהארנק)` using the risk engine's own `positionValue`/`portfolioExposure`.
+
+Tests: a new regression (`liveEntryMirror.test.ts`) proving a rejected order
+does NOT block the next attempt. Full gate green (tsc, 982 tests, build).
+
 ## Telegram now confirms the human's tap and the final trade outcome (2026-09-03)
 David correctly reported the approve/reject buttons felt broken — tapping
 "אשר" registered fine server-side (confirmed by the audit log), but nothing
