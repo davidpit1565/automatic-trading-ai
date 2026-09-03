@@ -1,5 +1,37 @@
 # PROJECT_STATE
 
+## A real FILLED order was reported to David as rejected (2026-09-03)
+He ran `/buy XBTEUR` from Telegram, approved it, and Revolut X actually
+FILLED it (confirmed directly in the Revolut X app: Limit Buy BTC-EUR,
++0.00014803 BTC, €10.01, status Filled) — but the bot's own message said
+"❌ הבורסה דחתה את ההזמנה — Revolut X response missing venue_order_id".
+Root cause: `readVenueOrderId` (`revolutXBrokerAdapter.mts`) only ever
+accepted Revolut X's documented placement-response shape
+(`{data: [{venue_order_id, ...}]}`, verified against their own docs this
+session) — whatever the real response body was for this fill didn't parse
+against that shape, and the code discarded the raw body before reporting
+the failure, so there's no way to know exactly what shape it actually was.
+
+Fixed two things: `readVenueOrderId` now also accepts `data` as a bare
+object (the same single-resource convention `readOrderDetail` already uses
+for the sibling GET-order-detail endpoint) as a defensive fallback,
+without weakening the documented array case, which is still tried first;
+and the failure path now includes the raw response body in the audit
+detail (matching the sibling `!placed.ok` branch, which already did this)
+so a repeat is diagnosable instead of silently discarded.
+
+Real-world consequence checked: `live-cash-eur` self-corrected anyway on
+the next cycle (it always reconciles against the broker's real balance,
+regardless of what this order was reported as), but `live-open-positions`
+never recorded this fill, so the bot had no stop-loss/take-profit tracking
+on it — the exact position-level risk-management gap capital protection
+exists to prevent. Flagged to David directly rather than guessing whether
+to auto-backfill it with a fabricated stop-loss.
+
+Tests: a bare-object `data` response now still resolves to 'filled'; an
+unparseable response's rejection detail contains the raw JSON. Full gate
+green (tsc, 1014 tests, build).
+
 ## Track the untracked BTC holding + chart it; fix the bottom-nav jitter (2026-09-03)
 Two separate David reports:
 

@@ -145,6 +145,36 @@ describe('RevolutXBrokerAdapter', () => {
     expect(audit.entries().at(-1)).toMatchObject({ intentId: 'BTC-USD:1:0', event: 'filled' });
   });
 
+  it('also accepts a bare object under data (not just the documented array) when reading venue_order_id back', async () => {
+    // Real incident (2026-09-03): an order Revolut X actually FILLED (confirmed
+    // directly in the Revolut X app) was reported to David as rejected because
+    // this only ever accepted the array shape their docs show. Defensive
+    // fallback so a real-world response shape drift doesn't silently drop a
+    // genuine fill again.
+    const { fetchFn } = fakeFetch([
+      { status: 200, body: { data: { venue_order_id: 'venue-5', client_order_id: 'x', state: 'new' } } },
+      { status: 200, body: { data: { status: 'filled', filled_quantity: '2', average_fill_price: '99.5' } } },
+    ]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    const report = await adapter.submit(intent());
+
+    expect(report.state).toBe('filled');
+    expect(audit.entries().at(-1)).toMatchObject({ event: 'filled' });
+  });
+
+  it('includes the raw response body when venue_order_id truly cannot be found — so a repeat is diagnosable, not silently discarded', async () => {
+    const { fetchFn } = fakeFetch([{ status: 200, body: { data: [] } }]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    const report = await adapter.submit(intent());
+
+    expect(report.state).toBe('rejected');
+    expect(report.detail).toContain('missing venue_order_id');
+    expect(report.detail).toContain('raw response');
+    expect(report.detail).toContain('"data":[]');
+  });
+
   it("sends a real UUID as client_order_id, since Revolut X rejects anything else — real HTTP 400 twice in production, 2026-09-03: first \"Invalid client order ID: 'live-entry:XBTEUR'\", then still \"Invalid client order ID: 'live-entry-XBTEUR'\" after merely stripping the ':'", async () => {
     const { fetchFn, calls } = fakeFetch([
       { status: 200, body: { data: [{ venue_order_id: 'venue-9', client_order_id: 'x', state: 'new' }] } },
