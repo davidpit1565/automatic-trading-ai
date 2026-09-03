@@ -1,5 +1,18 @@
 # PROJECT_STATE
 
+## Same push-race fix applied to the stocks runner (2026-09-03)
+`server/stocksRunner.mts` deliberately duplicates the crypto runner's
+`persistStateToGit` (full isolation by design — see this file's header),
+so it carried the exact same `git rebase -X theirs origin/main`
+whole-file-discard bug just fixed for crypto (see the entry below).
+Applied the identical fix: `FileStore.dirtyKeys()` overlaid onto
+origin's latest file on a push race, instead of a git-level rebase that
+can silently drop this run's own changes. Full gate green (tsc, 1032
+tests, build) — no new tests needed here specifically (the underlying
+`FileStore.dirtyKeys()` behavior is already covered; this runner's
+`persistStateToGit`, like crypto's, shells out to git and isn't unit-
+tested directly).
+
 ## Overlapping autopilot runs could silently discard each other's state on a push race (2026-09-03)
 David flagged a screenshot showing the SAME paper trade close ("מכירה
 ADAEUR... הגיע ליעד הרווח") alerted TWICE in Telegram, 60 seconds apart —

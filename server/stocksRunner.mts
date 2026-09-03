@@ -24,6 +24,8 @@
  */
 
 import { execSync } from 'node:child_process';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AlpacaStockSource, CURATED_STOCK_INSTRUMENTS, BROWSABLE_STOCK_INSTRUMENTS } from '../src/core/data/alpacaStocks';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
@@ -85,20 +87,30 @@ const STATE_COMMIT_EVERY = Math.max(0, Number(process.env['STOCKS_STATE_COMMIT_E
  * imported to keep the two sides fully isolated (see this file's header):
  * a bug in one's git-persistence helper must never be able to reach the
  * other's. Best-effort; only runs inside GitHub Actions.
+ *
+ * On a push race, merges at the JSON KEY level (origin's file as the base,
+ * this run's own dirty keys — `FileStore.dirtyKeys()` — overlaid on top)
+ * rather than `git rebase -X theirs`, which resolves a whole-file conflict
+ * by discarding ALL of this run's changes wholesale. Same real incident and
+ * fix as the crypto runner's own helper (2026-09-03, PROJECT_STATE.md) —
+ * applied here too since this file duplicates the same vulnerable shape.
  */
-function persistStateToGit(label: string): void {
+function persistStateToGit(store: FileStore, label: string): void {
   if (process.env['GITHUB_ACTIONS'] !== 'true') return;
   const run = (cmd: string): string => execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const hasStagedChanges = (): boolean => {
+    try {
+      run('git diff --staged --quiet');
+      return false; // exit 0 = no differences
+    } catch {
+      return true; // non-zero = staged changes exist
+    }
+  };
   try {
     run('git config user.name "github-actions[bot]"');
     run('git config user.email "github-actions[bot]@users.noreply.github.com"');
     run(`git add ${STATE_PATH}`);
-    try {
-      run('git diff --staged --quiet');
-      return; // exits 0 = no changes
-    } catch {
-      /* non-zero = there are staged changes; proceed to commit */
-    }
+    if (!hasStagedChanges()) return;
     run(`git commit -m "Stocks autopilot state (mid-run ${label})"`);
     for (let attempt = 1; attempt <= 5; attempt++) {
       try {
@@ -108,13 +120,18 @@ function persistStateToGit(label: string): void {
       } catch {
         try {
           run('git fetch origin main');
-          run('git rebase -X theirs origin/main');
-        } catch {
-          try {
-            run('git rebase --abort');
-          } catch {
-            /* nothing to abort */
-          }
+          const origin = JSON.parse(run(`git show origin/main:${STATE_PATH}`)) as Record<string, unknown>;
+          for (const key of store.dirtyKeys()) origin[key] = store.get(key);
+          mkdirSync(dirname(STATE_PATH), { recursive: true });
+          writeFileSync(STATE_PATH, JSON.stringify(origin, null, 2));
+          run('git reset --soft origin/main');
+          run(`git add ${STATE_PATH}`);
+          if (hasStagedChanges()) run(`git commit -m "Stocks autopilot state (mid-run ${label})"`);
+        } catch (mergeFailure) {
+          console.error(
+            'Stocks state merge-on-conflict failed:',
+            mergeFailure instanceof Error ? mergeFailure.message : mergeFailure,
+          );
         }
       }
     }
@@ -544,7 +561,7 @@ async function main(): Promise<void> {
     const isLast = i === LOOP_CYCLES - 1;
     const periodic = STATE_COMMIT_EVERY > 0 && (i + 1) % STATE_COMMIT_EVERY === 0;
     if (!isLast && (traded || periodic)) {
-      persistStateToGit(`cycle ${i + 1}/${LOOP_CYCLES}`);
+      persistStateToGit(store, `cycle ${i + 1}/${LOOP_CYCLES}`);
     }
   }
 }
