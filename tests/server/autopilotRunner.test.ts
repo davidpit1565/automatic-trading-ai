@@ -23,10 +23,12 @@ import {
   maybeSendMoveAlerts,
   maybeSendPeriodicReports,
   maybeSendSummaries,
+  readLiveSummary,
   readStocksSummary,
   runLiveMirror,
 } from '../../server/autopilotRunner.mts';
 import type { LiveEntryOutcome } from '../../server/liveEntryMirror.mts';
+import { PrefixedStore } from '../../src/core/data/prefixedStore';
 import { PortfolioEngine } from '../../src/core/position/portfolioEngine';
 import { PositionEngine } from '../../src/core/position/positionEngine';
 import { TradeJournal } from '../../src/core/position/tradeJournal';
@@ -227,6 +229,59 @@ describe('readStocksSummary (folds the isolated stocks side into the crypto dige
 
     const summary = readStocksSummary(Date.now());
     expect(summary?.benchmark ?? null).toBeNull();
+  });
+});
+
+describe('readLiveSummary (the real Revolut X account folded into the daily digest, 2026-09-03)', () => {
+  it('returns null when the live ledger has never been initialized (real money never enabled)', () => {
+    const liveStore = new PrefixedStore(store, 'live');
+    expect(readLiveSummary(liveStore, {})).toBeNull();
+  });
+
+  it('reports cash-only equity when there are no tracked positions and no external BTC', () => {
+    const liveStore = new PrefixedStore(store, 'live');
+    liveStore.set('live-cash-eur', 40.04);
+    const summary = readLiveSummary(liveStore, {});
+    expect(summary).not.toBeNull();
+    expect(summary!.cash).toBe(40.04);
+    expect(summary!.equity).toBe(40.04);
+    expect(summary!.positions).toEqual([]);
+    expect(summary!.externalBtcValue).toBe(0);
+    expect(summary!.killSwitchEngaged).toBe(false);
+  });
+
+  it('adds the untracked external BTC holding, valued at the current XBTEUR price, to equity — never affecting sizing separately', () => {
+    const liveStore = new PrefixedStore(store, 'live');
+    liveStore.set('live-cash-eur', 40.04);
+    liveStore.set('live-external-btc-qty', 0.00089742);
+    const summary = readLiveSummary(liveStore, { XBTEUR: 67_514 });
+    // 40.04 + 0.00089742 * 67,514 ≈ 100.6.
+    expect(summary!.externalBtcValue).toBeCloseTo(60.58, 1);
+    expect(summary!.equity).toBeCloseTo(100.62, 1);
+  });
+
+  it('reports a bot-tracked open position, marked to the current price', () => {
+    const liveStore = new PrefixedStore(store, 'live');
+    liveStore.set('live-cash-eur', 30);
+    liveStore.set('live-open-positions', {
+      'live-entry:XBTEUR': {
+        id: 'live-entry:XBTEUR', symbol: 'BTC/EUR', quantity: 0.001, entryPrice: 90_000,
+        stopLoss: 85_000, takeProfit: 100_000, highestPrice: 90_000, openedAt: 0,
+        entryAssessment: { asset: 'XBTEUR' },
+      },
+    });
+    const summary = readLiveSummary(liveStore, { XBTEUR: 100_000 });
+    expect(summary!.positions).toEqual([{ symbol: 'XBTEUR', marketValue: 100, pctOfEquity: expect.any(Number) }]);
+    expect(summary!.equity).toBe(130); // 30 cash + 0.001 * 100,000
+  });
+
+  it('reports whether the kill switch is engaged, and why', () => {
+    const liveStore = new PrefixedStore(store, 'live');
+    liveStore.set('live-cash-eur', 10);
+    liveStore.set('kill-switch', { engaged: true, reason: 'manual pause' });
+    const summary = readLiveSummary(liveStore, {});
+    expect(summary!.killSwitchEngaged).toBe(true);
+    expect(summary!.killSwitchReason).toBe('manual pause');
   });
 });
 

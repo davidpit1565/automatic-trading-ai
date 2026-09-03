@@ -233,6 +233,56 @@ describe('buildDailySummary', () => {
     expect(msg).not.toContain('+1.00%');
   });
 
+  // David pointed out (2026-09-03) the digest never mentioned the real
+  // Revolut X account at all, only the simulated crypto/stocks ones.
+  it('omits the real-account section entirely when no live data is given', () => {
+    const msg = buildDailySummary({ ...base, positions: [] });
+    expect(msg).not.toContain('חשבון אמיתי');
+  });
+
+  it('appends the real Revolut X account as its own section, additive to everything else', () => {
+    const msg = buildDailySummary({
+      ...base,
+      positions: [],
+      live: {
+        cash: 40.04,
+        equity: 100.71,
+        externalBtcValue: 60.67,
+        positions: [],
+        killSwitchEngaged: false,
+        killSwitchReason: null,
+      },
+    });
+    expect(msg).toContain('חשבון אמיתי');
+    expect(msg).toContain('€100.71');
+    expect(msg).toContain('מזומן €40.04');
+    expect(msg).toContain('BTC לא-מנוהל €60.67');
+    expect(msg).toContain('אין פוזיציות פתוחות של הבוט');
+    expect(msg).toContain('קיל סוויץ\' כבוי');
+    // The crypto section's own € figures must still be present too.
+    expect(msg).toContain('€10,250');
+  });
+
+  it("shows a bot-tracked open live position and the kill-switch reason when engaged", () => {
+    const msg = buildDailySummary({
+      ...base,
+      positions: [],
+      live: {
+        cash: 30,
+        equity: 130,
+        externalBtcValue: 0,
+        positions: [{ symbol: 'XBTEUR', marketValue: 100, pctOfEquity: 76.9 }],
+        killSwitchEngaged: true,
+        killSwitchReason: 'manual pause',
+      },
+    });
+    expect(msg).toContain('XBTEUR');
+    expect(msg).toContain('€100');
+    expect(msg).not.toContain('BTC לא-מנוהל'); // no external holding this time
+    expect(msg).toContain("קיל סוויץ' מופעל");
+    expect(msg).toContain('manual pause');
+  });
+
   it('reports crypto\'s own long-term investing wallet as a top-level section (not nested under stocks)', () => {
     const msg = buildDailySummary({
       ...base,

@@ -40,6 +40,7 @@ import { MAX_CONFIDENCE } from '../src/core/signal/signalEngine';
 import type { Instrument, Timeframe } from '../src/core/types';
 import type { RecentTrade } from '../src/core/data/krakenPublic';
 import type { Result } from '../src/core/types';
+import type { KeyValueStore } from '../src/core/data/storage';
 import { PrefixedStore } from '../src/core/data/prefixedStore';
 import { PositionEngine } from '../src/core/position/positionEngine';
 import { PortfolioEngine } from '../src/core/position/portfolioEngine';
@@ -66,7 +67,16 @@ import { checkManualSellRequests } from './manualSellCommand.mts';
 import { checkManualBuyRequests } from './manualBuyCommand.mts';
 import { mirrorApprovedEntries, type LiveEntryOutcome } from './liveEntryMirror.mts';
 import { checkAutomaticExits } from './liveExitMirror.mts';
-import { initLiveCash, recordLiveEquity, syncLiveCashFromBroker, syncLiveExternalBtc } from './liveLedger.mts';
+import {
+  hasLiveAccount,
+  initLiveCash,
+  liveCash,
+  liveExternalBtcQuantity,
+  recordLiveEquity,
+  syncLiveCashFromBroker,
+  syncLiveExternalBtc,
+} from './liveLedger.mts';
+import { openLivePositions } from './liveExitFlow.mts';
 import { RevolutXBrokerAdapter, type RevolutXCredentials } from './revolutXBrokerAdapter.mts';
 import { TelegramConfirmationGate } from './telegramConfirmationGate.mts';
 import {
@@ -84,6 +94,7 @@ import {
   killSwitchKeyboard,
   maybeSendEducationTip,
   sendTelegramMessage,
+  type DailySummaryLive,
   type DailySummaryStocks,
 } from './telegram.mts';
 
@@ -197,7 +208,10 @@ function persistStateToGit(label: string): void {
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Scheduled digests: each fires once per local day, at or after its hour. */
 const SUMMARY_SLOTS = [
-  { hour: 15, key: 'daily-summary', heading: '📊 סיכום יומי — סוכן מסחר (כסף מדומה)' },
+  // Dropped the "(כסף מדומה)" qualifier from the heading (2026-09-03) — the
+  // digest now also carries the REAL Revolut X account's own section below,
+  // so a blanket "simulated money" label at the top would be misleading.
+  { hour: 15, key: 'daily-summary', heading: '📊 סיכום יומי — סוכן מסחר' },
 ];
 /** Alert when an open position moves by at least this % (each new step). */
 const MOVE_ALERT_PCT = Number(process.env['MOVE_ALERT_PCT']) || 5;
@@ -1216,8 +1230,44 @@ export function readStocksSummary(now: number): DailySummaryStocks | null {
 }
 
 /**
+ * Builds the REAL Revolut X account's own numbers for the daily digest —
+ * null if real money has never been enabled (`liveLedger.mts`'s
+ * `hasLiveAccount`). Added 2026-09-03: David pointed out the digest never
+ * mentioned the real wallet at all, only the simulated crypto/stocks ones.
+ * Reporting only — mirrors the same total the app's Profit tab shows.
+ */
+export function readLiveSummary(
+  liveStore: KeyValueStore,
+  prices: Readonly<Record<string, number>>,
+): DailySummaryLive | null {
+  if (!hasLiveAccount(liveStore)) return null;
+  const cash = liveCash(liveStore);
+  const positionsRaw = openLivePositions(liveStore).map((p) => {
+    const symbol = p.entryAssessment.asset;
+    const price = prices[symbol] ?? p.entryPrice;
+    return { symbol, marketValue: p.quantity * price };
+  });
+  const trackedValue = positionsRaw.reduce((sum, p) => sum + p.marketValue, 0);
+  const externalBtcValue = liveExternalBtcQuantity(liveStore) * (prices['XBTEUR'] ?? 0);
+  const equity = cash + trackedValue + externalBtcValue;
+  const killSwitch = new PersistedKillSwitch(liveStore);
+  return {
+    cash,
+    equity,
+    externalBtcValue,
+    positions: positionsRaw.map((p) => ({
+      ...p,
+      pctOfEquity: equity > 0 ? (p.marketValue / equity) * 100 : 0,
+    })),
+    killSwitchEngaged: killSwitch.isEngaged(),
+    killSwitchReason: killSwitch.reason(),
+  };
+}
+
+/**
  * Send the single daily digest (see SUMMARY_SLOTS), at most once per local
- * day, folding in the stocks side's own numbers (see `readStocksSummary`).
+ * day, folding in the stocks side's own numbers (see `readStocksSummary`)
+ * and the real Revolut X account's own numbers (see `readLiveSummary`).
  * No-op without Telegram.
  */
 export async function maybeSendSummaries(
@@ -1240,10 +1290,13 @@ export async function maybeSendSummaries(
   if (dueSlots.length === 0) return;
 
   const open = portfolio.openPositions();
-  const prices = await latestPrices(
-    source,
-    open.map((p) => p.symbol),
+  const liveStore = new PrefixedStore(store, 'live');
+  // 'XBTEUR' is always fetched too, even with no open position in it — it's
+  // needed to value the untracked external BTC holding in readLiveSummary.
+  const priceSymbols = Array.from(
+    new Set([...open.map((p) => p.symbol), ...openLivePositions(liveStore).map((p) => p.entryAssessment.asset), 'XBTEUR']),
   );
+  const prices = await latestPrices(source, priceSymbols);
   const snap = portfolio.snapshot(prices, now);
   const since = now - DAY_MS;
   const benchmark = await computeBenchmark(store, source, snap.equity, now);
@@ -1269,6 +1322,7 @@ export async function maybeSendSummaries(
     benchmark,
     readiness: store.get<RealMoneyReadiness>(READINESS_KEY) ?? null,
     stocks: readStocksSummary(now),
+    live: readLiveSummary(liveStore, prices),
   };
 
   // Single digest a day now carries the shadow-strategy line every time.
