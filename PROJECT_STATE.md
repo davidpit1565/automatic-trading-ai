@@ -1,5 +1,33 @@
 # PROJECT_STATE
 
+## UI redesign pass: Home (Crypto Overview) micro-interactions (2026-09-03)
+Part of David's dashboard visual-elevation request, Home view increment
+(the "Overview" tab of the Crypto hub — `homeView.ts`, the screen David looks
+at most). `src/ui/styles.css` only, no DOM/structure changes:
+
+- `.tappable` (the hero card, market cards, mover rows — every "whole element
+  is a button" surface on Home) had no press feedback at all before; added a
+  `scale(0.985)` + slight opacity dip on `:active`, respecting
+  `prefers-reduced-motion`.
+- `.market-card` declared a `transform` transition that no rule ever
+  triggered (dead code) — added the matching `:hover` (border + a 2px lift +
+  `--shadow-sm`), the same tactile-depth treatment `.tool-card` already has
+  elsewhere, so Home's market-card row is no longer the one card style in the
+  app with an inert hover.
+
+Verified visually: dev server + Playwright at a 400px phone viewport with
+`?demo=1`; confirmed the hover lift and press-scale actually apply via
+`getComputedStyle` (`transform: matrix(1,0,0,1,0,-2)` on hover) since a static
+screenshot alone can't show a transient `:active` state. Full gate green:
+tsc, vitest (999 tests, none touched), build.
+
+Opened as its own PR (`claude/ui-redesign-home`), based on `main`
+independently of the two already-open PRs (chart polish, theme-foundation
+tokens) — deliberately did NOT reference the new `--fw-*`/`--tracking-*`
+tokens from the foundation PR here since it isn't merged yet and those
+custom properties don't exist on `main`; this PR uses plain literals
+matching the surrounding code, to stay safe to merge in any order.
+
 ## The website now shows the REAL Revolut X account, not just the simulated one (2026-09-03)
 David asked why the website "still shows the money as demo" even though
 real money is live — correct: `homeView.ts`'s hero card only ever read the

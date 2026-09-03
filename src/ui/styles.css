@@ -897,7 +897,11 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .hub-panel.active { display: block; animation: viewfade var(--dur-base) var(--ease); }
 .markets-strip::-webkit-scrollbar { display: none; }
 .market-card { min-width: 154px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
-  padding: 0.75rem 0.85rem; box-shadow: var(--shadow-xs); transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+  padding: 0.75rem 0.85rem; box-shadow: var(--shadow-xs); transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+/* The transform/box-shadow transition above previously had no rule that
+   ever triggered it — a hairline lift on hover, matching .tool-card's own
+   treatment, gives these cards the same tactile depth as the rest of the app. */
+.market-card:hover { border-color: var(--border-strong); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
 .market-top { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; }
 .market-id { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
 .market-id .coin-logo { width: 20px; height: 20px; }
@@ -1127,7 +1131,13 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .disclaimer { color: var(--text-dim); font-size: 0.72rem; text-align: center; margin: 1.5rem 0 0; }
 
 /* Market detail view (tap a coin) */
-.tappable { text-align: inherit; font: inherit; color: inherit; width: 100%; cursor: pointer; }
+/* Tap feedback for every whole-element-is-a-button surface (hero card,
+   market rows/cards, mover rows) — none had a press state before, so a tap
+   gave no tactile confirmation at all on a touch device. */
+.tappable { text-align: inherit; font: inherit; color: inherit; width: 100%; cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
+.tappable:active { transform: scale(0.985); opacity: 0.92; }
+@media (prefers-reduced-motion: reduce) { .tappable:active { transform: none; } }
 .detail-head { display: flex; justify-content: space-between; align-items: center; margin: 0.5rem 0 0.9rem; }
 .detail-head-left { display: flex; align-items: center; gap: 0.7rem; }
 .detail-coin { display: flex; align-items: center; gap: 0.6rem; }
