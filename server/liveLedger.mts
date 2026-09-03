@@ -40,6 +40,14 @@ export function liveCash(store: KeyValueStore): number {
   return store.get<number>(LIVE_CASH_KEY) ?? 0;
 }
 
+/** True once the live ledger has ever been initialized — distinguishes "no
+ * live account at all" (real money never enabled) from a genuine €0
+ * balance, mirroring the UI's own `parseLiveAccountState` convention
+ * (`src/ui/cloudState.ts`). */
+export function hasLiveAccount(store: KeyValueStore): boolean {
+  return store.get<number>(LIVE_CASH_KEY) !== undefined;
+}
+
 /**
  * Overwrites the tracked cash figure with Revolut X's own real EUR balance —
  * the broker is the only genuine source of truth for real money, and this

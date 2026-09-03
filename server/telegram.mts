@@ -112,6 +112,28 @@ export interface DailySummaryStocks {
   readonly benchmark?: DailySummaryBenchmark | null;
 }
 
+/**
+ * The REAL Revolut X account — separate from everything else in this file,
+ * which is all SIMULATED money. Null/omitted if real money has never been
+ * enabled (`liveLedger.mts`'s `hasLiveAccount`). Added 2026-09-03 after
+ * David pointed out the daily digest never mentioned the real wallet at
+ * all, only the simulated crypto/stocks accounts.
+ */
+export interface DailySummaryLive {
+  readonly cash: number;
+  /** Cash + tracked open positions + the untracked BTC holding below, all
+   * marked to the current price — the same total the app's Profit tab
+   * shows (see `liveLedger.mts`'s `recordLiveEquity`). */
+  readonly equity: number;
+  /** Positions the bot itself opened and manages (stop-loss/take-profit). */
+  readonly positions: readonly DailySummaryPosition[];
+  /** Current EUR value of BTC sitting in the account outside the bot's own
+   * tracking (e.g. a manual EUR→BTC conversion) — reporting only. */
+  readonly externalBtcValue: number;
+  readonly killSwitchEngaged: boolean;
+  readonly killSwitchReason: string | null;
+}
+
 export interface DailySummaryInput {
   readonly equity: number;
   readonly cash: number;
@@ -135,6 +157,8 @@ export interface DailySummaryInput {
   readonly shadows?: readonly ShadowStanding[];
   /** The stocks side's own numbers, appended as a second section. */
   readonly stocks?: DailySummaryStocks | null;
+  /** The REAL Revolut X account's own numbers, appended as its own section. */
+  readonly live?: DailySummaryLive | null;
   /**
    * Crypto's own long-term investing "wallet" — a separate paper portfolio
    * holding through weeks/months instead of the main runner's tight-stop
@@ -222,7 +246,7 @@ export function readinessLineHe(readiness: RealMoneyReadiness): string {
 export function buildDailySummary(input: DailySummaryInput): string {
   const ret = `${input.totalReturnPct >= 0 ? '+' : ''}${input.totalReturnPct.toFixed(2)}%`;
   const lines: string[] = [
-    input.heading ?? '📊 סיכום יומי — סוכן מסחר (כסף מדומה)',
+    input.heading ?? '📊 סיכום יומי — סוכן מסחר',
     `💰 שווי תיק: ${euro(input.equity)} (${ret} מההתחלה)`,
     `💵 מזומן פנוי: ${euro(input.cash)}`,
     `📈 רווח/הפסד: ${signedEuro(input.realizedPnl)} ממומש · ${signedEuro(input.unrealizedPnl)} על הנייר`,
@@ -267,6 +291,26 @@ export function buildDailySummary(input: DailySummaryInput): string {
     if (s.longTermShadow) {
       lines.push(...longTermShadowLines(s.longTermShadow, '   🌱 ארנק השקעות לטווח ארוך:'));
     }
+  }
+  if (input.live) {
+    const l = input.live;
+    lines.push('', '💶 חשבון אמיתי (Revolut X — כסף אמיתי):', `   💰 שווי כולל: ${euro(l.equity)}`);
+    const parts = [`מזומן ${euro(l.cash)}`];
+    if (l.externalBtcValue > 0) parts.push(`BTC לא-מנוהל ${euro(l.externalBtcValue)}`);
+    lines.push(`   (${parts.join(' · ')})`);
+    if (l.positions.length === 0) {
+      lines.push('   📌 אין פוזיציות פתוחות של הבוט כרגע.');
+    } else {
+      lines.push(`   📌 פוזיציות פתוחות של הבוט (${l.positions.length}):`);
+      for (const p of l.positions) {
+        lines.push(`      • ${p.symbol}: ${euro(p.marketValue)} (${p.pctOfEquity.toFixed(1)}% מהחשבון)`);
+      }
+    }
+    lines.push(
+      l.killSwitchEngaged
+        ? `   ⏸ קיל סוויץ' מופעל${l.killSwitchReason ? ` — ${l.killSwitchReason}` : ''}`
+        : "   ▶️ קיל סוויץ' כבוי — המסחר האמיתי פעיל",
+    );
   }
   return lines.join('\n');
 }
