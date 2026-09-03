@@ -26,6 +26,7 @@
  * running orchestrator loop yet).
  */
 
+import { createHash } from 'node:crypto';
 import { buildAuthHeaders } from './signing.mjs';
 import type {
   AuditLog,
@@ -75,6 +76,35 @@ function readVenueOrderId(json: unknown): string | null {
   const first = json.data[0];
   if (!isRecord(first) || typeof first.venue_order_id !== 'string') return null;
   return first.venue_order_id;
+}
+
+/**
+ * Revolut X's own API docs (checked directly, 2026-09-03, developer.revolut.com/docs/x-api/place-order)
+ * spell out `client_order_id: string(uuid) required` — a real UUID, not any
+ * sanitized string. A first attempt at fixing a real production rejection
+ * ("Invalid client order ID: 'live-entry:XBTEUR'") merely stripped the ':'
+ * (to '-'), which is STILL not a UUID and Revolut X rejected that too
+ * ("Invalid client order ID: 'live-entry-XBTEUR'", confirmed against the
+ * live audit log).
+ *
+ * This derives a UUID deterministically from intent.id via SHA-256, rather
+ * than a fresh crypto.randomUUID() per call — an accidental retry of
+ * submit() for the exact same intent must produce the exact SAME
+ * client_order_id every time, not a new one that looks like a brand new
+ * order (see the idempotency-safety project rule: a retried request must
+ * be safe to repeat). intent.id itself stays untouched everywhere else it's
+ * used as the internal tracking key.
+ */
+export function deterministicClientOrderId(intentId: string): string {
+  const hex = createHash('sha256').update(intentId).digest('hex').slice(0, 32);
+  const variantNibble = '89ab'[parseInt(hex[16]!, 16) % 4];
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    `5${hex.slice(13, 16)}`,
+    `${variantNibble}${hex.slice(17, 20)}`,
+    hex.slice(20, 32),
+  ].join('-');
 }
 
 /**
@@ -222,13 +252,7 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
     }
 
     const body = {
-      // Revolut X rejected our internal id verbatim in production
-      // (HTTP 400 "Invalid client order ID: 'live-entry:XBTEUR'", 2026-09-03)
-      // — ':' is apparently not an accepted character. intent.id itself stays
-      // unchanged (it's used as the internal tracking key everywhere else,
-      // e.g. rememberVenueOrderId/orderMap below); only what's sent to the
-      // broker is sanitized.
-      client_order_id: intent.id.replace(/:/g, '-'),
+      client_order_id: deterministicClientOrderId(intent.id),
       symbol: intent.symbol,
       side: intent.side,
       order_configuration: {

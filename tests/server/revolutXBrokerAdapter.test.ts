@@ -6,7 +6,7 @@ import { PersistedKillSwitch } from '../../src/core/autopilot/killSwitch';
 import type { OrderIntent } from '../../src/core/execution/types';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
 import type { Instrument } from '../../src/core/types';
-import { RevolutXBrokerAdapter, toRevolutXSymbol } from '../../server/revolutXBrokerAdapter.mts';
+import { deterministicClientOrderId, RevolutXBrokerAdapter, toRevolutXSymbol } from '../../server/revolutXBrokerAdapter.mts';
 
 // A fresh Ed25519 test key pair per run — not a secret, mirrors signing.test.ts.
 const { privateKey: TEST_PRIVATE_KEY, publicKey: TEST_PUBLIC_KEY } = generateKeyPairSync('ed25519');
@@ -128,10 +128,11 @@ describe('RevolutXBrokerAdapter', () => {
     expect(calls[0]!.method).toBe('POST');
     expect(calls[0]!.url).toBe('https://revx.revolut.com/api/1.0/orders');
     expect(JSON.parse(calls[0]!.body!)).toEqual({
-      // Revolut X rejects ':' in client_order_id (real HTTP 400, 2026-09-03)
-      // — sanitized to '-' for the broker, while intent.id/report.intentId
-      // below stay the original 'BTC-USD:1:0' used for internal tracking.
-      client_order_id: 'BTC-USD-1-0',
+      // Revolut X requires client_order_id to be a real UUID (confirmed
+      // against their own API docs, 2026-09-03) — derived deterministically
+      // from intent.id, while intent.id/report.intentId below stay the
+      // original 'BTC-USD:1:0' used for internal tracking.
+      client_order_id: deterministicClientOrderId('BTC-USD:1:0'),
       symbol: 'BTC-USD',
       side: 'buy',
       order_configuration: { limit: { base_size: '2', price: '100' } },
@@ -144,7 +145,7 @@ describe('RevolutXBrokerAdapter', () => {
     expect(audit.entries().at(-1)).toMatchObject({ intentId: 'BTC-USD:1:0', event: 'filled' });
   });
 
-  it("strips ':' from the client_order_id sent to Revolut X, which rejects it verbatim (real HTTP 400, 2026-09-03: \"Invalid client order ID: 'live-entry:XBTEUR'\")", async () => {
+  it("sends a real UUID as client_order_id, since Revolut X rejects anything else — real HTTP 400 twice in production, 2026-09-03: first \"Invalid client order ID: 'live-entry:XBTEUR'\", then still \"Invalid client order ID: 'live-entry-XBTEUR'\" after merely stripping the ':'", async () => {
     const { fetchFn, calls } = fakeFetch([
       { status: 200, body: { data: [{ venue_order_id: 'venue-9', client_order_id: 'x', state: 'new' }] } },
       { status: 200, body: { data: { status: 'new' } } },
@@ -153,9 +154,17 @@ describe('RevolutXBrokerAdapter', () => {
 
     const report = await adapter.submit(intent({ id: 'live-entry:XBTEUR' }));
 
-    expect(JSON.parse(calls[0]!.body!).client_order_id).toBe('live-entry-XBTEUR');
+    const sentId = JSON.parse(calls[0]!.body!).client_order_id;
+    expect(sentId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     // Internal tracking (report.intentId, audit log) keeps the original id.
     expect(report.intentId).toBe('live-entry:XBTEUR');
+  });
+
+  it('deterministicClientOrderId derives the SAME uuid-shaped id for the same intent id every time (an accidental retry must not look like a brand new order)', () => {
+    const first = deterministicClientOrderId('live-entry:XBTEUR');
+    const second = deterministicClientOrderId('live-entry:XBTEUR');
+    expect(first).toBe(second);
+    expect(deterministicClientOrderId('live-entry:ETHEUR')).not.toBe(first);
   });
 
   it('reports an order still open as submitted, not fabricated as filled', async () => {
