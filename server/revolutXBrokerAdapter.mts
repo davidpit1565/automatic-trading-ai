@@ -354,7 +354,25 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
         });
         return [];
       }
-      return readPairSymbols(result.json);
+      const symbols = readPairSymbols(result.json);
+      if (symbols.length === 0) {
+        // A 200 OK with zero parsed symbols is just as invisible as an HTTP
+        // failure (found 2026-09-03: the HTTP-failure diagnostic above never
+        // fired, yet every /buy still saw 0 tradable pairs) — audit the RAW
+        // response shape so a genuinely different payload shape (e.g. an
+        // array of pair objects instead of the expected {"BTC-USD": {...}}
+        // map) is diagnosable instead of silently yielding an empty list.
+        this.audit.append({
+          timestamp: Date.now(),
+          intentId: 'list-tradable-pairs',
+          event: 'rejected',
+          mode: 'live',
+          detail:
+            `GET /configuration/pairs returned HTTP ${result.status} but 0 parseable symbols — raw shape: ` +
+            JSON.stringify(result.json).slice(0, 500),
+        });
+      }
+      return symbols;
     } catch (cause) {
       this.audit.append({
         timestamp: Date.now(),
