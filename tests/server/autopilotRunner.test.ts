@@ -651,7 +651,15 @@ describe('runLiveMirror (real-money wiring stays off until deliberately turned o
     });
     afterEach(() => delete process.env['LIVE_STARTING_CASH_EUR']);
 
-    it('queues an automatically-approved entry instead of confirming it, while the window (now=1000, inside [0, 10000)) is active', async () => {
+    // mirrorApprovedEntries is called EXACTLY as it always is during an
+    // active window (proven by these tests never stubbing/bypassing it
+    // away — unlike an earlier version of this feature, nothing here
+    // short-circuits the real confirmation attempt; see
+    // liveEntryMirror.test.ts for coverage of that path actually sending a
+    // confirmation with a fake broker/gate). What's unique to blackout is
+    // ONLY that the opportunity is also remembered, in case it never gets
+    // answered by the time the window ends.
+    it('remembers an automatically-approved entry in the queue while the window (now=1000, inside [0, 10000)) is active', async () => {
       const sent: { text: string }[] = [];
       const telegram = { token: 'T', chatId: 'C', fetchFn: calendarAndTelegramFetch(sent) };
 
@@ -665,19 +673,16 @@ describe('runLiveMirror (real-money wiring stays off until deliberately turned o
         1000,
       );
 
-      expect(store.get('live:live-open-positions')).toBeUndefined();
-      expect(store.get('live:live-cash-eur')).toBe(100);
       expect(store.get('live:live-blackout-queue')).toEqual({
         'BTC-EUR': { symbol: 'BTC-EUR', entry: 100, stopLoss: 95, takeProfit: 115, queuedAt: 1000 },
       });
-      expect(sent.some((m) => m.text.includes('BTC-EUR'))).toBe(false);
     });
 
-    it('drains the queue into one Hebrew summary once the window ends, and resumes proposing normally', async () => {
+    it('drains the queue into one Hebrew summary once the window ends, for whatever never got answered', async () => {
       const sent: { text: string }[] = [];
       const telegram = { token: 'T', chatId: 'C', fetchFn: calendarAndTelegramFetch(sent) };
 
-      // Cycle 1: inside the window (now=1000) — queues instead of confirming.
+      // Cycle 1: inside the window (now=1000) — confirmation sent, remembered.
       await runLiveMirror(
         store,
         fakeSource(),
@@ -687,14 +692,64 @@ describe('runLiveMirror (real-money wiring stays off until deliberately turned o
         { 'BTC-EUR': 100 },
         1000,
       );
-      // Cycle 2: after havdalah (now=20000, past the window's end at 10000)
-      // — drains the queue into a summary; no new opportunity this cycle.
+      // Cycle 2: after havdalah (now=20000, past the window's end at 10000),
+      // still never answered — drains into a summary; no new opportunity.
       await runLiveMirror(store, fakeSource(), [btcInstrument], telegram, [], { 'BTC-EUR': 105 }, 20_000);
 
       expect(store.get('live:live-blackout-queue')).toEqual({});
-      const summary = sent.find((m) => m.text.includes('BTC-EUR'));
+      const summary = sent.find((m) => m.text.includes('🕯️'));
       expect(summary).toBeTruthy();
+      expect(summary!.text).toContain('BTC-EUR');
       expect(summary!.text).toContain('/buy');
+    });
+
+    it('excludes a symbol from the end-of-window summary once it actually has an open position (David approved it mid-window)', async () => {
+      const sent: { text: string }[] = [];
+      const telegram = { token: 'T', chatId: 'C', fetchFn: calendarAndTelegramFetch(sent) };
+
+      await runLiveMirror(
+        store,
+        fakeSource(),
+        [btcInstrument],
+        telegram,
+        [{ symbol: 'BTC-EUR', quantity: 0, entry: 100, opportunity }],
+        { 'BTC-EUR': 100 },
+        1000,
+      );
+
+      // Simulate David tapping אשר mid-Shabbat: a real position now exists.
+      store.set('live:live-open-positions', {
+        'live-entry:BTC-EUR:1000': {
+          id: 'live-entry:BTC-EUR:1000',
+          symbol: 'BTC-EUR',
+          quantity: 0.5,
+          entryPrice: 100,
+          stopLoss: 95,
+          takeProfit: 115,
+          highestPrice: 100,
+          openedAt: 1000,
+          entryAssessment: {
+            approved: true,
+            asset: 'BTC-EUR',
+            entry: 100,
+            stopLoss: 95,
+            takeProfit: 115,
+            positionSize: 0.5,
+            positionValue: 50,
+            riskAmount: 2.5,
+            riskPercentage: 2.5,
+            rewardRiskRatio: 3,
+            portfolioExposure: 50,
+            reasons: [],
+            warnings: [],
+          },
+        },
+      });
+
+      await runLiveMirror(store, fakeSource(), [btcInstrument], telegram, [], { 'BTC-EUR': 105 }, 20_000);
+
+      expect(store.get('live:live-blackout-queue')).toEqual({});
+      expect(sent.some((m) => m.text.includes('🕯️'))).toBe(false);
     });
   });
 });

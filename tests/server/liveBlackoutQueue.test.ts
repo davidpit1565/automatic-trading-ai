@@ -66,6 +66,22 @@ describe('queueBlackoutEntries / drainBlackoutQueue', () => {
     expect(drained[0]!.currentPrice).toBe(68_000);
     expect(drained[0]!.movedPct).toBe(0);
   });
+
+  // A symbol in `alreadyHandledSymbols` was approved and filled during the
+  // window (David asked 2026-09-03 to keep that option) — it needs no
+  // "missed" report, but the queue must still empty either way.
+  it('excludes an already-handled symbol from the drained result, but still clears it from the queue', () => {
+    const store = new MemoryStore();
+    queueBlackoutEntries(
+      store,
+      [opportunity('XBTEUR', 68_000, 67_000, 70_000), opportunity('ETHEUR', 3_000, 2_900, 3_200)],
+      1000,
+    );
+
+    const drained = drainBlackoutQueue(store, { XBTEUR: 68_000, ETHEUR: 3_000 }, new Set(['XBTEUR']));
+    expect(drained.map((e) => e.symbol)).toEqual(['ETHEUR']);
+    expect(store.get('live-blackout-queue')).toEqual({});
+  });
 });
 
 describe('buildBlackoutSummaryMessage', () => {

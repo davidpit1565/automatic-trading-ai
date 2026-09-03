@@ -905,31 +905,31 @@ export async function runLiveMirror(
     const newlyApproved = cycleOpened
       .map((o) => o.opportunity)
       .filter((o): o is NonNullable<typeof o> => o !== undefined);
-    // Shabbat/Yom Tov: queue the bot's own automatic proposals instead of
-    // pinging Telegram for a confirmation nobody can answer (David asked
-    // 2026-09-03) — never touches manual /buy /sell or automatic exits
-    // above/below this block, only this one automatic-entry path.
+    const mirroredOutcomes = await mirrorApprovedEntries(
+      liveStore,
+      newlyApproved,
+      instruments,
+      prices,
+      flowParams,
+      now,
+      liveEntryOptions,
+    );
+    await notifyLiveEntryOutcomes(telegram, mirroredOutcomes);
+    // Shabbat/Yom Tov: the confirmation above is still sent as always —
+    // David asked (2026-09-03) to keep the option to approve any time he's
+    // actually available. This only remembers what was proposed so
+    // anything that never got answered by the time the window ends can be
+    // summarized in one message, instead of silently vanishing.
     const blackoutWindows = await ensureBlackoutWindows(liveStore, now, telegram.fetchFn ?? fetch);
     const activeBlackout = isBlackout(blackoutWindows, now);
     const wasInBlackout = liveStore.get<boolean>('live-blackout-active') ?? false;
     if (activeBlackout) {
       queueBlackoutEntries(liveStore, newlyApproved, now);
-    } else {
-      const mirroredOutcomes = await mirrorApprovedEntries(
-        liveStore,
-        newlyApproved,
-        instruments,
-        prices,
-        flowParams,
-        now,
-        liveEntryOptions,
-      );
-      await notifyLiveEntryOutcomes(telegram, mirroredOutcomes);
-      if (wasInBlackout) {
-        const summary = drainBlackoutQueue(liveStore, prices);
-        const message = buildBlackoutSummaryMessage(summary, 'השבת/החג');
-        if (message) await sendTelegramMessage(message, telegram);
-      }
+    } else if (wasInBlackout) {
+      const stillOpen = new Set(openLivePositions(liveStore).map((p) => p.entryAssessment.asset));
+      const summary = drainBlackoutQueue(liveStore, prices, stillOpen);
+      const message = buildBlackoutSummaryMessage(summary, 'השבת/החג');
+      if (message) await sendTelegramMessage(message, telegram);
     }
     liveStore.set('live-blackout-active', activeBlackout !== null);
     await checkAutomaticExits(
