@@ -1,5 +1,35 @@
 # PROJECT_STATE
 
+## Correction to the "production frozen since PR #115" entry: the real limit is Vercel's 100-deploys/day cap, not just cancellation (2026-09-03)
+The `autoJobCancelation: false` fix (PR #140) was real and worth keeping,
+but it wasn't the whole story — GitHub started posting `vercel[bot]`
+comments on PRs #138–#142: `"Resource is limited - try again in 24 hours
+(more than 100, code: api-deployments-free-per-day)"`. Checked Vercel's own
+docs directly: Hobby plan = 100 real deployments/day, **account-wide**
+(scope `owner`, shared across every Vercel project under this account, not
+just this one) — but a build SKIPPED via the Ignored Build Step falls under
+a separate "skipped deployments per minute" bucket, not this one. So the
+autopilot's frequent state-only commits were never the drain on this quota
+(they're correctly ignored, confirmed via each one's `buildingAt`→`ready`
+gap of ~1.5s and its `errorLink` pointing at the Ignored Build Step docs).
+The quota was exhausted by the sheer volume of REAL deployments tonight's
+own work created — every PR's branch push (a preview deploy) plus every
+merge to main (a production deploy), and this session merged 30+ PRs.
+
+**Practical consequence**: no further production deployment — for anything,
+including tonight's already-merged UI work — can succeed until the 24h
+window resets. This is a plan limit, not a bug; there is no code fix for
+it. Two real options if it recurs: wait for the reset, or upgrade to
+Vercel Pro (6,000/day) if this pace of shipping continues.
+
+**Important distinction to keep straight**: this only affects the
+Vercel-hosted FRONTEND (the website David opens in a browser). Every
+server-side fix from tonight (venue_order_id parsing, BTC tracking, the
+digest, the plain-language confirmation message) runs via GitHub Actions
+directly against the state file and Telegram — completely unaffected by
+Vercel's quota, and confirmed already live in production (the redispatched
+autopilot run). Only the visual site is stuck until the quota resets.
+
 ## The live confirmation message left David unsure what to approve (2026-09-03)
 He sent `/buy XBTEUR`, got the confirmation prompt, and asked me mid-decision
 what it meant and whether to approve — he has near-zero trading background
