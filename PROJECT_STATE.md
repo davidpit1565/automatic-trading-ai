@@ -1,5 +1,48 @@
 # PROJECT_STATE
 
+## Overlapping autopilot runs could silently discard each other's state on a push race (2026-09-03)
+David flagged a screenshot showing the SAME paper trade close ("מכירה
+ADAEUR... הגיע ליעד הרווח") alerted TWICE in Telegram, 60 seconds apart —
+asked me to root-cause it and find anything else needing a fix. Confirmed
+via `trade-journal`: the trade genuinely closed ONCE (one journal entry,
+15:01:59 UTC) — the duplicate was purely a notification, not a double
+sell. But a 60s gap doesn't fit ONE process's own loop (`LOOP_INTERVAL_MS`
+defaults to 5 minutes) — it fits TWO overlapping `autopilot.yml` runs,
+each on its own ~1-min-offset cycle.
+
+Root cause, traced through `persistStateToGit` (`autopilotRunner.mts`):
+on a push race (this session's own `cancel_workflow_run` +
+immediate `run_workflow` redispatch pattern, used 4x tonight, can leave
+the "cancelled" run still executing for a few seconds/minutes while its
+replacement already started — GitHub's own `concurrency: group: autopilot`
+prevents true scheduling overlap, but not this narrow tail-end race), the
+losing run did `git rebase -X theirs origin/main` — a WHOLE-FILE conflict
+resolution that, for the single monolithic `state/autopilot-state.json`
+every cycle rewrites, silently discarded ALL of that run's changes to
+every key it touched (not just the alerted-id dedup) in favor of the
+other run's version. That's how the alert-dedup (`alerted-trade-ids`,
+already designed to prevent exactly "a position re-processed") got
+reverted right along with everything else, letting the same close get
+redetected against stale state next cycle. The SAME mechanism could, in a
+worse case, have discarded a live-money key (`live:*` lives in the same
+file) — this was a real capital-safety-adjacent gap, not just a cosmetic
+notification bug.
+
+Fixed by replacing the git-level whole-file merge with a JSON KEY-level
+one: `FileStore` now tracks which keys THIS instance actually
+set/removed (`dirtyKeys()`); on a push race, `persistStateToGit` fetches
+origin's latest file as the base and overlays only this run's own dirty
+keys on top, instead of discarding them. Real loss now only if two
+overlapping runs touch the exact SAME key in the same race window — not
+the whole file. (Going forward: when redispatching the autopilot
+workflow after a merge, poll for the cancelled run to reach a genuinely
+terminal state before firing the replacement, rather than firing them
+back-to-back.)
+
+Tests: new `FileStore.dirtyKeys()` cases. Full gate green (tsc, 1032
+tests, build). `persistStateToGit` itself shells out to git and isn't
+unit-tested directly (same as before this change).
+
 ## External BTC double-counted the bot's own tracked position once it actually filled (2026-09-03)
 Found during a scheduled live-money health check-in, right after the first
 real live BTC entry filled (14:40 UTC, PR #146's fix — confirmed working

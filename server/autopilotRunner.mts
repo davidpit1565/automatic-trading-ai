@@ -12,7 +12,8 @@
  */
 
 import { execSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { KrakenPublicSource } from '../src/core/data/krakenPublic';
 import { CoinbasePublicSource } from '../src/core/data/coinbasePublic';
@@ -162,25 +163,41 @@ function liveCredentials(): RevolutXCredentials | null {
 /**
  * Commit + push the state file mid-run so trades persist promptly and survive
  * a cancelled/timed-out run — the workflow's long run would otherwise only
- * save at the very end. Mirrors the workflow's resilient push (rebase onto the
- * latest main, retry) so it lands even when main advanced. Best-effort: any
- * failure is logged and the loop continues (the end-of-run commit is a
- * backstop). Only runs inside GitHub Actions.
+ * save at the very end. Best-effort: any failure is logged and the loop
+ * continues (the end-of-run commit is a backstop). Only runs inside GitHub
+ * Actions.
+ *
+ * On a push race (another run — e.g. a cancelled run that hadn't actually
+ * exited yet, racing its own freshly-dispatched replacement, see
+ * PROJECT_STATE.md 2026-09-03 — pushed first), this used to `git rebase -X
+ * theirs origin/main`: a WHOLE-FILE conflict resolution that, for the single
+ * monolithic state JSON every cycle rewrites, silently discarded this run's
+ * own changes to every key it touched in favor of the other run's version —
+ * even a just-closed trade or a live fill, producing a duplicate Telegram
+ * alert next cycle once the discarded close got redetected against stale
+ * state (the real incident: a paper ADAEUR take-profit alerted twice, 60s
+ * apart, from two overlapping runs). Merges at the JSON KEY level instead:
+ * origin's file as the base (keeps whatever the other run wrote), this run's
+ * own DIRTY keys (`FileStore.dirtyKeys()` — only what THIS instance actually
+ * set/removed) overlaid on top. Real data loss now only if both runs wrote
+ * the exact same key in the same race window, not the whole file.
  */
-function persistStateToGit(label: string): void {
+function persistStateToGit(store: FileStore, label: string): void {
   if (process.env['GITHUB_ACTIONS'] !== 'true') return;
   const run = (cmd: string): string => execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const hasStagedChanges = (): boolean => {
+    try {
+      run('git diff --staged --quiet');
+      return false; // exit 0 = no differences
+    } catch {
+      return true; // non-zero = staged changes exist
+    }
+  };
   try {
     run('git config user.name "github-actions[bot]"');
     run('git config user.email "github-actions[bot]@users.noreply.github.com"');
     run(`git add ${STATE_PATH}`);
-    // Nothing staged → nothing to do.
-    try {
-      run('git diff --staged --quiet');
-      return; // exits 0 = no changes
-    } catch {
-      /* non-zero = there are staged changes; proceed to commit */
-    }
+    if (!hasStagedChanges()) return;
     run(`git commit -m "Autopilot state (mid-run ${label})"`);
     for (let attempt = 1; attempt <= 5; attempt++) {
       try {
@@ -190,13 +207,20 @@ function persistStateToGit(label: string): void {
       } catch {
         try {
           run('git fetch origin main');
-          run('git rebase -X theirs origin/main');
-        } catch {
-          try {
-            run('git rebase --abort');
-          } catch {
-            /* nothing to abort */
-          }
+          const origin = JSON.parse(run(`git show origin/main:${STATE_PATH}`)) as Record<string, unknown>;
+          for (const key of store.dirtyKeys()) origin[key] = store.get(key);
+          mkdirSync(dirname(STATE_PATH), { recursive: true });
+          writeFileSync(STATE_PATH, JSON.stringify(origin, null, 2));
+          run('git reset --soft origin/main');
+          run(`git add ${STATE_PATH}`);
+          if (hasStagedChanges()) run(`git commit -m "Autopilot state (mid-run ${label})"`);
+          // else: the merged file is byte-identical to origin's — nothing of
+          // ours to add; the next attempt just fast-forwards.
+        } catch (mergeFailure) {
+          console.error(
+            'State merge-on-conflict failed:',
+            mergeFailure instanceof Error ? mergeFailure.message : mergeFailure,
+          );
         }
       }
     }
@@ -551,7 +575,7 @@ async function main(): Promise<void> {
     const isLast = i === LOOP_CYCLES - 1;
     const periodic = STATE_COMMIT_EVERY > 0 && (i + 1) % STATE_COMMIT_EVERY === 0;
     if (!isLast && (traded || periodic)) {
-      persistStateToGit(`cycle ${i + 1}/${LOOP_CYCLES}`);
+      persistStateToGit(store, `cycle ${i + 1}/${LOOP_CYCLES}`);
     }
   }
 }
