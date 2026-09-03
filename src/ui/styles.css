@@ -1157,6 +1157,11 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .market-row-id .row-title,
 .market-row-id .row-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .market-row-num { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
+/* Hidden on phone (the row already has 3 real columns there); shown as a 4th
+   desktop column below — real information (already fetched with the row,
+   no extra request) filling what would otherwise be empty stretch between
+   the name and the price on a wide row, instead of just widening the gap. */
+.market-row-vol { display: none; }
 /* Tabular figures stop the digits jittering as prices tick. */
 .row-price { font-weight: var(--fw-bold); font-size: 1.06rem; font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1; letter-spacing: -0.015em; }
@@ -1179,8 +1184,24 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 @media (min-width: 860px) {
   /* Keeps the right padding that clears the overlaid star — a plain
      `padding: 0.8rem 1.1rem` here would put the price back under it. */
-  .market-row { padding: 1.05rem 2.6rem 1.05rem 1.4rem; }
+  .market-row { padding: 1.05rem 2.6rem 1.05rem 1.4rem; grid-template-columns: auto 1fr auto auto; }
   .row-price { font-size: 1.14rem; }
+  .market-row-vol {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem;
+    color: var(--text-dim); font-size: 0.85rem; font-variant-numeric: tabular-nums;
+    padding-inline-end: 1.5rem;
+  }
+  .market-row-vol .dstat-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+  /* Coin detail: on a wide sidebar-layout viewport this read as a giant
+     stretched single column (a 380px chart's stats row was 3 flex:1 boxes
+     spread edge-to-edge across the whole available width, each mostly
+     empty around one small number) — cap it to a comfortable reading width
+     like a real analytics/detail page, and stop the stat boxes from
+     stretching past a sensible card size. */
+  #mk-detail-view { max-width: 720px; margin: 0 auto; }
+  .detail-stats-row { justify-content: flex-start; }
+  .dstat { flex: 0 1 200px; }
 }
 
 .stack { display: flex; flex-direction: column; gap: 0.55rem; }
