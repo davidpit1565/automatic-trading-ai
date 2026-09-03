@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { answerCallbackQuery, buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, editTelegramMessage, pollAllTelegramUpdates, readinessLineHe, sendTelegramMessage, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
+import { answerCallbackQuery, buildAllClearMessage, buildCycleMessage, buildDailySummary, buildKillSwitchKeyboardIntro, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, EDUCATION_TIPS, editTelegramMessage, killSwitchKeyboard, maybeSendEducationTip, pollAllTelegramUpdates, readinessLineHe, sendTelegramMessage, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
 import { assessRealMoneyReadiness, READINESS_THRESHOLDS } from '../../src/core/feedback/realMoneyReadiness';
 import { MemoryStore } from '../../src/core/data/storage';
 
@@ -498,6 +498,102 @@ describe('sendTelegramMessage with an inline keyboard (confirmation-gate buttons
     }) as unknown as typeof fetch;
     await sendTelegramMessage('plain', { token: 'T', chatId: 'C', fetchFn: fakeFetch });
     expect(sentBody).not.toHaveProperty('reply_markup');
+  });
+});
+
+// David asked for this 2026-09-03: a persistent kill-switch button instead
+// of remembering to type /pause. Its buttons are literally the text
+// '/pause'/'/resume' — tapping a reply-keyboard button just sends that text
+// as an ordinary message, so no new command-parsing is needed at all.
+describe('killSwitchKeyboard / buildKillSwitchKeyboardIntro', () => {
+  it('sends a persistent reply keyboard whose buttons are the existing /pause and /resume commands', async () => {
+    let sentReplyMarkup: unknown = null;
+    const fakeFetch = (async (_url: string, init: { body: string }) => {
+      sentReplyMarkup = (JSON.parse(init.body) as { reply_markup?: unknown }).reply_markup;
+      return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 });
+    }) as unknown as typeof fetch;
+    await sendTelegramMessage(buildKillSwitchKeyboardIntro(), { token: 'T', chatId: 'C', fetchFn: fakeFetch }, killSwitchKeyboard());
+    expect(sentReplyMarkup).toEqual({
+      keyboard: [[{ text: '/pause' }], [{ text: '/resume' }]],
+      resize_keyboard: true,
+      is_persistent: true,
+    });
+  });
+
+  it('the intro message explains what the two buttons do', () => {
+    const text = buildKillSwitchKeyboardIntro();
+    expect(text).toContain('/pause');
+    expect(text).toContain('/resume');
+  });
+});
+
+describe('maybeSendEducationTip', () => {
+  const fakeFetchOk = (async () =>
+    new Response(JSON.stringify({ ok: true }), { status: 200 })) as unknown as typeof fetch;
+
+  it('sends the first tip when none has ever been sent', async () => {
+    const store = new MemoryStore();
+    const sentTexts: string[] = [];
+    const fakeFetch = (async (_url: string, init: { body: string }) => {
+      sentTexts.push((JSON.parse(init.body) as { text: string }).text);
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }) as unknown as typeof fetch;
+    await maybeSendEducationTip(store, { token: 'T', chatId: 'C', fetchFn: fakeFetch }, 1_000);
+    expect(sentTexts).toEqual([EDUCATION_TIPS[0]]);
+  });
+
+  it('does not resend before the interval has elapsed', async () => {
+    const store = new MemoryStore();
+    await maybeSendEducationTip(store, { token: 'T', chatId: 'C', fetchFn: fakeFetchOk }, 1_000);
+    let calls = 0;
+    const countingFetch = (async () => {
+      calls += 1;
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }) as unknown as typeof fetch;
+    await maybeSendEducationTip(store, { token: 'T', chatId: 'C', fetchFn: countingFetch }, 1_000 + 60_000);
+    expect(calls).toBe(0);
+  });
+
+  it('sends again, with the next tip, once the interval has elapsed', async () => {
+    const store = new MemoryStore();
+    await maybeSendEducationTip(store, { token: 'T', chatId: 'C', fetchFn: fakeFetchOk }, 0);
+    const sentTexts: string[] = [];
+    const fakeFetch = (async (_url: string, init: { body: string }) => {
+      sentTexts.push((JSON.parse(init.body) as { text: string }).text);
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+    await maybeSendEducationTip(store, { token: 'T', chatId: 'C', fetchFn: fakeFetch }, twoDaysMs);
+    expect(sentTexts).toEqual([EDUCATION_TIPS[1]]);
+  });
+
+  it('wraps around to the first tip after the rotation reaches the end', async () => {
+    const store = new MemoryStore();
+    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+    for (let i = 0; i < EDUCATION_TIPS.length; i += 1) {
+      await maybeSendEducationTip(store, { token: 'T', chatId: 'C', fetchFn: fakeFetchOk }, i * twoDaysMs);
+    }
+    const sentTexts: string[] = [];
+    const fakeFetch = (async (_url: string, init: { body: string }) => {
+      sentTexts.push((JSON.parse(init.body) as { text: string }).text);
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }) as unknown as typeof fetch;
+    await maybeSendEducationTip(store, { token: 'T', chatId: 'C', fetchFn: fakeFetch }, EDUCATION_TIPS.length * twoDaysMs);
+    expect(sentTexts).toEqual([EDUCATION_TIPS[0]]);
+  });
+
+  it('does not advance the index or timestamp when the send fails, so it retries next cycle', async () => {
+    const store = new MemoryStore();
+    const failingFetch = (async () => new Response('{}', { status: 500 })) as unknown as typeof fetch;
+    await maybeSendEducationTip(store, { token: 'T', chatId: 'C', fetchFn: failingFetch }, 1_000);
+
+    const sentTexts: string[] = [];
+    const fakeFetch = (async (_url: string, init: { body: string }) => {
+      sentTexts.push((JSON.parse(init.body) as { text: string }).text);
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }) as unknown as typeof fetch;
+    await maybeSendEducationTip(store, { token: 'T', chatId: 'C', fetchFn: fakeFetch }, 1_001);
+    expect(sentTexts).toEqual([EDUCATION_TIPS[0]]);
   });
 });
 
