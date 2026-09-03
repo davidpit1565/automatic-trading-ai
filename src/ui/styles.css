@@ -65,6 +65,35 @@
 
   /* Back-compat aliases some component files reference directly */
   --muted: var(--text-dim);
+
+  /* ---------- Typography & spacing foundation ----------
+     Named tokens for the weight/tracking/spacing values already in
+     recurring use across the file (550/650/750 font-weight; -0.01em/0.06em
+     letter-spacing appear dozens of times each) — extending the existing
+     token system rather than a parallel one, and applied below via
+     mechanical 1:1 substitution (same numbers, now named) so this is a
+     zero-visual-change foundation pass. A few one-off weight/tracking
+     values (600, 680, 700, 800, etc.) are deliberately left as literals —
+     tokenising a value used once or twice adds indirection without a
+     consistency payoff. Font-size stays un-tokenised for now: the existing
+     sizes are legitimately context-tuned per component rather than drawn
+     from a shared scale, and consolidating them is a larger, separate pass
+     (see PROJECT_STATE). */
+  --fw-medium: 550;
+  --fw-semibold: 650;
+  --fw-bold: 750;
+  --tracking-tight: -0.01em;
+  --tracking-wide: 0.06em;
+
+  /* 4px-based spacing rhythm, applied so far to top-level layout rather
+     than every component's hand-tuned padding (same reasoning as above). */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.25rem;
+  --sp-6: 1.5rem;
+  --sp-7: 2rem;
 }
 
 * {
@@ -90,7 +119,7 @@ body {
 .app-header h1 {
   margin: 0;
   font-size: 1.4rem;
-  letter-spacing: -0.01em;
+  letter-spacing: var(--tracking-tight);
 }
 
 .app-tagline {
@@ -229,7 +258,7 @@ button.primary {
   border-radius: var(--r-sm);
   padding: 0.62rem 1.25rem;
   font-size: 0.9rem;
-  font-weight: 650;
+  font-weight: var(--fw-semibold);
   letter-spacing: 0.005em;
   cursor: pointer;
   transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-base) var(--ease), filter var(--dur-fast) var(--ease);
@@ -260,7 +289,7 @@ button.secondary {
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   padding: 0.58rem 1.15rem;
-  font-weight: 550;
+  font-weight: var(--fw-medium);
   cursor: pointer;
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
@@ -314,10 +343,10 @@ button.secondary:active {
 .data-table thead th {
   background: var(--surface-raised);
   color: var(--text-dim);
-  font-weight: 650;
+  font-weight: var(--fw-semibold);
   font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-wide);
 }
 
 .data-table tbody tr:last-child td {
@@ -343,6 +372,13 @@ button.secondary:active {
   background: var(--surface-raised);
 }
 
+/* A table row can't take a scale-press like a card (it would misalign the
+   cells) — a background darken on :active gives it the same tap feedback
+   `.tappable`/`.row` cards get elsewhere in the app. */
+.scan-row:active {
+  background: var(--surface-hover);
+}
+
 .scan-row.expanded {
   background: var(--surface-raised);
 }
@@ -352,8 +388,8 @@ button.secondary:active {
   padding: 0.15rem 0.6rem;
   border-radius: var(--r-pill);
   font-size: 0.72rem;
-  font-weight: 750;
-  letter-spacing: 0.06em;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-wide);
 }
 
 .badge-hot {
@@ -403,7 +439,7 @@ button.secondary:active {
 }
 
 .scan-component .contribution {
-  font-weight: 750;
+  font-weight: var(--fw-bold);
   font-size: 0.9rem;
 }
 
@@ -449,7 +485,7 @@ button.secondary:active {
 }
 
 .signal-title {
-  font-weight: 750;
+  font-weight: var(--fw-bold);
   letter-spacing: 0.02em;
 }
 
@@ -458,7 +494,7 @@ button.secondary:active {
   flex-wrap: wrap;
   gap: 1rem;
   margin: 0.5rem 0;
-  font-weight: 650;
+  font-weight: var(--fw-semibold);
 }
 
 .signal-explanation {
@@ -562,14 +598,14 @@ button.secondary:active {
   font-size: 0.72rem;
   color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 650;
+  letter-spacing: var(--tracking-wide);
+  font-weight: var(--fw-semibold);
 }
 
 .stat-card .stat-value {
   font-size: 1.3rem;
-  font-weight: 750;
-  letter-spacing: -0.01em;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
   margin-top: 0.2rem;
   font-variant-numeric: tabular-nums;
 }
@@ -586,7 +622,7 @@ button.secondary:active {
 
 .learn-card h3 {
   margin-top: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: var(--tracking-tight);
 }
 
 .app-footer {
@@ -625,14 +661,14 @@ button.secondary:active {
 }
 .home-value {
   font-size: 2.6rem;
-  font-weight: 750;
+  font-weight: var(--fw-bold);
   letter-spacing: -0.02em;
   margin: 0.2rem 0;
   font-variant-numeric: tabular-nums;
 }
 .home-return {
   font-size: 1.05rem;
-  font-weight: 650;
+  font-weight: var(--fw-semibold);
 }
 .home-return.up,
 .home-chip.up { color: var(--hot); }
@@ -682,11 +718,11 @@ button.secondary:active {
   transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 .home-pos-main, .home-trade-main { display: flex; align-items: center; gap: 0.6rem; }
-.home-pos-sym, .home-trade-sym { font-weight: 750; }
+.home-pos-sym, .home-trade-sym { font-weight: var(--fw-bold); }
 .home-pos-val { color: var(--text-dim); font-size: 0.9rem; }
 .home-pos-meta, .home-trade-meta { text-align: left; display: flex; flex-direction: column; gap: 0.15rem; }
 .home-chip {
-  font-weight: 750;
+  font-weight: var(--fw-bold);
   font-size: 0.95rem;
 }
 .home-pos-entry, .home-trade-date { color: var(--text-dim); font-size: 0.78rem; }
@@ -768,7 +804,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 @media (min-width: 1200px) {
   .topbar { padding: 1rem 2rem; }
 }
-.brand { font-weight: 750; letter-spacing: -0.01em; display: flex; align-items: center; gap: 0.65rem; font-size: 1.1rem; }
+.brand { font-weight: var(--fw-bold); letter-spacing: var(--tracking-tight); display: flex; align-items: center; gap: 0.65rem; font-size: 1.1rem; }
 .brand-dot {
   width: 11px; height: 11px; border-radius: 50%;
   background: var(--accent-text);
@@ -779,10 +815,10 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
   border: 1px solid rgba(255,255,255,0.08); border-radius: var(--r-pill); padding: 0.3rem 0.7rem;
   box-shadow: var(--shadow-xs); }
-.tb-label { color: var(--text-dim); font-weight: 750; }
-.tb-price { font-weight: 650; font-variant-numeric: tabular-nums; }
+.tb-label { color: var(--text-dim); font-weight: var(--fw-bold); }
+.tb-price { font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
 
-.content { max-width: 760px; margin: 0 auto; padding: 1rem 1rem calc(84px + env(safe-area-inset-bottom)); }
+.content { max-width: 760px; margin: 0 auto; padding: var(--sp-4) var(--sp-4) calc(84px + env(safe-area-inset-bottom)); }
 .view { display: none; }
 .view.active { display: block; animation: viewfade var(--dur-slow) var(--ease-out); }
 @keyframes viewfade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
@@ -838,26 +874,26 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   position: absolute; inset: 0 0 auto 0; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent);
 }
-.hero-label { color: var(--text-dim); font-size: 0.85rem; font-weight: 550; display: flex; align-items: center; gap: 0.5rem; }
-.tag-sim { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; background: var(--accent-tint);
+.hero-label { color: var(--text-dim); font-size: 0.85rem; font-weight: var(--fw-medium); display: flex; align-items: center; gap: 0.5rem; }
+.tag-sim { font-size: 0.6rem; font-weight: 700; letter-spacing: var(--tracking-wide); background: var(--accent-tint);
   color: var(--accent-text); border: 1px solid rgba(255, 255, 255, 0.4); padding: 0.12rem 0.45rem; border-radius: var(--r-xs); }
 /* The REAL account's badge is deliberately a different color from
    .tag-sim (--cold, not --accent) — the two must never read as the same
    kind of thing at a glance. */
-.tag-live { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; background: var(--cold-tint);
+.tag-live { font-size: 0.6rem; font-weight: 700; letter-spacing: var(--tracking-wide); background: var(--cold-tint);
   color: var(--cold); border: 1px solid rgba(242, 109, 125, 0.4); padding: 0.12rem 0.45rem; border-radius: var(--r-xs); }
 .kill-switch-banner { display: flex; align-items: center; gap: 0.5rem; background: var(--warn-tint);
   color: var(--warn); border: 1px solid rgba(245, 185, 61, 0.4); border-radius: var(--r-md);
-  padding: 0.6rem 0.75rem; font-size: 0.85rem; font-weight: 650; margin-top: 0.6rem; }
-.hero-value { display: flex; align-items: baseline; gap: 0.06em; font-weight: 750; letter-spacing: -0.02em;
+  padding: 0.6rem 0.75rem; font-size: 0.85rem; font-weight: var(--fw-semibold); margin-top: 0.6rem; }
+.hero-value { display: flex; align-items: baseline; gap: 0.06em; font-weight: var(--fw-bold); letter-spacing: -0.02em;
   margin: 0.3rem 0 0.1rem; font-variant-numeric: tabular-nums; }
 .hero-value-currency { font-size: 1.7rem; }
 .hero-value-major { font-size: 2.7rem; }
 /* The smaller, lighter cents suffix — the "big integer + small decimal"
    split the reference uses for its balance figure, so the eye lands on the
    whole-euro number first and the exact cents read as secondary detail. */
-.hero-value-minor { font-size: 1.5rem; font-weight: 650; color: var(--text-dim); }
-.hero-change { font-weight: 650; font-size: 1rem; }
+.hero-value-minor { font-size: 1.5rem; font-weight: var(--fw-semibold); color: var(--text-dim); }
+.hero-change { font-weight: var(--fw-semibold); font-size: 1rem; }
 .hero-change.up::before { content: '▲ '; font-size: 0.7em; }
 .hero-change.down::before { content: '▼ '; font-size: 0.7em; }
 .hero-split { display: flex; gap: 1.2rem; color: var(--text-dim); font-size: 0.85rem; margin-top: 0.5rem; }
@@ -870,9 +906,9 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .hero-spark { margin: 0.6rem -1.4rem -1.7rem; }
 .hero-spark svg, .hero-spark .spark { width: 100%; height: 88px; display: block; }
 
-.block { margin-bottom: 1.5rem; }
+.block { margin-bottom: var(--sp-6); }
 .block-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.7rem; }
-.block-head h2, .view-title { font-size: 1.08rem; margin: 0; letter-spacing: -0.01em; }
+.block-head h2, .view-title { font-size: 1.08rem; margin: 0; letter-spacing: var(--tracking-tight); }
 .view-title { margin-bottom: 0.15rem; font-size: 1.35rem; }
 .view-sub { color: var(--text-dim); font-size: 0.85rem; margin: 0.1rem 0 1.1rem; }
 .link-btn { background: none; border: none; color: var(--accent-text); font-size: 0.82rem; font-weight: 600; cursor: pointer;
@@ -894,17 +930,21 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .hub-tab:active { transform: scale(0.96); }
 .hub-tab.active { background: var(--accent); color: #fff; }
 /* Stocks adds a 5th tab (Long-Term) — shrink to fit without wrapping. */
-.hub-tabs:has(.hub-tab:nth-child(5)) .hub-tab { font-size: 0.7rem; padding: 0.5rem 0.15rem; letter-spacing: -0.01em; }
+.hub-tabs:has(.hub-tab:nth-child(5)) .hub-tab { font-size: 0.7rem; padding: 0.5rem 0.15rem; letter-spacing: var(--tracking-tight); }
 .hub-panel { display: none; }
 .hub-panel.active { display: block; animation: viewfade var(--dur-base) var(--ease); }
 .markets-strip::-webkit-scrollbar { display: none; }
 .market-card { min-width: 154px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
-  padding: 0.75rem 0.85rem; box-shadow: var(--shadow-xs); transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+  padding: 0.75rem 0.85rem; box-shadow: var(--shadow-xs); transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+/* The transform/box-shadow transition above previously had no rule that
+   ever triggered it — a hairline lift on hover, matching .tool-card's own
+   treatment, gives these cards the same tactile depth as the rest of the app. */
+.market-card:hover { border-color: var(--border-strong); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
 .market-top { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; }
 .market-id { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
 .market-id .coin-logo { width: 20px; height: 20px; }
-.market-name { color: var(--text-dim); font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.market-price { font-weight: 750; margin: 0.28rem 0; font-variant-numeric: tabular-nums; }
+.market-name { color: var(--text-dim); font-weight: var(--fw-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.market-price { font-weight: var(--fw-bold); margin: 0.28rem 0; font-variant-numeric: tabular-nums; }
 .market-spark svg, .spark { width: 100%; height: 44px; display: block; }
 /* Thinner stroke than the inline SVG default (2.5) — a restrained hairline
    reads as "instrument", a thick one as a decorative squiggle. Overrides the
@@ -926,7 +966,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .mk-tabs::-webkit-scrollbar { display: none; }
 .mk-tab { flex: 0 0 auto; padding: 0.48rem 0.95rem; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--surface); color: var(--text-dim);
-  font-size: 0.86rem; font-weight: 650; cursor: pointer; transition: all var(--dur-fast) var(--ease); }
+  font-size: 0.86rem; font-weight: var(--fw-semibold); cursor: pointer; transition: all var(--dur-fast) var(--ease); }
 .mk-tab:hover { color: var(--text); border-color: var(--border-strong); }
 .mk-tab:active { transform: scale(0.96); }
 .mk-tab.active { background: linear-gradient(155deg, var(--accent), var(--accent-2)); border-color: transparent; color: #fff;
@@ -986,7 +1026,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .market-row-id .row-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .market-row-num { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
 /* Tabular figures stop the digits jittering as prices tick. */
-.row-price { font-weight: 750; font-size: 1.02rem; font-variant-numeric: tabular-nums;
+.row-price { font-weight: var(--fw-bold); font-size: 1.02rem; font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1; }
 .market-row-num .chg { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1;
   white-space: nowrap; }
@@ -1024,7 +1064,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .trade.sell { border-inline-start: 3px solid var(--cold); }
 .trade.profit { border-inline-start: 3px solid var(--hot); }
 .trade.loss { border-inline-start: 3px solid var(--cold); }
-.pill { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.06em; padding: 0.2rem 0.5rem; border-radius: var(--r-xs); }
+.pill { font-size: 0.62rem; font-weight: 800; letter-spacing: var(--tracking-wide); padding: 0.2rem 0.5rem; border-radius: var(--r-xs); }
 .pill.buy { background: var(--hot-tint); color: var(--hot); }
 .pill.sell { background: var(--cold-tint); color: var(--cold); }
 .pill.profit { background: var(--hot-tint); color: var(--hot); }
@@ -1064,16 +1104,20 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   display: flex; align-items: center; justify-content: center; }
 .tool-icon-badge svg { width: 20px; height: 20px; fill: none; stroke: var(--accent-text); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tool-card-text { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
-.tool-card strong { font-size: 0.95rem; font-weight: 650; letter-spacing: -0.005em; }
+.tool-card strong { font-size: 0.95rem; font-weight: var(--fw-semibold); letter-spacing: -0.005em; }
 .tool-card small { color: var(--text-dim); font-size: 0.8rem; }
 .tool-card:hover { border-color: var(--accent); transform: translateY(-4px);
   box-shadow: var(--shadow-md), var(--shadow-glow); }
 .tool-card:hover .tool-icon-badge { background: var(--accent); }
 .tool-card:hover .tool-icon-badge svg { stroke: #fff; }
+/* Press feedback for the main Backtest/Validation/Grid/Portfolio/Stocks
+   navigation grid — it had a hover lift but nothing for the tap itself. */
+.tool-card:active { transform: scale(0.97); box-shadow: var(--shadow-xs); }
 .tool-back { background: var(--surface); border: 1px solid var(--border); color: var(--text);
   border-radius: var(--r-sm); padding: 0.48rem 0.9rem; margin-bottom: 1rem; cursor: pointer;
-  transition: border-color var(--dur-fast) var(--ease); }
+  transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .tool-back:hover { border-color: var(--border-strong); }
+.tool-back:active { transform: scale(0.96); }
 
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
@@ -1137,7 +1181,13 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .disclaimer { color: var(--text-dim); font-size: 0.72rem; text-align: center; margin: 1.5rem 0 0; }
 
 /* Market detail view (tap a coin) */
-.tappable { text-align: inherit; font: inherit; color: inherit; width: 100%; cursor: pointer; }
+/* Tap feedback for every whole-element-is-a-button surface (hero card,
+   market rows/cards, mover rows) — none had a press state before, so a tap
+   gave no tactile confirmation at all on a touch device. */
+.tappable { text-align: inherit; font: inherit; color: inherit; width: 100%; cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
+.tappable:active { transform: scale(0.985); opacity: 0.92; }
+@media (prefers-reduced-motion: reduce) { .tappable:active { transform: none; } }
 .detail-head { display: flex; justify-content: space-between; align-items: center; margin: 0.5rem 0 0.9rem; }
 .detail-head-left { display: flex; align-items: center; gap: 0.7rem; }
 .detail-coin { display: flex; align-items: center; gap: 0.6rem; }
@@ -1156,7 +1206,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .icon-btn:active { transform: scale(0.9); }
 .icon-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2;
   stroke-linecap: round; stroke-linejoin: round; }
-.detail-name { font-size: 1.15rem; font-weight: 750; letter-spacing: -0.01em; }
+.detail-name { font-size: 1.15rem; font-weight: var(--fw-bold); letter-spacing: var(--tracking-tight); }
 .detail-price { text-align: right; }
 .detail-price-row { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.7rem; }
 .star-btn { background: color-mix(in srgb, var(--surface-raised) 55%, transparent);
@@ -1171,7 +1221,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .dstat { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
   padding: 0.5rem 0.6rem; display: flex; flex-direction: column; gap: 0.15rem; }
 .dstat-label { font-size: 0.68rem; color: var(--text-dim); }
-.dstat-value { font-size: 0.85rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.dstat-value { font-size: 0.85rem; font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
 .view-tabs { display: flex; gap: 0.2rem; margin-bottom: 0.9rem; padding: 0.22rem; background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--r-pill); }
 .view-tab { flex: 1; background: transparent; border: none; color: var(--text-dim); padding: 0.5rem 0;
@@ -1202,7 +1252,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .detail-chart svg { width: 100%; height: 210px; display: block; }
 .detail-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; }
 .pager { background: var(--surface); border: 1px solid var(--border); color: var(--text);
-  border-radius: var(--r-sm); padding: 0.5rem 1rem; cursor: pointer; font-weight: 650;
+  border-radius: var(--r-sm); padding: 0.5rem 1rem; cursor: pointer; font-weight: var(--fw-semibold);
   transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .pager:hover:not(:disabled) { border-color: var(--border-strong); }
 .pager:active:not(:disabled) { transform: scale(0.96); }
@@ -1267,7 +1317,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 
 /* Live current-price marker */
 .pchart .pchart-now-line { stroke: currentColor; stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.4; }
-.pchart .pchart-now-text { fill: #fff; font-size: 9px; font-weight: 750; font-family: inherit; }
+.pchart .pchart-now-text { fill: #fff; font-size: 9px; font-weight: var(--fw-bold); font-family: inherit; }
 .pchart .pchart-now { animation: pchart-pulse 1.8s ease-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes pchart-pulse { 0% { opacity: 1; } 50% { opacity: 0.35; } 100% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .pchart .pchart-now { animation: none; } }
@@ -1312,10 +1362,10 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   box-shadow: var(--shadow-md); z-index: 2;
 }
 .pchart-tip[hidden] { display: none; }
-.pchart-tip-price { font-weight: 750; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.pchart-tip-price { font-weight: var(--fw-bold); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
 .pchart-tip-time { color: var(--text-dim); font-size: 0.7rem; }
 
-.hero-more { float: left; color: var(--accent-text); font-size: 0.8rem; font-weight: 650; }
+.hero-more { float: left; color: var(--accent-text); font-size: 0.8rem; font-weight: var(--fw-semibold); }
 
 /* Real-money readiness card */
 .readiness .block-head { display: flex; align-items: center; justify-content: space-between; }
@@ -1482,10 +1532,10 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 
 .empty-state-title {
   font-size: 1.2rem;
-  font-weight: 650;
+  font-weight: var(--fw-semibold);
   color: var(--text);
   margin-bottom: 0.5rem;
-  letter-spacing: -0.01em;
+  letter-spacing: var(--tracking-tight);
 }
 
 .empty-state-text {
