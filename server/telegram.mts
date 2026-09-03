@@ -453,6 +453,41 @@ export async function sendTelegramMessage(
   }
 }
 
+/** Edits a previously-sent message's text and strips its inline keyboard
+ * (David asked for this 2026-09-03: after tapping אשר/דחה the original
+ * confirmation prompt just sat there with live buttons and no visible
+ * change, which read as "the bot isn't registering my tap" even when it
+ * was — Telegram's `answerCallbackQuery` alone shows nothing by default).
+ * Used to replace the "awaiting confirmation" prompt with either a
+ * "processing" line right after the tap, or the final outcome once known. */
+export async function editTelegramMessage(
+  messageId: number,
+  text: string,
+  config: TelegramConfig,
+): Promise<SendResult> {
+  if (!config.token || !config.chatId) {
+    return { sent: false, reason: 'Telegram credentials not set' };
+  }
+  const doFetch = config.fetchFn ?? ((input, init) => fetch(input, init));
+  try {
+    const response = await doFetch(`https://api.telegram.org/bot${config.token}/editMessageText`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: config.chatId,
+        message_id: messageId,
+        text,
+        disable_web_page_preview: true,
+        reply_markup: { inline_keyboard: [] },
+      }),
+    });
+    if (!response.ok) return { sent: false, reason: `Telegram HTTP ${response.status}` };
+    return { sent: true };
+  } catch (cause) {
+    return { sent: false, reason: cause instanceof Error ? cause.message : String(cause) };
+  }
+}
+
 export interface TelegramCallbackQuery {
   readonly id: string;
   readonly data: string;

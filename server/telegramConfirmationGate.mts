@@ -27,6 +27,7 @@ import type { ConfirmationDecision, ConfirmationGate, OrderIntent } from '../src
 import type { KeyValueStore } from '../src/core/data/storage';
 import {
   answerCallbackQuery,
+  editTelegramMessage,
   pollAllTelegramUpdates,
   sendTelegramMessage,
   stashUnclaimedTelegramUpdates,
@@ -60,6 +61,10 @@ export class ConfirmationPendingError extends Error {
 
 interface PendingRecord {
   readonly sentAt: number;
+  /** Undefined only if the send succeeded before this field existed, or
+   * Telegram's response genuinely omitted it — editing is then skipped
+   * rather than guessing a message to edit. */
+  readonly messageId?: number;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -166,6 +171,9 @@ export class TelegramConfirmationGate implements ConfirmationGate {
         mode: intent.mode,
         detail: decision.note!,
       });
+      if (pending.messageId !== undefined) {
+        await editTelegramMessage(pending.messageId, `⌛ פג התוקף — ההזמנה בוטלה אוטומטית (לא הגיבו תוך ${minutes} דקות).`, this.telegram);
+      }
       return decision;
     }
 
@@ -198,7 +206,7 @@ export class TelegramConfirmationGate implements ConfirmationGate {
       if (!result.sent) {
         throw new ConfirmationPendingError(intent.id);
       }
-      pending = { sentAt };
+      pending = { sentAt, messageId: result.messageId };
       pendingAll[intent.id] = pending;
       this.store.set(STORAGE_KEY, pendingAll);
     }
@@ -243,6 +251,21 @@ export class TelegramConfirmationGate implements ConfirmationGate {
         mode: intent.mode,
         detail: approved ? 'approved via Telegram' : 'rejected via Telegram',
       });
+      // David asked for this 2026-09-03: tapping אשר/דחה left the original
+      // prompt sitting there untouched with no visible sign it registered
+      // (Telegram's answerCallbackQuery alone shows nothing by default) —
+      // replace the "awaiting confirmation" text and drop the keyboard
+      // immediately so the tap is visibly acknowledged. The follow-up
+      // message with the actual broker result (filled/rejected/etc.) is a
+      // SEPARATE message sent by the caller once that's known — this class
+      // only knows the human's decision, not what the broker will do with it.
+      if (pending.messageId !== undefined) {
+        await editTelegramMessage(
+          pending.messageId,
+          approved ? '✅ אישרת — שולח לבורסה...' : '❌ דחית — ההזמנה לא תבוצע.',
+          this.telegram,
+        );
+      }
       return decision;
     }
     throw new ConfirmationPendingError(intent.id);

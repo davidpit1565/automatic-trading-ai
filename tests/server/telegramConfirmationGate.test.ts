@@ -63,7 +63,17 @@ function fakeTelegram(getUpdatesResponses: { update_id: number; callback_query?:
   let updatesCallIndex = 0;
   const sent: string[] = [];
   const answered: string[] = [];
+  const edited: { messageId: number; text: string; keyboardCleared: boolean }[] = [];
   const fetchFn = (async (url: string, init?: { body?: string }) => {
+    if (url.includes('/editMessageText')) {
+      const body = JSON.parse(init!.body!);
+      edited.push({
+        messageId: body.message_id,
+        text: body.text,
+        keyboardCleared: Array.isArray(body.reply_markup?.inline_keyboard) && body.reply_markup.inline_keyboard.length === 0,
+      });
+      return new Response('{}', { status: 200 });
+    }
     if (url.includes('/sendMessage')) {
       sent.push(JSON.parse(init!.body!).text);
       return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 });
@@ -86,7 +96,7 @@ function fakeTelegram(getUpdatesResponses: { update_id: number; callback_query?:
     }
     throw new Error(`unexpected Telegram endpoint: ${url}`);
   }) as unknown as typeof fetch;
-  return { fetchFn, sent, answered };
+  return { fetchFn, sent, answered, edited };
 }
 
 describe('TelegramConfirmationGate (real network I/O — the human safety gate for Stage 6)', () => {
@@ -130,7 +140,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
   });
 
   it('sends one Telegram message with approve/reject buttons and resolves approved on a matching tap', async () => {
-    const { fetchFn, sent } = fakeTelegram([
+    const { fetchFn, sent, edited } = fakeTelegram([
       [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:approve:BTCEUR:1:0' } }],
     ]);
     const store = new MemoryStore();
@@ -144,6 +154,10 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     expect(sent).toHaveLength(1);
     expect(sent[0]).toContain('BTCEUR');
     expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation', 'confirmed']);
+    // David asked (2026-09-03) to see a visible sign his tap registered,
+    // since answerCallbackQuery alone shows nothing — the original prompt
+    // must be edited (buttons stripped) right after the decision.
+    expect(edited).toEqual([{ messageId: 1, text: expect.stringContaining('אישרת'), keyboardCleared: true }]);
   });
 
   it('shows the fixed expiry deadline (clock time + minutes) in the sent message, so the human knows exactly how long they have', async () => {
@@ -182,7 +196,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
   });
 
   it('resolves approved: false on a reject tap', async () => {
-    const { fetchFn } = fakeTelegram([
+    const { fetchFn, edited } = fakeTelegram([
       [{ update_id: 10, callback_query: { id: 'cb1', data: 'confirm:reject:BTCEUR:1:0' } }],
     ]);
     const store = new MemoryStore();
@@ -191,6 +205,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     const decision = await gate.requestConfirmation(intent());
     expect(decision.approved).toBe(false);
     expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation', 'rejected']);
+    expect(edited).toEqual([{ messageId: 1, text: expect.stringContaining('דחית'), keyboardCleared: true }]);
   });
 
   it('ignores a callback tap for a different intent and keeps polling for the right one', async () => {
@@ -254,6 +269,9 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     expect(decision.note).toContain('expired');
     expect(second.sent).toHaveLength(0);
     expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation', 'rejected']);
+    // The original prompt (still showing live buttons at this point) must
+    // be edited to reflect the auto-expiry, not left sitting there stale.
+    expect(second.edited).toEqual([{ messageId: 1, text: expect.stringContaining('פג'), keyboardCleared: true }]);
   });
 
   it('does not expire a resumed call still within the pending window', async () => {

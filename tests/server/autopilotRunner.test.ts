@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileStore } from '../../server/fileStore.mts';
 import {
   breakerEngaged,
+  buildLiveEntryResultMessage,
   localDayAndHour,
   maybeSendMoveAlerts,
   maybeSendPeriodicReports,
@@ -25,6 +26,7 @@ import {
   readStocksSummary,
   runLiveMirror,
 } from '../../server/autopilotRunner.mts';
+import type { LiveEntryOutcome } from '../../server/liveEntryMirror.mts';
 import { PortfolioEngine } from '../../src/core/position/portfolioEngine';
 import { PositionEngine } from '../../src/core/position/positionEngine';
 import { TradeJournal } from '../../src/core/position/tradeJournal';
@@ -490,5 +492,71 @@ describe('runLiveMirror (real-money wiring stays off until deliberately turned o
     expect(store.get('live:live-cash-eur')).toBe(100);
     expect(store.get('live:live-open-positions')).toBeUndefined();
     delete process.env['LIVE_STARTING_CASH_EUR'];
+  });
+});
+
+// David asked for this 2026-09-03: after tapping אשר/דחה he had no way to
+// know what actually happened at the broker without asking me to read the
+// audit log for him. buildLiveEntryResultMessage is the (pure, easy to
+// test directly) piece that decides whether a follow-up Telegram message
+// gets sent at all, and what it says.
+describe('buildLiveEntryResultMessage (the post-decision follow-up David asked for)', () => {
+  it('reports a real fill with quantity and average price', () => {
+    const outcome: LiveEntryOutcome = {
+      symbol: 'BTC-EUR',
+      outcome: 'submitted',
+      report: { intentId: 'x', state: 'filled', filledQuantity: 2, avgFillPrice: 99.5, detail: 'filled' },
+    };
+    const message = buildLiveEntryResultMessage(outcome);
+    expect(message).toContain('בוצעה');
+    expect(message).toContain('BTC-EUR');
+    expect(message).toContain('2');
+    expect(message).toContain('99.5');
+  });
+
+  it('reports a resting (not yet filled) order distinctly from a real fill', () => {
+    const outcome: LiveEntryOutcome = {
+      symbol: 'BTC-EUR',
+      outcome: 'submitted',
+      report: { intentId: 'x', state: 'submitted', filledQuantity: 0, avgFillPrice: null, detail: 'order venue-1 placed' },
+    };
+    const message = buildLiveEntryResultMessage(outcome);
+    expect(message).toContain('ממתינה למילוי');
+    expect(message).not.toContain('בוצעה בבורסה');
+  });
+
+  it('reports a broker-side rejection with the real detail (e.g. the HTTP 400 body)', () => {
+    const outcome: LiveEntryOutcome = {
+      symbol: 'BTC-EUR',
+      outcome: 'submitted',
+      report: {
+        intentId: 'x',
+        state: 'rejected',
+        filledQuantity: 0,
+        avgFillPrice: null,
+        detail: 'Revolut X rejected the order: HTTP 400 — {"error":"size_too_small"}',
+      },
+    };
+    const message = buildLiveEntryResultMessage(outcome);
+    expect(message).toContain('דחתה');
+    expect(message).toContain('size_too_small');
+  });
+
+  it('reports a human decline', () => {
+    const outcome: LiveEntryOutcome = { symbol: 'BTC-EUR', outcome: 'rejected', decidedBy: 'C' };
+    const message = buildLiveEntryResultMessage(outcome);
+    expect(message).toContain('דחית');
+    expect(message).toContain('BTC-EUR');
+  });
+
+  it('stays silent for outcomes that never reached a human decision (unchanged, audit-log-only)', () => {
+    expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'entry-already-outstanding' })).toBeNull();
+    expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'not-approved', reasons: ['x'] })).toBeNull();
+    expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'no-broker-symbol' })).toBeNull();
+    expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'unknown-symbol', detail: 'x' })).toBeNull();
+    expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'missing-symbol-check' })).toBeNull();
+    expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'blocked-by-kill-switch' })).toBeNull();
+    expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'pending' })).toBeNull();
+    expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'stale-after-approval', reason: 'x' })).toBeNull();
   });
 });
