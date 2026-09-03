@@ -71,9 +71,21 @@ function readOrderDetail(json: unknown): RevolutXOrderDetail | null {
   };
 }
 
+/**
+ * Real incident (2026-09-03): a live order that Revolut X actually FILLED
+ * (confirmed directly in the Revolut X app) was reported to David as
+ * REJECTED — "response missing venue_order_id" — because this only ever
+ * accepted `data` as an array (`{data: [{venue_order_id, ...}]}`, the shape
+ * Revolut X's own docs show), and whatever the real response body was here
+ * didn't match. Now also accepts `data` as a bare object (the same
+ * single-resource convention `readOrderDetail` above already assumes for
+ * the sibling GET-order-detail endpoint), in case the real API drifts from
+ * its own docs for some order outcomes — without weakening the documented
+ * array case, which is still tried first.
+ */
 function readVenueOrderId(json: unknown): string | null {
-  if (!isRecord(json) || !Array.isArray(json.data)) return null;
-  const first = json.data[0];
+  if (!isRecord(json)) return null;
+  const first = Array.isArray(json.data) ? json.data[0] : json.data;
   if (!isRecord(first) || typeof first.venue_order_id !== 'string') return null;
   return first.venue_order_id;
 }
@@ -306,7 +318,14 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
     }
     const venueOrderId = readVenueOrderId(placed.json);
     if (!venueOrderId) {
-      return this.reportAndAudit(intent.id, 'rejected', 'Revolut X response missing venue_order_id');
+      // Include the raw body (same as the !placed.ok branch above) — the
+      // 2026-09-03 incident discarded it here, leaving no way to diagnose
+      // why parsing failed for an order Revolut X had actually filled.
+      return this.reportAndAudit(
+        intent.id,
+        'rejected',
+        `Revolut X response missing venue_order_id — raw response: ${JSON.stringify(placed.json).slice(0, 500)}`,
+      );
     }
     this.rememberVenueOrderId(intent.id, venueOrderId);
 
