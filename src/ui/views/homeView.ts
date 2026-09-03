@@ -54,7 +54,10 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   // The REAL Revolut X account — separate section, hidden entirely until
   // the live ledger has ever been initialized (state.live !== null), so a
   // stocks view or a fresh crypto deploy with no live account yet never
-  // shows a misleading "€0.00 real money" card.
+  // shows a misleading "€0.00 real money" card. Deliberately kept as a
+  // boxed SECONDARY card rather than also going `hero-bare`: #117's point
+  // was ONE dominant bare hero (the sim balance, what David actually looks
+  // at) with everything else — including this real-money card — boxed.
   const liveHero = el('section', 'hero');
   liveHero.id = 'home-live-hero';
   liveHero.hidden = true;
@@ -72,7 +75,11 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   livePosList.id = 'home-live-positions';
   livePosWrap.appendChild(livePosList);
 
-  const hero = el('section', 'hero tappable');
+  // `hero-bare` drops the card chrome so the balance sits directly on the
+  // page as the screen's single dominant element, the way the Revolut X
+  // reference opens its wallet screen. Boxing it made it read as one widget
+  // among several.
+  const hero = el('section', 'hero hero-bare tappable');
   hero.dataset['nav'] = 'value';
   hero.innerHTML = `
     <div class="hero-label">Portfolio value <span class="tag-sim">SIMULATED</span><span class="hero-more">history ›</span></div>

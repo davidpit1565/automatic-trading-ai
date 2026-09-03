@@ -1,23 +1,31 @@
 :root {
-  /* ---------- Core palette: deep, rich neutrals with a premium fintech tone ---------- */
-  --bg: #07090d;
-  --bg-elevated: #0c0f15;
-  --surface: #12161e;
-  --surface-raised: #1a1f2a;
-  --surface-hover: #212736;
-  --border: #232a38;
-  --border-strong: #303a4d;
-  --text: #f4f6fa;
-  --text-dim: #929bb0;
-  --text-faint: #5d6579;
+  /* ---------- Core palette ----------
+     TRUE BLACK, neutral greys. Every earlier pass kept a blue-violet tint in
+     the background/surface/border ramp (#07090d / #12161e / #232a38). Held
+     next to the actual Revolut X reference that tint is what made this read
+     as "a generic dark dashboard" rather than the reference: Revolut X is
+     pure #000 with warm-neutral grey cards and NO drawn card outlines at all
+     — separation comes from the surface being lighter than the page, plus
+     elevation, never from a 1px navy stroke. Borders are now near-invisible
+     white hairlines, used only where a real divider is needed. */
+  --bg: #000000;
+  --bg-elevated: #0a0a0b;
+  --surface: #141416;
+  --surface-raised: #1e1e21;
+  --surface-hover: #27272b;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --text: #ffffff;
+  --text-dim: #9a9aa4;
+  --text-faint: #66666e;
 
   /* Accent: neutral graphite, not a colour — Revolut X's own look uses no
      blue anywhere; emphasis comes from brightness/weight and from --hot/
      --cold, not a tinted primary. Used for active-pill/button BACKGROUNDS
      (paired with white text, so it stays a medium-dark neutral). */
-  --accent: #454c5c;
-  --accent-2: #5c6474;
-  --accent-dim: #2e333d;
+  --accent: #2e2e33;
+  --accent-2: #3a3a41;
+  --accent-dim: #202024;
   --accent-glow: rgba(255, 255, 255, 0.16);
   --accent-tint: rgba(255, 255, 255, 0.08);
   /* Bright neutral for TEXT-only emphasis (links, badges, chart markers) —
@@ -47,13 +55,27 @@
   --shadow-lg: 0 20px 56px rgba(0, 0, 0, 0.44), 0 6px 18px rgba(0, 0, 0, 0.28);
   --shadow-glow: 0 10px 36px var(--accent-glow);
 
-  /* Radius scale, used consistently across every card/control */
-  --r-xs: 8px;
-  --r-sm: 12px;
-  --r-md: 16px;
-  --r-lg: 20px;
-  --r-xl: 26px;
+  /* Radius scale. Bumped a full step: the reference's cards are noticeably
+     rounder than a conventional 12/16px dashboard, and that softness is a
+     large part of why it reads as an app rather than a web admin panel. */
+  --r-xs: 10px;
+  --r-sm: 14px;
+  --r-md: 18px;
+  --r-lg: 22px;
+  --r-xl: 30px;
   --r-pill: 999px;
+
+  /* ---------- Type scale ----------
+     Named steps so the hierarchy is deliberate instead of every heading
+     landing within a few px of every other. The previous pass had a page
+     title at 1.35rem and a section heading at 1.08rem — a 4px difference
+     that no reader perceives as a hierarchy at all. */
+  --fs-hero: clamp(3.1rem, 13.5vw, 4.1rem);
+  --fs-display: 2.05rem;
+  --fs-section: 1.32rem;
+  --fs-body: 1rem;
+  --fs-sub: 0.88rem;
+  --fs-micro: 0.76rem;
 
   /* Motion: an "ease-out-expo" curve reads as noticeably more polished
      than a linear/plain-ease transition on hover/press states. */
@@ -224,7 +246,7 @@ body {
 .control select {
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23929bb0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239a9aa4' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   padding-right: 2rem;
@@ -251,29 +273,30 @@ body {
   font-size: 0.9rem;
 }
 
+/* The reference's primary action is a SOLID WHITE PILL with black text — a
+   confident, unmistakable CTA (see its Buy button). The old treatment was a
+   small dark-grey rounded rect wearing a white outer glow, which read as a
+   disabled secondary control rather than the main action on the screen. */
 button.primary {
-  background: linear-gradient(155deg, var(--accent) 0%, var(--accent-2) 100%);
-  color: #fff;
+  background: #ffffff;
+  color: #000000;
   border: none;
-  border-radius: var(--r-sm);
-  padding: 0.62rem 1.25rem;
-  font-size: 0.9rem;
-  font-weight: var(--fw-semibold);
-  letter-spacing: 0.005em;
+  border-radius: var(--r-pill);
+  padding: 0.95rem 1.9rem;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-base) var(--ease), filter var(--dur-fast) var(--ease);
-  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.3);
+  transition: transform var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease);
+  box-shadow: none;
 }
 
 button.primary:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.06);
-  box-shadow: 0 10px 26px rgba(255, 255, 255, 0.4), var(--shadow-glow);
+  filter: brightness(0.9);
 }
 
 button.primary:active {
-  transform: translateY(0) scale(0.99);
-  box-shadow: 0 3px 10px rgba(255, 255, 255, 0.3);
+  transform: scale(0.98);
 }
 
 button.primary:disabled {
@@ -283,21 +306,22 @@ button.primary:disabled {
   filter: none;
 }
 
+/* Matches the primary's size and pill shape so a Buy/Sell pair reads as one
+   deliberate control, not two mismatched buttons. */
 button.secondary {
   background: var(--surface-raised);
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  padding: 0.58rem 1.15rem;
-  font-weight: var(--fw-medium);
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 0.95rem 1.9rem;
+  font-size: 1rem;
+  font-weight: var(--fw-semibold);
   cursor: pointer;
-  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+  transition: transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
 
 button.secondary:hover {
-  border-color: var(--accent);
   background: var(--surface-hover);
-  box-shadow: 0 0 0 3px var(--accent-tint);
 }
 
 button.secondary:active {
@@ -785,7 +809,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   /* Genuinely translucent rather than a near-opaque panel with a blur
      filter tacked on — the wash above (and whatever scrolls under it)
      should read clearly through the glass. */
-  background: linear-gradient(180deg, rgba(18,22,30,0.4) 0%, rgba(7,9,13,0.28) 100%);
+  background: linear-gradient(180deg, rgba(28,28,30,0.55) 0%, rgba(0,0,0,0.35) 100%);
   backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
   border-bottom: 1px solid rgba(255,255,255,0.07);
@@ -818,7 +842,12 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .tb-label { color: var(--text-dim); font-weight: var(--fw-bold); }
 .tb-price { font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
 
-.content { max-width: 760px; margin: 0 auto; padding: var(--sp-4) var(--sp-4) calc(84px + env(safe-area-inset-bottom)); }
+/* The bottom nav floats 20px off the bottom and is ~72px tall, so the old
+   84px reserve was genuinely too small — the last row of every list sat
+   underneath it. That "content disappears behind the tab bar" effect is the
+   single most unfinished-looking thing in the app, and it was on every
+   screen. 128px clears the pill plus a real breathing gap. */
+.content { max-width: 760px; margin: 0 auto; padding: var(--sp-5) var(--sp-5) calc(128px + env(safe-area-inset-bottom)); }
 .view { display: none; }
 .view.active { display: block; animation: viewfade var(--dur-slow) var(--ease-out); }
 @keyframes viewfade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
@@ -826,35 +855,63 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .bottom-nav {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: 20px; z-index: 30;
   display: flex; justify-content: space-around; align-items: center; gap: 0.5rem;
-  background: color-mix(in srgb, var(--surface) 78%, transparent);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(28, 28, 30, 0.72);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: var(--r-pill);
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.6rem;
   width: fit-content;
-  max-width: 90%;
-  box-shadow: var(--shadow-lg);
+  max-width: 92%;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.5);
 }
 .nav-btn { flex: none; background: transparent; border: none; color: var(--text-dim);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-  padding: 0.5rem 0.75rem; font-size: 0.64rem; font-weight: 600; cursor: pointer; border-radius: var(--r-sm);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  padding: 0.55rem 0.95rem; font-size: 0.68rem; font-weight: var(--fw-semibold); cursor: pointer; border-radius: var(--r-pill);
   transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
-.nav-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nav-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .nav-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
 .nav-btn:active { transform: scale(0.92); }
-.nav-btn.active { background: var(--accent-tint); color: var(--accent-text); }
+/* Active tab is plain WHITE, no tinted chip — the reference marks the current
+   tab by brightness alone. A filled chip made all four look like buttons. */
+.nav-btn.active { background: transparent; color: #fff; }
 
 .hero {
   position: relative;
-  background: linear-gradient(155deg, var(--surface-raised), var(--surface) 65%);
+  background: linear-gradient(160deg, var(--surface-raised), var(--surface) 70%);
   border: 1px solid var(--border);
   border-radius: var(--r-xl);
-  padding: 1.7rem 1.4rem;
-  margin-bottom: 1.25rem;
-  box-shadow: var(--shadow-md);
+  padding: 2rem 1.6rem;
+  margin-bottom: 1.75rem;
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
+
+/* Home's balance is NOT a card in the reference — it is a very large number
+   sitting directly on the black page with a lot of air around it and the
+   sparkline bleeding the full width underneath. Boxing it, as every previous
+   pass did, is what stopped the balance reading as the hero of the screen:
+   a bordered panel makes the number look like one widget among several
+   rather than the thing the screen is about. */
+.hero.hero-bare {
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0.75rem 0 0;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+.hero.hero-bare::after { display: none; }
+.hero.hero-bare .hero-label { justify-content: center; }
+.hero.hero-bare .hero-value { justify-content: center; }
+.hero.hero-bare .hero-split { justify-content: center; }
+/* Full-bleed to the viewport edges, not just the card's padding box. */
+.hero.hero-bare .hero-spark { margin: 1.5rem -1.25rem 0; }
+.hero.hero-bare .hero-spark svg,
+.hero.hero-bare .hero-spark .spark { height: 132px; }
+/* No data yet — collapse rather than reserving a tall empty band. */
+.hero-spark:empty { display: none; }
 .hero::before {
   /* Ambient sentiment glow, bleeding down from the top edge — the Revolut X
      reference's colour-blurred backdrop, scoped to the card. `::before`
@@ -874,7 +931,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   position: absolute; inset: 0 0 auto 0; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent);
 }
-.hero-label { color: var(--text-dim); font-size: 0.85rem; font-weight: var(--fw-medium); display: flex; align-items: center; gap: 0.5rem; }
+.hero-label { color: var(--text-dim); font-size: var(--fs-sub); font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
 .tag-sim { font-size: 0.6rem; font-weight: 700; letter-spacing: var(--tracking-wide); background: var(--accent-tint);
   color: var(--accent-text); border: 1px solid rgba(255, 255, 255, 0.4); padding: 0.12rem 0.45rem; border-radius: var(--r-xs); }
 /* The REAL account's badge is deliberately a different color from
@@ -885,6 +942,9 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .kill-switch-banner { display: flex; align-items: center; gap: 0.5rem; background: var(--warn-tint);
   color: var(--warn); border: 1px solid rgba(245, 185, 61, 0.4); border-radius: var(--r-md);
   padding: 0.6rem 0.75rem; font-size: 0.85rem; font-weight: var(--fw-semibold); margin-top: 0.6rem; }
+/* Base size fits a boxed card (the "Real money" secondary hero, which stays
+   boxed — see homeView.ts). `.hero-bare` below overrides to the giant
+   dominant-element scale; this base is what a secondary `.hero` still gets. */
 .hero-value { display: flex; align-items: baseline; gap: 0.06em; font-weight: var(--fw-bold); letter-spacing: -0.02em;
   margin: 0.3rem 0 0.1rem; font-variant-numeric: tabular-nums; }
 .hero-value-currency { font-size: 1.7rem; }
@@ -893,10 +953,22 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
    split the reference uses for its balance figure, so the eye lands on the
    whole-euro number first and the exact cents read as secondary detail. */
 .hero-value-minor { font-size: 1.5rem; font-weight: var(--fw-semibold); color: var(--text-dim); }
-.hero-change { font-weight: var(--fw-semibold); font-size: 1rem; }
+/* The PRIMARY (bare) hero's balance is the loudest thing on the screen —
+   ~2.5x the page title and ~4x body text. `--fs-hero` bottoms out around
+   50px on a 390px phone and caps near 66px, matching the reference's
+   balance. Sized on the flex parent so the currency symbol and the cents
+   can scale off it in `em`. Scoped to `.hero-bare` only — a boxed secondary
+   hero (the real-money card) keeps the moderate size above; only the ONE
+   dominant hero gets this treatment. */
+.hero-bare .hero-value { gap: 0.04em; font-weight: 800; letter-spacing: -0.035em;
+  margin: 0.7rem 0 0.35rem; line-height: 1.02; font-size: var(--fs-hero); }
+.hero-bare .hero-value-currency { font-size: 0.5em; font-weight: 700; color: var(--text-dim); }
+.hero-bare .hero-value-major { font-size: 1em; }
+.hero-bare .hero-value-minor { font-size: 0.46em; font-weight: 700; color: var(--text-dim); }
+.hero-change { font-weight: 700; font-size: 1.05rem; letter-spacing: -0.01em; }
 .hero-change.up::before { content: '▲ '; font-size: 0.7em; }
 .hero-change.down::before { content: '▼ '; font-size: 0.7em; }
-.hero-split { display: flex; gap: 1.2rem; color: var(--text-dim); font-size: 0.85rem; margin-top: 0.5rem; }
+.hero-split { display: flex; gap: 1.5rem; color: var(--text-dim); font-size: var(--fs-sub); margin-top: 1.1rem; }
 .hero-bench { margin-top: 0.8rem; font-size: 0.82rem; background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border); border-radius: var(--r-sm); padding: 0.48rem 0.75rem; }
 /* Bleeds to the hero card's own edges (negative margins matching its
@@ -906,11 +978,14 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .hero-spark { margin: 0.6rem -1.4rem -1.7rem; }
 .hero-spark svg, .hero-spark .spark { width: 100%; height: 88px; display: block; }
 
-.block { margin-bottom: var(--sp-6); }
-.block-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.7rem; }
-.block-head h2, .view-title { font-size: 1.08rem; margin: 0; letter-spacing: var(--tracking-tight); }
-.view-title { margin-bottom: 0.15rem; font-size: 1.35rem; }
-.view-sub { color: var(--text-dim); font-size: 0.85rem; margin: 0.1rem 0 1.1rem; }
+.block { margin-bottom: 2.25rem; }
+.block-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.9rem; }
+.block-head h2 { font-size: var(--fs-section); font-weight: var(--fw-bold); margin: 0; letter-spacing: -0.02em; }
+/* A page title now reads a full step above a section heading, which reads a
+   step above body — the reference's whole "premium" feel is carried by that
+   contrast far more than by any colour value. */
+.view-title { margin: 0 0 0.2rem; font-size: var(--fs-display); font-weight: 800; letter-spacing: -0.032em; line-height: 1.12; }
+.view-sub { color: var(--text-dim); font-size: var(--fs-sub); margin: 0.35rem 0 1.6rem; max-width: 46ch; }
 .link-btn { background: none; border: none; color: var(--accent-text); font-size: 0.82rem; font-weight: 600; cursor: pointer;
   transition: opacity var(--dur-fast) var(--ease); }
 .link-btn:hover { opacity: 0.75; }
@@ -921,39 +996,54 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%); }
 
-.hub-tabs { display: flex; gap: 0.3rem; background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-pill); padding: 0.25rem; margin-bottom: 1.1rem; }
-.hub-tab { flex: 1; background: none; border: none; color: var(--text-dim); font-size: 0.8rem;
-  font-weight: 600; padding: 0.5rem 0.4rem; border-radius: var(--r-pill); cursor: pointer;
+/* Reference-style segmented control: no outer container chrome at all, just
+   a row of plain labels where the active one wears a filled pill. The old
+   bordered track read as a form widget. */
+.hub-tabs { display: flex; gap: 0.25rem; background: none; border: none;
+  border-radius: var(--r-pill); padding: 0; margin-bottom: 1.5rem; }
+.hub-tab { flex: 1; background: none; border: none; color: var(--text-dim); font-size: 0.94rem;
+  font-weight: 650; padding: 0.62rem 0.4rem; border-radius: var(--r-pill); cursor: pointer;
+  letter-spacing: -0.01em;
   transition: all var(--dur-fast) var(--ease); }
 .hub-tab:hover { color: var(--text); }
 .hub-tab:active { transform: scale(0.96); }
-.hub-tab.active { background: var(--accent); color: #fff; }
+.hub-tab.active { background: var(--surface-raised); color: #fff; font-weight: 750; }
 /* Stocks adds a 5th tab (Long-Term) — shrink to fit without wrapping. */
 .hub-tabs:has(.hub-tab:nth-child(5)) .hub-tab { font-size: 0.7rem; padding: 0.5rem 0.15rem; letter-spacing: var(--tracking-tight); }
 .hub-panel { display: none; }
 .hub-panel.active { display: block; animation: viewfade var(--dur-base) var(--ease); }
 .markets-strip::-webkit-scrollbar { display: none; }
-.market-card { min-width: 154px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
-  padding: 0.75rem 0.85rem; box-shadow: var(--shadow-xs); transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
-/* The transform/box-shadow transition above previously had no rule that
-   ever triggered it — a hairline lift on hover, matching .tool-card's own
-   treatment, gives these cards the same tactile depth as the rest of the app. */
-.market-card:hover { border-color: var(--border-strong); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-.market-top { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; }
-.market-id { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
-.market-id .coin-logo { width: 20px; height: 20px; }
-.market-name { color: var(--text-dim); font-weight: var(--fw-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.market-price { font-weight: var(--fw-bold); margin: 0.28rem 0; font-variant-numeric: tabular-nums; }
-.market-spark svg, .spark { width: 100%; height: 44px; display: block; }
+.market-card { min-width: 178px; background: var(--surface); border: none; border-radius: var(--r-xl);
+  padding: 1rem 1.05rem 0.85rem; box-shadow: var(--shadow-md); transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+/* Hairline lift on hover, matching .tool-card's own treatment — no border to
+   swap on true black (cards have none), so the lift itself carries the
+   hover affordance. */
+.market-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.market-top { display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; }
+.market-id { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
+.market-id .coin-logo { width: 26px; height: 26px; }
+.market-name { color: var(--text-dim); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.market-price { font-weight: 780; font-size: 1.32rem; letter-spacing: -0.025em; margin: 0.5rem 0 0.15rem; font-variant-numeric: tabular-nums; }
+.market-spark svg, .spark { width: 100%; height: 52px; display: block; }
 /* Thinner stroke than the inline SVG default (2.5) — a restrained hairline
    reads as "instrument", a thick one as a decorative squiggle. Overrides the
    inline stroke-width attribute, which the CSS cascade always outranks. */
 .spark polyline { stroke-width: 2; }
 
-.chg { font-weight: 700; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
-.chg.up, .up { color: var(--hot); }
-.chg.down, .down { color: var(--cold); }
+.chg { font-weight: 700; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+/* `.up`/`.down` are also toggled on the `.hero` element itself (to drive its
+   sentiment glow). The bare `.up { color: var(--hot) }` therefore inherited
+   down into the whole card, painting the equity figure, its label AND the
+   cash/realised/unrealised row solid green — which is exactly the "cheap
+   dashboard" look, since the reference always renders the balance in white
+   and colours ONLY the delta. Excluding `.hero` keeps the sentiment glow
+   without repainting the card's text. */
+.chg.up, .up:not(.hero) { color: var(--hot); }
+.chg.down, .down:not(.hero) { color: var(--cold); }
+/* Balance stays white; only the change line takes the colour. */
+.hero .hero-value { color: var(--text); }
+.hero .hero-change.up { color: var(--hot); }
+.hero .hero-change.down { color: var(--cold); }
 
 /* Markets list: identity left, price + daily change right. No sparkline —
    it would cost one candle request per symbol, which is what capped the list
@@ -969,12 +1059,14 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   font-size: 0.86rem; font-weight: var(--fw-semibold); cursor: pointer; transition: all var(--dur-fast) var(--ease); }
 .mk-tab:hover { color: var(--text); border-color: var(--border-strong); }
 .mk-tab:active { transform: scale(0.96); }
-.mk-tab.active { background: linear-gradient(155deg, var(--accent), var(--accent-2)); border-color: transparent; color: #fff;
-  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.3); }
+/* A white outer glow on a pill (the old `box-shadow: 0 4px 14px rgba(255,255,255,.3)`)
+   is a 2015 dashboard tell. The reference just fills the active pill. */
+.mk-tab.active { background: var(--surface-raised); border-color: transparent; color: #fff; font-weight: 750;
+  box-shadow: none; }
 
 /* Coin logo, or a generated tile for the long tail with no bundled mark.
    Both share a size so rows never reflow when one falls back to the other. */
-.coin-logo { width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto; display: block; box-shadow: 0 0 0 1px rgba(255,255,255,0.06); }
+.coin-logo { width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto; display: block; box-shadow: 0 0 0 1px rgba(255,255,255,0.06); }
 .coin-logo-tile { display: inline-flex; align-items: center; justify-content: center;
   font-size: 0.62rem; font-weight: 800; letter-spacing: -0.02em; color: #fff;
   background: hsl(var(--coin-hue, 210) 55% 42%); text-transform: uppercase; }
@@ -984,7 +1076,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .logo-check { position: absolute; right: -2px; bottom: -2px; width: 15px; height: 15px;
   border-radius: 50%; background: var(--hot); border: 2px solid var(--surface);
   display: flex; align-items: center; justify-content: center; }
-.logo-check svg { width: 9px; height: 9px; fill: none; stroke: #07090d; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.logo-check svg { width: 9px; height: 9px; fill: none; stroke: #000; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Search + sort. The star overlays the row, so the row itself stays one big
    tap target and the star is not nested inside it (a button inside a button is
@@ -997,7 +1089,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .mk-sort { flex: 0 0 auto; padding: 0.58rem 1.85rem 0.58rem 0.9rem; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.86rem;
   appearance: none; -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23929bb0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239a9aa4' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 0.8rem center; }
 
 .market-row-wrap { position: relative; display: block; }
@@ -1011,13 +1103,20 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .mk-star:active { transform: translateY(-50%) scale(0.85); }
 .mk-star.on { color: var(--warn); }
 
-.market-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.75rem;
+/* The markets list is ONE grouped card with hairline separators, not 60
+   individually-outlined floating cards with gaps between them. The reference
+   groups rows this way everywhere (wallet, watchlist, recently viewed) and
+   it is the difference between "a list" and "a stack of buttons". */
+#mk-list { gap: 0; background: var(--surface); border-radius: var(--r-xl);
+  overflow: hidden; box-shadow: var(--shadow-md); }
+#mk-list .market-row-wrap ~ .market-row-wrap .market-row { border-top: 1px solid var(--border); }
+.market-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.85rem;
   width: 100%; text-align: left;
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: transparent; border: none; border-radius: 0;
   /* Extra room on the right keeps the price clear of the overlaid star. */
-  padding: 0.72rem 2.4rem 0.72rem 0.9rem;
-  transition: border-color var(--dur-fast) var(--ease); }
-.market-row:hover { border-color: var(--border-strong); }
+  padding: 0.95rem 2.4rem 0.95rem 1.1rem;
+  transition: background var(--dur-fast) var(--ease); }
+.market-row:hover { background: var(--surface-hover); }
 .market-row-id { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
 /* Both lines truncate rather than wrap. A wide change value ("+0.0019 (+0.22%)")
    squeezes this column, and a wrapped symbol made those rows taller than the
@@ -1026,8 +1125,8 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .market-row-id .row-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .market-row-num { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
 /* Tabular figures stop the digits jittering as prices tick. */
-.row-price { font-weight: var(--fw-bold); font-size: 1.02rem; font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1; }
+.row-price { font-weight: var(--fw-bold); font-size: 1.06rem; font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1; letter-spacing: -0.015em; }
 .market-row-num .chg { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1;
   white-space: nowrap; }
 /* Freshness dot beside the update time, mirroring the reference market apps. */
@@ -1047,19 +1146,19 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 @media (min-width: 860px) {
   /* Keeps the right padding that clears the overlaid star — a plain
      `padding: 0.8rem 1.1rem` here would put the price back under it. */
-  .market-row { padding: 0.85rem 2.6rem 0.85rem 1.15rem; }
-  .row-price { font-size: 1.1rem; }
+  .market-row { padding: 1.05rem 2.6rem 1.05rem 1.4rem; }
+  .row-price { font-size: 1.14rem; }
 }
 
 .stack { display: flex; flex-direction: column; gap: 0.55rem; }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 0.72rem 0.9rem;
-  transition: border-color var(--dur-fast) var(--ease); }
-.row:hover { border-color: var(--border-strong); }
-.row-main { display: flex; align-items: center; gap: 0.6rem; }
-.row-side { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
-.row-title { font-weight: 680; }
-.row-sub { color: var(--text-dim); font-size: 0.78rem; }
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 0.95rem 1.1rem;
+  transition: background var(--dur-fast) var(--ease); }
+.row:hover { background: var(--surface-hover); }
+.row-main { display: flex; align-items: center; gap: 0.8rem; }
+.row-side { display: flex; flex-direction: column; align-items: flex-end; gap: 0.2rem; }
+.row-title { font-weight: 680; font-size: 1.02rem; letter-spacing: -0.012em; }
+.row-sub { color: var(--text-dim); font-size: 0.82rem; }
 .trade.buy { border-inline-start: 3px solid var(--hot); }
 .trade.sell { border-inline-start: 3px solid var(--cold); }
 .trade.profit { border-inline-start: 3px solid var(--hot); }
@@ -1069,8 +1168,8 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .pill.sell { background: var(--cold-tint); color: var(--cold); }
 .pill.profit { background: var(--hot-tint); color: var(--hot); }
 .pill.loss { background: var(--cold-tint); color: var(--cold); }
-.empty { color: var(--text-dim); background: var(--surface); border: 1px dashed var(--border-strong);
-  border-radius: var(--r-lg); padding: 1.15rem; text-align: center; font-size: 0.9rem; }
+.empty { color: var(--text-dim); background: var(--surface); border: none;
+  border-radius: var(--r-xl); padding: 1.6rem 1.15rem; text-align: center; font-size: 0.9rem; }
 
 /* Grouped-card lists — short lists (positions, activity, trade history) sit
    as rows inside ONE continuous rounded card with hairline dividers, rather
@@ -1078,8 +1177,8 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
    (the full markets browser) keep the per-row card treatment instead — a
    single giant card wrapping hundreds of rows would look wrong at that
    scale, so this is deliberately opt-in via a second class on `.stack`. */
-.stack-card { gap: 0; background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-lg); overflow: hidden; }
+.stack-card { gap: 0; background: var(--surface); border: none;
+  border-radius: var(--r-xl); overflow: hidden; box-shadow: var(--shadow-md); }
 .stack-card .row { background: transparent; border: none; border-radius: 0;
   border-bottom: 1px solid var(--border); }
 .stack-card .row:last-child { border-bottom: none; }
@@ -1145,18 +1244,24 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 /* ===== DESKTOP: ≥860px (sidebar nav) ===== */
 @media (min-width: 860px) {
   /* Sidebar navigation */
+  /* The sidebar used to start at `top: 0` and rely on a 4.25rem top padding
+     to clear the sticky topbar — but it sits at a HIGHER z-index than the
+     topbar, so its translucent panel was drawn over the header and the
+     header's own text showed through it. Pinning it below the topbar
+     instead fixes the overlap outright. */
   .bottom-nav {
-    flex-direction: column; top: 0; bottom: auto; right: auto; left: 1rem;
-    transform: none; width: auto; gap: 0.25rem; padding: 4.25rem 0.6rem 1rem;
-    border: 1px solid var(--border); border-radius: var(--r-lg); border-inline-end: 1px solid var(--border);
-    justify-content: flex-start; box-shadow: var(--shadow-sm);
+    flex-direction: column; top: 5rem; bottom: auto; right: auto; left: 1rem;
+    transform: none; width: auto; gap: 0.25rem; padding: 0.6rem;
+    background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--r-xl); border-inline-end: 1px solid var(--border);
+    justify-content: flex-start; box-shadow: var(--shadow-md);
   }
   .nav-btn {
     flex: none; flex-direction: row; justify-content: flex-start; gap: 0.8rem; font-size: 0.95rem;
-    padding: 0.75rem 1rem; width: 100%; background: transparent;
+    padding: 0.75rem 1.1rem; width: 100%; background: transparent; border-radius: var(--r-md);
   }
   .nav-btn:hover { background: rgba(255,255,255,0.05); }
-  .nav-btn.active { background: var(--accent-tint); }
+  .nav-btn.active { background: var(--surface-raised); color: #fff; }
 
   /* Content with sidebar */
   .content {
@@ -1243,7 +1348,12 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .depth-bid { fill: var(--hot-tint); stroke: var(--hot); stroke-width: 1.5; }
 .depth-ask { fill: var(--cold-tint); stroke: var(--cold); stroke-width: 1.5; }
 .depth-mid { stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 3 3; }
-.row-title.big { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+/* The coin-detail price is that screen's hero the same way the balance is
+   Home's — the reference runs it at roughly 2.5x body text with the delta
+   beside it, not at a slightly-larger-than-a-list-row 1.5rem. */
+.row-title.big { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.032em;
+  font-variant-numeric: tabular-nums; }
+.detail-price-row .chg { font-size: 1rem; }
 /* Detail chart responsive sizing */
 .detail-chart {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 0.8rem;
