@@ -1622,7 +1622,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788443136387,
+    "at": 1788443467586,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1638,10 +1638,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1786651175463,
-      "equity": 9568.52
-    },
     {
       "at": 1786651483591,
       "equity": 9568.52
@@ -21637,6 +21633,10 @@
     {
       "at": 1788443136387,
       "equity": 10236.06
+    },
+    {
+      "at": 1788443467586,
+      "equity": 10230.62
     }
   ],
   "trade-journal": [
@@ -22861,7 +22861,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -18.03% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -18.10% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -22959,13 +22959,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1788443136387,
+    "at": 1788443467586,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10611.48660239996,
-        "returnPct": 6.114866023999602,
+        "equity": 10605.849309897585,
+        "returnPct": 6.058493098975851,
         "trades": 25,
         "winRatePct": 60,
         "profitFactor": 1.9658779582181563,
@@ -22975,8 +22975,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10611.48660239996,
-        "returnPct": 6.114866023999602,
+        "equity": 10605.849309897585,
+        "returnPct": 6.058493098975851,
         "trades": 25,
         "winRatePct": 60,
         "profitFactor": 1.9658779582181563,
@@ -22986,8 +22986,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10611.48660239996,
-        "returnPct": 6.114866023999602,
+        "equity": 10605.849309897585,
+        "returnPct": 6.058493098975851,
         "trades": 25,
         "winRatePct": 60,
         "profitFactor": 1.9658779582181563,
@@ -23008,8 +23008,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9335.223138202706,
-        "returnPct": -6.647768617972942,
+        "equity": 9335.378439628752,
+        "returnPct": -6.6462156037124815,
         "trades": 65,
         "winRatePct": 38.46153846153847,
         "profitFactor": 0.5745074535618775,
@@ -23019,8 +23019,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9825.090043122455,
-        "returnPct": -1.749099568775455,
+        "equity": 9814.979725466314,
+        "returnPct": -1.8502027453368646,
         "trades": 140,
         "winRatePct": 39.285714285714285,
         "profitFactor": 1.1335549974332315,
@@ -23030,8 +23030,8 @@
       {
         "key": "whale-flow",
         "label": "Refuses entries during heavy net selling by large traders",
-        "equity": 10726.096068528346,
-        "returnPct": 7.260960685283462,
+        "equity": 10720.39789039248,
+        "returnPct": 7.203978903924798,
         "trades": 16,
         "winRatePct": 68.75,
         "profitFactor": 2.6304126705653164,
@@ -23052,8 +23052,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10419.4226625989,
-        "returnPct": 4.194226625988994,
+        "equity": 10413.887402983,
+        "returnPct": 4.138874029830004,
         "trades": 13,
         "winRatePct": 61.53846153846154,
         "profitFactor": 1.9104569916599419,
@@ -28119,6 +28119,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused SOLEUR: no exposure headroom: 5918.31 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1788443467586,
+      "intentId": "XBTEUR:1788443467586",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused XBTEUR: no exposure headroom: 5938.13 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -31374,7 +31381,7 @@
       "takeProfit": 67933.07769000185,
       "feesPaid": 5.461247593869373,
       "realizedPnl": 0,
-      "highestPrice": 67890.7,
+      "highestPrice": 67921.6,
       "lowestPrice": 66072,
       "confidence": 30.416281700041367,
       "validationVerdict": null,
@@ -40503,32 +40510,7 @@
       "data": "confirm:approve:live-entry:XBTEUR"
     }
   ],
-  "live:live-entry-pending": {
-    "XBTEUR": {
-      "opportunity": {
-        "symbol": "XBTEUR",
-        "timeframe": "1h",
-        "direction": "long",
-        "levels": {
-          "entry": 67536.9,
-          "stopLoss": 66523.8465,
-          "takeProfit": 69563.007,
-          "riskReward": 2
-        },
-        "confidence": 0,
-        "confidenceComponents": [],
-        "explanation": "manual /buy override — human-triggered, not derived from the scanner/signal engine",
-        "warnings": [
-          "manual override: entry/stop/target are fixed defaults, not signal-derived"
-        ],
-        "basedOn": {
-          "score": 0,
-          "candleCount": 2
-        }
-      },
-      "queuedAt": 1788442130457
-    }
-  },
+  "live:live-entry-pending": {},
   "live:manual-buy-pending-symbols": [],
   "live:audit-log": [
     {
@@ -40775,14 +40757,16 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1788443475894,
+      "intentId": "live-entry:XBTEUR",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
     }
   ],
-  "live:confirmation-gate-pending": {
-    "live-entry:XBTEUR": {
-      "sentAt": 1788442138822,
-      "messageId": 408
-    }
-  },
+  "live:confirmation-gate-pending": {},
   "live:live-entry-outstanding-symbols": [],
   "live:kill-switch-keyboard-sent": true,
   "education-tip-last-sent-at": 1788408526525,
@@ -40818,6 +40802,10 @@
     {
       "at": 1788443136387,
       "equity": 100.99
+    },
+    {
+      "at": 1788443467586,
+      "equity": 101
     }
   ]
 }
