@@ -1,5 +1,83 @@
 # PROJECT_STATE
 
+## True-black Revolut X theme landed — supersedes PR #117 (2026-09-03)
+David: "do the direction of #117, this is your next target now." PR #117
+(`claude/market-scan-integration-r9lck1`) proposed the true-black theme but
+was hours stale with real merge conflicts against everything the redesign
+pass above landed since (chart polish, typography tokens, Home/Markets/
+controls press states, the real-money account card, the live-cash
+reconciliation fix). Rather than merge it as-is, recreated its direction on
+top of current `main`: cherry-picked its commit, resolved every conflict by
+hand, reconciled it against what landed after it, then re-verified. `src/ui/
+styles.css` + `src/ui/views/homeView.ts` + this file only.
+
+**Token changes (authoritative, `:root`)**: `--bg: #000`, `--surface:
+#141416`/`#1e1e21`/`#27272b`, `--border` now a near-invisible white hairline
+(`rgba(255,255,255,.07)`/`.15`, was a solid navy-tinted hex) with card
+OUTLINES REMOVED entirely, radius scale bumped a full step (`--r-xl: 30px`),
+a new named type scale (`--fs-hero/display/section/body/sub/micro`). The
+newer `--fw-*`/`--tracking-*`/`--sp-*` tokens (from tonight's typography-
+foundation pass) are palette-agnostic and carried over untouched, applied
+via the token where its value was an exact match (e.g. `--fw-semibold` for
+literal 650) and left as a literal where PR #117's number didn't match any
+existing step (e.g. button.primary's 700).
+
+**Reconciliation calls made explicitly**:
+- Home's PRIMARY simulated-portfolio hero gets `hero-bare` exactly as #117
+  did — the balance sits directly on the page, no card chrome. The newer
+  "Real money" hero (added after #117, `#home-live-hero`) stays a BOXED
+  secondary card — #117's whole point was ONE dominant bare hero with
+  everything else boxed, and a live-money card is secondary, not the
+  screen's hero. Concretely: `.hero-value`'s giant `--fs-hero` sizing is now
+  scoped to `.hero-bare .hero-value` only; a bare `.hero .hero-value` (i.e.
+  a boxed card) keeps the previous moderate card-appropriate size — without
+  this split the boxed real-money card would have inherited the same giant
+  balance font as the dominant hero.
+- Every `:active` press-state rule added tonight (`.nav-btn`, `.hub-tab`,
+  `.mk-tab`, `.mk-star`, `.market-card` hover-lift, etc.) was preserved
+  alongside #117's color/shape changes rather than dropped by the cherry-
+  pick — e.g. `.market-card:hover` keeps its lift+shadow (adjusted to
+  `--shadow-lg` since there's no border to swap on true black anymore).
+  `.mk-star`'s `translateY(-50%) scale(0.85)` press composition (not a bare
+  `scale()`, which would re-anchor it) is unaffected.
+- Markets' "one grouped card, hairline separators" restructuring (`#mk-list`
+  + `.market-row-wrap ~ .market-row-wrap` dividers) merged with ZERO DOM
+  changes needed — `marketsView.ts` already wraps rows in `.market-row-wrap`
+  inside a `.stack` with `id="mk-list"`, so #117's CSS-only restructuring
+  slotted in directly.
+- Fixed two more hardcoded pre-true-black leftovers #117 didn't touch: the
+  `<select>`/`.mk-sort` chevron SVG data-URIs hardcoded the old `--text-dim`
+  hex (`#929bb0`) directly in an inline `stroke` attribute rather than a
+  token, now `#9a9aa4`.
+
+**Bugs from #117 verified still present on current `main` and fixed**: the
+`.up`/`.hero.up` selector collision (equity card rendering solid green) —
+`.chg.up, .up:not(.hero)`; `.content` bottom padding clipping the last list
+row under the floating nav (84px → 128px); desktop sidebar drawing over the
+topbar (`top: 0` → `top: 5rem`); white outer glow on `button.primary` and
+`.mk-tab.active` (removed).
+
+Verified visually: dev server + Playwright (`playwright-core`,
+`/opt/pw-browsers/chromium`) at 400x860 (`?demo=1`) — Home reads as pure
+black with the balance as the dominant bare element and no market-card
+outlines; Markets is one grouped hairline-separated card with 40px logos and
+a filled `Popular` pill, no per-row borders; Tools inherits the palette
+cleanly with no component-level changes needed. Also checked 1280px desktop:
+sidebar now sits cleanly below the topbar with no overlap.
+
+Full gate green: `tsc --noEmit`, `vitest run` (1002 tests, all passing, none
+needed updating — the design change didn't touch any DOM structure or class
+name the tests assert on beyond the one added `hero-bare` class), `npm run
+build`.
+
+PR #117 itself: commented that its direction landed via this PR and closed
+without merging (its branch was stale/conflicted; this reimplementation is
+what actually ships).
+
+Left for a future pass (per David: this is an ongoing target, not one-shot):
+extending true-black component-level polish to Portfolio/Grid/Backtest/
+Validation/Stocks beyond what the token change already gives them for free.
+
 ## UI redesign pass: press feedback for every pill/icon control (Markets/coin-detail) (2026-09-03)
 Continuing David's dashboard visual-elevation request — this increment targets
 the coin-detail view's control vocabulary (range selector, chart-type toggle,
