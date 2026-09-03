@@ -26,6 +26,57 @@ never from this Revolut client) — left as a flagged follow-up, not fixed
 here, to keep this change scoped to what's actually blocking real money
 tonight. Full gate green (tsc, 973 tests, build).
 
+## The Revolut-X redesign was real in the CSS but invisible on screen — fixed (2026-09-03)
+UI-only. David reported, more than once, that the app looks unchanged and
+"nowhere near Revolut X" despite PR #109 and #112 both self-reporting done.
+He was right, and the earlier passes were wrong about why.
+
+**Deployment was NOT the problem.** Verified directly: a local `vite build`
+of `main` emits `assets/index-Dz4tygbd.css`, byte-identical in name to the
+file GitHub Pages is serving, and that file does contain `.stack-card`,
+`.view-title`, `.block-head` etc. The merged work is live. The work simply
+did not look different.
+
+**What the previous two passes actually got wrong** (found by screenshotting
+the built app at 390x844 and holding it next to fresh frames pulled from
+David's own Revolut X screen recording, rather than trusting the PR text):
+- **They changed the screens David doesn't open.** #112's own summary says
+  the Home/Markets/Crypto hubs "were already fully on this system" and
+  scoped the work to Tools (Portfolio/Monitoring/Scan/Backtest/Validation/
+  Grid). Home and Markets — the two screens he actually looks at — received
+  essentially nothing.
+- **The palette was never really Revolut's.** The `:root` ramp kept a
+  blue-violet tint (`--bg: #07090d`, `--surface: #12161e`, `--border:
+  #232a38`). Revolut X is pure `#000` with neutral-grey cards and *no drawn
+  card outlines at all*. That navy tint plus a 1px stroke around every card
+  is precisely what reads as "generic dark dashboard".
+- **There was no type hierarchy.** Page title 1.35rem vs section heading
+  1.08rem — a 4px difference nobody perceives. The reference's premium feel
+  is carried mostly by that contrast.
+- **Real defects nobody had looked at.** The bare `.up { color: var(--hot) }`
+  rule also matched `.hero.up`, so the whole Paper Portfolio equity card —
+  the balance, its label, cash/realised/unrealised — rendered solid green.
+  `.content` reserved 84px for a floating nav that needs ~120px, so the last
+  row of every list sat under the tab bar. The desktop sidebar was pinned at
+  `top: 0` above the topbar's z-index and drew over the header. Primary
+  buttons wore a `0 4px 14px rgba(255,255,255,.3)` white glow.
+
+**What changed now** (structural, not another token nudge): true-black
+palette with hairline borders and no card strokes; a named type scale
+(`--fs-hero`/`--fs-display`/`--fs-section`) giving a 50-66px balance, a 33px
+page title and a 21px section head; Home's balance promoted out of its card
+(`.hero.hero-bare`) so it sits on the page as the dominant element the way
+the reference's wallet screen opens; the Markets list rebuilt as ONE grouped
+card with hairline separators and 40px coin logos instead of 60 individually
+outlined floating cards; segmented controls stripped to a bare row with a
+filled active pill; primary action turned into the reference's solid white
+pill with black text; nav overlap and the green-card and desktop-sidebar
+bugs fixed. Verified by before/after screenshots at 390x844 and 1280px, not
+by class-name inspection.
+
+Full gate green (tsc, 970 tests, build). No test assertions were loosened —
+the only markup change is one added class on Home's hero.
+
 ## Definitive answer: Revolut X returns 0 tradable pairs, not an HTTP failure (2026-09-03)
 The same-base-pair diagnostic (previous entry below) reported the real
 finding on its first live cycle: `'BTC-EUR' not found among 0 tradable pairs

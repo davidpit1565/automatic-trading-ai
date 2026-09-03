@@ -51,7 +51,11 @@ async function livePrices(data: ActiveDataSource, symbols: string[]): Promise<Re
 
 export function renderHomeView(container: HTMLElement, data: ActiveDataSource): ViewHandle {
   container.innerHTML = '';
-  const hero = el('section', 'hero tappable');
+  // `hero-bare` drops the card chrome so the balance sits directly on the
+  // page as the screen's single dominant element, the way the Revolut X
+  // reference opens its wallet screen. Boxing it made it read as one widget
+  // among several.
+  const hero = el('section', 'hero hero-bare tappable');
   hero.dataset['nav'] = 'value';
   hero.innerHTML = `
     <div class="hero-label">Portfolio value <span class="tag-sim">SIMULATED</span><span class="hero-more">history ›</span></div>
