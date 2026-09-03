@@ -25,7 +25,13 @@ import { MONITOR_INTERVALS, type MonitorInterval, type Scheduler } from '../moni
 import type { PortfolioEngine } from '../position/portfolioEngine';
 import type { PositionEngine } from '../position/positionEngine';
 import type { ExitReason } from '../position/tradeJournal';
-import { assessTrade, confidenceScaledRiskPct, DEFAULT_RISK_LIMITS, type RiskLimits } from '../risk/riskEngine';
+import {
+  assessTrade,
+  confidenceScaledRiskPct,
+  DEFAULT_RISK_LIMITS,
+  type RiskLimits,
+  type TradeRiskAssessment,
+} from '../risk/riskEngine';
 import type { TrailingConfig } from '../risk/trailingStop';
 import { scanCandles, scanMarket, type ScanResult } from '../scan/marketScanner';
 import { applyHigherTimeframeGate } from '../signal/multiTimeframe';
@@ -734,4 +740,127 @@ export class PaperAutoPilot {
     this.lastCycle = result;
     return result;
   }
+
+  /**
+   * Read-only: scans the same universe through the SAME entry gates as
+   * `runCycleOnce` (confidence floor, higher-timeframe, daily/market regime,
+   * whale flow, top-trader, AI judgment, risk engine) — but never opens a
+   * position, never writes to the audit log, and never touches the exit
+   * side. Powers the `/tip` Telegram command (David asked 2026-09-03): it
+   * must report exactly what the autopilot itself would act on, not a
+   * simplified approximation that could recommend something the real
+   * pipeline would refuse.
+   *
+   * Deliberately a SEPARATE method rather than a `dryRun` flag threaded
+   * through `runCycleOnce` — that function is the safety-critical real
+   * trading path; duplicating its read-only half here means a bug in this
+   * preview can never affect what actually trades.
+   */
+  async previewBestOpportunity(timestamp: number): Promise<TipResult> {
+    const scan = await scanMarket(this.options.source, this.options.symbols, this.options.timeframe, SCAN_CANDLES);
+    const held = new Set(this.options.positions.openPositions().map((p) => p.symbol));
+    const marketPrices: Record<string, number> = {};
+    for (const p of this.options.positions.openPositions()) marketPrices[p.symbol] = p.entryPrice;
+
+    const qualified: TipCandidate[] = [];
+    const misses: { readonly symbol: string; readonly confidence: number; readonly reason: string }[] = [];
+    const floor = this.options.minConfidence ?? 0;
+
+    for (const scanResult of scan.results) {
+      if (held.has(scanResult.symbol)) continue;
+
+      let decision = this.options.evaluate
+        ? this.options.evaluate(scanResult, floor)
+        : evaluateScan(scanResult, {
+            ...DEFAULT_SIGNAL_CRITERIA,
+            maxRsiForLong: this.options.maxRsiForLong ?? DEFAULT_SIGNAL_CRITERIA.maxRsiForLong,
+            minConfidence: floor,
+          });
+      if (decision.kind === 'rejected') continue; // no signal at all — not a near-miss worth reporting
+
+      const confidence = decision.opportunity.confidence;
+      const miss = (reason: string): void => void misses.push({ symbol: scanResult.symbol, confidence, reason });
+
+      if (this.options.confirmationTimeframe) {
+        decision = applyHigherTimeframeGate(decision, await this.higherTimeframeScan(scanResult.symbol));
+        if (decision.kind === 'rejected') {
+          miss(decision.reasons.join('; '));
+          continue;
+        }
+      }
+      if (this.options.regimeCheck && !(await this.options.regimeCheck(scanResult.symbol, timestamp))) {
+        miss('daily regime filter: larger trend is down');
+        continue;
+      }
+      if (this.options.marketRegimeCheck && !(await this.options.marketRegimeCheck(timestamp))) {
+        miss('market regime filter: broader market trend is down');
+        continue;
+      }
+      if (this.options.whaleFlowCheck && !(await this.options.whaleFlowCheck(scanResult.symbol, timestamp))) {
+        miss('whale flow filter: large trades show heavy net selling');
+        continue;
+      }
+      if (this.options.topTraderCheck && !(await this.options.topTraderCheck(scanResult.symbol, timestamp))) {
+        miss('top-trader positioning: OKX top traders are net-short');
+        continue;
+      }
+      if (this.options.aiJudgmentCheck && !(await this.options.aiJudgmentCheck(scanResult.symbol, timestamp))) {
+        miss('AI second opinion: bearish read of the setup');
+        continue;
+      }
+
+      const snapshot = this.options.portfolio.snapshot(marketPrices, timestamp);
+      const correlateWith = this.options.correlationBetween;
+      const confidenceRisk = this.options.confidenceRisk;
+      const assessment = assessTrade(
+        decision.opportunity,
+        {
+          equity: snapshot.equity,
+          openPositions: this.options.positions
+            .openPositions()
+            .map((p) => ({
+              symbol: p.symbol,
+              quantity: p.quantity,
+              entryPrice: p.entryPrice,
+              currentPrice: marketPrices[p.symbol] ?? p.entryPrice,
+            })),
+        },
+        {
+          limits: this.options.riskLimits ?? DEFAULT_RISK_LIMITS,
+          dailyLossSoFar: this.options.getDailyLoss(),
+          correlationTo: correlateWith ? (other: string) => correlateWith(scanResult.symbol, other) : undefined,
+          riskPerTradePct: confidenceRisk
+            ? confidenceScaledRiskPct(confidence, floor, MAX_CONFIDENCE, confidenceRisk.floorPct, confidenceRisk.ceilingPct)
+            : undefined,
+        },
+      );
+      if (!assessment.approved) {
+        miss(assessment.reasons.join('; '));
+        continue;
+      }
+      qualified.push({ symbol: scanResult.symbol, opportunity: decision.opportunity, assessment });
+    }
+
+    qualified.sort((a, b) => b.opportunity.confidence - a.opportunity.confidence);
+    misses.sort((a, b) => b.confidence - a.confidence);
+    return { qualified: qualified[0] ?? null, closestMiss: qualified[0] ? null : (misses[0] ?? null) };
+  }
+}
+
+export interface TipCandidate {
+  readonly symbol: string;
+  readonly opportunity: TradeOpportunity;
+  readonly assessment: TradeRiskAssessment;
+}
+
+export interface TipResult {
+  /** The single best-confidence candidate that cleared every entry gate —
+   * what the autopilot itself would open right now, if it were this
+   * symbol's turn in the scan. Null when nothing currently qualifies. */
+  readonly qualified: TipCandidate | null;
+  /** When nothing qualifies, the highest-confidence candidate that came
+   * closest, paired with why it was refused — so `/tip` is never a bare
+   * "nothing", it's an honest "closest miss and why". Null only when the
+   * scan found no signal at all across the whole universe. */
+  readonly closestMiss: { readonly symbol: string; readonly confidence: number; readonly reason: string } | null;
 }

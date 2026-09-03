@@ -19,6 +19,8 @@ import { FileStore } from '../../server/fileStore.mts';
 import {
   breakerEngaged,
   buildLiveEntryResultMessage,
+  checkHelpRequests,
+  checkStatusRequests,
   localDayAndHour,
   maybeSendMoveAlerts,
   maybeSendPeriodicReports,
@@ -817,5 +819,106 @@ describe('buildLiveEntryResultMessage (the post-decision follow-up David asked f
     expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'blocked-by-kill-switch' })).toBeNull();
     expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'pending' })).toBeNull();
     expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'stale-after-approval', reason: 'x' })).toBeNull();
+  });
+});
+
+describe('checkHelpRequests (David asked 2026-09-03 for a pinnable command list)', () => {
+  it('sends the full command list on /help', async () => {
+    const sent: string[] = [];
+    const telegram = {
+      token: 'T',
+      chatId: 'C',
+      fetchFn: (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url.includes('getUpdates')) {
+          return new Response(
+            JSON.stringify({ ok: true, result: [{ update_id: 1, message: { text: '/help', chat: { id: 'C' } } }] }),
+            { status: 200 },
+          );
+        }
+        if (url.includes('sendMessage') && init?.body) sent.push(JSON.parse(init.body as string).text);
+        return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
+      }) as unknown as typeof fetch,
+    };
+
+    const answered = await checkHelpRequests(store, telegram);
+
+    expect(answered).toBe(true);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toContain('/buy');
+    expect(sent[0]).toContain('/sell');
+    expect(sent[0]).toContain('/tip');
+    expect(sent[0]).toContain('/status');
+    expect(sent[0]).toContain('/pause');
+    expect(sent[0]).toContain('/resume');
+  });
+
+  it('does nothing, and stashes the message back, for anything else', async () => {
+    const telegram = {
+      token: 'T',
+      chatId: 'C',
+      fetchFn: (async () =>
+        new Response(
+          JSON.stringify({ ok: true, result: [{ update_id: 1, message: { text: '/tip', chat: { id: 'C' } } }] }),
+          { status: 200 },
+        )) as unknown as typeof fetch,
+    };
+
+    const answered = await checkHelpRequests(store, telegram);
+
+    expect(answered).toBe(false);
+    expect(store.get<unknown[]>('telegram-unclaimed-messages')).toHaveLength(1);
+  });
+});
+
+describe('checkStatusRequests (David asked 2026-09-03: "what\'s the situation now")', () => {
+  it('answers /status with the same digest shape as the scheduled daily summary', async () => {
+    const { portfolio, journal } = buildPortfolio();
+    const opened = portfolio.open({
+      symbol: 'BTC-EUR', quantity: 1, entryPrice: 100, stopLoss: 90, takeProfit: 130, timestamp: 0,
+    });
+    if (!opened.ok) throw new Error('open failed');
+
+    const sent: string[] = [];
+    const telegram = {
+      token: 'T',
+      chatId: 'C',
+      fetchFn: (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url.includes('getUpdates')) {
+          return new Response(
+            JSON.stringify({ ok: true, result: [{ update_id: 1, message: { text: '/status', chat: { id: 'C' } } }] }),
+            { status: 200 },
+          );
+        }
+        if (url.includes('sendMessage') && init?.body) sent.push(JSON.parse(init.body as string).text);
+        return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
+      }) as unknown as typeof fetch,
+    };
+
+    const answered = await checkStatusRequests(store, fakeSource(), portfolio, journal, telegram, Date.now());
+
+    expect(answered).toBe(true);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toContain('BTC-EUR');
+    expect(sent[0]).toContain('לפי בקשה');
+  });
+
+  it('does nothing, and stashes the message back, when there is no /status command', async () => {
+    const { portfolio, journal } = buildPortfolio();
+    const telegram = {
+      token: 'T',
+      chatId: 'C',
+      fetchFn: (async () =>
+        new Response(
+          JSON.stringify({ ok: true, result: [{ update_id: 1, message: { text: '/tip', chat: { id: 'C' } } }] }),
+          { status: 200 },
+        )) as unknown as typeof fetch,
+    };
+
+    const answered = await checkStatusRequests(store, fakeSource(), portfolio, journal, telegram, Date.now());
+
+    expect(answered).toBe(false);
+    expect(store.get<unknown[]>('telegram-unclaimed-messages')).toHaveLength(1);
   });
 });
