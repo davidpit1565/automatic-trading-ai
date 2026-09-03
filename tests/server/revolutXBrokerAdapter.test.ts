@@ -271,7 +271,10 @@ describe('RevolutXBrokerAdapter', () => {
 
   it('lists the real tradable pair symbols, for verifying a symbol before ever proposing it', async () => {
     const { fetchFn, calls } = fakeFetch([
-      { status: 200, body: { data: { 'BTC-USD': { active: true }, 'ETH-USD': { active: true } } } },
+      {
+        status: 200,
+        body: { data: { 'BTC-USD': { base: 'BTC', quote: 'USD', active: true }, 'ETH-USD': { base: 'ETH', quote: 'USD', active: true } } },
+      },
     ]);
     const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
 
@@ -280,6 +283,35 @@ describe('RevolutXBrokerAdapter', () => {
     expect(pairs).toEqual(['BTC-USD', 'ETH-USD']);
     expect(calls[0]).toMatchObject({ method: 'GET', url: 'https://revx.revolut.com/api/1.0/configuration/pairs' });
     expect(verifiesAgainstRealRequest(calls[0]!)).toBe(true);
+  });
+
+  it("parses the REAL production key shape ('/'-separated, e.g. 'LINK/USD') — found 2026-09-03: the first real /buy attempt silently saw 0 pairs because this used to split keys on '-', which never matched any real key", async () => {
+    const { fetchFn } = fakeFetch([
+      { status: 200, body: { 'LINK/USD': { base: 'LINK', quote: 'USD', status: 'active' }, 'BTC/EUR': { base: 'BTC', quote: 'EUR', status: 'active' } } },
+    ]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    expect(await adapter.listTradablePairs()).toEqual(['LINK/USD', 'BTC/EUR']);
+  });
+
+  it('excludes entries missing base/quote fields rather than guessing from the key', async () => {
+    const { fetchFn } = fakeFetch([
+      { status: 200, body: { 'BTC-USD': { active: true }, 'ETH/USD': { base: 'ETH', quote: 'USD' } } },
+    ]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    expect(await adapter.listTradablePairs()).toEqual(['ETH/USD']);
+  });
+
+  it('audits the raw response body when a 200 OK yields 0 parseable symbols (found 2026-09-03: otherwise indistinguishable from an HTTP failure)', async () => {
+    const { fetchFn } = fakeFetch([{ status: 200, body: { 'BTC-USD': { active: true } } }]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    expect(await adapter.listTradablePairs()).toEqual([]);
+    const entry = audit.entries().find((e) => e.intentId === 'list-tradable-pairs');
+    expect(entry).toBeDefined();
+    expect(entry!.detail).toContain('0 parseable symbols');
+    expect(entry!.detail).toContain('BTC-USD');
   });
 
   it('returns no pairs when the configuration request fails, rather than reporting a stale/wrong list, and audits the REAL HTTP status/body (found undiagnosable in review, 2026-09-03 — the first real go-live attempt silently refused every entry with no visible reason)', async () => {
@@ -319,9 +351,9 @@ describe('toRevolutXSymbol', () => {
     { symbol: 'ETHEUR', base: 'ETH', quote: 'EUR' },
   ];
 
-  it('translates an internal instrument symbol to the broker BASE-QUOTE format using its real base/quote, not string-guessing', () => {
-    expect(toRevolutXSymbol('XBTEUR', instruments)).toBe('BTC-EUR');
-    expect(toRevolutXSymbol('ETHEUR', instruments)).toBe('ETH-EUR');
+  it('translates an internal instrument symbol to the broker BASE/QUOTE format using its real base/quote, not string-guessing', () => {
+    expect(toRevolutXSymbol('XBTEUR', instruments)).toBe('BTC/EUR');
+    expect(toRevolutXSymbol('ETHEUR', instruments)).toBe('ETH/EUR');
   });
 
   it('returns null — never guesses — for a symbol not in the known instrument list', () => {

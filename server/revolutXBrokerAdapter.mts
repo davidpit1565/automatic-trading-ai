@@ -100,22 +100,26 @@ function readVenueOrderId(json: unknown): string | null {
 export function toRevolutXSymbol(internalSymbol: string, instruments: readonly Instrument[]): string | null {
   const found = instruments.find((i) => i.symbol === internalSymbol);
   if (!found) return null;
-  return `${found.base}-${found.quote}`;
+  return `${found.base}/${found.quote}`;
 }
 
 /** Mirrors RevolutXClient.getInstruments()'s own parsing of the same
  * endpoint (src/core/data/revolutClient.ts) — response maps symbols to pair
- * configuration, e.g. { "BTC-USD": { ... } }, optionally wrapped in { data }.
- * Only keys that actually split into a base and quote asset (e.g.
- * 'BTC-USD') are reported; a malformed or unexpectedly-shaped response
- * (e.g. an array) yields no symbols rather than bogus ones. */
+ * configuration, e.g. { "LINK/USD": { "base": "LINK", "quote": "USD", ... } },
+ * optionally wrapped in { data }. The real production response (confirmed
+ * 2026-09-03 via the raw-body diagnostic below) uses '/' as the key
+ * separator, not '-' — this used to split on '-' and silently matched
+ * nothing, so it's validated against each entry's own `base`/`quote` fields
+ * instead of guessing a separator at all. A malformed or unexpectedly-shaped
+ * response (e.g. an array, or entries missing base/quote) yields no symbols
+ * for that entry rather than a bogus one. */
 function readPairSymbols(json: unknown): string[] {
   if (!isRecord(json)) return [];
   const body = isRecord(json.data) && !Array.isArray(json.data) ? json.data : json;
   if (Array.isArray(body)) return [];
   return Object.keys(body).filter((symbol) => {
-    const [base, quote] = symbol.split('-');
-    return Boolean(base && quote);
+    const config = (body as Record<string, unknown>)[symbol];
+    return isRecord(config) && typeof config.base === 'string' && typeof config.quote === 'string';
   });
 }
 
