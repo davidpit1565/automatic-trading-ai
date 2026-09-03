@@ -103,7 +103,19 @@ export async function syncLiveExternalBtc(store: KeyValueStore, brokerAdapter: B
     return;
   }
   const btc = positions.find((p) => p.symbol === 'BTC');
-  store.set(LIVE_EXTERNAL_BTC_KEY, btc?.quantity ?? 0);
+  // `fetchPositions` reports the ENTIRE broker-side BTC balance — once the
+  // bot itself holds a live BTC position, that quantity is already part of
+  // this same total (real incident, 2026-09-03: after the first live
+  // XBTEUR fill, this raw balance silently absorbed the bot's own tracked
+  // position, double-counting its value in `recordLiveEquity`'s chart —
+  // once via `liveEquity()`'s invested sum, again via this "untracked"
+  // figure). Subtract whatever the bot itself currently tracks so this
+  // stays what it's documented to be: the personal holding the bot never
+  // opened.
+  const trackedBtc = openLivePositions(store)
+    .filter((p) => p.symbol.split(/[/-]/)[0] === 'BTC')
+    .reduce((sum, p) => sum + p.quantity, 0);
+  store.set(LIVE_EXTERNAL_BTC_KEY, Math.max(0, (btc?.quantity ?? 0) - trackedBtc));
 }
 
 export function liveExternalBtcQuantity(store: KeyValueStore): number {

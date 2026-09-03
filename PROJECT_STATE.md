@@ -1,5 +1,28 @@
 # PROJECT_STATE
 
+## External BTC double-counted the bot's own tracked position once it actually filled (2026-09-03)
+Found during a scheduled live-money health check-in, right after the first
+real live BTC entry filled (14:40 UTC, PR #146's fix — confirmed working
+end-to-end). `syncLiveExternalBtc` (`liveLedger.mts`) sets the "untracked
+personal BTC" figure to the ENTIRE broker-reported BTC balance
+(`fetchPositions` → Revolut X's `/balances`, which has no notion of
+"bot's vs. personal" — it's just the wallet total). Once the bot itself
+held a live BTC position, that balance already included it, so the
+figure silently absorbed the bot's own position — and `recordLiveEquity`
+then double-counted its value in the real-account equity chart: once via
+`liveEquity()`'s own tracked-position sum, again via this "untracked"
+figure added on top. Purely a reporting/chart bug — never touched
+`liveEquity()`'s own trade-sizing path, real cash, or order execution.
+
+Fixed by subtracting the bot's own currently-tracked BTC quantity (summed
+from `openLivePositions`, matched by base currency) from the broker's raw
+balance before storing it, floored at zero.
+
+Tests: two new cases in `liveLedger.test.ts` — broker balance minus a
+tracked position leaves the correct personal remainder, and a momentary
+broker/tracked mismatch never reports negative. Full gate green (tsc,
+1031 tests, build).
+
 ## Bug audit ("תבדוק שאין עוד באגים"): live-entry sizing vs. actual free cash (2026-09-03)
 David asked for a general bug check on the live-money code. Ran the
 `code-review` skill over the live-money server files at high effort; one
