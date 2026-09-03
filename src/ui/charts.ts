@@ -309,9 +309,17 @@ export function candleChartSvg(
     formatY: (v: number) => string;
     width?: number;
     height?: number;
+    /** EMA/support-resistance/volume overlays are technical-analysis signals
+     * for a tradable asset's PRICE — meaningful on a market/coin-detail chart,
+     * but not on a chart of the viewer's OWN portfolio equity (there's no
+     * "trend" to trade there). Same reasoning as the RSI/MACD overlays
+     * already removed as misleading above; defaults to true so every
+     * existing market-chart call site is unaffected. */
+    indicators?: boolean;
   },
 ): string {
   if (candles.length < 2) return '<div class="empty">Not enough history for this range yet.</div>';
+  const indicators = opts.indicators ?? true;
   const geo = candleGeometry(candles, opts.width, opts.height);
   const { W, H, padL, padR, padB } = geo;
   const n = candles.length;
@@ -344,10 +352,10 @@ export function candleChartSvg(
     xlab += `<text class="paxis pxlab" style="text-anchor:${anchor}" x="${geo.x(idx).toFixed(1)}" y="${H - 8}">${opts.formatX(candles[idx]!.timestamp)}</text>`;
   }
 
-  // Calculate EMAs
+  // Calculate EMAs (market charts only — see `indicators` above)
   const closes = candles.map((c) => c.close);
-  const ema20 = calculateEMA(closes, 20);
-  const ema50 = calculateEMA(closes, 50);
+  const ema20 = indicators ? calculateEMA(closes, 20) : [];
+  const ema50 = indicators ? calculateEMA(closes, 50) : [];
 
   let bodies = '';
   let volumes = '';
@@ -368,9 +376,11 @@ export function candleChartSvg(
       `</g>`;
 
     // Volume bars (scaled to volBarHeight)
-    const vh = (c.volume / maxVol) * volBarHeight;
-    const barColor = up ? 'var(--hot)' : 'var(--cold)';
-    volumes += `<rect class="pvol-bar" x="${(cx - bodyW / 2).toFixed(1)}" y="${(volBarY - vh).toFixed(1)}" width="${bodyW.toFixed(1)}" height="${vh.toFixed(1)}" fill="${barColor}" opacity="0.6"/>`;
+    if (indicators) {
+      const vh = (c.volume / maxVol) * volBarHeight;
+      const barColor = up ? 'var(--hot)' : 'var(--cold)';
+      volumes += `<rect class="pvol-bar" x="${(cx - bodyW / 2).toFixed(1)}" y="${(volBarY - vh).toFixed(1)}" width="${bodyW.toFixed(1)}" height="${vh.toFixed(1)}" fill="${barColor}" opacity="0.6"/>`;
+    }
   }
 
   // EMA lines as paths (not polylines, to avoid test confusion with line-chart detection)
@@ -399,18 +409,21 @@ export function candleChartSvg(
     ${ema50Path ? `<path class="pema pema50" fill="none" stroke="var(--text-dim)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" d="${ema50Path}"/>` : ''}
   `;
 
-  // Support/Resistance levels (last 20 candles). Labelled "R"/"S" at the
-  // left edge so the dashed lines read as an intentional annotation, not a
-  // stray artifact.
-  const sr = calculateSRLevels(candles, 20);
-  const srResistanceY = geo.y(sr.resistance);
-  const srSupportY = geo.y(sr.support);
-  const srLines = `
+  // Support/Resistance levels (last 20 candles) — market charts only (see
+  // `indicators` above). Labelled "R"/"S" at the left edge so the dashed
+  // lines read as an intentional annotation, not a stray artifact.
+  let srLines = '';
+  if (indicators) {
+    const sr = calculateSRLevels(candles, 20);
+    const srResistanceY = geo.y(sr.resistance);
+    const srSupportY = geo.y(sr.support);
+    srLines = `
     <line class="psr psr-resistance" x1="${padL.toFixed(1)}" y1="${srResistanceY.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${srResistanceY.toFixed(1)}" stroke="var(--hot)" stroke-width="1" stroke-dasharray="3,2" opacity="0.3"/>
     <text class="psr-label psr-label-resistance" x="${(padL + 2).toFixed(1)}" y="${(srResistanceY - 2.5).toFixed(1)}" font-size="7" fill="var(--hot)" opacity="0.85">R</text>
     <line class="psr psr-support" x1="${padL.toFixed(1)}" y1="${srSupportY.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${srSupportY.toFixed(1)}" stroke="var(--cold)" stroke-width="1" stroke-dasharray="3,2" opacity="0.3"/>
     <text class="psr-label psr-label-support" x="${(padL + 2).toFixed(1)}" y="${(srSupportY - 2.5).toFixed(1)}" font-size="7" fill="var(--cold)" opacity="0.85">S</text>
   `;
+  }
 
   const last = candles[n - 1]!;
   const lastX = geo.x(n - 1);

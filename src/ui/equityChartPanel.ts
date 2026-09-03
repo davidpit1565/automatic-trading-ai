@@ -135,7 +135,11 @@ export function mountEquityChartPanel(
     let chart: string;
     let geo: ChartGeometry | null = null;
     if (mode === 'candle') {
-      chart = candleChartSvg(candles, { formatX: range.fx, formatY: (v) => `${currency}${formatPrice(v)}` });
+      // No EMA/support-resistance/volume overlays here — those are
+      // technical-analysis signals for a tradable asset's price, and this
+      // is the viewer's own portfolio equity, not a market to read a trend
+      // signal off of (see the `indicators` option's own doc comment).
+      chart = candleChartSvg(candles, { formatX: range.fx, formatY: (v) => `${currency}${formatPrice(v)}`, indicators: false });
       geo = candleGeometry(candles);
     } else {
       const points = pts.map((p) => ({ timestamp: p.at, value: p.equity }));

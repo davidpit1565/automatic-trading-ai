@@ -1348,7 +1348,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .view-tab svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .view-tab:hover { color: var(--text); }
 .view-tab:active { transform: scale(0.94); }
-.view-tab.active { background: linear-gradient(155deg, var(--accent), var(--accent-2)); color: #fff; }
+.view-tab.active { background: var(--surface-raised); color: #fff; }
 .detail-nonchart { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
   padding: 0.8rem; box-shadow: var(--shadow-xs); min-height: 160px; }
 .orderbook-table { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
@@ -1390,8 +1390,12 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   transition: all var(--dur-fast) var(--ease); }
 .range-btn:hover { color: var(--text); }
 .range-btn:active { transform: scale(0.94); }
-.range-btn.active { background: linear-gradient(155deg, var(--accent), var(--accent-2)); color: #fff;
-  box-shadow: 0 3px 10px rgba(255, 255, 255, 0.3); }
+/* Flat fill, no gradient/glow — matches .mk-tab.active/.hub-tab.active,
+   the true-black pass's active-pill treatment everywhere else. This pair
+   was missed by that sweep (they live in the shared chart panel, not a
+   Home/Markets tab bar) and had kept the pre-true-black two-tone gradient
+   plus a white outer glow that pass explicitly removed elsewhere. */
+.range-btn.active { background: var(--surface-raised); color: #fff; }
 /* The price chart sizes by aspect-ratio, not height — a `height` rule on
    `.detail-chart svg` cannot reach it (this selector is more specific and
    sets height:auto). Widen the ratio as the viewport grows so the chart
@@ -1421,7 +1425,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   transition: all var(--dur-fast) var(--ease); }
 .ctoggle-btn:hover { color: var(--text); }
 .ctoggle-btn:active { transform: scale(0.94); }
-.ctoggle-btn.active { background: linear-gradient(155deg, var(--accent), var(--accent-2)); color: #fff; }
+.ctoggle-btn.active { background: var(--surface-raised); color: #fff; }
 
 /* Candlestick chart: green up / red down bodies + wicks. Full-opacity,
    crisply-stroked bodies — the semi-transparent fill in the previous pass
