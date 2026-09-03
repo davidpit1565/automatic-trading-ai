@@ -46,6 +46,29 @@ Tests: 3 new (`reduceLivePositionQuantity` unit tests plus its wiring in
 (`revolutXBrokerAdapter.test.ts`'s failure-path tests now assert the
 diagnostic audit entry). Full gate green (tsc, 970 tests, build).
 
+## Design-system consistency pass across all views (2026-09-03)
+UI-only, token-driven (`src/ui/styles.css`'s existing Revolut-X-informed
+`--hot`/`--cold`/`--r-*`/`--shadow-*` tokens and `.hero`/`.row`/`.stack-card`/
+`.pill`/`.empty`/`.block-head`/`.view-title` classes — no new palette). The
+Home/Markets/Crypto/Stocks hub views were already fully on this system; this
+pass brought the remaining Tools views in line: `portfolioView.ts` (Equity
+promoted to a `.hero` big-number card with all-time change; Positions and
+Trade journal rewritten as `.stack stack-card` rows with coin logos and
+colored `.chg up/down` deltas, replacing plain `<table>`s), `monitoringView.ts`
+(section headers moved to `.block`/`.block-head`, every bare-text empty state
+swapped for a `.empty` card), and header/subtitle classes standardized to
+`.view-title`/`.view-sub` in `gridView.ts`, `marketScanView.ts`,
+`validationView.ts`, `backtestView.ts`, and the Learn panel in `index.html`.
+Added `box-shadow: var(--shadow-sm)` to the shared `.data-table` class so
+every dense analytical grid (scan results, walk-forward folds, watchlist,
+opportunity/alert history) picks up the same card elevation without a
+per-view change. Analytical multi-column tables (market scan, walk-forward
+folds, monitoring's watchlist/opportunity/alert history) were deliberately
+kept as `<table>` rather than forced into a two-value row pattern — converting
+7-9 column data into left/right rows would lose information, and
+`monitoringView.integration.test.ts` asserts on `tbody tr` structure there.
+Full gate (tsc/vitest 963 passed/build) green.
+
 ## Adversarial review of the live-money wiring (PRs #107-#110) — 3 real bugs fixed (2026-09-03)
 Real funds are now live (100.15€), so a full adversarial review (not a
 formality) was run against `liveEntryMirror.mts`/`liveExitMirror.mts`/

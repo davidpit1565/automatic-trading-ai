@@ -34,8 +34,8 @@ const TREND_GRID = [
 
 export function renderValidationView(container: HTMLElement, data: ActiveDataSource): void {
   container.innerHTML = `
-    <h2>Validation</h2>
-    <p class="status-line">
+    <h2 class="view-title">Validation</h2>
+    <p class="view-sub">
       Walk-forward analysis: strategy parameters are chosen on a rolling training window,
       then judged on the unseen candles that follow — with fees, spread, and slippage
       included. Out-of-sample numbers are the ones that matter.
@@ -166,10 +166,10 @@ function renderReport(
       }
     </div>
 
-    <h3>Out-of-sample equity (all folds, costs included)</h3>
+    <div class="block-head"><h2>Out-of-sample equity (all folds, costs included)</h2></div>
     ${equityCurveSvg(report.oosEquityCurve)}
 
-    <h3>Training vs unseen data</h3>
+    <div class="block-head"><h2>Training vs unseen data</h2></div>
     <div class="result-cards">
       <div class="stat-card"><div class="stat-label">Avg return (train)</div>
         <div class="stat-value ${signClass(a.avgTrainReturnPct)}">${formatPct(a.avgTrainReturnPct)}</div></div>
@@ -185,7 +185,7 @@ function renderReport(
         <div class="stat-value">${a.totalTestTrades}</div></div>
     </div>
 
-    <h3>Per-fold results (${escapeHtml(report.strategyName)})</h3>
+    <div class="block-head"><h2>Per-fold results (${escapeHtml(report.strategyName)})</h2></div>
     <table class="data-table">
       <thead>
         <tr>
