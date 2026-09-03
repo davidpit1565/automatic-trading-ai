@@ -967,6 +967,14 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .kill-switch-banner { display: flex; align-items: center; gap: 0.5rem; background: var(--warn-tint);
   color: var(--warn); border: 1px solid rgba(245, 185, 61, 0.4); border-radius: var(--r-md);
   padding: 0.6rem 0.75rem; font-size: 0.85rem; font-weight: var(--fw-semibold); margin-top: 0.6rem; }
+/* Real bug, found 2026-09-03 from a screenshot: this rule's own unconditional
+   `display: flex` overrides the browser's default `[hidden] { display: none }`
+   UA rule, so the element stayed visible (an empty amber pill — no text, since
+   the JS never sets `hv-kill-switch`'s content when the kill switch isn't
+   engaged) even with the `hidden` attribute correctly set on it. Every other
+   conditionally-shown element in this file needs the same guard whenever it
+   sets its own unconditional `display`, but this is the one actually hit. */
+.kill-switch-banner[hidden] { display: none; }
 /* Base size fits a boxed card (the "Real money" secondary hero, which stays
    boxed — see homeView.ts). `.hero-bare` below overrides to the giant
    dominant-element scale; this base is what a secondary `.hero` still gets. */
