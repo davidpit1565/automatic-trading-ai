@@ -7,6 +7,29 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderAssetHub } from '../../src/ui/views/assetHubView';
+import type { CloudState } from '../../src/ui/cloudState';
+
+function cloudState(overrides: Partial<CloudState> = {}): CloudState {
+  return {
+    cash: 100,
+    initialCash: 100,
+    baseCurrency: 'USD',
+    positions: [],
+    history: [],
+    lastRunAt: null,
+    benchmark: null,
+    equityHistory: [],
+    readiness: null,
+    marketSnapshot: [],
+    shadowStandings: [],
+    live: null,
+    ...overrides,
+  };
+}
+
+async function flush(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 beforeEach(() => {
   document.body.innerHTML = '';
@@ -62,5 +85,46 @@ describe('renderAssetHub — optional Long-Term sub-tab', () => {
 
     tabBtn!.click(); // clicking again must not remount
     expect(mounts).toBe(1);
+  });
+});
+
+describe('renderAssetHub — real-money sections on History and Profit (real bug, 2026-09-03)', () => {
+  // David reported the real wallet "still isn't reflected everywhere" — the
+  // real-money card had only ever been added to the Overview tab (homeView.ts);
+  // History and Profit showed only the SIMULATED chart/return with no real
+  // counterpart at all, easy to mistake for a stale/broken real balance.
+  it('hides the real-activity and real-money sections entirely when there is no live account (e.g. Stocks)', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, { ...baseOpts, fetchState: async () => cloudState({ live: null }) });
+    await flush();
+
+    expect(container.querySelector<HTMLElement>('#hub-real-activity')!.hidden).toBe(true);
+    expect(container.querySelector<HTMLElement>('#hub-real-money')!.hidden).toBe(true);
+  });
+
+  it('shows real activity on History and real equity on Profit once a live account exists', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      fetchState: async () =>
+        cloudState({
+          live: {
+            cash: 50,
+            positions: [{ symbol: 'XBTEUR', quantity: 0.001, entryPrice: 95_000, stopLoss: 90_000, takeProfit: 105_000, openedAt: 1 }],
+            killSwitchEngaged: false,
+            killSwitchReason: null,
+            recentEvents: [{ at: 1_700_000_000_000, event: 'rejected', detail: 'Insufficient balance' }],
+          },
+        }),
+    });
+    await flush();
+
+    expect(container.querySelector<HTMLElement>('#hub-real-activity')!.hidden).toBe(false);
+    expect(container.querySelector('#hub-real-activity-list')!.textContent).toContain('Insufficient balance');
+    expect(container.querySelector<HTMLElement>('#hub-real-money')!.hidden).toBe(false);
+    // 50 cash + 0.001 * 95000 invested = 145
+    expect(container.querySelector('#hub-real-equity')!.textContent).toContain('145');
   });
 });
