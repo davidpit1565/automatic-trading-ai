@@ -84,10 +84,19 @@ export async function checkManualBuyRequests(
   flowParams: Omit<LiveOrderFlowParams, 'intent'>,
   now: number,
   options: MirrorApprovedEntriesOptions = {},
+  /**
+   * The SAME store instance `/help`, `/tip`, `/status` and `/discover` poll
+   * through — there is only ONE Telegram bot and ONE update offset. Defaults
+   * to `store` for backward compatibility, but `autopilotRunner.mts` passes
+   * the raw (unprefixed) store here specifically, not the `live:`-prefixed
+   * one `store` itself is — see `checkManualSellRequests`'s matching
+   * parameter for the real bug (found 2026-09-03) this fixes.
+   */
+  telegramStore: KeyValueStore = store,
 ): Promise<readonly LiveEntryOutcome[]> {
   // Shared poller (telegram.mts) — never poll Telegram directly here with a
   // private offset (see PROJECT_STATE.md's shared-cursor fix, 2026-09-02).
-  const polled = await pollAllTelegramUpdates(store, telegram);
+  const polled = await pollAllTelegramUpdates(telegramStore, telegram);
   const pendingSymbols = new Set(store.get<string[]>(MANUAL_BUY_PENDING_KEY) ?? []);
   const unclaimedMessages: TelegramTextMessage[] = [];
   for (const message of polled.messages) {
@@ -95,7 +104,7 @@ export async function checkManualBuyRequests(
     if (symbol) pendingSymbols.add(symbol);
     else unclaimedMessages.push(message);
   }
-  stashUnclaimedTelegramUpdates(store, { messages: unclaimedMessages, callbacks: polled.callbacks });
+  stashUnclaimedTelegramUpdates(telegramStore, { messages: unclaimedMessages, callbacks: polled.callbacks });
   if (pendingSymbols.size === 0) return [];
 
   const opportunities: TradeOpportunity[] = [];

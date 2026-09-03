@@ -41,6 +41,27 @@ export interface TelegramConfig {
   fetchFn?: typeof fetch;
 }
 
+/** Same bound already used for every other outbound HTTP call in this
+ * project (krakenPublic.ts, revolutXBrokerAdapter.mts) — this file was the
+ * one place missing it. Found 2026-09-03 after the crypto autopilot's
+ * internal cycle loop hung for 2+ hours with no error and no progress: every
+ * one of this file's 4 fetch calls ran with no AbortController at all, so a
+ * single stalled connection to api.telegram.org — and `pollAllTelegramUpdates`
+ * alone is called several times per cycle, by every command handler — could
+ * block the entire cycle (and therefore the whole run) forever, with nothing
+ * to time it out short of the workflow's own multi-hour job timeout. */
+const FETCH_TIMEOUT_MS = 15_000;
+
+async function fetchWithTimeout(doFetch: typeof fetch, input: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await doFetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export interface SendResult {
   sent: boolean;
   reason?: string;
@@ -594,7 +615,7 @@ export async function sendTelegramMessage(
   }
   const doFetch = config.fetchFn ?? ((input, init) => fetch(input, init));
   try {
-    const response = await doFetch(`https://api.telegram.org/bot${config.token}/sendMessage`, {
+    const response = await fetchWithTimeout(doFetch, `https://api.telegram.org/bot${config.token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -629,7 +650,7 @@ export async function editTelegramMessage(
   }
   const doFetch = config.fetchFn ?? ((input, init) => fetch(input, init));
   try {
-    const response = await doFetch(`https://api.telegram.org/bot${config.token}/editMessageText`, {
+    const response = await fetchWithTimeout(doFetch, `https://api.telegram.org/bot${config.token}/editMessageText`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -709,7 +730,8 @@ export async function pollAllTelegramUpdates(
   const freshMessages: TelegramTextMessage[] = [];
   const freshCallbacks: TelegramCallbackQuery[] = [];
   try {
-    const response = await doFetch(
+    const response = await fetchWithTimeout(
+      doFetch,
       `https://api.telegram.org/bot${config.token}/getUpdates?offset=${offset}&timeout=0&allowed_updates=%5B%22message%22%2C%22callback_query%22%5D`,
       { method: 'GET' },
     );
@@ -768,7 +790,7 @@ export async function answerCallbackQuery(callbackQueryId: string, config: Teleg
   if (!config.token) return;
   const doFetch = config.fetchFn ?? ((input, init) => fetch(input, init));
   try {
-    await doFetch(`https://api.telegram.org/bot${config.token}/answerCallbackQuery`, {
+    await fetchWithTimeout(doFetch, `https://api.telegram.org/bot${config.token}/answerCallbackQuery`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ callback_query_id: callbackQueryId }),
