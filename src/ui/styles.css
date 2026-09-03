@@ -1305,6 +1305,23 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 
   /* Tools grid */
   .tools-grid { grid-template-columns: repeat(2, 1fr); gap: 0.9rem; }
+
+  /* Home dashboard: main column + a right rail of market widgets (price
+     cards, top movers), matching Revolut X's Home/Analytics layout instead
+     of the phone-first single column stretched to desktop width. Two
+     independent grid tracks (not shared-row placement) so the rail's own
+     widgets stack tightly regardless of how tall the main column's cards are. */
+  .home-grid.active { display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; gap: 1.75rem; }
+  .home-rail { display: flex; flex-direction: column; gap: 1.25rem; }
+  /* Each rail widget reads as its own boxed panel (Revolut's side-widget
+     look) rather than bleeding straight into the page background the way
+     a `.block` does inline in the main column. */
+  .home-rail .block {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+    padding: 1.1rem; margin-bottom: 0;
+  }
+  .home-rail .markets-strip { flex-direction: column; overflow-x: visible; }
+  .home-rail .market-card { width: 100%; min-width: 0; background: var(--surface-raised); }
 }
 
 /* ===== LARGE DESKTOP: ≥1400px ===== */
@@ -1314,6 +1331,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
     max-width: 1200px;
   }
   .tools-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+  .home-grid.active { grid-template-columns: minmax(0, 1fr) 360px; gap: 2rem; }
 }
 
 .disclaimer { color: var(--text-dim); font-size: 0.72rem; text-align: center; margin: 1.5rem 0 0; }
