@@ -936,6 +936,18 @@ export async function runLiveMirror(
     // being alive (other commands answered fine).
     await checkManualKillSwitchCommands(store, telegram, killSwitch, audit, 'david', now);
     await checkManualSellRequests(liveStore, telegram, source, ENTRY_TF, flowParams, now, recordLiveRealizedPnl, store);
+    // Persisted immediately after EACH real-money action point below, not
+    // only once at the very end of this whole function (which itself only
+    // runs once per OUTER cycle) — a real incident, 2026-09-03 (twice, the
+    // second time while writing this very fix): a manual /buy genuinely
+    // reached Revolut X (a real order placed, Telegram already notified)
+    // but the surrounding cycle was killed (a stuck job cancelled and
+    // redispatched) before ever reaching runCycle's own end-of-loop persist,
+    // silently losing every bit of bookkeeping for an order that had
+    // already, irreversibly, happened. persistStateToGit no-ops cheaply
+    // when nothing actually changed, so calling it after every step here is
+    // safe even on a quiet cycle.
+    persistStateToGit(store, 'live-mirror: after manual sell');
     const manualBuyOutcomes = await checkManualBuyRequests(
       liveStore,
       telegram,
@@ -949,6 +961,7 @@ export async function runLiveMirror(
       store,
     );
     await notifyLiveEntryOutcomes(telegram, manualBuyOutcomes);
+    persistStateToGit(store, 'live-mirror: after manual buy');
     const newlyApproved = cycleOpened
       .map((o) => o.opportunity)
       .filter((o): o is NonNullable<typeof o> => o !== undefined);
@@ -962,6 +975,7 @@ export async function runLiveMirror(
       liveEntryOptions,
     );
     await notifyLiveEntryOutcomes(telegram, mirroredOutcomes);
+    persistStateToGit(store, 'live-mirror: after auto-approved entries');
     // Shabbat/Yom Tov: the confirmation above is still sent as always —
     // David asked (2026-09-03) to keep the option to approve any time he's
     // actually available. This only remembers what was proposed so
@@ -989,6 +1003,7 @@ export async function runLiveMirror(
       150,
       recordLiveRealizedPnl,
     );
+    persistStateToGit(store, 'live-mirror: after automatic exits');
   } catch (cause) {
     // Never let a live-money problem take down the paper cycle that already
     // completed above — log and retry next cycle, same contract as every
