@@ -343,6 +343,13 @@ button.secondary:active {
   background: var(--surface-raised);
 }
 
+/* A table row can't take a scale-press like a card (it would misalign the
+   cells) — a background darken on :active gives it the same tap feedback
+   `.tappable`/`.row` cards get elsewhere in the app. */
+.scan-row:active {
+  background: var(--surface-hover);
+}
+
 .scan-row.expanded {
   background: var(--surface-raised);
 }
@@ -1064,10 +1071,14 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   box-shadow: var(--shadow-md), var(--shadow-glow); }
 .tool-card:hover .tool-icon-badge { background: var(--accent); }
 .tool-card:hover .tool-icon-badge svg { stroke: #fff; }
+/* Press feedback for the main Backtest/Validation/Grid/Portfolio/Stocks
+   navigation grid — it had a hover lift but nothing for the tap itself. */
+.tool-card:active { transform: scale(0.97); box-shadow: var(--shadow-xs); }
 .tool-back { background: var(--surface); border: 1px solid var(--border); color: var(--text);
   border-radius: var(--r-sm); padding: 0.48rem 0.9rem; margin-bottom: 1rem; cursor: pointer;
-  transition: border-color var(--dur-fast) var(--ease); }
+  transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .tool-back:hover { border-color: var(--border-strong); }
+.tool-back:active { transform: scale(0.96); }
 
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }

@@ -1,5 +1,38 @@
 # PROJECT_STATE
 
+## UI redesign pass: press feedback for Tools-grid and remaining-views controls (2026-09-03)
+Last increment of this pass of David's dashboard visual-elevation request,
+covering the lowest-priority bucket ("remaining views — portfolio, grid,
+backtest, validation, stocks, as time allows"): the Tools navigation grid
+that leads to all of them, plus its back button and the Market Scan table
+rows, none of which had press feedback. `src/ui/styles.css` only.
+
+- `.tool-card` (the Backtest/Validation/Grid/Portfolio/Stocks nav grid on the
+  Tools tab) had a hover lift but nothing for the tap itself — added
+  `scale(0.97)` + `--shadow-xs` on `:active`.
+- `.tool-back` (the back button inside every one of those tool panels) —
+  added `scale(0.96)` on `:active`.
+- `.scan-row` (Market Scan's table rows) — a `<tr>` can't take a scale-press
+  without misaligning its cells, so it gets a background darken on `:active`
+  instead, matching what `.tappable`/`.row` cards elsewhere already do for
+  their own press state.
+
+Verified visually: dev server + Playwright, confirmed via `getComputedStyle`
+that `.tool-card` applies `scale(0.97)` on press (matrix confirms it).
+
+Full gate green: `tsc`, `vitest run` (1002 tests — 3 more than earlier today
+from other work landed on `main` meanwhile; none touched by this diff),
+`build`. Branch `claude/ui-redesign-tools-controls`, based on latest `main`.
+
+This closes out the micro-interaction gap across every priority tier from
+the original request (charts → theme tokens → Home → Markets/coin-detail →
+remaining views). Five PRs total from this pass; see each PR's own
+description for specifics. Anything beyond press-state consistency and the
+chart/token work already done — e.g. a full font-size scale consolidation,
+or component-level (not just token-level) spacing/elevation redesign of
+individual remaining views — is intentionally left for a future pass rather
+than attempted as one large, harder-to-review change.
+
 ## The live cash tracker was never reconciled against the real Revolut X balance (2026-09-03)
 Real incident: the first order that ever reached the broker after the UUID
 `client_order_id` fix landed got rejected with `HTTP 422 — "Insufficient
