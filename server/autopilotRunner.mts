@@ -510,11 +510,13 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  // Trade ONLY the validated majors (the first 10 curated instruments). The
-  // instrument list was broadened for display/browsing; capping here keeps the
-  // capital-risking universe exactly the measured majors — broadening trading
-  // is a separate, must-be-measured change (see PROJECT_STATE pending queue).
-  const symbols = instruments.value.slice(0, 10).map((i) => i.symbol);
+  // Trade ONLY the validated majors (the first 16 curated instruments — see
+  // the CURATED_INSTRUMENTS doc comment in krakenPublic.ts for the 2026-09-03
+  // measurement that added 6 to the original 10). The instrument list was
+  // broadened for display/browsing; capping here keeps the capital-risking
+  // universe exactly the measured majors — broadening trading further is a
+  // separate, must-be-measured change (see PROJECT_STATE pending queue).
+  const symbols = instruments.value.slice(0, 16).map((i) => i.symbol);
 
   const journal = new TradeJournal(store);
   const positions = new PositionEngine(store, journal);

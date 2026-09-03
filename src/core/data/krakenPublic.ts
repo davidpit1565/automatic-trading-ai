@@ -40,10 +40,22 @@ const INTERVAL_MINUTES: Record<Timeframe, number> = {
 /**
  * Curated majors, EUR-quoted. Kraken names Bitcoin XBT; we display BTC.
  * TRADED by the agent (`server/autopilotRunner.mts` trades exactly
- * `instruments.slice(0, 10)`) — this order is load-bearing. Do NOT reorder
+ * `instruments.slice(0, 16)`) — this order is load-bearing. Do NOT reorder
  * or insert above this line; broadening the browsable universe happens by
  * appending more instruments after it (see `getInstruments` below), never by
- * changing what these first 10 are.
+ * changing what these first 16 are.
+ *
+ * The first 10 (XBT…AVAX) are the original measured majors. UNI/FIL/AAVE/
+ * ATOM/XLM/ALGO were added 2026-09-03 after measuring each candidate on real
+ * Kraken history through the live decision pipeline (`validateStrategy.mts`,
+ * ~720 1h candles): all six were net-positive (best: UNI +6.23%, PF 2.49,
+ * 14 trades; weakest of the six: ALGO +0.88%, PF 1.77) — comparable to or
+ * better than the weakest of the original 10 (DOT -0.33%, AVAX -0.06%), so
+ * excluded as an inconsistent bar. ETC (-0.16%, PF 0.91) and NEAR (-0.99%,
+ * PF 0.79) measured net-negative on the same run and were deliberately left
+ * out; BCH/TRX measured only marginally positive on very few trades (5 and 3)
+ * — too thin to call either way — and were left out pending more data rather
+ * than included on a coin-flip sample.
  */
 const CURATED_INSTRUMENTS: Instrument[] = [
   { symbol: 'XBTEUR', base: 'BTC', quote: 'EUR' },
@@ -56,11 +68,17 @@ const CURATED_INSTRUMENTS: Instrument[] = [
   { symbol: 'DOTEUR', base: 'DOT', quote: 'EUR' },
   { symbol: 'LINKEUR', base: 'LINK', quote: 'EUR' },
   { symbol: 'AVAXEUR', base: 'AVAX', quote: 'EUR' },
+  { symbol: 'UNIEUR', base: 'UNI', quote: 'EUR' },
+  { symbol: 'FILEUR', base: 'FIL', quote: 'EUR' },
+  { symbol: 'AAVEEUR', base: 'AAVE', quote: 'EUR' },
+  { symbol: 'ATOMEUR', base: 'ATOM', quote: 'EUR' },
+  { symbol: 'XLMEUR', base: 'XLM', quote: 'EUR' },
+  { symbol: 'ALGOEUR', base: 'ALGO', quote: 'EUR' },
 ];
 
 /**
  * Kraken's internal asset codes for assets the rest of the world names
- * differently. Verified against the live AssetPairs list: of the ten curated
+ * differently. Verified against the live AssetPairs list: of the sixteen curated
  * majors, only these two differ. Without the mapping the curated entry and the
  * discovered entry look like two separate assets, and the coin is listed twice
  * — once under its real name, once under Kraken's code.
@@ -76,22 +94,16 @@ const CURATED_SYMBOL_BY_BASE = new Map(CURATED_INSTRUMENTS.map((i) => [i.base, i
 /**
  * Static DISPLAY-only fallback, used only when the live AssetPairs call
  * (see `fetchEurPairs`) fails — so a transient network error never shrinks
- * the browsable list back down to just the 10 curated majors. Each entry
+ * the browsable list back down to just the 16 curated majors. Each entry
  * verified live on Kraken. PAXG is a gold-backed token (tracks gold, not
  * physical metal).
  */
 const FALLBACK_DISPLAY_INSTRUMENTS: Instrument[] = [
   { symbol: 'POLEUR', base: 'POL', quote: 'EUR' },
   { symbol: 'TRXEUR', base: 'TRX', quote: 'EUR' },
-  { symbol: 'ATOMEUR', base: 'ATOM', quote: 'EUR' },
-  { symbol: 'XLMEUR', base: 'XLM', quote: 'EUR' },
   { symbol: 'BCHEUR', base: 'BCH', quote: 'EUR' },
-  { symbol: 'UNIEUR', base: 'UNI', quote: 'EUR' },
-  { symbol: 'AAVEEUR', base: 'AAVE', quote: 'EUR' },
   { symbol: 'ETCEUR', base: 'ETC', quote: 'EUR' },
-  { symbol: 'FILEUR', base: 'FIL', quote: 'EUR' },
   { symbol: 'NEAREUR', base: 'NEAR', quote: 'EUR' },
-  { symbol: 'ALGOEUR', base: 'ALGO', quote: 'EUR' },
   { symbol: 'INJEUR', base: 'INJ', quote: 'EUR' },
   { symbol: 'ARBEUR', base: 'ARB', quote: 'EUR' },
   { symbol: 'OPEUR', base: 'OP', quote: 'EUR' },
@@ -166,7 +178,7 @@ export class KrakenPublicSource implements MarketDataSource {
   }
 
   /**
-   * The curated 10 majors always lead, in their fixed order (what the agent
+   * The curated 16 majors always lead, in their fixed order (what the agent
    * trades). Appended after them: every other EUR pair Kraken currently
    * lists live, broadening the BROWSABLE universe — or, if that live call
    * fails, the static fallback list, so browsing never regresses. Cached
