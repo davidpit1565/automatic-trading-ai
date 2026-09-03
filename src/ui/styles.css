@@ -1192,6 +1192,16 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
     padding-inline-end: 1.5rem;
   }
   .market-row-vol .dstat-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+  /* Coin detail: on a wide sidebar-layout viewport this read as a giant
+     stretched single column (a 380px chart's stats row was 3 flex:1 boxes
+     spread edge-to-edge across the whole available width, each mostly
+     empty around one small number) — cap it to a comfortable reading width
+     like a real analytics/detail page, and stop the stat boxes from
+     stretching past a sensible card size. */
+  #mk-detail-view { max-width: 720px; margin: 0 auto; }
+  .detail-stats-row { justify-content: flex-start; }
+  .dstat { flex: 0 1 200px; }
 }
 
 .stack { display: flex; flex-direction: column; gap: 0.55rem; }
