@@ -214,11 +214,19 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     if (!live) return;
 
     const invested = live.positions.reduce((s, p) => s + p.quantity * (prices[p.symbol] ?? p.entryPrice), 0);
-    const equity = live.cash + invested;
+    // Prefer the server's own recorded equity (marks the untracked BTC
+    // holding at its real current price); only fall back to a local
+    // approximation before the very first cycle to record one.
+    const equity = live.equityHistory.at(-1)?.equity ?? live.cash + invested;
     const { major, minor } = formatPriceSplit(equity);
     const equityEl = liveHero.querySelector<HTMLElement>('#hv-live-equity')!;
     equityEl.innerHTML = `<span class="hero-value-currency">€</span><span class="hero-value-major">${major}</span><span class="hero-value-minor">.${minor}</span>`;
-    liveHero.querySelector<HTMLElement>('#hv-live-cash')!.textContent = `Cash ${euro(live.cash)}`;
+    const btcSymbol = findBtcSymbol(data);
+    const btcValue = live.externalBtcQuantity * (btcSymbol ? prices[btcSymbol] ?? 0 : 0);
+    liveHero.querySelector<HTMLElement>('#hv-live-cash')!.textContent =
+      live.externalBtcQuantity > 0
+        ? `Cash ${euro(live.cash)} · BTC holding ${euro(btcValue)} (untracked)`
+        : `Cash ${euro(live.cash)}`;
 
     const banner = liveHero.querySelector<HTMLElement>('#hv-kill-switch')!;
     if (live.killSwitchEngaged) {

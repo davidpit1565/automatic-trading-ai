@@ -165,6 +165,8 @@ describe('live account state parsing (the real Revolut X account, separate from 
         { timestamp: 2_000, event: 'awaiting-confirmation', detail: 'confirmation request sent to Telegram' },
         { timestamp: 3_000, event: 'rejected', detail: "Revolut X rejected the order: HTTP 400 — Invalid client order ID" },
       ],
+      'live:live-external-btc-qty': 0.00075,
+      'live:live-equity-history': [{ at: 4_000, equity: 150.42 }],
     });
     const state = await fetchCloudState(okFetch(body));
     expect(state!.live).toEqual({
@@ -174,10 +176,12 @@ describe('live account state parsing (the real Revolut X account, separate from 
       killSwitchReason: 'network failure before a response was received',
       // Only real outcome events (filled/rejected) — 'awaiting-confirmation' is excluded.
       recentEvents: [{ at: 3_000, event: 'rejected', detail: "Revolut X rejected the order: HTTP 400 — Invalid client order ID" }],
+      externalBtcQuantity: 0.00075,
+      equityHistory: [{ at: 4_000, equity: 150.42 }],
     });
   });
 
-  it('defaults an absent kill-switch/positions/audit-log to a safe empty state, not a crash', async () => {
+  it('defaults an absent kill-switch/positions/audit-log/external-btc/equity-history to a safe empty state, not a crash', async () => {
     const body = JSON.stringify({
       'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
       'live:live-cash-eur': 50,
@@ -189,6 +193,8 @@ describe('live account state parsing (the real Revolut X account, separate from 
       killSwitchEngaged: false,
       killSwitchReason: null,
       recentEvents: [],
+      externalBtcQuantity: 0,
+      equityHistory: [],
     });
   });
 });

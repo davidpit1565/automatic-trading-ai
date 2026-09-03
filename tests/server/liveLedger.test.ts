@@ -3,7 +3,17 @@ import { MemoryStore } from '../../src/core/data/storage';
 import type { BrokerAdapter, BrokerPosition, OrderIntent, OrderStatusReport } from '../../src/core/execution/types';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
 import { recordLiveEntryFill } from '../../server/liveExitFlow.mts';
-import { creditLiveCash, debitLiveCash, initLiveCash, liveCash, liveEquity, syncLiveCashFromBroker } from '../../server/liveLedger.mts';
+import {
+  creditLiveCash,
+  debitLiveCash,
+  initLiveCash,
+  liveCash,
+  liveEquity,
+  liveExternalBtcQuantity,
+  recordLiveEquity,
+  syncLiveCashFromBroker,
+  syncLiveExternalBtc,
+} from '../../server/liveLedger.mts';
 
 /** Minimal fake — only fetchPositions is exercised by these tests. */
 function fakeBroker(positions: BrokerPosition[] | (() => Promise<BrokerPosition[]>)): BrokerAdapter {
@@ -140,5 +150,57 @@ describe('liveEquity', () => {
     recordLiveEntryFill(store, buyIntent(), filledReport(), 5000);
 
     expect(liveEquity(store, {})).toBe(80 + 2 * 100);
+  });
+});
+
+describe('syncLiveExternalBtc (untracked BTC holding, 2026-09-03)', () => {
+  it('records the broker-reported BTC balance', async () => {
+    const store = new MemoryStore();
+    await syncLiveExternalBtc(store, fakeBroker([{ symbol: 'BTC', quantity: 0.00075, avgCost: 0 }]));
+    expect(liveExternalBtcQuantity(store)).toBe(0.00075);
+  });
+
+  it('records zero when the broker reports no BTC balance at all', async () => {
+    const store = new MemoryStore();
+    await syncLiveExternalBtc(store, fakeBroker([{ symbol: 'EUR', quantity: 50, avgCost: 0 }]));
+    expect(liveExternalBtcQuantity(store)).toBe(0);
+  });
+
+  it('leaves the tracked quantity untouched on a network failure', async () => {
+    const store = new MemoryStore();
+    await syncLiveExternalBtc(store, fakeBroker([{ symbol: 'BTC', quantity: 0.001, avgCost: 0 }]));
+    await syncLiveExternalBtc(store, fakeBroker(() => Promise.reject(new Error('network timeout'))));
+    expect(liveExternalBtcQuantity(store)).toBe(0.001);
+  });
+});
+
+describe('recordLiveEquity (real account value-over-time, reporting only — 2026-09-03)', () => {
+  it('appends cash + tracked positions + the untracked BTC holding, valued at the current XBTEUR price', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 50);
+    await syncLiveExternalBtc(store, fakeBroker([{ symbol: 'BTC', quantity: 0.001, avgCost: 0 }]));
+
+    recordLiveEquity(store, { XBTEUR: 100_000 }, 1_000);
+
+    // 50 cash + 0.001 * 100,000 BTC value = 150.
+    expect(store.get('live-equity-history')).toEqual([{ at: 1_000, equity: 150 }]);
+  });
+
+  it('never changes liveEquity (used to size trades) — reporting only', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 50);
+    await syncLiveExternalBtc(store, fakeBroker([{ symbol: 'BTC', quantity: 0.001, avgCost: 0 }]));
+
+    const before = liveEquity(store, { XBTEUR: 100_000 });
+    recordLiveEquity(store, { XBTEUR: 100_000 }, 1_000);
+    expect(liveEquity(store, { XBTEUR: 100_000 })).toBe(before);
+    expect(before).toBe(50); // does NOT include the untracked BTC
+  });
+
+  it('caps the history and treats a missing XBTEUR price as zero rather than throwing', () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 10);
+    recordLiveEquity(store, {}, 1);
+    expect(store.get('live-equity-history')).toEqual([{ at: 1, equity: 10 }]);
   });
 });

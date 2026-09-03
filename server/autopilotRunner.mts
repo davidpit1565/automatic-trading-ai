@@ -66,7 +66,7 @@ import { checkManualSellRequests } from './manualSellCommand.mts';
 import { checkManualBuyRequests } from './manualBuyCommand.mts';
 import { mirrorApprovedEntries, type LiveEntryOutcome } from './liveEntryMirror.mts';
 import { checkAutomaticExits } from './liveExitMirror.mts';
-import { initLiveCash, syncLiveCashFromBroker } from './liveLedger.mts';
+import { initLiveCash, recordLiveEquity, syncLiveCashFromBroker, syncLiveExternalBtc } from './liveLedger.mts';
 import { RevolutXBrokerAdapter, type RevolutXCredentials } from './revolutXBrokerAdapter.mts';
 import { TelegramConfirmationGate } from './telegramConfirmationGate.mts';
 import {
@@ -760,6 +760,12 @@ export async function runLiveMirror(
   // before anything sizes a trade off of it — see liveLedger.mts's own doc
   // comment for the real incident (2026-09-03) that made this necessary.
   await syncLiveCashFromBroker(liveStore, brokerAdapter);
+  // Same reconciliation, for the BTC balance David keeps as a personal
+  // holding outside the bot's own tracked positions (2026-09-03) — reporting
+  // only, so the app's Real-money chart reflects it without changing how
+  // trades are sized (see liveLedger.mts's own doc comment).
+  await syncLiveExternalBtc(liveStore, brokerAdapter);
+  recordLiveEquity(liveStore, prices, now);
   const confirmationGate = new TelegramConfirmationGate(liveStore, telegram, audit);
   // Live-scoped daily-loss circuit breaker (PrefixedStore, never the raw
   // store — see PROJECT_STATE.md's note on why this must never conflate
