@@ -222,7 +222,13 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
     }
 
     const body = {
-      client_order_id: intent.id,
+      // Revolut X rejected our internal id verbatim in production
+      // (HTTP 400 "Invalid client order ID: 'live-entry:XBTEUR'", 2026-09-03)
+      // — ':' is apparently not an accepted character. intent.id itself stays
+      // unchanged (it's used as the internal tracking key everywhere else,
+      // e.g. rememberVenueOrderId/orderMap below); only what's sent to the
+      // broker is sanitized.
+      client_order_id: intent.id.replace(/:/g, '-'),
       symbol: intent.symbol,
       side: intent.side,
       order_configuration: {
