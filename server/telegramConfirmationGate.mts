@@ -25,6 +25,7 @@
 import type { AuditLog } from '../src/core/execution/types';
 import type { ConfirmationDecision, ConfirmationGate, OrderIntent } from '../src/core/execution/types';
 import type { KeyValueStore } from '../src/core/data/storage';
+import { liveCash } from './liveLedger.mts';
 import {
   answerCallbackQuery,
   editTelegramMessage,
@@ -102,25 +103,37 @@ function expiryLine(deadlineMs: number): string {
  * "reward/risk 2:1" actually means for HIM. Every figure below now carries
  * a short parenthetical of what it means in practice, not just the raw
  * number, without dropping any of the original figures.
+ *
+ * `cashBefore` (the real, current free EUR cash — `liveLedger.mts`'s
+ * `liveCash`) was added the same day after he asked specifically: with an
+ * existing open position already tying up some of the wallet, he wanted to
+ * see the free-cash before/after alongside the overall wallet %, not just
+ * one or the other. `a.portfolioExposure` was ALREADY computed against
+ * total equity (cash + every open position's current value, not just what's
+ * currently free — see `assessTrade` in `riskEngine.ts`), so the wallet %
+ * shown here was correct even with other positions open; this only adds the
+ * free-cash figures for full transparency, exactly as he asked for "both."
  */
-function buildConfirmationMessage(intent: OrderIntent, deadlineMs: number): string {
+function buildConfirmationMessage(intent: OrderIntent, deadlineMs: number, cashBefore: number): string {
   if (intent.side === 'sell') return buildExitConfirmationMessage(intent, deadlineMs);
   const a = intent.assessment;
+  const cashAfter = cashBefore - a.positionValue;
   return (
     `🔔 מחכה לאישור שלך — עסקה בכסף אמיתי\n\n` +
     `קנייה ${intent.symbol} (כמות: ${formatQty(intent.quantity)}, במחיר נוכחי ${intent.limitPrice})\n\n` +
-    // David asked (2026-09-03) to see the EUR value and % of the wallet
-    // right in the message, not just implied by the risk numbers below —
-    // a.positionValue is already the risk engine's own EUR sizing, and
-    // a.portfolioExposure is already this trade's share of total equity
-    // (there being no other open positions right now, it IS the wallet %).
-    `💰 סכום שיושקע: €${a.positionValue.toFixed(2)} — ${a.portfolioExposure.toFixed(1)}% מכל הכסף שיש לך בחשבון\n` +
+    // a.positionValue is the risk engine's own EUR sizing for this trade;
+    // a.portfolioExposure is this trade's share of the ENTIRE wallet
+    // (cash + every open position combined, not just what's currently
+    // free) — already correct with other positions open, not only when
+    // this is the sole position.
+    `💰 סכום שיושקע: €${a.positionValue.toFixed(2)} — ${a.portfolioExposure.toFixed(1)}% מכל הכסף שיש לך בחשבון (כולל פוזיציות פתוחות אחרות, לא רק המזומן הפנוי)\n` +
+    `💵 מזומן פנוי: €${cashBefore.toFixed(2)} עכשיו → €${cashAfter.toFixed(2)} אחרי העסקה\n` +
     `🛑 סטופ (מוכר אוטומטית אם המחיר יורד לכאן, כדי לעצור הפסד): ${intent.stopLoss}\n` +
     `🎯 יעד (מוכר אוטומטית אם המחיר עולה לכאן, כדי לממש רווח): ${intent.takeProfit}\n` +
     `⚠️ הכי הרבה שאפשר להפסיד בעסקה הזו אם היא נכשלת: €${a.riskAmount.toFixed(2)} ` +
     `(${a.riskPercentage.toFixed(2)}% מכל התיק — סכום קטן בכוונה)\n` +
     `📊 יחס סיכוי-סיכון ${a.rewardRiskRatio.toFixed(1)}:1 — אם זה מצליח, הרווח הפוטנציאלי גדול פי ${a.rewardRiskRatio.toFixed(1)} מהסיכון\n` +
-    `📌 אחרי העסקה הזו, ${a.portfolioExposure.toFixed(1)}% מהתיק יהיו קשורים בפוזיציות פתוחות\n\n` +
+    `📌 אחרי העסקה הזו, ${a.portfolioExposure.toFixed(1)}% מכל התיק (לא רק מהחלק הפנוי) יהיו קשורים בפוזיציות פתוחות\n\n` +
     `${expiryLine(deadlineMs)}\n\n` +
     `לחץ למטה כדי לאשר או לדחות. ללא לחיצה — שום דבר לא קורה, ההזמנה פשוט מתבטלת לבד.`
   );
@@ -212,14 +225,18 @@ export class TelegramConfirmationGate implements ConfirmationGate {
       // button's data one-time-only: an old callback can never match a
       // different pending record again.
       const token = `${sentAt}:${intent.id}`;
-      const result = await sendTelegramMessage(buildConfirmationMessage(intent, sentAt + MAX_PENDING_MS), this.telegram, {
-        inline_keyboard: [
-          [
-            { text: '✅ אשר', callback_data: `${APPROVE_PREFIX}${token}` },
-            { text: '❌ דחה', callback_data: `${REJECT_PREFIX}${token}` },
+      const result = await sendTelegramMessage(
+        buildConfirmationMessage(intent, sentAt + MAX_PENDING_MS, liveCash(this.store)),
+        this.telegram,
+        {
+          inline_keyboard: [
+            [
+              { text: '✅ אשר', callback_data: `${APPROVE_PREFIX}${token}` },
+              { text: '❌ דחה', callback_data: `${REJECT_PREFIX}${token}` },
+            ],
           ],
-        ],
-      });
+        },
+      );
       this.audit.append({
         timestamp: Date.now(),
         intentId: intent.id,

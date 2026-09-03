@@ -1,5 +1,33 @@
 # PROJECT_STATE
 
+## Confirmation message: show real free-cash before/after, not just the wallet % (2026-09-03)
+David asked: with an existing open position already tying up part of the
+wallet, does the confirmation message's percentage reflect his TOTAL
+wallet, or just what's currently free — and if it can't be made clearly
+one or the other, show both. Checked `assessTrade` (`riskEngine.ts`):
+`portfolioExposure` was ALREADY `(currentExposure + thisTrade) /
+totalEquity` — the entire wallet (cash + every open position's current
+value), not just free cash — so the % shown was already correct even with
+other positions open. The stale doc comment claiming this "only works
+because there are no other open positions right now" was wrong and has
+been corrected.
+
+Added the free-cash figures anyway, exactly as he offered ("or show me
+both"): the buy confirmation now shows real current free EUR cash
+(`liveLedger.mts`'s `liveCash`) before and after the trade, alongside the
+already-correct total-wallet %, and the wallet-% lines now say explicitly
+"including other open positions, not just the free cash."
+
+Separately answered (not a bug, no code change): he asked why `/buy
+XBTEUR` buys Bitcoin — XBT is the ISO-4217-style ticker Kraken/Revolut X
+use for Bitcoin (the "X" prefix marks a non-national currency, same
+convention as XAU for gold); XBTEUR literally means "Bitcoin priced in
+EUR," so this was working as intended.
+
+Tests: a new case confirming the free-cash-before/after line renders with
+the right values and the "including other positions" wording. Full gate
+green (tsc, 1028 tests, build).
+
 ## A genuinely new /buy was rejected as a duplicate order (2026-09-03)
 David sent `/buy XBTEUR` again, approved it, and Revolut X rejected it:
 `"An order with the client_order_id '...' has already been placed."` —
