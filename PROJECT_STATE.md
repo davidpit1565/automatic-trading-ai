@@ -31,6 +31,37 @@ and 431. Screenshot confirms the tooltip renders fully on-screen.
 Full gate green: `tsc --noEmit`, `vitest run` (1014 tests, none touched),
 `npm run build`.
 
+## The daily Telegram digest never mentioned the real Revolut X account at all (2026-09-03)
+David: "זה צריך להתעדכן לגמרי כי הוא ממש ממש לא מעודכן במיוחד עם הארנק החדש והכסף האמיתי" —
+pasted the actual daily digest he receives, and it's entirely about the two
+SIMULATED accounts (paper crypto + paper stocks); nothing about the real
+wallet's cash, the untracked BTC holding, real open positions, or whether
+the kill switch is engaged. The heading even said "(כסף מדומה)" outright.
+
+Added a new "💶 חשבון אמיתי (Revolut X)" section to `buildDailySummary`
+(`telegram.mts`) — total equity (cash + bot-tracked positions + the
+untracked BTC holding, same total the app's Profit tab shows), the
+cash/BTC breakdown, any bot-tracked open positions, and the kill-switch
+state. Built from a new `readLiveSummary` (`autopilotRunner.mts`), reusing
+`liveLedger.mts`'s existing helpers (`liveCash`, `liveExternalBtcQuantity`,
+a new `hasLiveAccount` to distinguish "real money never enabled" from a
+genuine €0 balance — mirrors the UI's own `parseLiveAccountState`
+convention) plus `openLivePositions` and `PersistedKillSwitch`. Also
+dropped the now-inaccurate "(כסף מדומה)" from the digest's own heading,
+since it's no longer purely about simulated money.
+
+Deliberately reporting-only: nothing here touches `liveEquity()` (used to
+SIZE a live entry's risk) — the real account's digest section is built
+entirely separately, so a text summary can never accidentally change how
+much the bot risks on a trade.
+
+Tests: `readLiveSummary` (null with no live account; cash-only; adds the
+external BTC value without affecting the live-position figure; a
+bot-tracked position marked to price; kill-switch state and reason) and
+`buildDailySummary`'s new section (additive to the crypto/stocks sections,
+omitted entirely with no live data, shows the external-BTC line only when
+there is one). Full gate green (tsc, 1024 tests, build).
+
 ## Chart range/mode switches hard-snapped instead of fading (2026-09-03)
 Continuing David's chart-polish request. `src/ui/equityChartPanel.ts` +
 `src/ui/views/marketsView.ts` only.

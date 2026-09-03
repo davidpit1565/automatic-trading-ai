@@ -6,6 +6,7 @@ import { recordLiveEntryFill } from '../../server/liveExitFlow.mts';
 import {
   creditLiveCash,
   debitLiveCash,
+  hasLiveAccount,
   initLiveCash,
   liveCash,
   liveEquity,
@@ -123,6 +124,21 @@ describe('syncLiveCashFromBroker (real incident, 2026-09-03: tracker said €100
       fakeBroker(() => Promise.reject(new Error('network timeout'))),
     );
     expect(liveCash(store)).toBe(100.15);
+  });
+});
+
+describe('hasLiveAccount (distinguishes "never enabled" from a genuine €0 balance)', () => {
+  it('is false before the live ledger has ever been initialized', () => {
+    const store = new MemoryStore();
+    expect(hasLiveAccount(store)).toBe(false);
+  });
+
+  it('is true once initialized, even if the balance later drops to exactly 0', () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    debitLiveCash(store, 100);
+    expect(liveCash(store)).toBe(0);
+    expect(hasLiveAccount(store)).toBe(true);
   });
 });
 
