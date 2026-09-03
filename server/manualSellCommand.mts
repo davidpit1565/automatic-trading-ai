@@ -96,6 +96,22 @@ export async function checkManualSellRequests(
    * (`liveExitMirror.mts`'s `checkAutomaticExits`). Optional so this stays
    * callable exactly as before wherever a caller has no tracker to feed. */
   onRealizedPnl?: (pnl: number, now: number) => void,
+  /**
+   * The SAME store instance `/help`, `/tip`, `/status` and `/discover` poll
+   * through — there is only ONE Telegram bot and ONE update offset, and it
+   * MUST be tracked in one place. Defaults to `store` for backward
+   * compatibility, but `autopilotRunner.mts` passes the raw (unprefixed)
+   * store here specifically, not the `live:`-prefixed one `store` itself
+   * is. Real bug found 2026-09-03: this used to implicitly poll through
+   * whatever `store` was (the live-prefixed one), which is a SEPARATE
+   * key namespace from the one every other command handler polls through —
+   * a `/sell` picked up by the outer (unprefixed) pollers first (they run
+   * earlier in the cycle) got stashed into the unprefixed unclaimed-messages
+   * key, where this function, reading the live-prefixed one, could never
+   * find it. `/sell` silently never worked despite the bot clearly being
+   * alive (other commands like `/discover` answered fine) — this is why.
+   */
+  telegramStore: KeyValueStore = store,
 ): Promise<readonly ManualSellOutcome[]> {
   // Shared poller (telegram.mts) — never poll Telegram directly here with a
   // private offset (a real bug, fixed 2026-09-02: see PROJECT_STATE.md).
@@ -103,7 +119,7 @@ export async function checkManualSellRequests(
   // any message that isn't a /sell command) is immediately stashed back so
   // OTHER consumers (the confirmation gate, the manual kill-switch) can
   // still find it — the raw Telegram update is already gone by now.
-  const polled = await pollAllTelegramUpdates(store, telegram);
+  const polled = await pollAllTelegramUpdates(telegramStore, telegram);
   const pendingSymbols = new Set(store.get<string[]>(MANUAL_SELL_PENDING_KEY) ?? []);
   const unclaimedMessages: TelegramTextMessage[] = [];
   for (const message of polled.messages) {
@@ -111,7 +127,7 @@ export async function checkManualSellRequests(
     if (symbol) pendingSymbols.add(symbol);
     else unclaimedMessages.push(message);
   }
-  stashUnclaimedTelegramUpdates(store, { messages: unclaimedMessages, callbacks: polled.callbacks });
+  stashUnclaimedTelegramUpdates(telegramStore, { messages: unclaimedMessages, callbacks: polled.callbacks });
   if (pendingSymbols.size === 0) return [];
 
   const positions = openLivePositions(store);

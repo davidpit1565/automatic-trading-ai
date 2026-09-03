@@ -184,6 +184,17 @@ export class TelegramConfirmationGate implements ConfirmationGate {
     private readonly store: KeyValueStore,
     private readonly telegram: TelegramConfig,
     private readonly audit: AuditLog,
+    /**
+     * The SAME store instance `/help`, `/tip`, `/status` and `/discover`
+     * poll through — there is only ONE Telegram bot and ONE update offset.
+     * Defaults to `store` for backward compatibility, but `autopilotRunner.mts`
+     * passes the raw (unprefixed) store here specifically, not the
+     * `live:`-prefixed one `store` itself is — see
+     * `manualSellCommand.mts`'s matching parameter for the real bug (found
+     * 2026-09-03, affecting approve/reject button taps too, not just
+     * `/sell`) this fixes.
+     */
+    private readonly telegramStore: KeyValueStore = store,
   ) {}
 
   async requestConfirmation(intent: OrderIntent): Promise<ConfirmationDecision> {
@@ -276,20 +287,20 @@ export class TelegramConfirmationGate implements ConfirmationGate {
       // silently discarded forever). Every attempt MUST stash back
       // whatever it doesn't use, in every branch below, or the same bug
       // returns in a new shape.
-      const polled = await pollAllTelegramUpdates(this.store, this.telegram);
+      const polled = await pollAllTelegramUpdates(this.telegramStore, this.telegram);
       const token = `${pending.sentAt}:${intent.id}`;
       const matchIndex = polled.callbacks.findIndex(
         (u) => u.data === `${APPROVE_PREFIX}${token}` || u.data === `${REJECT_PREFIX}${token}`,
       );
 
       if (matchIndex === -1) {
-        stashUnclaimedTelegramUpdates(this.store, polled);
+        stashUnclaimedTelegramUpdates(this.telegramStore, polled);
         if (attempt < POLL_ATTEMPTS - 1) await sleep(POLL_INTERVAL_MS);
         continue;
       }
 
       const match = polled.callbacks[matchIndex]!;
-      stashUnclaimedTelegramUpdates(this.store, {
+      stashUnclaimedTelegramUpdates(this.telegramStore, {
         messages: polled.messages,
         callbacks: polled.callbacks.filter((_, i) => i !== matchIndex),
       });

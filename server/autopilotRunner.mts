@@ -399,9 +399,26 @@ async function buildTopTraderCheck(
  * isolated function so `aiJudgment.ts` itself never needs a network
  * dependency (see that file's doc comment).
  */
+/** Same bound every data source in this project uses — this AI-judgment gate
+ * and the Telegram helpers were the only fetch calls in the whole codebase
+ * missing it (found 2026-09-03 after the crypto autopilot's cycle loop hung
+ * for 2+ hours with nothing to time it out). This gate runs on every
+ * candidate that reaches it, every cycle. */
+const AI_JUDGMENT_TIMEOUT_MS = 15_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AI_JUDGMENT_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function callGemini(prompt: string, apiKey: string): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
@@ -423,7 +440,7 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
  * doc comment).
  */
 async function callClaude(prompt: string, apiKey: string): Promise<string> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'x-api-key': apiKey,
@@ -829,7 +846,7 @@ export async function runLiveMirror(
   // trades are sized (see liveLedger.mts's own doc comment).
   await syncLiveExternalBtc(liveStore, brokerAdapter);
   recordLiveEquity(liveStore, prices, now);
-  const confirmationGate = new TelegramConfirmationGate(liveStore, telegram, audit);
+  const confirmationGate = new TelegramConfirmationGate(liveStore, telegram, audit, store);
   // Live-scoped daily-loss circuit breaker (PrefixedStore, never the raw
   // store — see PROJECT_STATE.md's note on why this must never conflate
   // with the paper autopilot's own 'daily-loss' key on the same file). Found
@@ -900,8 +917,18 @@ export async function runLiveMirror(
   };
 
   try {
-    await checkManualKillSwitchCommands(liveStore, telegram, killSwitch, audit, 'david', now);
-    await checkManualSellRequests(liveStore, telegram, source, ENTRY_TF, flowParams, now, recordLiveRealizedPnl);
+    // `store` (raw, unprefixed) is passed for Telegram polling specifically —
+    // never `liveStore` — there is only ONE Telegram bot and ONE update
+    // offset, and every OTHER command handler (/help, /tip, /status,
+    // /discover) polls through `store` too. Real bug, found 2026-09-03: this
+    // used to implicitly poll through `liveStore` (a separate key namespace),
+    // so a /sell (or /buy, /pause, /resume, or an approve/reject button tap)
+    // picked up by the outer pollers first — they run earlier in the cycle —
+    // got stashed where these handlers, reading the live-prefixed unclaimed
+    // key, could never find it. Silently broken despite the bot clearly
+    // being alive (other commands answered fine).
+    await checkManualKillSwitchCommands(store, telegram, killSwitch, audit, 'david', now);
+    await checkManualSellRequests(liveStore, telegram, source, ENTRY_TF, flowParams, now, recordLiveRealizedPnl, store);
     const manualBuyOutcomes = await checkManualBuyRequests(
       liveStore,
       telegram,
@@ -912,6 +939,7 @@ export async function runLiveMirror(
       flowParams,
       now,
       liveEntryOptions,
+      store,
     );
     await notifyLiveEntryOutcomes(telegram, manualBuyOutcomes);
     const newlyApproved = cycleOpened

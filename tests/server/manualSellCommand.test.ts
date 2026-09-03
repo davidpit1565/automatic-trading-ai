@@ -15,6 +15,7 @@ import type { MarketDataSource } from '../../src/core/data/revolutClient';
 import type { Candle, Instrument } from '../../src/core/types';
 import { openLivePositions, recordLiveEntryFill } from '../../server/liveExitFlow.mts';
 import { checkManualSellRequests, parseSellCommand } from '../../server/manualSellCommand.mts';
+import { stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
 import { TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
 
 function approvedAssessment(): TradeRiskAssessment {
@@ -484,6 +485,73 @@ describe('checkManualSellRequests', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('finds a /sell command that was stashed by ANOTHER consumer into the shared telegramStore, even though the business store (liveStore) is a completely separate instance (real incident, 2026-09-03: /sell silently never worked because the confirmation/manual-command handlers polled through the live-prefixed store while every other handler shared one unprefixed store)', async () => {
+    const liveStore = new MemoryStore(); // business state (positions, pending symbols) — NOT the Telegram namespace
+    const sharedTelegramStore = new MemoryStore(); // the ONE namespace every command handler must share
+    const audit = new PersistedAuditLog(liveStore);
+    const killSwitch = new PersistedKillSwitch(liveStore);
+    recordLiveEntryFill(liveStore, buyIntent(), filledReport(), 5000);
+
+    // Simulate an earlier consumer (e.g. checkStatusRequests) already having
+    // polled Telegram this cycle and stashed back a /sell it didn't
+    // recognise — this is exactly what lands in the shared store in
+    // production, never in liveStore.
+    stashUnclaimedTelegramUpdates(sharedTelegramStore, {
+      messages: [{ updateId: 1, text: '/sell XBTEUR' }],
+      callbacks: [],
+    });
+
+    const outcomes = await checkManualSellRequests(
+      liveStore,
+      { token: 'T', chatId: 'C', fetchFn: seedTelegram([]) }, // nothing NEW from Telegram itself this cycle
+      fakeSource(95),
+      '1h',
+      {
+        confirmationGate: fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' }),
+        brokerAdapter: fakeBrokerAdapter(filledReport()),
+        killSwitch,
+        audit,
+        verifySymbolExists: async () => true,
+      },
+      9000,
+      undefined,
+      sharedTelegramStore, // the fix: poll/stash through the SAME store other handlers use
+    );
+    expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: filledReport() }]);
+  });
+
+  it('demonstrates the actual bug when telegramStore is omitted and defaults to a live-prefixed-style store: a /sell stashed in the shared store is invisible', async () => {
+    const liveStore = new MemoryStore();
+    const sharedTelegramStore = new MemoryStore();
+    const audit = new PersistedAuditLog(liveStore);
+    const killSwitch = new PersistedKillSwitch(liveStore);
+    recordLiveEntryFill(liveStore, buyIntent(), filledReport(), 5000);
+
+    stashUnclaimedTelegramUpdates(sharedTelegramStore, {
+      messages: [{ updateId: 1, text: '/sell XBTEUR' }],
+      callbacks: [],
+    });
+
+    // No telegramStore argument -> defaults to `liveStore`, the pre-fix
+    // behavior. It polls/unstashes liveStore's own (empty) namespace, so the
+    // message sitting in sharedTelegramStore is never seen.
+    const outcomes = await checkManualSellRequests(
+      liveStore,
+      { token: 'T', chatId: 'C', fetchFn: seedTelegram([]) },
+      fakeSource(95),
+      '1h',
+      {
+        confirmationGate: fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' }),
+        brokerAdapter: fakeBrokerAdapter(filledReport()),
+        killSwitch,
+        audit,
+        verifySymbolExists: async () => true,
+      },
+      9000,
+    );
+    expect(outcomes).toEqual([]); // the position is open, but the /sell was never found
   });
 
   it('ignores a message from any chat other than the configured one', async () => {

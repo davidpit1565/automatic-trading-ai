@@ -20,6 +20,13 @@ import { err, ok } from '../types';
 
 const BASE_URL =
   'https://www.okx.com/api/v5/rubik/stat/contracts/long-short-position-ratio-contract-top-trader';
+/** Same bound every other data source in this project uses (krakenPublic.ts,
+ * coinbasePublic.ts, alpacaStocks.ts, revolutClient.ts, sec13f.ts) — this was
+ * the one file missing it. Found 2026-09-03 after the crypto autopilot's
+ * cycle loop hung for 2+ hours: this call runs once per traded symbol, every
+ * cycle, unconditionally (buildTopTraderCheck in autopilotRunner.mts), with
+ * nothing to time it out if OKX ever stalls. */
+const DEFAULT_TIMEOUT_MS = 15_000;
 
 export interface TopTraderRatioPoint {
   readonly timestamp: number;
@@ -54,10 +61,14 @@ export async function getTopTraderPositionRatio(
 ): Promise<Result<TopTraderRatioPoint[]>> {
   const url = `${BASE_URL}?instId=${encodeURIComponent(instId)}&period=${period}&limit=${limit}`;
   let response: Response;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
   try {
-    response = await fetchFn(url);
+    response = await fetchFn(url, { signal: controller.signal });
   } catch (cause) {
     return err(`network error fetching OKX top-trader ratio: ${cause instanceof Error ? cause.message : String(cause)}`);
+  } finally {
+    clearTimeout(timer);
   }
   if (!response.ok) return err(`OKX top-trader ratio HTTP ${response.status}`);
   let payload: { code?: string; data?: unknown };
