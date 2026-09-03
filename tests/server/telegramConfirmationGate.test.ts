@@ -5,6 +5,7 @@ import type { OrderIntent } from '../../src/core/execution/types';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
 import { ConfirmationPendingError, TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
 import { getSummaryTimezone, pollAllTelegramUpdates, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
+import { initLiveCash } from '../../server/liveLedger.mts';
 
 function approvedAssessment(): TradeRiskAssessment {
   return {
@@ -183,6 +184,28 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     expect(msg).toContain('מוכר אוטומטית אם המחיר עולה');
     expect(msg).toContain('הכי הרבה שאפשר להפסיד');
     expect(msg).toContain('אם זה מצליח, הרווח הפוטנציאלי גדול פי');
+  });
+
+  // David asked (2026-09-03): with an existing open position already tying
+  // up part of the wallet, he wanted the free-cash before/after shown
+  // explicitly alongside the overall wallet % (which was already computed
+  // against TOTAL equity, not just free cash — this only adds visibility).
+  it('shows real free cash before/after the trade, alongside the already-correct total-wallet %', async () => {
+    const empty = Array.from({ length: 5 }, () => [] as never[]);
+    const { fetchFn, sent } = fakeTelegram(empty);
+    const store = new MemoryStore();
+    initLiveCash(store, 130); // e.g. 100 tied up in another open position + 30 free
+    const audit = new PersistedAuditLog(store);
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+    const assertion = expect(gate.requestConfirmation(intent())).rejects.toThrow(ConfirmationPendingError);
+    await vi.runAllTimersAsync();
+    await assertion;
+
+    const msg = sent[0]!;
+    // positionValue is 200 in the shared fixture (approvedAssessment).
+    expect(msg).toContain('€130.00 עכשיו');
+    expect(msg).toContain('€-70.00 אחרי העסקה');
+    expect(msg).toContain('כולל פוזיציות פתוחות אחרות');
   });
 
   it('never shows a raw 15-decimal quantity float — a real production message that leaked one, 2026-09-03', async () => {
