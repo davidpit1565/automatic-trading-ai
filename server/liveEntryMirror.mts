@@ -33,7 +33,7 @@ import type { Instrument } from '../src/core/types';
 import type { TradeOpportunity } from '../src/core/signal/signalEngine';
 import { assessTrade, confidenceScaledRiskPct, DEFAULT_RISK_LIMITS, type RiskLimits } from '../src/core/risk/riskEngine';
 import { openLivePositions, recordLiveEntryFill } from './liveExitFlow.mts';
-import { debitLiveCash, liveEquity } from './liveLedger.mts';
+import { debitLiveCash, liveCash, liveEquity } from './liveLedger.mts';
 import { runLiveOrderFlow, buildLiveOrderIntent, type LiveOrderFlowParams, type LiveOrderFlowResult } from './liveOrchestrator.mts';
 import { toRevolutXSymbol } from './revolutXBrokerAdapter.mts';
 
@@ -172,6 +172,26 @@ export async function mirrorApprovedEntries(
     );
     if (!assessment.approved) {
       outcomes.push({ symbol, outcome: 'not-approved', reasons: assessment.reasons });
+      delete pending[symbol];
+      store.set(PENDING_KEY, pending);
+      continue;
+    }
+    // Found in review, 2026-09-03: `assessment.positionValue` is sized
+    // against total LIVE equity (cash + open positions' current value), but
+    // an order can only actually be paid for out of free CASH — with an
+    // open position already holding some of that equity, an approved
+    // position size can exceed what's actually spendable. Sending a
+    // confirmation for a trade the account can't pay for wastes a human
+    // approval and would only be caught later by the broker rejecting it.
+    const availableCash = liveCash(store);
+    if (assessment.positionValue > availableCash) {
+      outcomes.push({
+        symbol,
+        outcome: 'not-approved',
+        reasons: [
+          `Position value €${assessment.positionValue.toFixed(2)} exceeds available cash €${availableCash.toFixed(2)}`,
+        ],
+      });
       delete pending[symbol];
       store.set(PENDING_KEY, pending);
       continue;

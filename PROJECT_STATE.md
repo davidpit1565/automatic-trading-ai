@@ -1,5 +1,30 @@
 # PROJECT_STATE
 
+## Bug audit ("תבדוק שאין עוד באגים"): live-entry sizing vs. actual free cash (2026-09-03)
+David asked for a general bug check on the live-money code. Ran the
+`code-review` skill over the live-money server files at high effort; one
+finding was worth fixing: `mirrorApprovedEntries` (`liveEntryMirror.mts`)
+sent a Telegram confirmation for any `assessTrade`-approved entry without
+checking whether `assessment.positionValue` actually fits in real free
+cash (`liveLedger.mts`'s `liveCash`). Under `DEFAULT_RISK_LIMITS` this is
+structurally hard to hit (`maxTotalExposurePct` at 60% keeps the
+exposure-headroom cap below free cash), but a future/misconfigured
+`riskLimits` override (e.g. `maxTotalExposurePct` at or above 100%) or a
+cash/position desync could still let a human approve a trade the account
+can't actually pay for — wasting an approval that would only bounce at
+the broker.
+
+Added a guard right after the existing "not approved" branch: if
+`assessment.positionValue > liveCash(store)`, the entry is refused
+(`not-approved`, with the specific euro figures in the reason) before
+ever reaching the broker or a Telegram confirmation — same shape as the
+existing not-approved path, no new `LiveEntryOutcome` variant needed.
+
+Tests: a new case using a deliberately permissive `riskLimits` override
+(200% total exposure) to size a 200€ position against 100€ equity/cash,
+confirming it's now refused and never reaches the broker. Full gate green
+(tsc, 1029 tests, build).
+
 ## Confirmation message: show real free-cash before/after, not just the wallet % (2026-09-03)
 David asked: with an existing open position already tying up part of the
 wallet, does the confirmation message's percentage reflect his TOTAL

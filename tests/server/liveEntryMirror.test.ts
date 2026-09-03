@@ -207,6 +207,43 @@ describe('mirrorApprovedEntries', () => {
     expect(outcomes[0]!.symbol).toBe('XBTEUR');
   });
 
+  it('refuses (not-approved) when the risk-engine sizing exceeds actual free cash, even though it fits within total equity (found in review, 2026-09-03: with permissive/misconfigured risk limits, positionValue is capped by exposureHeadroom which is only guaranteed <= free cash while maxTotalExposurePct < 100%)', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100); // no open positions -> equity is also 100
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    // A deliberately permissive risk-limits override (maxTotalExposurePct
+    // 200%) lets the risk engine size a 200€ position against 100€ equity —
+    // still "approved" by assessTrade itself, but the account only has 100€
+    // of actual cash to pay for it.
+    const permissive = {
+      maxRiskPerTradePct: 100,
+      maxPositionPct: 200,
+      maxTotalExposurePct: 200,
+      maxOpenPositions: 5,
+      maxExposurePerAssetPct: 200,
+      dailyLossLimitPct: 100,
+      minRewardRisk: 0,
+      maxRewardRisk: 999,
+      minStopDistancePct: 0.01,
+    };
+    const bigPosition = opportunity({ levels: { entry: 100, stopLoss: 50, takeProfit: 200, riskReward: 2 } });
+
+    const outcomes = await mirrorApprovedEntries(
+      store,
+      [bigPosition],
+      [XBT],
+      { XBTEUR: 100 },
+      flowParams({ intentId: 'x', state: 'filled', filledQuantity: 0, avgFillPrice: null, detail: '' }, killSwitch, audit),
+      1000,
+      { riskLimits: permissive },
+    );
+
+    expect(outcomes).toHaveLength(1);
+    expect(outcomes[0]!.outcome).toBe('not-approved');
+    expect(liveCash(store)).toBe(100); // untouched — never reached the broker
+  });
+
   it('reports no-broker-symbol and does not call the broker when the symbol has no known translation', async () => {
     const store = new MemoryStore();
     initLiveCash(store, 100);
