@@ -128,7 +128,10 @@ describe('RevolutXBrokerAdapter', () => {
     expect(calls[0]!.method).toBe('POST');
     expect(calls[0]!.url).toBe('https://revx.revolut.com/api/1.0/orders');
     expect(JSON.parse(calls[0]!.body!)).toEqual({
-      client_order_id: 'BTC-USD:1:0',
+      // Revolut X rejects ':' in client_order_id (real HTTP 400, 2026-09-03)
+      // — sanitized to '-' for the broker, while intent.id/report.intentId
+      // below stay the original 'BTC-USD:1:0' used for internal tracking.
+      client_order_id: 'BTC-USD-1-0',
       symbol: 'BTC-USD',
       side: 'buy',
       order_configuration: { limit: { base_size: '2', price: '100' } },
@@ -139,6 +142,20 @@ describe('RevolutXBrokerAdapter', () => {
     expect(verifiesAgainstRealRequest(calls[1]!)).toBe(true);
     // Audited under the FINAL observed state, not the placement acknowledgement.
     expect(audit.entries().at(-1)).toMatchObject({ intentId: 'BTC-USD:1:0', event: 'filled' });
+  });
+
+  it("strips ':' from the client_order_id sent to Revolut X, which rejects it verbatim (real HTTP 400, 2026-09-03: \"Invalid client order ID: 'live-entry:XBTEUR'\")", async () => {
+    const { fetchFn, calls } = fakeFetch([
+      { status: 200, body: { data: [{ venue_order_id: 'venue-9', client_order_id: 'x', state: 'new' }] } },
+      { status: 200, body: { data: { status: 'new' } } },
+    ]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    const report = await adapter.submit(intent({ id: 'live-entry:XBTEUR' }));
+
+    expect(JSON.parse(calls[0]!.body!).client_order_id).toBe('live-entry-XBTEUR');
+    // Internal tracking (report.intentId, audit log) keeps the original id.
+    expect(report.intentId).toBe('live-entry:XBTEUR');
   });
 
   it('reports an order still open as submitted, not fabricated as filled', async () => {

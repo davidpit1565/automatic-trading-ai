@@ -1,5 +1,27 @@
 # PROJECT_STATE
 
+## Revolut X rejects ':' in client_order_id — found from a live rejection (2026-09-03)
+Right after the kill-switch-keyboard/education-tips PR shipped, David's next
+real `/buy XBTEUR` got approved and actually reached the broker for the
+first time tonight — and Revolut X rejected it: `HTTP 400 — {"message":
+"Invalid client order ID: 'live-entry:XBTEUR'", ...}`. This is new,
+previously-invisible information (only surfaced because PR #118 added the
+raw rejection body to the Telegram message) — Revolut X does not accept
+`:` in `client_order_id`, but this project's internal order id
+(`live-entry:${symbol}`) is built with one and was being sent to the
+broker verbatim.
+
+Fixed in `RevolutXBrokerAdapter.submit()`: only the `client_order_id` field
+sent over the wire is sanitized (`:` → `-`), leaving `intent.id` itself
+untouched everywhere else it's used as the internal tracking key (audit
+log, `rememberVenueOrderId`/`orderMap`, the Telegram approve/reject
+callback data) — so nothing that correlates by `intent.id` needed to
+change, only what Revolut X actually sees.
+
+Tests: a regression reproducing the exact real error string and asserting
+the sanitized id reaches the request while `report.intentId` keeps the
+original. Full gate green (tsc, 991 tests, build).
+
 ## Persistent kill-switch keyboard + periodic education tips (2026-09-03)
 David asked for two engagement features, both shipped:
 
