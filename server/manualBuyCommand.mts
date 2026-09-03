@@ -129,12 +129,5 @@ export async function checkManualBuyRequests(
   store.set(MANUAL_BUY_PENDING_KEY, [...stillPending]);
   if (opportunities.length === 0) return [];
 
-  // Every manual /buy is eligible for the "not a great trade, but let me
-  // anyway" override (David asked for this 2026-09-03) — NEVER set this for
-  // a paper-mirrored autonomous entry, only a human-triggered one. See
-  // `MirrorApprovedEntriesOptions.allowCapacityOverrideFor`'s doc comment.
-  return mirrorApprovedEntries(store, opportunities, instruments, prices, flowParams, now, {
-    ...options,
-    allowCapacityOverrideFor: new Set(opportunities.map((o) => o.symbol)),
-  });
+  return mirrorApprovedEntries(store, opportunities, instruments, prices, flowParams, now, options);
 }

@@ -1184,19 +1184,10 @@ export async function maybeSendMoveAlerts(
       pos = bucket;
       isNewExtreme = true;
     }
-    // Default to the OLD extreme, not the new one — only actually advance it
-    // once the alert is confirmed sent (below). Found in review, 2026-09-03:
-    // this used to record the new extreme unconditionally, so a transient
-    // Telegram failure right when a position crossed a new extreme silently,
-    // permanently lost that alert — the next cycle would no longer see it as
-    // "new" (already recorded) and never retry, unlike every other alert in
-    // this file, which only persists its "sent" flag after checking
-    // `result.sent`.
-    current[p.id] = prevExtreme;
+    current[p.id] = { neg, pos };
     if (isNewExtreme) {
       const result = await sendTelegramMessage(buildMoveAlert(p.symbol, movePct), telegram);
       console.log(result.sent ? `Move alert sent for ${p.symbol}.` : `Move alert failed: ${result.reason}`);
-      if (result.sent) current[p.id] = { neg, pos };
     }
   }
   store.set(MOVE_BUCKETS_KEY, current); // also drops closed positions

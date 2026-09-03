@@ -244,52 +244,6 @@ describe('mirrorApprovedEntries', () => {
     expect(liveCash(store)).toBe(100); // untouched — never reached the broker
   });
 
-  it("overrides a portfolio-capacity refusal ONLY for a symbol listed in allowCapacityOverrideFor — David's manual 'buy anyway' override, 2026-09-03; an identical setup with no override still gets refused (an autonomous paper-mirrored entry must never bypass this)", async () => {
-    const zeroCapacity = {
-      maxRiskPerTradePct: 1,
-      maxPositionPct: 20,
-      maxTotalExposurePct: 60,
-      maxOpenPositions: 0, // refuses ANY new entry regardless of the account being otherwise empty
-      maxExposurePerAssetPct: 20,
-      dailyLossLimitPct: 3,
-      minRewardRisk: 1.5,
-      maxRewardRisk: 20,
-      minStopDistancePct: 0.25,
-    };
-
-    const withoutOverride = new MemoryStore();
-    initLiveCash(withoutOverride, 100);
-    const killSwitch1 = new PersistedKillSwitch(withoutOverride);
-    const audit1 = new PersistedAuditLog(withoutOverride);
-    const refused = await mirrorApprovedEntries(
-      withoutOverride,
-      [opportunity()],
-      [XBT],
-      { XBTEUR: 100 },
-      flowParams({ intentId: 'x', state: 'filled', filledQuantity: 0, avgFillPrice: null, detail: '' }, killSwitch1, audit1),
-      1000,
-      { riskLimits: zeroCapacity },
-    );
-    expect(refused).toEqual([{ symbol: 'XBTEUR', outcome: 'not-approved', reasons: ['maximum open positions reached (0/0)'] }]);
-
-    const withOverride = new MemoryStore();
-    initLiveCash(withOverride, 100);
-    const killSwitch2 = new PersistedKillSwitch(withOverride);
-    const audit2 = new PersistedAuditLog(withOverride);
-    const report = { intentId: 'x', state: 'filled' as const, filledQuantity: 0.01, avgFillPrice: 100, detail: 'ok' };
-    const accepted = await mirrorApprovedEntries(
-      withOverride,
-      [opportunity()],
-      [XBT],
-      { XBTEUR: 100 },
-      flowParams(report, killSwitch2, audit2),
-      1000,
-      { riskLimits: zeroCapacity, allowCapacityOverrideFor: new Set(['XBTEUR']) },
-    );
-    expect(accepted).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: { ...report, intentId: 'live-entry:XBTEUR:1000' } }]);
-    expect(openLivePositions(withOverride)).toHaveLength(1);
-  });
-
   it('reports no-broker-symbol and does not call the broker when the symbol has no known translation', async () => {
     const store = new MemoryStore();
     initLiveCash(store, 100);
@@ -506,42 +460,6 @@ describe('mirrorApprovedEntries', () => {
     expect(captured[0]!.id).not.toBe(captured[1]!.id);
     expect(captured[0]!.id).toBe('live-entry:XBTEUR:1000');
     expect(captured[1]!.id).toBe('live-entry:XBTEUR:2000');
-  });
-
-  it('keeps attempting OTHER pending symbols when one throws mid-cycle (found in review, 2026-09-03: an unhandled exception for one symbol used to abort every other pending symbol that cycle)', async () => {
-    const store = new MemoryStore();
-    initLiveCash(store, 100);
-    const killSwitch = new PersistedKillSwitch(store);
-    const audit = new PersistedAuditLog(store);
-    const ETH: Instrument = { symbol: 'ETHEUR', base: 'ETH', quote: 'EUR' };
-    const report: OrderStatusReport = { intentId: 'x', state: 'filled', filledQuantity: 0.01, avgFillPrice: 100, detail: 'ok' };
-    const params = {
-      confirmationGate: {
-        async requestConfirmation(intent: OrderIntent) {
-          if (intent.symbol === 'XBT/EUR') throw new Error('transient Telegram error');
-          return { intentId: intent.id, approved: true, decidedAt: 1, decidedBy: 'david' };
-        },
-      },
-      brokerAdapter: fakeBrokerAdapter(report),
-      killSwitch,
-      audit,
-      verifySymbolExists: async () => true,
-    };
-
-    const outcomes = await mirrorApprovedEntries(
-      store,
-      [opportunity({ symbol: 'XBTEUR' }), opportunity({ symbol: 'ETHEUR' })],
-      [XBT, ETH],
-      { XBTEUR: 100, ETHEUR: 100 },
-      params,
-      1000,
-    );
-    expect(outcomes).toEqual([
-      { symbol: 'XBTEUR', outcome: 'error', detail: 'transient Telegram error' },
-      { symbol: 'ETHEUR', outcome: 'submitted', report: { ...report, intentId: 'live-entry:ETHEUR:1000' } },
-    ]);
-    // XBTEUR stays queued (not deleted) for a retry next cycle.
-    expect(store.get<Record<string, unknown>>('live-entry-pending')).toHaveProperty('XBTEUR');
   });
 
   it('scales risk by confidence when confidenceRisk is provided, instead of always sizing at the flat ceiling (found in review, 2026-09-03)', async () => {

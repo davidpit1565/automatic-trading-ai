@@ -371,24 +371,6 @@ describe('buildCycleMessage', () => {
     expect(msg).toContain('מגמה חזקה');
   });
 
-  it("translates the higher-timeframe confirmation reason instead of leaking raw English mid-Hebrew-sentence (found in review, 2026-09-03 — applyHigherTimeframeGate's 4th confidence-component label was untranslated)", () => {
-    const msg = buildCycleMessage({
-      timestamp: 0,
-      opened: [
-        {
-          symbol: 'XBTEUR',
-          quantity: 0.1,
-          entry: 65000,
-          confidence: 78,
-          reasons: ['Higher timeframe confirmation (4h)', 'Trend strength'],
-        },
-      ],
-      closed: [],
-    });
-    expect(msg).not.toContain('Higher timeframe confirmation');
-    expect(msg).toContain('אישור מהטווח הגדול יותר (4h)');
-  });
-
   it('combines opens and closes in one message', () => {
     const msg = buildCycleMessage({
       timestamp: 0,

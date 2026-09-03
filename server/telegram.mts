@@ -471,12 +471,7 @@ export function buildMoveAlert(symbol: string, movePct: number): string {
   return `${up ? '📈' : '📉'} ${symbol} ${up ? 'עלה' : 'ירד'} ${pct} מאז הקנייה (כסף מדומה)`;
 }
 
-/** Signal-driver labels (from the signal engine) in plain Hebrew. Found in
- * review, 2026-09-03: `applyHigherTimeframeGate` (multiTimeframe.ts) adds a
- * FOURTH label — `Higher timeframe confirmation (${timeframe})` — whenever
- * the higher timeframe confirms (the common case), which this switch didn't
- * know about and fell through untranslated, leaking raw English mid-Hebrew-
- * sentence into the single most frequent notification (every buy). */
+/** Signal-driver labels (from the signal engine) in plain Hebrew. */
 function driverHe(label: string): string {
   switch (label) {
     case 'Scanner evidence':
@@ -485,11 +480,8 @@ function driverHe(label: string): string {
       return 'מגמה חזקה';
     case 'Volume participation':
       return 'מחזור מסחר גבוה';
-    default: {
-      const higherTimeframe = /^Higher timeframe confirmation \((.+)\)$/.exec(label);
-      if (higherTimeframe) return `אישור מהטווח הגדול יותר (${higherTimeframe[1]})`;
+    default:
       return label;
-    }
   }
 }
 

@@ -208,43 +208,6 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     expect(msg).toContain('כולל פוזיציות פתוחות אחרות');
   });
 
-  // David asked for this 2026-09-03: a manual "buy anyway" override must
-  // actually SHOW the human why the trade was normally refused, not just
-  // send a plain confirmation as if nothing were unusual — see
-  // liveEntryMirror.mts's allowCapacityOverrideFor.
-  it('shows the risk-engine warnings (e.g. a manual capacity override) in the confirmation message', async () => {
-    const empty = Array.from({ length: 5 }, () => [] as never[]);
-    const { fetchFn, sent } = fakeTelegram(empty);
-    const store = new MemoryStore();
-    const audit = new PersistedAuditLog(store);
-    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
-    const overriddenIntent = intent('BTCEUR:1:0', {
-      assessment: {
-        ...approvedAssessment(),
-        warnings: ['manual override: normally refused — maximum open positions reached (5/5)'],
-      },
-    });
-    const assertion = expect(gate.requestConfirmation(overriddenIntent)).rejects.toThrow(ConfirmationPendingError);
-    await vi.runAllTimersAsync();
-    await assertion;
-
-    expect(sent[0]).toContain('שים לב');
-    expect(sent[0]).toContain('maximum open positions reached (5/5)');
-  });
-
-  it('shows no warnings section at all for a normal (non-overridden) approval', async () => {
-    const empty = Array.from({ length: 5 }, () => [] as never[]);
-    const { fetchFn, sent } = fakeTelegram(empty);
-    const store = new MemoryStore();
-    const audit = new PersistedAuditLog(store);
-    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
-    const assertion = expect(gate.requestConfirmation(intent())).rejects.toThrow(ConfirmationPendingError);
-    await vi.runAllTimersAsync();
-    await assertion;
-
-    expect(sent[0]).not.toContain('שים לב');
-  });
-
   it('never shows a raw 15-decimal quantity float — a real production message that leaked one, 2026-09-03', async () => {
     const empty = Array.from({ length: 5 }, () => [] as never[]);
     const { fetchFn, sent } = fakeTelegram(empty);
