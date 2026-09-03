@@ -1595,7 +1595,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788397857152,
+    "at": 1788397898442,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -21608,7 +21608,7 @@
       "equity": 10195.85
     },
     {
-      "at": 1788397857152,
+      "at": 1788397898442,
       "equity": 10195.85
     }
   ],
@@ -22833,7 +22833,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -16.20% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -16.22% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -22931,7 +22931,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1788397857152,
+    "at": 1788397898442,
     "standings": [
       {
         "key": "live-mirror",
@@ -22980,8 +22980,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9299.354620944148,
-        "returnPct": -7.006453790558517,
+        "equity": 9300.255008326418,
+        "returnPct": -6.997449916735822,
         "trades": 65,
         "winRatePct": 38.46153846153847,
         "profitFactor": 0.5745074535618775,
@@ -22991,8 +22991,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9667.391240876324,
-        "returnPct": -3.326087591236756,
+        "equity": 9668.09776991621,
+        "returnPct": -3.3190223008378963,
         "trades": 140,
         "winRatePct": 39.285714285714285,
         "profitFactor": 1.1335549974332315,
@@ -23055,19 +23055,19 @@
       "exits": []
     },
     {
-      "id": "ADAEUR:1788397857152:1",
+      "id": "ADAEUR:1788397898442:1",
       "symbol": "ADAEUR",
-      "openedAt": 1788397857152,
-      "entryPrice": 0.174424,
-      "quantity": 11094.7991985885,
-      "initialQuantity": 11094.7991985885,
-      "stopLoss": 0.17086423235901987,
-      "takeProfit": 0.18154353528196024,
+      "openedAt": 1788397898442,
+      "entryPrice": 0.174758,
+      "quantity": 11073.594658983282,
+      "initialQuantity": 11073.594658983282,
+      "stopLoss": 0.17118066093044845,
+      "takeProfit": 0.18191267813910308,
       "feesPaid": 5.805597766243801,
       "realizedPnl": 0,
-      "highestPrice": 0.174424,
-      "lowestPrice": 0.174424,
-      "confidence": 62.74371746649606,
+      "highestPrice": 0.174758,
+      "lowestPrice": 0.174758,
+      "confidence": 62.90400487135763,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -27892,11 +27892,11 @@
       "detail": "paper entry LTCEUR: 45.11138837378465 @ 42.93 (stop 42.26937189208594, target 44.25125621582812, confidence 69)"
     },
     {
-      "timestamp": 1788397857152,
-      "intentId": "ADAEUR:1788397857152:1",
+      "timestamp": 1788397898442,
+      "intentId": "ADAEUR:1788397898442:1",
       "event": "filled",
       "mode": "paper",
-      "detail": "paper entry ADAEUR: 11094.7991985885 @ 0.174424 (stop 0.17086423235901987, target 0.18154353528196024, confidence 63)"
+      "detail": "paper entry ADAEUR: 11073.594658983282 @ 0.174758 (stop 0.17118066093044845, target 0.18191267813910308, confidence 63)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -40115,20 +40115,18 @@
     {
       "updateId": 447904465,
       "text": "Buy XBTEUR"
-    },
-    {
-      "updateId": 447904466,
-      "text": "/buy XBTEUR"
-    },
-    {
-      "updateId": 447904467,
-      "text": "/buy XBTEUR"
-    },
-    {
-      "updateId": 447904468,
-      "text": "/buy XBTEUR"
     }
   ],
   "live:telegram-unclaimed-callbacks": [],
-  "live:live-entry-pending": {}
+  "live:live-entry-pending": {},
+  "live:manual-buy-pending-symbols": [],
+  "live:audit-log": [
+    {
+      "timestamp": 1788397906470,
+      "intentId": "live-entry:XBTEUR",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "could not verify 'BTC-EUR' as a currently tradable instrument on revolut-x (either it doesn't exist there, or the check itself failed) — refusing rather than guessing a symbol mapping"
+    }
+  ]
 }
