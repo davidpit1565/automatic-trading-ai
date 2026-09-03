@@ -603,6 +603,100 @@ describe('runLiveMirror (real-money wiring stays off until deliberately turned o
     expect(store.get('live:live-open-positions')).toBeUndefined();
     delete process.env['LIVE_STARTING_CASH_EUR'];
   });
+
+  // Feature, 2026-09-03: David can't be on the phone during Shabbat/Yom Tov
+  // (religious observance) and doesn't want automatic entries executed
+  // unattended, but also doesn't want to silently lose them. A blackout
+  // window queues the bot's own automatic proposals instead of pinging a
+  // confirmation nobody can answer, then summarizes once it ends.
+  describe('Shabbat/Yom Tov blackout queueing', () => {
+    function calendarAndTelegramFetch(sent: { text: string }[]): typeof fetch {
+      return (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url.includes('hebcal.com')) {
+          return new Response(
+            JSON.stringify({
+              items: [
+                { category: 'candles', date: new Date(0).toISOString(), title: 'Candle lighting' },
+                { category: 'havdalah', date: new Date(10_000).toISOString(), title: 'Havdalah' },
+              ],
+            }),
+            { status: 200 },
+          );
+        }
+        if (url.includes('sendMessage') && init?.body) {
+          sent.push(JSON.parse(init.body as string));
+        }
+        return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
+      }) as unknown as typeof fetch;
+    }
+
+    const opportunity = {
+      symbol: 'BTC-EUR',
+      timeframe: '1h' as const,
+      direction: 'long' as const,
+      levels: { entry: 100, stopLoss: 95, takeProfit: 115, riskReward: 3 },
+      confidence: 70,
+      confidenceComponents: [],
+      explanation: 'test',
+      warnings: [],
+      basedOn: { score: 70, candleCount: 200 },
+    };
+
+    beforeEach(() => {
+      process.env['REAL_MONEY_ENABLED'] = 'true';
+      process.env['REVOLUT_X_API_KEY'] = 'key';
+      process.env['REVOLUT_X_PRIVATE_KEY_PEM'] = 'pem';
+      process.env['LIVE_STARTING_CASH_EUR'] = '100';
+    });
+    afterEach(() => delete process.env['LIVE_STARTING_CASH_EUR']);
+
+    it('queues an automatically-approved entry instead of confirming it, while the window (now=1000, inside [0, 10000)) is active', async () => {
+      const sent: { text: string }[] = [];
+      const telegram = { token: 'T', chatId: 'C', fetchFn: calendarAndTelegramFetch(sent) };
+
+      await runLiveMirror(
+        store,
+        fakeSource(),
+        [btcInstrument],
+        telegram,
+        [{ symbol: 'BTC-EUR', quantity: 0, entry: 100, opportunity }],
+        { 'BTC-EUR': 100 },
+        1000,
+      );
+
+      expect(store.get('live:live-open-positions')).toBeUndefined();
+      expect(store.get('live:live-cash-eur')).toBe(100);
+      expect(store.get('live:live-blackout-queue')).toEqual({
+        'BTC-EUR': { symbol: 'BTC-EUR', entry: 100, stopLoss: 95, takeProfit: 115, queuedAt: 1000 },
+      });
+      expect(sent.some((m) => m.text.includes('BTC-EUR'))).toBe(false);
+    });
+
+    it('drains the queue into one Hebrew summary once the window ends, and resumes proposing normally', async () => {
+      const sent: { text: string }[] = [];
+      const telegram = { token: 'T', chatId: 'C', fetchFn: calendarAndTelegramFetch(sent) };
+
+      // Cycle 1: inside the window (now=1000) — queues instead of confirming.
+      await runLiveMirror(
+        store,
+        fakeSource(),
+        [btcInstrument],
+        telegram,
+        [{ symbol: 'BTC-EUR', quantity: 0, entry: 100, opportunity }],
+        { 'BTC-EUR': 100 },
+        1000,
+      );
+      // Cycle 2: after havdalah (now=20000, past the window's end at 10000)
+      // — drains the queue into a summary; no new opportunity this cycle.
+      await runLiveMirror(store, fakeSource(), [btcInstrument], telegram, [], { 'BTC-EUR': 105 }, 20_000);
+
+      expect(store.get('live:live-blackout-queue')).toEqual({});
+      const summary = sent.find((m) => m.text.includes('BTC-EUR'));
+      expect(summary).toBeTruthy();
+      expect(summary!.text).toContain('/buy');
+    });
+  });
 });
 
 // David asked for this 2026-09-03: after tapping אשר/דחה he had no way to

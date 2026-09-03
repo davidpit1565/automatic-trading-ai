@@ -78,6 +78,8 @@ import {
   syncLiveExternalBtc,
 } from './liveLedger.mts';
 import { openLivePositions } from './liveExitFlow.mts';
+import { ensureBlackoutWindows, isBlackout } from './blackoutCalendar.mts';
+import { buildBlackoutSummaryMessage, drainBlackoutQueue, queueBlackoutEntries } from './liveBlackoutQueue.mts';
 import { RevolutXBrokerAdapter, type RevolutXCredentials } from './revolutXBrokerAdapter.mts';
 import { TelegramConfirmationGate } from './telegramConfirmationGate.mts';
 import {
@@ -783,7 +785,7 @@ export async function runLiveMirror(
   store: FileStore,
   source: MarketDataSource,
   instruments: readonly Instrument[],
-  telegram: { token: string; chatId: string },
+  telegram: { token: string; chatId: string; fetchFn?: typeof fetch },
   cycleOpened: CycleResult['opened'],
   prices: Readonly<Record<string, number>>,
   now: number,
@@ -903,16 +905,33 @@ export async function runLiveMirror(
     const newlyApproved = cycleOpened
       .map((o) => o.opportunity)
       .filter((o): o is NonNullable<typeof o> => o !== undefined);
-    const mirroredOutcomes = await mirrorApprovedEntries(
-      liveStore,
-      newlyApproved,
-      instruments,
-      prices,
-      flowParams,
-      now,
-      liveEntryOptions,
-    );
-    await notifyLiveEntryOutcomes(telegram, mirroredOutcomes);
+    // Shabbat/Yom Tov: queue the bot's own automatic proposals instead of
+    // pinging Telegram for a confirmation nobody can answer (David asked
+    // 2026-09-03) — never touches manual /buy /sell or automatic exits
+    // above/below this block, only this one automatic-entry path.
+    const blackoutWindows = await ensureBlackoutWindows(liveStore, now, telegram.fetchFn ?? fetch);
+    const activeBlackout = isBlackout(blackoutWindows, now);
+    const wasInBlackout = liveStore.get<boolean>('live-blackout-active') ?? false;
+    if (activeBlackout) {
+      queueBlackoutEntries(liveStore, newlyApproved, now);
+    } else {
+      const mirroredOutcomes = await mirrorApprovedEntries(
+        liveStore,
+        newlyApproved,
+        instruments,
+        prices,
+        flowParams,
+        now,
+        liveEntryOptions,
+      );
+      await notifyLiveEntryOutcomes(telegram, mirroredOutcomes);
+      if (wasInBlackout) {
+        const summary = drainBlackoutQueue(liveStore, prices);
+        const message = buildBlackoutSummaryMessage(summary, 'השבת/החג');
+        if (message) await sendTelegramMessage(message, telegram);
+      }
+    }
+    liveStore.set('live-blackout-active', activeBlackout !== null);
     await checkAutomaticExits(
       liveStore,
       source,
