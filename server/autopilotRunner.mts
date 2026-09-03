@@ -66,7 +66,7 @@ import { checkManualSellRequests } from './manualSellCommand.mts';
 import { checkManualBuyRequests } from './manualBuyCommand.mts';
 import { mirrorApprovedEntries, type LiveEntryOutcome } from './liveEntryMirror.mts';
 import { checkAutomaticExits } from './liveExitMirror.mts';
-import { initLiveCash } from './liveLedger.mts';
+import { initLiveCash, syncLiveCashFromBroker } from './liveLedger.mts';
 import { RevolutXBrokerAdapter, type RevolutXCredentials } from './revolutXBrokerAdapter.mts';
 import { TelegramConfirmationGate } from './telegramConfirmationGate.mts';
 import {
@@ -770,6 +770,10 @@ export async function runLiveMirror(
   const killSwitch = new PersistedKillSwitch(liveStore);
   const audit = new PersistedAuditLog(liveStore);
   const brokerAdapter = new RevolutXBrokerAdapter(liveStore, audit, killSwitch, credentials);
+  // Reconcile the tracked cash figure against Revolut X's own real balance
+  // before anything sizes a trade off of it — see liveLedger.mts's own doc
+  // comment for the real incident (2026-09-03) that made this necessary.
+  await syncLiveCashFromBroker(liveStore, brokerAdapter);
   const confirmationGate = new TelegramConfirmationGate(liveStore, telegram, audit);
   // Live-scoped daily-loss circuit breaker (PrefixedStore, never the raw
   // store — see PROJECT_STATE.md's note on why this must never conflate
