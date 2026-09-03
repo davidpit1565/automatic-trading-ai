@@ -1,5 +1,21 @@
 # PROJECT_STATE
 
+## Definitive answer: Revolut X returns 0 tradable pairs, not an HTTP failure (2026-09-03)
+The same-base-pair diagnostic (previous entry below) reported the real
+finding on its first live cycle: `'BTC-EUR' not found among 0 tradable pairs
+from revolut-x; no pair with base 'BTC' listed at all`. Zero pairs, with NO
+HTTP-failure audit entry from `listTradablePairs()` — meaning `GET
+/configuration/pairs` returns `200 OK`, but `readPairSymbols()` parses zero
+symbols out of it. The parsing assumes an object keyed by pair symbol (e.g.
+`{"BTC-USD": {...}}`, mirroring `RevolutXClient.getInstruments()`'s own
+assumption for the read-only market-data key) — the live trading key's
+response may genuinely be shaped differently (e.g. an array of pair objects,
+which this parsing explicitly discards rather than guess-parses). Added one
+more layer: `listTradablePairs()` now audits the raw response body (truncated
+to 500 chars) whenever it gets a 200 OK but 0 parseable symbols, so the very
+next attempt will show the actual JSON shape Revolut X returns for this key,
+instead of another guess. Full gate green (tsc, 970 tests, build).
+
 ## The go-live blocker's diagnostic fix didn't actually diagnose it — narrowed further (2026-09-03)
 PR #113's diagnostic logging in `listTradablePairs()` shipped and ran for real
 (after two more stale-workflow-run cancellations), but the next `/buy XBTEUR`
