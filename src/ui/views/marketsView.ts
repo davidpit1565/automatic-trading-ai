@@ -22,6 +22,7 @@ import {
   candleChartSvg,
   chartGeometry,
   candleGeometry,
+  positionChartTip,
   type ChartGeometry,
 } from '../charts';
 import { startLivePrice } from '../liveTicker';
@@ -896,9 +897,8 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         cross?.classList.add('show');
         tip.hidden = false;
         tip.innerHTML = cfg.tipHtml(idx);
-        // The CSS aspect-ratio matches the viewBox, so viewBox→% is linear.
-        tip.style.left = `${(px / geo.W) * 100}%`;
-        tip.style.top = `${(py / geo.H) * 100}%`;
+        const wrap = detailView.querySelector<HTMLElement>('.pchart-wrap');
+        if (wrap) positionChartTip(tip, wrap, px / geo.W, py / geo.H);
       };
       const hide = (): void => {
         cross?.classList.remove('show');

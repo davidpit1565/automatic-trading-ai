@@ -1,5 +1,36 @@
 # PROJECT_STATE
 
+## Chart crosshair tooltip ran off-screen near either edge (2026-09-03)
+Continuing the chart-polish pass (follow-up to #139/#141). `src/ui/charts.ts`
++ `src/ui/equityChartPanel.ts` + `src/ui/views/marketsView.ts` only.
+
+Both places that wire a crosshair (`equityChartPanel.ts`'s `wireCrosshair`,
+`marketsView.ts`'s coin-detail `wireChart` — duplicated logic) positioned
+`.pchart-tip` with `left: X%` and the CSS default `transform: translate(-50%,
+...)`, centering it on the crosshair point. That overflows the phone
+viewport for any point within roughly the tooltip's own half-width of either
+edge — measured directly on a real 390px viewport: inspecting the first
+candle put the tooltip's bounding box at `x: -92`, i.e. ~90px of it rendered
+past the left edge and unreadable; the last candle overflowed the right edge
+by ~41px the same way. Exactly the "crosshair/tooltip polish" gap next to a
+real trading app.
+
+Added `positionChartTip(tip, wrap, leftFrac, topFrac)` to `charts.ts` (the
+module both views already import from) — same vertical placement as before,
+but horizontal position is computed in the wrapper's actual pixel width and
+clamped to a 4px margin on each side, falling back to the old centered
+percentage only if the tooltip isn't measurable yet (just unhidden, no
+layout pass done). Both call sites now use it instead of inlining the same
+percentage math.
+
+Verified directly: re-measured the same left/right-edge hover on the History
+chart — bounding box now `x: 30` (left) and `x: 123, width: 237` → right
+edge 360, both fully inside the 390px viewport where before they were -92
+and 431. Screenshot confirms the tooltip renders fully on-screen.
+
+Full gate green: `tsc --noEmit`, `vitest run` (1014 tests, none touched),
+`npm run build`.
+
 ## The daily Telegram digest never mentioned the real Revolut X account at all (2026-09-03)
 David: "זה צריך להתעדכן לגמרי כי הוא ממש ממש לא מעודכן במיוחד עם הארנק החדש והכסף האמיתי" —
 pasted the actual daily digest he receives, and it's entirely about the two

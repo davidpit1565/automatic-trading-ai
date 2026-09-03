@@ -471,6 +471,39 @@ export function candleChartSvg(
   </svg>`;
 }
 
+/**
+ * Position the floating crosshair tooltip (`.pchart-tip`) at a fractional
+ * point within its chart wrapper, clamped so it never overflows the
+ * wrapper's edges. The CSS default (`left: X%` + `transform:
+ * translate(-50%, ...)`) runs the tooltip off-screen for any point within
+ * roughly its own half-width of either edge — confirmed measuring a real
+ * tooltip on a 390px phone viewport: ~90px of it rendered past the left
+ * edge when inspecting the first candle, and past the right edge
+ * symmetrically for the last. Shared by both chart views that wire a
+ * crosshair (`equityChartPanel.ts`, `marketsView.ts`'s coin-detail chart).
+ */
+export function positionChartTip(tip: HTMLElement, wrap: HTMLElement, leftFrac: number, topFrac: number): void {
+  const wrapW = wrap.clientWidth;
+  const tipW = tip.offsetWidth;
+  if (wrapW <= 0 || tipW <= 0) {
+    // Not yet measurable (e.g. just unhidden, no layout pass done) — fall
+    // back to the simple centered placement rather than clamping to zero.
+    tip.style.left = `${(leftFrac * 100).toFixed(2)}%`;
+    tip.style.top = `${(topFrac * 100).toFixed(2)}%`;
+    tip.style.transform = '';
+    return;
+  }
+  const margin = 4;
+  const desiredCenter = leftFrac * wrapW;
+  const clampedLeft = Math.min(Math.max(desiredCenter - tipW / 2, margin), wrapW - tipW - margin);
+  tip.style.left = `${clampedLeft.toFixed(1)}px`;
+  tip.style.top = `${(topFrac * 100).toFixed(2)}%`;
+  // Vertical anchor unchanged from the CSS default (above the point); only
+  // horizontal centering moves from a percentage+translate(-50%) to an
+  // already-clamped absolute left, so translateX becomes 0.
+  tip.style.transform = 'translate(0, calc(-100% - 10px))';
+}
+
 export function lineChartSvg(points: readonly ChartPoint[], options: LineChartOptions): string {
   if (points.length < 2) return '<p class="status-line">Not enough points for a chart.</p>';
   const width = options.width ?? 800;
