@@ -1,5 +1,28 @@
 # PROJECT_STATE
 
+## client_order_id must be a real UUID — the colon fix was incomplete (2026-09-03)
+The earlier fix tonight (sanitizing `:` → `-` in `client_order_id`) was not
+enough: the very next live order still got `HTTP 400 — "Invalid client
+order ID: 'live-entry-XBTEUR'"` (confirmed in the live audit log — same
+message, now with the hyphenated id, still rejected). Checked Revolut X's
+own API docs directly (developer.revolut.com/docs/x-api/place-order):
+`client_order_id: string(uuid) required` — it must be an actual UUID, not
+any sanitized string.
+
+Fixed properly: `deterministicClientOrderId(intent.id)` (new, exported
+from `revolutXBrokerAdapter.mts`) derives a UUID-shaped id via SHA-256 of
+`intent.id`, rather than `crypto.randomUUID()` — deliberately
+deterministic, so an accidental retry of `submit()` for the exact same
+intent sends the exact same `client_order_id` every time (idempotency-
+safety project rule: a retry must be safe to repeat, not look like a
+brand new order to the broker). `intent.id` itself is still the internal
+tracking key everywhere else (audit log, `orderMap`, Telegram callback
+tokens) — only the wire value changed.
+
+Tests: format assertion (real UUID shape, version/variant nibbles) and a
+determinism test (same intent id → same client_order_id, different ids →
+different). Full gate green (tsc, 993 tests, build).
+
 ## CRITICAL: a trade could be "approved" without the human ever tapping anything (2026-09-03)
 David reported the exact violation of this project's core safety rule: he
 got "✅ אישרת — שולח לבורסה..." (you approved — sending to exchange) for a
