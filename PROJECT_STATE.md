@@ -1484,6 +1484,17 @@ No runner/workflow changes were made — `persistStateToGit` in
 `autopilotRunner.mts`/`stocksRunner.mts` still pushes state to `main` exactly
 as before (real money went live 2026-09-03; that git-persistence path is not
 something to touch without a strong reason). This fix is Vercel-config-only.
+
+**Follow-up, same day**: after merging, verified live via the Vercel API that
+`main` pushes (bot and real merges alike) correctly stopped creating
+deployments — but `deploy-pages.yml` force-pushes `dist/` to `gh-pages` on
+every push to `main`, and that branch wasn't covered by the `main`-only
+exclusion, so it kept creating its own (CANCELED) Vercel deployment each time
+it settled (throttled somewhat by that workflow's own `cancel-in-progress`
+concurrency group, but still non-zero). Added `"gh-pages": false` alongside
+`"main": false` in `deploymentEnabled` — GitHub Pages serves `gh-pages`
+directly, so Vercel building that branch was always redundant, not just for
+the bot's commits.
 ## Real money is now LIVE (2026-09-03)
 David generated real Revolut X trading credentials, funded the account
 (100.15€), and set `REAL_MONEY_ENABLED=true` as a repo Variable. The
