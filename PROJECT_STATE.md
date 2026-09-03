@@ -1,5 +1,46 @@
 # PROJECT_STATE
 
+## UI redesign pass: typography/weight/tracking/spacing foundation tokens (2026-09-03)
+Part of David's request to visually elevate the dashboard to Revolut X /
+Investing.com polish. This increment lays the token foundation the task asked
+for first ("cascades everywhere") — `src/ui/styles.css` only, and deliberately
+a **zero-visual-change** pass: every substitution maps an existing literal
+value to a newly-named token with the identical number, so nothing on screen
+moves. Extends the existing `:root` token system (--hot/--cold, --shadow-*,
+--r-*) rather than introducing a parallel one:
+
+- `--fw-medium` (550), `--fw-semibold` (650), `--fw-bold` (750) — the three
+  font-weight values already used dozens of times each across the file — and
+  `--tracking-tight` (-0.01em), `--tracking-wide` (0.06em), likewise the two
+  dominant recurring letter-spacing values. Applied via exact-match
+  substitution everywhere they occurred (49 font-weight + 25 letter-spacing
+  declarations).
+- `--sp-1` through `--sp-7` (0.25rem-2rem, 4px rhythm), applied so far to the
+  top-level shared layout containers (`.content`, `.block`) where an exact
+  match existed.
+- Deliberately NOT done here (left as literals): one-off weight/tracking
+  values used once or twice (600, 680, 700, 800, etc.) — tokenising a value
+  with no reuse adds indirection without a consistency payoff, and would be
+  unnecessary refactoring. Font-size stays un-tokenised for now: the existing
+  sizes are legitimately context-tuned per component rather than drawn from a
+  shared scale, and consolidating ~30 distinct values into a clean scale
+  without visual regression is a larger, separate, higher-risk pass than this
+  one. Card/border/shadow treatment was reviewed and left alone — it's
+  already a consistent, shared system (`--shadow-xs/sm/md/lg`, `--border`,
+  `--r-*` used uniformly across every card class already), not something
+  needing a foundation pass.
+
+Verified visually: dev server + Playwright at a 400px phone viewport with
+`?demo=1`, Home/Crypto and Tools views — pixel-identical to before, as
+expected for a token-naming-only change. Full gate green: `tsc`, `vitest run`
+(999 tests, all passing, none touched), `npm run build`.
+
+Opened as its own PR (branch `claude/ui-redesign-theme-foundation`), based on
+`main` independently of the chart-polish PR (`claude/ui-redesign-charts`) so
+the two can be reviewed and merged separately. Next passes: home view and
+markets view visual polish (spacing/elevation applied at the component level,
+building on these tokens).
+
 ## The website now shows the REAL Revolut X account, not just the simulated one (2026-09-03)
 David asked why the website "still shows the money as demo" even though
 real money is live — correct: `homeView.ts`'s hero card only ever read the
