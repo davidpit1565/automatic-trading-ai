@@ -480,7 +480,14 @@ describe('Value view (DOM integration)', () => {
     renderValueView(container, await makeData());
 
     await waitFor(() => container.querySelector('svg.pchart') !== null);
-    // Stayed in candle mode (the default) — a real chart, not a 1-candle flat line.
+    // Line is the default now (2026-09-03) — switch to Candles explicitly to
+    // exercise the same adaptiveBucketMs bug this test guards against.
+    const candleBtn = Array.from(container.querySelectorAll<HTMLButtonElement>('.ctoggle-btn')).find(
+      (b) => b.dataset['mode'] === 'candle',
+    )!;
+    candleBtn.click();
+    await waitFor(() => container.querySelectorAll('.pcandle').length > 0);
+    // A real chart, not a 1-candle flat line.
     expect(container.querySelectorAll('.pcandle').length).toBeGreaterThan(15);
   });
 });

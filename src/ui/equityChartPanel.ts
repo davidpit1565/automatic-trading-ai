@@ -1,10 +1,16 @@
 /**
- * Shared equity/P&L chart panel: range selector (1D → All), candlestick
- * (default, bucketed from real recorded samples) with a Line toggle, an
- * interactive crosshair + tooltip, and a hero summary (current value + the
- * gain/loss over the selected range). Used by both the Portfolio value view
- * and the History view so one implementation — and one set of fixes —
- * covers both.
+ * Shared equity/P&L chart panel: range selector (1D → All), a smooth Line
+ * chart (default) with a Candlestick toggle, an interactive crosshair +
+ * tooltip, and a hero summary (current value + the gain/loss over the
+ * selected range). Used by both the Portfolio value view and the History
+ * view so one implementation — and one set of fixes — covers both.
+ *
+ * Line is the default (David flagged this, 2026-09-03: a real ~€8 balance
+ * wobble read as an alarming "very big drop" once OHLC-bucketed into a
+ * candle body) — every real trading app (Revolut X included) charts
+ * account/portfolio VALUE as a smooth line, reserving candlesticks for a
+ * tradable asset's own PRICE chart (Markets/coin-detail, a different
+ * component entirely — unaffected by this default).
  */
 
 import { priceChartSvg, candleChartSvg, chartGeometry, candleGeometry, positionChartTip, type ChartGeometry } from './charts';
@@ -106,7 +112,7 @@ export function mountEquityChartPanel(
   const tag = options.live ? '<span class="tag-live">REAL</span>' : '<span class="tag-sim">SIMULATED</span>';
   let history: readonly EquityPoint[] = [];
   let rangeKey = 'All';
-  let chartMode: 'candle' | 'line' = 'candle';
+  let chartMode: 'candle' | 'line' = 'line';
 
   function windowedPoints(): EquityPoint[] {
     const range = RANGES.find((r) => r.key === rangeKey)!;
@@ -182,8 +188,8 @@ export function mountEquityChartPanel(
       <div class="chart-controls">
         <div class="range-bar">${rangeBar}</div>
         <div class="chart-toggle">
-          <button class="ctoggle-btn ${mode === 'candle' ? 'active' : ''}" data-mode="candle">Candles</button>
           <button class="ctoggle-btn ${mode === 'line' ? 'active' : ''}" data-mode="line">Line</button>
+          <button class="ctoggle-btn ${mode === 'candle' ? 'active' : ''}" data-mode="candle">Candles</button>
         </div>
       </div>
       <div class="detail-chart"><div class="pchart-wrap">${chart}<div class="pchart-tip" hidden></div></div></div>`;
