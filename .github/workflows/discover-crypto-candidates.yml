@@ -1,0 +1,46 @@
+# Weekly "market survey": measures whether any NOT-YET-TRADED Kraken EUR pair
+# now deserves promotion to CURATED_INSTRUMENTS, using the same real-history
+# bar every manual addition so far has been held to.
+#
+# Read-only and side-effect-free, same philosophy as measure-stocks.yml: this
+# only measures and reports (job log + one Telegram message if anything
+# passes). It never edits CURATED_INSTRUMENTS, commits, opens a PR, or
+# changes what the live agent trades — promoting a candidate stays a
+# deliberate, reviewed code change.
+
+name: Discover crypto candidates (weekly market survey)
+
+on:
+  schedule:
+    # Mondays 07:00 UTC — ahead of the weekly live win-rate check-in.
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+    inputs:
+      top_n:
+        description: 'How many non-curated EUR pairs to measure, ranked by 24h volume'
+        type: string
+        default: '40'
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Discover candidates
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Routed through an env var rather than interpolated straight into
+          # the run: string, so a manual-dispatch input can never reach a
+          # shell command unquoted.
+          TOP_N: ${{ inputs.top_n || '40' }}
+        run: npx tsx scripts/discoverCryptoCandidates.mts "$TOP_N"

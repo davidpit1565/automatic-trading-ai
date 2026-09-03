@@ -74,7 +74,7 @@ const INTERVAL_MINUTES: Record<Timeframe, number> = {
  * the four that held up over ~720 hours of real decision-pipeline replay
  * were added.
  */
-const CURATED_INSTRUMENTS: Instrument[] = [
+export const CURATED_INSTRUMENTS: Instrument[] = [
   { symbol: 'XBTEUR', base: 'BTC', quote: 'EUR' },
   { symbol: 'ETHEUR', base: 'ETH', quote: 'EUR' },
   { symbol: 'SOLEUR', base: 'SOL', quote: 'EUR' },
