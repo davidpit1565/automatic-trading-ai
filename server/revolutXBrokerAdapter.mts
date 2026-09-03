@@ -263,7 +263,16 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
       );
     }
     if (!placed.ok) {
-      return this.reportAndAudit(intent.id, 'rejected', `Revolut X rejected the order: HTTP ${placed.status}`);
+      // Same class of bug as listTradablePairs() (found 2026-09-03): the
+      // HTTP status alone tells a human nothing about WHY Revolut X
+      // rejected the order (bad price precision, size below minimum,
+      // insufficient balance, ...) — include the real response body so the
+      // next attempt is diagnosable instead of guessed at.
+      return this.reportAndAudit(
+        intent.id,
+        'rejected',
+        `Revolut X rejected the order: HTTP ${placed.status} — ${JSON.stringify(placed.json).slice(0, 500)}`,
+      );
     }
     const venueOrderId = readVenueOrderId(placed.json);
     if (!venueOrderId) {

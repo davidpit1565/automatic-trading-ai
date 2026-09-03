@@ -1,5 +1,25 @@
 # PROJECT_STATE
 
+## First real end-to-end confirmation worked — now blocked one step later (2026-09-03)
+The pair-key fix (previous entry below) worked immediately: the very next
+`/buy XBTEUR` produced a real Telegram confirmation prompt, David tapped
+"אשר" (approve), and `TelegramConfirmationGate` correctly registered it
+(`'confirmed'` audited ~19s after the prompt was sent — the button DID
+register; David just never saw any follow-up, see below). The order was
+then submitted to Revolut X, which rejected it with HTTP 400 — but
+`submit()`'s rejection path discarded the response body, so — same class of
+bug as `listTradablePairs()` — there's no way yet to see WHY. Fixed the same
+way: audits the real response body (truncated) alongside the HTTP status.
+
+**Separately flagged, not yet fixed**: nothing sends David a Telegram
+message reporting the final outcome after he approves — `runLiveOrderFlow`
+takes a `ConfirmationGate` interface, deliberately not Telegram-specific, so
+a post-decision notification needs to be plumbed through the caller
+(`autopilotRunner.mts`'s `runLiveMirror`) instead. This is why the approved
+tap looked like it "didn't register" — it did, but he had no way to know
+without me reading the audit log for him. Real gap for a real-money bot;
+next.
+
 ## THE go-live blocker, actually fixed: pair keys use '/' not '-' (2026-09-03)
 The raw-response diagnostic (previous entry below) landed and immediately
 paid off: the real `GET /configuration/pairs` response is
