@@ -745,7 +745,34 @@ export async function runLiveMirror(
     brokerAdapter,
     killSwitch,
     audit,
-    verifySymbolExists: async (symbol: string) => (await brokerAdapter.listTradablePairs()).includes(symbol),
+    verifySymbolExists: async (symbol: string) => {
+      const pairs = await brokerAdapter.listTradablePairs();
+      const found = pairs.includes(symbol);
+      // `listTradablePairs()` itself only audits a genuine fetch failure —
+      // a symbol simply not being in an otherwise-successful pairs list
+      // looked identical to that in the audit log (both surfaced as the
+      // same ambiguous "could not verify" message from `runLiveOrderFlow`).
+      // Found in review (2026-09-03) after the diagnostic fix landed but
+      // the /buy XBTEUR rejection message stayed unchanged: this records
+      // WHICH case it was — an empty/unreachable pairs list vs. a
+      // non-empty list that simply has no 'BASE-*' pair at all.
+      if (!found) {
+        const base = symbol.split('-')[0];
+        const sameBase = base ? pairs.filter((p) => p.startsWith(`${base}-`)) : [];
+        audit.append({
+          timestamp: Date.now(),
+          intentId: 'verify-symbol-exists',
+          event: 'rejected',
+          mode: 'live',
+          detail:
+            `'${symbol}' not found among ${pairs.length} tradable pairs from revolut-x` +
+            (sameBase.length > 0
+              ? `; same-base pairs available: ${sameBase.join(', ')}`
+              : `; no pair with base '${base}' listed at all`),
+        });
+      }
+      return found;
+    },
     // Re-checked AFTER a human approves, BEFORE the broker sees the order
     // (David's "after I approve, check again it's still good" ask) — this
     // hook existed in `runLiveOrderFlow` already but was never actually

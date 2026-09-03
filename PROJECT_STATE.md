@@ -1,5 +1,21 @@
 # PROJECT_STATE
 
+## The go-live blocker's diagnostic fix didn't actually diagnose it — narrowed further (2026-09-03)
+PR #113's diagnostic logging in `listTradablePairs()` shipped and ran for real
+(after two more stale-workflow-run cancellations), but the next `/buy XBTEUR`
+still logged the exact same ambiguous `'could not verify... either it doesn't
+exist there, or the check itself failed'` message — because that logging only
+fires when the `/configuration/pairs` HTTP call itself fails, and it wasn't
+failing. `listTradablePairs()` was succeeding and simply not returning
+`'BTC-EUR'` in its list — indistinguishable, from the caller's side, from a
+fetch failure. Narrowed further: `runLiveMirror`'s `verifySymbolExists`
+closure (`server/autopilotRunner.mts`) now audits, on a miss, the pairs count
+and whether ANY same-base pair exists (e.g. `'BTC-USD'` present but not
+`'BTC-EUR'`, vs. no `'BTC-*'` pair at all, vs. an empty/unreachable list) —
+so the NEXT `/buy` attempt's audit log will finally say which of those three
+it actually is, instead of another round of the same guess. Full gate green
+(tsc, 970 tests, build).
+
 ## Found and fixed the real go-live blocker, plus the two flagged review gaps (2026-09-03)
 The first real `/buy XBTEUR` attempts against production went unanswered —
 no Telegram confirmation ever arrived. Root cause, found by pulling the
