@@ -66,6 +66,7 @@ import { FileStore } from './fileStore.mts';
 import { checkManualKillSwitchCommands } from './manualKillSwitchCommand.mts';
 import { checkManualSellRequests } from './manualSellCommand.mts';
 import { checkManualBuyRequests } from './manualBuyCommand.mts';
+import { checkTipRequests } from './manualTipCommand.mts';
 import { mirrorApprovedEntries, type LiveEntryOutcome } from './liveEntryMirror.mts';
 import { checkAutomaticExits } from './liveExitMirror.mts';
 import {
@@ -96,9 +97,12 @@ import {
   getSummaryTimezone,
   killSwitchKeyboard,
   maybeSendEducationTip,
+  pollAllTelegramUpdates,
   sendTelegramMessage,
+  stashUnclaimedTelegramUpdates,
   type DailySummaryLive,
   type DailySummaryStocks,
+  type TelegramTextMessage,
 } from './telegram.mts';
 
 const STATE_PATH = process.env['AUTOPILOT_STATE_PATH'] ?? 'state/autopilot-state.json';
@@ -609,6 +613,9 @@ async function runCycle(
   instruments: readonly Instrument[],
 ): Promise<boolean> {
   const now = Date.now();
+  await checkHelpRequests(store, telegram);
+  await checkTipRequests(store, telegram, autopilot, now);
+  await checkStatusRequests(store, source, portfolio, journal, telegram, now);
   const cycle = await autopilot.runCycleOnce(now);
   console.log(
     `Cycle done via ${source.name}: opened ${cycle.opened.length}, ` +
@@ -1409,6 +1416,100 @@ export async function maybeSendSummaries(
       console.log(`Summary not sent (${slot.key}): ${result.reason}`);
     }
   }
+}
+
+/**
+ * `/status` — on-demand snapshot of both accounts, right now (David asked
+ * 2026-09-03, alongside `/tip`: "what's bought and sold, what's the
+ * situation now"). Reuses the exact same data-gathering and message format
+ * as the scheduled daily digest (`maybeSendSummaries`, just above) —
+ * consistent with every other notification rather than inventing a new
+ * shape — just triggered on demand instead of by the clock, and never
+ * marks a summary slot as sent (a `/status` check must never suppress the
+ * real scheduled digest later that day).
+ */
+export async function checkStatusRequests(
+  store: FileStore,
+  source: MarketDataSource,
+  portfolio: PortfolioEngine,
+  journal: TradeJournal,
+  telegram: { token: string; chatId: string },
+  now: number,
+): Promise<boolean> {
+  const polled = await pollAllTelegramUpdates(store, telegram);
+  const unclaimed: TelegramTextMessage[] = [];
+  let requested = false;
+  for (const message of polled.messages) {
+    if (/^\/status\s*$/i.test(message.text.trim())) requested = true;
+    else unclaimed.push(message);
+  }
+  stashUnclaimedTelegramUpdates(store, { messages: unclaimed, callbacks: polled.callbacks });
+  if (!requested) return false;
+
+  const open = portfolio.openPositions();
+  const liveStore = new PrefixedStore(store, 'live');
+  const priceSymbols = Array.from(
+    new Set([...open.map((p) => p.symbol), ...openLivePositions(liveStore).map((p) => p.entryAssessment.asset), 'XBTEUR']),
+  );
+  const prices = await latestPrices(source, priceSymbols);
+  const snap = portfolio.snapshot(prices, now);
+  const since = now - DAY_MS;
+  const benchmark = await computeBenchmark(store, source, snap.equity, now);
+  const message = buildDailySummary({
+    heading: '📋 מצב נוכחי — לפי בקשה',
+    equity: snap.equity,
+    cash: snap.cash,
+    totalReturnPct: snap.totalReturnPct,
+    realizedPnl: snap.realizedPnl,
+    unrealizedPnl: snap.unrealizedPnl,
+    positions: snap.allocation.map((a) => ({ symbol: a.symbol, marketValue: a.marketValue, pctOfEquity: a.pctOfEquity })),
+    openedLast24h:
+      open.filter((p) => p.openedAt >= since).length + journal.entries().filter((e) => e.entryTimestamp >= since).length,
+    closedLast24h: journal.entries().filter((e) => e.exitTimestamp >= since).length,
+    benchmark,
+    readiness: store.get<RealMoneyReadiness>(READINESS_KEY) ?? null,
+    stocks: readStocksSummary(now),
+    live: readLiveSummary(liveStore, prices),
+  });
+  const result = await sendTelegramMessage(message, telegram);
+  console.log(result.sent ? 'Status sent (on demand).' : `Status not sent: ${result.reason}`);
+  return true;
+}
+
+const HELP_MESSAGE = [
+  '📋 פקודות זמינות:',
+  '',
+  '/status — מצב נוכחי של שני החשבונות (מדומה + אמיתי): הון, מזומן, פוזיציות פתוחות, קניות/מכירות ב-24 השעות האחרונות.',
+  '/tip — הזדמנות המסחר הכי טובה כרגע (אותם קריטריונים בדיוק כמו הסוכן האוטומטי) — לא מבצע כלום, רק מדווח.',
+  '/buy SYMBOL — פתיחת פוזיציה אמיתית ידנית (למשל /buy XBTEUR). עובר את אותה שרשרת בטיחות (אישור בטלגרם, מתג חירום).',
+  '/sell SYMBOL — סגירת פוזיציה אמיתית פתוחה ידנית (למשל /sell XBTEUR).',
+  '/pause — עצירת חירום מיידית: אין הזמנות אמיתיות חדשות עד /resume.',
+  '/resume — ביטול /pause, חזרה לפעילות רגילה.',
+  '/help — ההודעה הזו.',
+].join('\n');
+
+/**
+ * `/help` — a pinnable list of every command (David asked 2026-09-03).
+ * Static text, no data gathering — genuinely read-only, no side effects
+ * beyond consuming its own Telegram message.
+ */
+export async function checkHelpRequests(
+  store: FileStore,
+  telegram: { token: string; chatId: string },
+): Promise<boolean> {
+  const polled = await pollAllTelegramUpdates(store, telegram);
+  const unclaimed: TelegramTextMessage[] = [];
+  let requested = false;
+  for (const message of polled.messages) {
+    if (/^\/help\s*$/i.test(message.text.trim())) requested = true;
+    else unclaimed.push(message);
+  }
+  stashUnclaimedTelegramUpdates(store, { messages: unclaimed, callbacks: polled.callbacks });
+  if (!requested) return false;
+
+  const result = await sendTelegramMessage(HELP_MESSAGE, telegram);
+  console.log(result.sent ? 'Help sent.' : `Help not sent: ${result.reason}`);
+  return true;
 }
 
 /** Periodic all-clear: confirms safety systems are active every ~2 weeks. */
