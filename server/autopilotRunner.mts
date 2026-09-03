@@ -74,11 +74,14 @@ import {
   buildCycleMessage,
   buildDailySummary,
   buildDrawdownHaltAlert,
+  buildKillSwitchKeyboardIntro,
   buildMoveAlert,
   buildPeriodReport,
   buildRiskHaltAlert,
   buildSafetyAlert,
   buildTestMessage,
+  killSwitchKeyboard,
+  maybeSendEducationTip,
   sendTelegramMessage,
   type DailySummaryStocks,
 } from './telegram.mts';
@@ -668,6 +671,7 @@ async function runCycle(
   await recordEquity(store, source, portfolio, journal, now, cyclePrices);
   await maybeSendSummaries(store, source, portfolio, journal, telegram, now);
   await maybeSendPeriodicReports(store, source, portfolio, journal, telegram, now);
+  await maybeSendEducationTip(store, telegram, now);
   await maybeSendAllClear(store, telegram, now);
 
   return cycle.opened.length > 0 || cycle.closed.length > 0;
@@ -755,6 +759,14 @@ export async function runLiveMirror(
 
   const liveStore = new PrefixedStore(store, 'live');
   initLiveCash(liveStore, liveStartingCashEur());
+  // Send the always-visible kill-switch keyboard once (David asked for
+  // this 2026-09-03) — a persistent reply keyboard stays pinned at the
+  // bottom of the chat regardless of later inline-keyboard messages, so
+  // one send is enough; tracked so it's never re-sent every cycle.
+  if (!liveStore.get<boolean>('kill-switch-keyboard-sent')) {
+    const result = await sendTelegramMessage(buildKillSwitchKeyboardIntro(), telegram, killSwitchKeyboard());
+    if (result.sent) liveStore.set('kill-switch-keyboard-sent', true);
+  }
   const killSwitch = new PersistedKillSwitch(liveStore);
   const audit = new PersistedAuditLog(liveStore);
   const brokerAdapter = new RevolutXBrokerAdapter(liveStore, audit, killSwitch, credentials);

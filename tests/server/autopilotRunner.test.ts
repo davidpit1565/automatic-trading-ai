@@ -451,6 +451,32 @@ describe('runLiveMirror (real-money wiring stays off until deliberately turned o
     delete process.env['LIVE_STARTING_CASH_EUR'];
   });
 
+  // David asked for this 2026-09-03: an always-visible kill-switch button
+  // instead of remembering to type /pause — sent once, tracked, never
+  // resent every cycle (a persistent reply keyboard stays pinned regardless).
+  it('sends the persistent kill-switch keyboard exactly once, the first time real money is enabled', async () => {
+    process.env['REAL_MONEY_ENABLED'] = 'true';
+    process.env['REVOLUT_X_API_KEY'] = 'key';
+    process.env['REVOLUT_X_PRIVATE_KEY_PEM'] = 'pem';
+    const sendMessageCalls: unknown[] = [];
+    const trackingFetch = (async (url: string, init?: { body?: string }) => {
+      if (String(url).includes('/sendMessage')) sendMessageCalls.push(JSON.parse(init!.body!));
+      return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const trackingTelegram = { token: 'T', chatId: 'C', fetchFn: trackingFetch };
+
+    await runLiveMirror(store, fakeSource(), [btcInstrument], trackingTelegram, [], {}, 1000);
+    expect(store.get('live:kill-switch-keyboard-sent')).toBe(true);
+    const keyboardSends = sendMessageCalls.filter((c) => (c as { reply_markup?: { keyboard?: unknown } }).reply_markup?.keyboard);
+    expect(keyboardSends).toHaveLength(1);
+
+    await runLiveMirror(store, fakeSource(), [btcInstrument], trackingTelegram, [], {}, 2000);
+    const keyboardSendsAfterSecondCycle = sendMessageCalls.filter(
+      (c) => (c as { reply_markup?: { keyboard?: unknown } }).reply_markup?.keyboard,
+    );
+    expect(keyboardSendsAfterSecondCycle).toHaveLength(1); // still just the one
+  });
+
   // Regression, 2026-09-03: the live account's daily-loss circuit breaker
   // (`DailyLossTracker`) was never actually wired into `runLiveMirror` —
   // nothing read today's real realized loss when sizing a new live entry, so

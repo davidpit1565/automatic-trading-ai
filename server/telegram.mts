@@ -256,6 +256,72 @@ export function buildTestMessage(): string {
   return '✅ הסוכן מחובר! מעכשיו תקבל כאן התראה על כל קנייה/מכירה. כסף מדומה בלבד.';
 }
 
+/** The always-visible kill-switch keyboard (David asked for this 2026-09-03:
+ * a permanent button instead of remembering to type /pause). Once sent, it
+ * stays pinned at the bottom of the chat regardless of later messages'
+ * inline keyboards — a persistent reply keyboard and a message's inline
+ * keyboard are separate Telegram UI layers. Sent once (tracked by the
+ * caller), not on every message. */
+export function killSwitchKeyboard(): TelegramReplyMarkup {
+  return {
+    keyboard: [[{ text: '/pause' }], [{ text: '/resume' }]],
+    resize_keyboard: true,
+    is_persistent: true,
+  };
+}
+
+/** Short, beginner-level trading tips (David asked 2026-09-03 to be taught
+ * gradually, "one or two tips every day or two" — he has near-zero trading
+ * background). Deliberately foundational and specific to how THIS project
+ * actually works (confidence score, risk%, kill switch), not generic
+ * finance-blog filler. Order matters: builds from "what am I looking at"
+ * toward "why the safety rails exist". */
+export const EDUCATION_TIPS: readonly string[] = [
+  '💡 טיפ 1: "ביטחון" (confidence) בכל עסקה הוא ציון 0-100 שהמערכת נותנת לאיתות, לא הבטחה. ציון גבוה (למשל 70+) אומר שהרבה סימנים מסכימים ביניהם — לא שהעסקה בטוחה לרווח.',
+  '💡 טיפ 2: "סטופ-לוס" הוא המחיר שבו העסקה נסגרת אוטומטית אם השוק זז נגדך, כדי לעצור הפסד לפני שהוא גדל. כל עסקה בכסף אמיתי כאן תמיד מגיעה עם סטופ-לוס מוגדר מראש.',
+  '💡 טיפ 3: "% סיכון" זה כמה מהתיק שלך אתה מוכן להפסיד בעסקה הזו אם היא נכשלת (לא כמה אתה קונה בכסף). המערכת שומרת את זה קטן בכוונה — כדי שאף עסקה בודדת לא תפגע משמעותית בתיק.',
+  '💡 טיפ 4: יחס סיכוי/סיכון (למשל 2:1 או 3:1) אומר כמה אתה יכול להרוויח מול כמה אתה מסכן. גם אם רק חצי מהעסקאות שלך מצליחות, יחס טוב מספיק יכול עדיין להרוויח לאורך זמן.',
+  '💡 טיפ 5: "חשיפת תיק" זה כמה אחוז מכל הכסף שלך נמצא כרגע בעסקאות פתוחות. חשיפה גבוהה מדי אומרת שאם השוק יורד בבת אחת, אתה מרגיש את זה חזק יותר.',
+  "💡 טיפ 6: כפתור ה\"קיל סוויץ'\" (/pause) עוצר מיידית כל מסחר חדש בכסף אמיתי — פוזיציות פתוחות ממשיכות להיות מנוטרות, אבל שום עסקה חדשה לא תיפתח עד /resume. שימושי כשאתה לא בטוח או רוצה הפסקה.",
+  '💡 טיפ 7: מסחר בכסף מדומה (paper trading) לפני כסף אמיתי הוא לא "משחק" — זו הדרך לבדוק אם אסטרטגיה עובדת על נתונים אמיתיים, בלי לשלם על טעויות למידה.',
+  '💡 טיפ 8: הדחף הכי מסוכן בטריידינג הוא לרדוף אחרי הפסד — לפתוח עסקה גדולה יותר "כדי להחזיר" מה שהפסדת. מערכות טובות (וזו כלולה) שומרות על גודל עסקה קבוע לפי הכללים, לא לפי הרגש של הרגע.',
+  '💡 טיפ 9: תנודתיות (וריאציה חדה במחיר) לא שווה לסיכון גבוה יותר בהכרח — היא כן אומרת שהמחיר יכול לנוע מהר בשני הכיוונים, ולכן סטופ-לוס קרוב מדי עלול "להיתפס" ברעש רגיל של השוק ולא בתנועה אמיתית.',
+  '💡 טיפ 10: אין שיטה שמנצחת בכל עסקה — המטרה היא שהעסקאות המנצחות, לאורך הרבה עסקאות, יפצו על ההפסדים ועוד. זו הסיבה שממושמעות בגודל עסקה וסטופ-לוס חשובה יותר מלנחש נכון כל פעם.',
+];
+
+const EDUCATION_TIP_INTERVAL_MS = 2 * 24 * 60 * 60 * 1000;
+const EDUCATION_TIP_INDEX_KEY = 'education-tip-index';
+const EDUCATION_TIP_LAST_SENT_KEY = 'education-tip-last-sent-at';
+
+/** Sends the next educational tip in rotation roughly every 2 days (David
+ * asked for "a tip or two every day or two", 2026-09-03) — never gated
+ * behind REAL_MONEY_ENABLED, since paper trading benefits just as much.
+ * Wraps around the list forever rather than stopping once it runs out. */
+export async function maybeSendEducationTip(
+  store: KeyValueStore,
+  telegram: TelegramConfig,
+  now: number,
+): Promise<void> {
+  if (!telegram.token || !telegram.chatId) return;
+  const lastSentAt = store.get<number>(EDUCATION_TIP_LAST_SENT_KEY);
+  if (lastSentAt !== undefined && now - lastSentAt < EDUCATION_TIP_INTERVAL_MS) return;
+
+  const index = store.get<number>(EDUCATION_TIP_INDEX_KEY) ?? 0;
+  const tip = EDUCATION_TIPS[index % EDUCATION_TIPS.length]!;
+  const result = await sendTelegramMessage(tip, telegram);
+  if (!result.sent) return; // retry next cycle rather than skipping ahead
+  store.set(EDUCATION_TIP_LAST_SENT_KEY, now);
+  store.set(EDUCATION_TIP_INDEX_KEY, index + 1);
+}
+
+export function buildKillSwitchKeyboardIntro(): string {
+  return (
+    '🔒 כפתור עצירת החירום זמין עכשיו תמיד למטה.\n\n' +
+    '/pause — עוצר את כל המסחר בכסף אמיתי מיידית.\n' +
+    '/resume — ממשיך אחרי עצירה.'
+  );
+}
+
 /** Alert sent once when a safety limit pauses new buying for the day. */
 export function buildRiskHaltAlert(): string {
   return (
@@ -425,10 +491,28 @@ export interface InlineKeyboardButton {
   readonly callback_data: string;
 }
 
+/** A persistent, bottom-of-chat keyboard button (distinct from an inline
+ * button under one message) — tapping it just sends its `text` as an
+ * ordinary message, exactly as if the human had typed it. Used for the
+ * always-visible kill-switch button David asked for (2026-09-03): the
+ * button's text is literally `/pause`/`/resume`, so it needs zero new
+ * command-parsing — `checkManualKillSwitchCommands` already handles those. */
+export interface ReplyKeyboardButton {
+  readonly text: string;
+}
+
+export type TelegramReplyMarkup =
+  | { readonly inline_keyboard: readonly (readonly InlineKeyboardButton[])[] }
+  | {
+      readonly keyboard: readonly (readonly ReplyKeyboardButton[])[];
+      readonly resize_keyboard?: boolean;
+      readonly is_persistent?: boolean;
+    };
+
 export async function sendTelegramMessage(
   text: string,
   config: TelegramConfig,
-  replyMarkup?: { inline_keyboard: readonly (readonly InlineKeyboardButton[])[] },
+  replyMarkup?: TelegramReplyMarkup,
 ): Promise<SendResult & { messageId?: number }> {
   if (!config.token || !config.chatId) {
     return { sent: false, reason: 'Telegram credentials not set' };

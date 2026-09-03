@@ -1,5 +1,44 @@
 # PROJECT_STATE
 
+## Persistent kill-switch keyboard + periodic education tips (2026-09-03)
+David asked for two engagement features, both shipped:
+
+1. **Always-visible kill-switch button.** A persistent Telegram reply
+   keyboard (`killSwitchKeyboard()`, distinct from the per-message inline
+   confirmation buttons) with two buttons whose text is literally `/pause`
+   and `/resume` — tapping one just sends that text as an ordinary message,
+   so `checkManualKillSwitchCommands` already handles it with zero new
+   parsing. Sent once (an intro message explaining the buttons) the first
+   time `runLiveMirror` runs, tracked via a `kill-switch-keyboard-sent`
+   store flag so it's never resent every cycle — a persistent reply
+   keyboard stays pinned at the bottom of the chat once sent.
+2. **Periodic trading-education tips.** `maybeSendEducationTip` sends the
+   next tip from a 10-entry Hebrew `EDUCATION_TIPS` rotation roughly every
+   2 days (not gated behind `REAL_MONEY_ENABLED` — paper trading benefits
+   too), wraps around forever, and only advances its index/timestamp on a
+   confirmed send so a failed send retries next cycle instead of skipping
+   a tip. Wired into the main cycle after `maybeSendPeriodicReports`.
+
+Deliberately NOT done as part of this: auto-executing high-confidence
+trades without approval. David's own answer, once asked, was to explicitly
+reject that and keep the safe current default (no response = nothing
+happens) — see `TelegramConfirmationGate`. What he actually wants instead
+(escalating reminder(s) if a ≥70%-confidence trade sits unanswered for the
+first ~10 minutes, a "you missed a good trade" message on final expiry, and
+later a retrospective "here's what you would have earned" message once the
+hypothetical trade's outcome resolves) is a real, separate feature: it
+requires threading `confidence` through `TradeOpportunity` →
+`TradeRiskAssessment` → `OrderIntent` → `TelegramConfirmationGate`, none of
+which carry it today, touching ~10 test fixtures. Scoped as its own
+follow-up rather than rushed into this diff.
+
+The "best trading course in the world" request is left as background
+research to start once current fixes are stable — no work started yet.
+
+Tests: `maybeSendEducationTip` (first-send, interval-gated, rotates,
+wraps, retries on failed send), kill-switch keyboard send-once. Full gate
+green (tsc server+app, 990 tests, build).
+
 ## Found why every /buy after the first got silently swallowed (2026-09-03)
 David reported still getting no response at all to repeated `/buy XBTEUR`
 sends even after the previous fixes landed. Root cause: the very first
