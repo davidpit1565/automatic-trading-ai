@@ -60,6 +60,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+/**
+ * Formats a number for the order body itself (not display) as a clean
+ * decimal string, rounded to a fixed precision — never scientific notation,
+ * never raw binary-float noise (e.g. a `0.1 + 0.2`-style trailing tail).
+ * Found 2026-09-03, full-system audit: `submit` used to send
+ * `String(intent.quantity)` directly — `intent.quantity` is the raw output
+ * of `riskEngine.ts`'s division/cap math, which can carry float noise the
+ * human never sees (the Telegram confirmation shows `formatQty`'s rounded
+ * display value, a DIFFERENT code path) — so what a human approves and what
+ * actually gets POSTed to Revolut X were not guaranteed to be identical. 8
+ * decimals comfortably covers every instrument's real lot-size precision
+ * without ever rounding a legitimate quantity down to zero.
+ */
+export function safeDecimalString(value: number, decimals = 8): string {
+  const fixed = value.toFixed(decimals).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+  return fixed.length > 0 ? fixed : '0';
+}
+
 function readOrderDetail(json: unknown): RevolutXOrderDetail | null {
   if (!isRecord(json) || !isRecord(json.data)) return null;
   const data = json.data;
@@ -269,8 +287,8 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
       side: intent.side,
       order_configuration: {
         limit: {
-          base_size: String(intent.quantity),
-          price: String(intent.limitPrice),
+          base_size: safeDecimalString(intent.quantity),
+          price: safeDecimalString(intent.limitPrice),
         },
       },
     };

@@ -579,11 +579,13 @@ async function main(): Promise<void> {
       // Never let one bad cycle kill the whole run — log and keep looping.
       console.error('Stocks cycle failed:', cause instanceof Error ? cause.message : cause);
     }
-    // Persist mid-run: immediately after any trade, and every N cycles. The
-    // final cycle is left to the workflow's end-of-run commit step.
-    const isLast = i === LOOP_CYCLES - 1;
+    // Persist mid-run: immediately after any trade, and every N cycles —
+    // including the FINAL cycle. See autopilotRunner.mts's matching fix
+    // (found 2026-09-03, full-system audit) for why: the workflow's own
+    // end-of-run commit step's conflict fallback is a weaker, whole-file
+    // strategy that can silently discard an entire cycle's state on a race.
     const periodic = STATE_COMMIT_EVERY > 0 && (i + 1) % STATE_COMMIT_EVERY === 0;
-    if (!isLast && (traded || periodic)) {
+    if (traded || periodic) {
       persistStateToGit(store, `cycle ${i + 1}/${LOOP_CYCLES}`);
     }
   }

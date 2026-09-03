@@ -6,7 +6,7 @@ import { PersistedKillSwitch } from '../../src/core/autopilot/killSwitch';
 import type { OrderIntent } from '../../src/core/execution/types';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
 import type { Instrument } from '../../src/core/types';
-import { deterministicClientOrderId, RevolutXBrokerAdapter, toRevolutXSymbol } from '../../server/revolutXBrokerAdapter.mts';
+import { deterministicClientOrderId, RevolutXBrokerAdapter, safeDecimalString, toRevolutXSymbol } from '../../server/revolutXBrokerAdapter.mts';
 
 // A fresh Ed25519 test key pair per run — not a secret, mirrors signing.test.ts.
 const { privateKey: TEST_PRIVATE_KEY, publicKey: TEST_PUBLIC_KEY } = generateKeyPairSync('ed25519');
@@ -143,6 +143,28 @@ describe('RevolutXBrokerAdapter', () => {
     expect(verifiesAgainstRealRequest(calls[1]!)).toBe(true);
     // Audited under the FINAL observed state, not the placement acknowledgement.
     expect(audit.entries().at(-1)).toMatchObject({ intentId: 'BTC-USD:1:0', event: 'filled' });
+  });
+
+  it('sends a clean, rounded decimal quantity/price to the broker, never raw binary-float noise (real gap found 2026-09-03, full-system audit: the human-facing Telegram confirmation shows a rounded quantity via a DIFFERENT formatter — formatQty — while the actual order body used to send String(intent.quantity) unrounded, so what was approved and what was submitted were not guaranteed identical)', async () => {
+    const { fetchFn, calls } = fakeFetch([
+      { status: 200, body: { data: [{ venue_order_id: 'venue-2', client_order_id: 'x', state: 'new' }] } },
+      { status: 200, body: { data: { status: 'new' } } },
+    ]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    await adapter.submit(intent({ quantity: 0.00011673469387755104, limitPrice: 0.1 + 0.2 }));
+
+    expect(JSON.parse(calls[0]!.body!).order_configuration).toEqual({
+      limit: { base_size: '0.00011673', price: '0.3' },
+    });
+  });
+
+  it('safeDecimalString rounds to 8 decimals and strips trailing zeros without producing scientific notation', () => {
+    expect(safeDecimalString(0.1 + 0.2)).toBe('0.3');
+    expect(safeDecimalString(0.00011673469387755104)).toBe('0.00011673');
+    expect(safeDecimalString(100)).toBe('100');
+    expect(safeDecimalString(0)).toBe('0');
+    expect(safeDecimalString(68620)).toBe('68620');
   });
 
   it('also accepts a bare object under data (not just the documented array) when reading venue_order_id back', async () => {

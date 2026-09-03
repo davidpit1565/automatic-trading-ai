@@ -608,11 +608,18 @@ async function main(): Promise<void> {
       // Never let one bad cycle kill the whole run — log and keep looping.
       console.error('Cycle failed:', cause instanceof Error ? cause.message : cause);
     }
-    // Persist mid-run: immediately after any trade, and every N cycles. The
-    // final cycle is left to the workflow's end-of-run commit step.
-    const isLast = i === LOOP_CYCLES - 1;
+    // Persist mid-run: immediately after any trade, and every N cycles —
+    // including the FINAL cycle (found 2026-09-03, full-system audit): this
+    // used to be left to the workflow's own end-of-run commit step, whose
+    // conflict fallback (`git rebase -X theirs`, a whole-file strategy) can
+    // silently discard an entire cycle's state on a genuine push race — the
+    // exact bug class `persistStateToGit`'s key-level dirty-merge exists to
+    // prevent, just left unprotected in this one remaining spot. The
+    // workflow's own commit step still runs afterward as a harmless
+    // redundant safety net (it finds nothing staged and no-ops in the normal
+    // case).
     const periodic = STATE_COMMIT_EVERY > 0 && (i + 1) % STATE_COMMIT_EVERY === 0;
-    if (!isLast && (traded || periodic)) {
+    if (traded || periodic) {
       persistStateToGit(store, `cycle ${i + 1}/${LOOP_CYCLES}`);
     }
   }
