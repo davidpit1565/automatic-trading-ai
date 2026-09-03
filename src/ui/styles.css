@@ -964,6 +964,11 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    kind of thing at a glance. */
 .tag-live { font-size: 0.6rem; font-weight: 700; letter-spacing: var(--tracking-wide); background: var(--cold-tint);
   color: var(--cold); border: 1px solid rgba(242, 109, 125, 0.4); padding: 0.12rem 0.45rem; border-radius: var(--r-xs); }
+/* Marks a coin as part of the agent's actual trading universe (as opposed
+ * to just browsable in Markets) — deliberately a neutral colour, not
+ * hot/cold, so it never reads as a price-direction signal on the same row. */
+.tag-traded { font-size: 0.6rem; font-weight: 700; letter-spacing: var(--tracking-wide); background: var(--neutral-tint);
+  color: var(--neutral); border: 1px solid rgba(139, 147, 165, 0.4); padding: 0.12rem 0.45rem; border-radius: var(--r-xs); }
 .kill-switch-banner { display: flex; align-items: center; gap: 0.5rem; background: var(--warn-tint);
   color: var(--warn); border: 1px solid rgba(245, 185, 61, 0.4); border-radius: var(--r-md);
   padding: 0.6rem 0.75rem; font-size: 0.85rem; font-weight: var(--fw-semibold); margin-top: 0.6rem; }
@@ -1156,6 +1161,12 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    rest — uneven row heights also undermine the scroll-stable paging. */
 .market-row-id .row-title,
 .market-row-id .row-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Wraps the name + an optional .tag-traded badge on one line — a sibling of
+   .row-title, never nested inside it, so .row-title's own text content stays
+   just the coin name for anything that reads it. */
+.row-title-line { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+.row-title-line .row-title { min-width: 0; flex-shrink: 1; }
+.row-title-line .tag-traded { flex-shrink: 0; }
 .market-row-num { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
 /* Hidden on phone (the row already has 3 real columns there); shown as a 4th
    desktop column below — real information (already fetched with the row,

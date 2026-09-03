@@ -97,6 +97,14 @@ export const CURATED_INSTRUMENTS: Instrument[] = [
   { symbol: 'ENAEUR', base: 'ENA', quote: 'EUR' },
 ];
 
+/** Base asset codes (BTC, ETH, …) actually traded by the agent — for the UI's
+ * "TRADED" badge (Markets list, Home's Markets rail widget). Compared by
+ * base rather than symbol since the display data source can be Kraken,
+ * Coinbase, Revolut or synthetic demo data, each with its own pair-symbol
+ * format, while the base code (what a coin is actually called) is the same
+ * across all of them. */
+export const CURATED_BASES: ReadonlySet<string> = new Set(CURATED_INSTRUMENTS.map((i) => i.base));
+
 /**
  * Kraken's internal asset codes for assets the rest of the world names
  * differently. Verified against the live AssetPairs list: of the sixteen curated

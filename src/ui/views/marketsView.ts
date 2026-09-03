@@ -9,6 +9,7 @@
 import type { ActiveDataSource } from '../dataSource';
 import type { Timeframe } from '../../core/types';
 import type { OrderBook, RecentTrade } from '../../core/data/krakenPublic';
+import { CURATED_BASES } from '../../core/data/krakenPublic';
 import {
   fetchMarketRows,
   fetchSeries,
@@ -455,7 +456,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       `<button class="market-row tappable" data-row="${index}">` +
       coinLogoHtml(m.base, BASE_URL) +
       `<span class="market-row-id">` +
-      `<span class="row-title">${escapeHtml(m.label)}</span>` +
+      `<span class="row-title-line"><span class="row-title">${escapeHtml(m.label)}</span>${CURATED_BASES.has(m.base) ? '<span class="tag-traded">TRADED</span>' : ''}</span>` +
       `<span class="row-sub"><span class="row-clock ${stale ? 'stale' : 'fresh'}" aria-hidden="true"></span>` +
       `${formatClock(m.updatedAt)} · ${escapeHtml(m.symbol)}</span>` +
       `</span>` +

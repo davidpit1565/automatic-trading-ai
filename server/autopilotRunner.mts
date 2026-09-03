@@ -67,6 +67,7 @@ import { checkManualKillSwitchCommands } from './manualKillSwitchCommand.mts';
 import { checkManualSellRequests } from './manualSellCommand.mts';
 import { checkManualBuyRequests } from './manualBuyCommand.mts';
 import { checkTipRequests } from './manualTipCommand.mts';
+import { checkDiscoverRequests } from './manualDiscoverCommand.mts';
 import { mirrorApprovedEntries, type LiveEntryOutcome } from './liveEntryMirror.mts';
 import { checkAutomaticExits } from './liveExitMirror.mts';
 import {
@@ -619,6 +620,7 @@ async function runCycle(
   await checkHelpRequests(store, telegram);
   await checkTipRequests(store, telegram, autopilot, now);
   await checkStatusRequests(store, source, portfolio, journal, telegram, now);
+  await checkDiscoverRequests(store, telegram, source);
   const cycle = await autopilot.runCycleOnce(now);
   console.log(
     `Cycle done via ${source.name}: opened ${cycle.opened.length}, ` +
@@ -1484,6 +1486,7 @@ const HELP_MESSAGE = [
   '',
   '/status — מצב נוכחי של שני החשבונות (מדומה + אמיתי): הון, מזומן, פוזיציות פתוחות, קניות/מכירות ב-24 השעות האחרונות.',
   '/tip — הזדמנות המסחר הכי טובה כרגע (אותם קריטריונים בדיוק כמו הסוכן האוטומטי) — לא מבצע כלום, רק מדווח.',
+  '/discover — סקר שוק על-פי דרישה: בודק מטבעות שעדיין לא ברשימת המסחר על נתונים אמיתיים ומדווח אם משהו שווה הוספה. לא מוסיף כלום אוטומטית.',
   '/buy SYMBOL — פתיחת פוזיציה אמיתית ידנית (למשל /buy XBTEUR). עובר את אותה שרשרת בטיחות (אישור בטלגרם, מתג חירום).',
   '/sell SYMBOL — סגירת פוזיציה אמיתית פתוחה ידנית (למשל /sell XBTEUR).',
   '/pause — עצירת חירום מיידית: אין הזמנות אמיתיות חדשות עד /resume.',

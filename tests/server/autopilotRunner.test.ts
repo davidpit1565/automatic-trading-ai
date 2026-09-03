@@ -848,6 +848,7 @@ describe('checkHelpRequests (David asked 2026-09-03 for a pinnable command list)
     expect(sent[0]).toContain('/buy');
     expect(sent[0]).toContain('/sell');
     expect(sent[0]).toContain('/tip');
+    expect(sent[0]).toContain('/discover');
     expect(sent[0]).toContain('/status');
     expect(sent[0]).toContain('/pause');
     expect(sent[0]).toContain('/resume');
