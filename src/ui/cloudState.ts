@@ -117,6 +117,14 @@ export interface LiveAccountState {
   /** Real (not simulated) trade outcomes — filled or broker-rejected —
    * newest first, capped to a short recent list. */
   readonly recentEvents: { at: number; event: string; detail: string }[];
+  /** BTC sitting in the real account outside the bot's own tracked
+   * positions (David converted EUR→BTC manually while funding the account,
+   * 2026-09-03) — reporting only, never included in trade-sizing equity. */
+  readonly externalBtcQuantity: number;
+  /** The real account's own value-over-time series — cash + tracked
+   * positions + the untracked BTC above — mirroring `equityHistory` above
+   * but for real, not simulated, money. */
+  readonly equityHistory: Array<{ at: number; equity: number }>;
 }
 
 interface RawState {
@@ -151,6 +159,8 @@ interface RawState {
   'live:live-open-positions'?: Record<string, RawLivePosition> | null;
   'live:kill-switch'?: { engaged?: boolean; reason?: string | null };
   'live:audit-log'?: Array<{ timestamp?: number; event?: string; detail?: string }>;
+  'live:live-external-btc-qty'?: number;
+  'live:live-equity-history'?: Array<{ at: number; equity: number }>;
 }
 
 interface RawLivePosition {
@@ -208,6 +218,8 @@ function parseLiveAccountState(raw: RawState): LiveAccountState | null {
     killSwitchEngaged: killSwitch?.engaged === true,
     killSwitchReason: killSwitch?.reason ?? null,
     recentEvents,
+    externalBtcQuantity: raw['live:live-external-btc-qty'] ?? 0,
+    equityHistory: Array.isArray(raw['live:live-equity-history']) ? raw['live:live-equity-history'] : [],
   };
 }
 

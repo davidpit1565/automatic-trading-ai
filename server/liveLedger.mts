@@ -24,6 +24,9 @@ import type { BrokerAdapter } from '../src/core/execution/types';
 import { openLivePositions } from './liveExitFlow.mts';
 
 const LIVE_CASH_KEY = 'live-cash-eur';
+const LIVE_EXTERNAL_BTC_KEY = 'live-external-btc-qty';
+const LIVE_EQUITY_HISTORY_KEY = 'live-equity-history';
+const LIVE_EQUITY_HISTORY_CAP = 5000; // matches the paper account's own EQUITY_HISTORY_CAP
 
 /** Sets the starting cash ONLY if this ledger has never been initialized —
  * safe to call every cycle without ever resetting a real, already-moving
@@ -72,6 +75,54 @@ export function debitLiveCash(store: KeyValueStore, amount: number): void {
  * proceeds (fill price × filled quantity − fee). */
 export function creditLiveCash(store: KeyValueStore, amount: number): void {
   store.set(LIVE_CASH_KEY, liveCash(store) + amount);
+}
+
+/**
+ * Reconciles the BTC balance sitting in the real Revolut X account OUTSIDE
+ * the bot's own tracked positions — David converted EUR to BTC manually
+ * while moving money into the account (2026-09-03), then sold part of it
+ * back to EUR himself, keeping the rest as a personal holding the bot never
+ * opened. REPORTING ONLY: this never feeds `liveEquity()` (used to size a
+ * live entry's risk) — the bot must keep sizing trades against real spendable
+ * cash, not a BTC holding it can't itself deploy. Same no-op-on-failure
+ * safety as `syncLiveCashFromBroker`.
+ */
+export async function syncLiveExternalBtc(store: KeyValueStore, brokerAdapter: BrokerAdapter): Promise<void> {
+  let positions: Awaited<ReturnType<BrokerAdapter['fetchPositions']>>;
+  try {
+    positions = await brokerAdapter.fetchPositions();
+  } catch {
+    return;
+  }
+  const btc = positions.find((p) => p.symbol === 'BTC');
+  store.set(LIVE_EXTERNAL_BTC_KEY, btc?.quantity ?? 0);
+}
+
+export function liveExternalBtcQuantity(store: KeyValueStore): number {
+  return store.get<number>(LIVE_EXTERNAL_BTC_KEY) ?? 0;
+}
+
+/**
+ * Appends one point to the real account's OWN equity history — cash +
+ * tracked positions (`liveEquity`) + the untracked BTC holding above, valued
+ * at the current XBTEUR price — so the app can chart the real account's
+ * total value over time, same as it already does for the simulated
+ * portfolio (`autopilotRunner.mts`'s `recordEquity`/`EQUITY_HISTORY_KEY`).
+ * Reporting only; does not affect trade sizing.
+ */
+export function recordLiveEquity(
+  store: KeyValueStore,
+  prices: Readonly<Record<string, number>>,
+  now: number,
+): void {
+  const btcValue = liveExternalBtcQuantity(store) * (prices['XBTEUR'] ?? 0);
+  const equity = liveEquity(store, prices) + btcValue;
+  const history = store.get<Array<{ at: number; equity: number }>>(LIVE_EQUITY_HISTORY_KEY) ?? [];
+  history.push({ at: now, equity: Math.round(equity * 100) / 100 });
+  store.set(
+    LIVE_EQUITY_HISTORY_KEY,
+    history.length > LIVE_EQUITY_HISTORY_CAP ? history.slice(-LIVE_EQUITY_HISTORY_CAP) : history,
+  );
 }
 
 /**

@@ -853,7 +853,20 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 @keyframes viewfade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 .bottom-nav {
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: 20px; z-index: 30;
+  /* iOS Safari (and some Android WebViews) reflow `position: fixed` against
+     the toolbar-collapsed viewport size, so a bar offset from the edge
+     (bottom: 20px, not 0) visibly snaps to a new spot as the address bar
+     shows/hides on scroll — the "jumps and isn't stuck where it should be"
+     report. Forcing this element onto its own GPU compositor layer
+     (translateZ/backface-visibility/perspective, the standard fix for this
+     class of WebKit fixed-position bug) makes the browser track it as a
+     stable composited layer instead of relaying it out on every toolbar
+     animation frame. */
+  position: fixed; left: 50%; bottom: 20px; z-index: 30;
+  transform: translate(-50%, 0) translateZ(0);
+  -webkit-backface-visibility: hidden; backface-visibility: hidden;
+  -webkit-perspective: 1000px; perspective: 1000px;
+  will-change: transform;
   display: flex; justify-content: space-around; align-items: center; gap: 0.5rem;
   background: rgba(28, 28, 30, 0.72);
   backdrop-filter: blur(30px) saturate(180%);

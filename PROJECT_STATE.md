@@ -1,5 +1,51 @@
 # PROJECT_STATE
 
+## Track the untracked BTC holding + chart it; fix the bottom-nav jitter (2026-09-03)
+Two separate David reports:
+
+1. He moved money into Revolut X by converting EUR→BTC directly, then sold
+   about half back to EUR for the bot to trade with, keeping the rest
+   (~0.00075 BTC) as a personal holding the bot never opened. He asked for
+   it to be tracked and charted anyway, not left invisible.
+2. The bottom nav "still jumps and isn't stuck where it should be" on his
+   phone — a known WebKit/mobile-Chrome issue: a `position: fixed` element
+   offset from the viewport edge (`bottom: 20px`, not `0`) gets relaid-out
+   as the address bar collapses/expands on scroll, visibly snapping to a
+   new spot. Fixed with the standard remedy: forcing `.bottom-nav` onto its
+   own GPU-composited layer (`translateZ(0)` + `backface-visibility: hidden`
+   + `will-change: transform`) so the browser tracks it as a stable
+   composited layer instead of relaying it out on every toolbar-animation
+   frame. Could not verify the jitter itself is gone — that's real
+   mobile-Safari/Chrome toolbar-collapse behavior no headless browser
+   reproduces — so this needs a check on an actual phone.
+
+For (1): kept `liveEquity()` (used to SIZE live trades) completely
+untouched — the BTC isn't cash the bot can spend, so it must never affect
+position sizing. Added a separate reporting-only path instead:
+`syncLiveExternalBtc` (liveLedger.mts) reconciles the real BTC balance from
+Revolut X's own `/balances` response each cycle (same no-op-on-failure
+safety as the existing EUR cash sync), and `recordLiveEquity` appends a
+point to a new `live-equity-history` series — cash + tracked positions +
+this BTC valued at the current XBTEUR price — every cycle, mirroring how
+the simulated portfolio already charts itself
+(`autopilotRunner.mts`'s `recordEquity`/`EQUITY_HISTORY_KEY`).
+
+UI: the Profit tab's "Real money" card now shows a Cash/BTC-holding
+breakdown and its own equity chart (reused `mountEquityChartPanel`, which
+previously hardcoded a "SIMULATED" tag on its built-in "Now" hero — added
+a `live` option so this real chart correctly says "REAL" instead). Home's
+Overview real-money line got the same breakdown for consistency between
+tabs (the exact kind of cross-tab mismatch flagged in the entry below).
+
+Tests: `syncLiveExternalBtc`/`recordLiveEquity` (liveLedger.test.ts) —
+records the broker's BTC balance, no-ops on a fetch failure, and proves
+`recordLiveEquity` never changes what `liveEquity` returns (the sizing
+function). UI tests cover the breakdown text and that the server-recorded
+equity wins over the local cash-only fallback. Full gate green (tsc,
+1012 tests, build) — visually verified both tabs render correctly with a
+mocked live-account state (real network to the committed state file isn't
+reachable from this sandbox), screenshots at 390×844.
+
 ## Real money was invisible on the History and Profit tabs (2026-09-03)
 David reported the real wallet "still isn't reflected everywhere and still
 shows the demo money" — but nothing was stale. The real-money card had only

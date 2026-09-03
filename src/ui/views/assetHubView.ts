@@ -81,6 +81,8 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
       <section class="hero" id="hub-real-money" hidden>
         <div class="hero-label">Real money <span class="tag-live">REAL</span></div>
         <div class="hero-value" id="hub-real-equity">—</div>
+        <div class="hero-bench" id="hub-real-breakdown"></div>
+        <div id="hub-real-equity-chart"></div>
       </section>
       <!-- hero-bare matches Home's balance treatment: same dominant-figure
            pattern for this sub-screen (shared by Crypto's and Stocks' Profit
@@ -107,8 +109,11 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
   const realActivityListEl = container.querySelector<HTMLElement>('#hub-real-activity-list')!;
   const realMoneyWrap = container.querySelector<HTMLElement>('#hub-real-money')!;
   const realEquityEl = container.querySelector<HTMLElement>('#hub-real-equity')!;
+  const realBreakdownEl = container.querySelector<HTMLElement>('#hub-real-breakdown')!;
+  const realEquityChartSlot = container.querySelector<HTMLElement>('#hub-real-equity-chart')!;
 
   const historyChart = mountEquityChartPanel(historyChartSlot, { currencySymbol: opts.currencySymbol });
+  const realEquityChart = mountEquityChartPanel(realEquityChartSlot, { currencySymbol: opts.currencySymbol, live: true });
 
   let marketMounted = false;
   let marketHandle: ViewHandle | void;
@@ -162,8 +167,19 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     realMoneyWrap.hidden = !live;
     if (!live) return;
     const invested = live.positions.reduce((s, p) => s + p.quantity * p.entryPrice, 0);
-    const equity = live.cash + invested;
+    // Prefer the server's own recorded equity (marks the untracked BTC
+    // holding at its real current price) — only fall back to the
+    // entry-price approximation before the very first cycle to record one.
+    const equity = live.equityHistory.at(-1)?.equity ?? live.cash + invested;
     realEquityEl.textContent = money(equity);
+
+    const btcPrice = state.marketSnapshot.find((m) => m.symbol === 'XBTEUR')?.price ?? 0;
+    const btcValue = live.externalBtcQuantity * btcPrice;
+    realBreakdownEl.hidden = live.externalBtcQuantity <= 0;
+    if (live.externalBtcQuantity > 0) {
+      realBreakdownEl.textContent = `Cash ${money(live.cash)} · BTC holding ${money(btcValue)} (untracked)`;
+    }
+    realEquityChart.setHistory(live.equityHistory);
   }
 
   function renderProfit(state: CloudState): void {

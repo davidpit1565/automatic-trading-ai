@@ -116,6 +116,8 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
             killSwitchEngaged: false,
             killSwitchReason: null,
             recentEvents: [{ at: 1_700_000_000_000, event: 'rejected', detail: 'Insufficient balance' }],
+            externalBtcQuantity: 0,
+            equityHistory: [],
           },
         }),
     });
@@ -124,7 +126,39 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
     expect(container.querySelector<HTMLElement>('#hub-real-activity')!.hidden).toBe(false);
     expect(container.querySelector('#hub-real-activity-list')!.textContent).toContain('Insufficient balance');
     expect(container.querySelector<HTMLElement>('#hub-real-money')!.hidden).toBe(false);
-    // 50 cash + 0.001 * 95000 invested = 145
+    // No equity-history point yet, so falls back to 50 cash + 0.001 * 95000 invested = 145
     expect(container.querySelector('#hub-real-equity')!.textContent).toContain('145');
+  });
+
+  it('shows the untracked-BTC breakdown and feeds the real equity chart once external BTC and history exist', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      fetchState: async () =>
+        cloudState({
+          marketSnapshot: [{ symbol: 'XBTEUR', price: 100_000, changePct: 1, updatedAt: 1 }],
+          live: {
+            cash: 50,
+            positions: [],
+            killSwitchEngaged: false,
+            killSwitchReason: null,
+            recentEvents: [],
+            externalBtcQuantity: 0.001,
+            equityHistory: [
+              { at: 1, equity: 100 },
+              { at: 2, equity: 150 },
+            ],
+          },
+        }),
+    });
+    await flush();
+
+    // Server-recorded equity (150) wins over the local cash-only fallback.
+    expect(container.querySelector('#hub-real-equity')!.textContent).toContain('150');
+    const breakdown = container.querySelector<HTMLElement>('#hub-real-breakdown')!;
+    expect(breakdown.hidden).toBe(false);
+    // 0.001 BTC * 100,000 = 100 EUR untracked holding value.
+    expect(breakdown.textContent).toContain('100');
   });
 });

@@ -100,9 +100,10 @@ export interface EquityChartPanelHandle {
  */
 export function mountEquityChartPanel(
   container: HTMLElement,
-  options: { readonly currencySymbol?: string } = {},
+  options: { readonly currencySymbol?: string; readonly live?: boolean } = {},
 ): EquityChartPanelHandle {
   const currency = options.currencySymbol ?? '€';
+  const tag = options.live ? '<span class="tag-live">REAL</span>' : '<span class="tag-sim">SIMULATED</span>';
   let history: readonly EquityPoint[] = [];
   let rangeKey = 'All';
   let chartMode: 'candle' | 'line' = 'candle';
@@ -150,7 +151,7 @@ export function mountEquityChartPanel(
            pattern for this sub-screen (shared by Crypto's and Stocks' History
            tab), not a secondary boxed widget. -->
       <div class="hero hero-bare">
-        <div class="hero-label">Now <span class="tag-sim">SIMULATED</span></div>
+        <div class="hero-label">Now ${tag}</div>
         <div class="hero-value">${currency}${formatPrice(last)}</div>
         <div class="hero-change ${up ? 'up' : 'down'}">${formatPct(ret)} · ${rangeKey}</div>
         <div class="hero-split"><span>since ${new Date(pts[0]!.at).toLocaleDateString('en-GB')}</span></div>
