@@ -12,7 +12,7 @@ import { topGainers, topLosers } from '../marketFilters';
 import { openMarketsAt } from './marketsView';
 import { sparklineSvg } from '../charts';
 import { attachCoinLogoFallback, coinLogoHtml, completedLogoHtml } from '../coinLogo';
-import { formatPrice, formatPct, formatPriceSplit } from '../format';
+import { formatPrice, formatPct, formatPriceSplit, tieredPriceHtml } from '../format';
 import { skeletonRowsHtml } from '../loadingStates';
 import type { ViewHandle } from '../viewLifecycle';
 
@@ -105,13 +105,13 @@ function holdingsTableHtml(rows: readonly HoldingRow[]): string {
   const body = rows
     .map((r) => {
       const pnlCell = r.pnl
-        ? `<span class="chg ${r.pnl.abs >= 0 ? 'up' : 'down'}">${euro(r.pnl.abs)} (${formatPct(r.pnl.pct)})</span>`
+        ? `<span class="chg ${r.pnl.abs >= 0 ? 'up' : 'down'}">${tieredPriceHtml(euro(r.pnl.abs))} (${formatPct(r.pnl.pct)})</span>`
         : '—';
       return `<tr>
         <td class="holdings-id">${r.logoHtml}<div><div class="row-title">${r.name}</div><div class="row-sub">${r.sub}</div></div></td>
         <td class="col-total">${r.qty ?? '—'}</td>
-        <td class="col-price">${r.price ?? '—'}</td>
-        <td>${euro(r.value)}</td>
+        <td class="col-price">${r.price ? tieredPriceHtml(r.price) : '—'}</td>
+        <td>${tieredPriceHtml(euro(r.value))}</td>
         <td class="col-alloc">${r.allocationPct.toFixed(1)}%</td>
         <td>${pnlCell}</td>
       </tr>`;
@@ -269,7 +269,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       card.innerHTML = `
         <div class="market-top"><div class="market-id">${coinLogoHtml(base)}<span class="market-name">${m.label}</span>${CURATED_BASES.has(base) ? '<span class="tag-traded">TRADED</span>' : ''}</div>
           <span class="chg ${up ? 'up' : 'down'}">${formatPct(m.changePct)}</span></div>
-        <div class="market-price">${euro(m.price)}</div>
+        <div class="market-price">${tieredPriceHtml(euro(m.price))}</div>
         <div class="market-spark" style="color:${up ? HOT : COLD}">${sparklineSvg(m.closes, { stroke: up ? HOT : COLD, fill: true, width: 150, height: 44 })}</div>`;
       marketsStrip.appendChild(card);
     }
