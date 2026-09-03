@@ -1,5 +1,30 @@
 # PROJECT_STATE
 
+## UI redesign pass: press feedback for every pill/icon control (Markets/coin-detail) (2026-09-03)
+Continuing David's dashboard visual-elevation request — this increment targets
+the coin-detail view's control vocabulary (range selector, chart-type toggle,
+view tabs, pager, back/star icon buttons) plus the shared hub-tab/nav-bar
+controls, all of which had a `:hover` state but **no `:active`/press state at
+all** — the one micro-interaction gap left after the chart-polish and Home
+passes already merged/opened. `src/ui/styles.css` only.
+
+Added a `scale()` press state to: `.nav-btn`, `.hub-tab`, `.mk-tab`,
+`.mk-star`, `.icon-btn`, `.star-btn`, `.view-tab`, `.pager`, `.range-btn`,
+`.ctoggle-btn`. One subtlety worth flagging for review: `.mk-star` already
+carries a base `translateY(-50%)` for vertical centering (it's an absolutely-
+positioned overlay on a market row) — its `:active` rule composes
+`translateY(-50%) scale(0.85)` rather than a bare `scale()`, which would have
+silently re-anchored and visibly shifted the star on every press.
+
+Verified visually: dev server + Playwright, opened the coin-detail view,
+confirmed via `getComputedStyle` that `.icon-btn` actually applies
+`scale(0.9)` on press (matrix confirms it); the other nine follow the
+identical, lower-risk `transform: scale()` pattern.
+
+Full gate green: `tsc`, `vitest run` (999 tests, none touched), `build`.
+Branch `claude/ui-redesign-controls`, based on latest `main` (which already
+includes the merged chart-polish PR).
+
 ## UI redesign pass 1: chart visual polish (2026-09-03)
 David asked for the whole dashboard visually elevated to Revolut X / Investing.com
 polish, "especially all the graphs." First increment of that pass, scoped to

@@ -803,9 +803,10 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .nav-btn { flex: none; background: transparent; border: none; color: var(--text-dim);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   padding: 0.5rem 0.75rem; font-size: 0.64rem; font-weight: 600; cursor: pointer; border-radius: var(--r-sm);
-  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .nav-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .nav-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+.nav-btn:active { transform: scale(0.92); }
 .nav-btn.active { background: var(--accent-tint); color: var(--accent-text); }
 
 .hero {
@@ -890,6 +891,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   font-weight: 600; padding: 0.5rem 0.4rem; border-radius: var(--r-pill); cursor: pointer;
   transition: all var(--dur-fast) var(--ease); }
 .hub-tab:hover { color: var(--text); }
+.hub-tab:active { transform: scale(0.96); }
 .hub-tab.active { background: var(--accent); color: #fff; }
 /* Stocks adds a 5th tab (Long-Term) — shrink to fit without wrapping. */
 .hub-tabs:has(.hub-tab:nth-child(5)) .hub-tab { font-size: 0.7rem; padding: 0.5rem 0.15rem; letter-spacing: -0.01em; }
@@ -926,6 +928,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   border: 1px solid var(--border); background: var(--surface); color: var(--text-dim);
   font-size: 0.86rem; font-weight: 650; cursor: pointer; transition: all var(--dur-fast) var(--ease); }
 .mk-tab:hover { color: var(--text); border-color: var(--border-strong); }
+.mk-tab:active { transform: scale(0.96); }
 .mk-tab.active { background: linear-gradient(155deg, var(--accent), var(--accent-2)); border-color: transparent; color: #fff;
   box-shadow: 0 4px 14px rgba(255, 255, 255, 0.3); }
 
@@ -961,8 +964,11 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .mk-star { position: absolute; top: 50%; right: 0.35rem; transform: translateY(-50%);
   width: 30px; height: 30px; border: 0; border-radius: 50%; background: transparent;
   color: var(--border-strong); font-size: 0.95rem; line-height: 1; cursor: pointer; padding: 0;
-  transition: color var(--dur-fast) var(--ease); }
+  transition: color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .mk-star:hover { color: var(--text-dim); }
+/* Keeps the base translateY(-50%) centering — scale alone would re-anchor
+   the element and jump its position on press. */
+.mk-star:active { transform: translateY(-50%) scale(0.85); }
 .mk-star.on { color: var(--warn); }
 
 .market-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.75rem;
@@ -1145,8 +1151,9 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   border: 1px solid rgba(255,255,255,0.08); color: var(--text);
   width: 38px; height: 38px; border-radius: 50%; cursor: pointer; flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center;
-  transition: background var(--dur-fast) var(--ease); }
+  transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .icon-btn:hover { background: var(--surface-hover); }
+.icon-btn:active { transform: scale(0.9); }
 .icon-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2;
   stroke-linecap: round; stroke-linejoin: round; }
 .detail-name { font-size: 1.15rem; font-weight: 750; letter-spacing: -0.01em; }
@@ -1158,6 +1165,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   width: 38px; height: 38px; border-radius: 50%; font-size: 1.1rem; cursor: pointer;
   transition: all var(--dur-fast) var(--ease); }
 .star-btn:hover { background: var(--surface-hover); color: var(--text); }
+.star-btn:active { transform: scale(0.9); }
 .star-btn.active { color: var(--warn); background: var(--warn-tint); }
 .detail-stats-row { display: flex; gap: 0.6rem; margin-bottom: 0.9rem; }
 .dstat { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
@@ -1171,6 +1179,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   transition: all var(--dur-fast) var(--ease); }
 .view-tab svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .view-tab:hover { color: var(--text); }
+.view-tab:active { transform: scale(0.94); }
 .view-tab.active { background: linear-gradient(155deg, var(--accent), var(--accent-2)); color: #fff; }
 .detail-nonchart { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
   padding: 0.8rem; box-shadow: var(--shadow-xs); min-height: 160px; }
@@ -1194,8 +1203,9 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
 .detail-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; }
 .pager { background: var(--surface); border: 1px solid var(--border); color: var(--text);
   border-radius: var(--r-sm); padding: 0.5rem 1rem; cursor: pointer; font-weight: 650;
-  transition: border-color var(--dur-fast) var(--ease); }
+  transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .pager:hover:not(:disabled) { border-color: var(--border-strong); }
+.pager:active:not(:disabled) { transform: scale(0.96); }
 .pager:disabled { opacity: 0.4; cursor: default; }
 
 /* Timeframe selector + real price chart */
@@ -1206,6 +1216,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   border-radius: var(--r-pill); padding: 0.42rem 0.78rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; flex: 0 0 auto;
   transition: all var(--dur-fast) var(--ease); }
 .range-btn:hover { color: var(--text); }
+.range-btn:active { transform: scale(0.94); }
 .range-btn.active { background: linear-gradient(155deg, var(--accent), var(--accent-2)); color: #fff;
   box-shadow: 0 3px 10px rgba(255, 255, 255, 0.3); }
 /* The price chart sizes by aspect-ratio, not height — a `height` rule on
@@ -1236,6 +1247,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
   border-radius: var(--r-pill); padding: 0.42rem 0.72rem; font-size: 0.8rem; font-weight: 700; cursor: pointer;
   transition: all var(--dur-fast) var(--ease); }
 .ctoggle-btn:hover { color: var(--text); }
+.ctoggle-btn:active { transform: scale(0.94); }
 .ctoggle-btn.active { background: linear-gradient(155deg, var(--accent), var(--accent-2)); color: #fff; }
 
 /* Candlestick chart: green up / red down bodies + wicks. Full-opacity,
