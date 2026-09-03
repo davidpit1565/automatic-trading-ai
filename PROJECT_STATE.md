@@ -1,5 +1,31 @@
 # PROJECT_STATE
 
+## THE go-live blocker, actually fixed: pair keys use '/' not '-' (2026-09-03)
+The raw-response diagnostic (previous entry below) landed and immediately
+paid off: the real `GET /configuration/pairs` response is
+`{"LINK/USD":{"base":"LINK","quote":"USD",...}, "BTC-EUR-shaped-guess-was-wrong": ...}` —
+Revolut X separates base/quote with a **forward slash**, not a hyphen. This
+project's own parsing (`readPairSymbols` in `server/revolutXBrokerAdapter.mts`,
+and the mirrored `getInstruments()` in `src/core/data/revolutClient.ts`)
+assumed a hyphen, so `Object.keys(body).filter(s => s.split('-'))` matched
+**zero** real keys — `listTradablePairs()` was silently returning an empty
+list on every single call, with a genuinely successful HTTP 200 the whole
+time. `toRevolutXSymbol` also built its candidate symbol with a hyphen
+(`'BTC-EUR'`), which could never have matched anyway even if parsing worked.
+
+Fixed both: `readPairSymbols` now validates each entry by its own `base`/
+`quote` fields (present on every real pair config) instead of guessing a
+separator from the key at all — robust to whatever the key format actually
+is. `toRevolutXSymbol` now joins with `/` to match. 3 new regression tests
+lock in the real production shape (`'LINK/USD'`), that entries missing
+base/quote are still excluded, and that a 200-with-0-symbols still audits
+the raw body. `src/core/data/revolutClient.ts`'s `getInstruments()` has the
+identical latent bug (same hyphen assumption) but is NOT on the live-trading
+path (`runLiveMirror` gets its `instruments` from Kraken via `pickSource()`,
+never from this Revolut client) — left as a flagged follow-up, not fixed
+here, to keep this change scoped to what's actually blocking real money
+tonight. Full gate green (tsc, 973 tests, build).
+
 ## Definitive answer: Revolut X returns 0 tradable pairs, not an HTTP failure (2026-09-03)
 The same-base-pair diagnostic (previous entry below) reported the real
 finding on its first live cycle: `'BTC-EUR' not found among 0 tradable pairs
