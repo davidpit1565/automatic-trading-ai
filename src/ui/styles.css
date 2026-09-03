@@ -799,8 +799,13 @@ button.secondary:active {
   background: radial-gradient(110% 65% at 35% -15%, var(--wash-color, transparent) 0%, transparent 75%);
   transition: opacity var(--dur-slow) var(--ease);
 }
-body[data-sentiment="up"] { --wash-color: rgba(76, 215, 135, 0.5); }
-body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.5); }
+/* David compared this against Revolut X directly (2026-09-03): its own
+   header stays essentially neutral regardless of market direction — this
+   wash read as a loud, distinct green/red banner next to that, not an
+   ambient tint. Same colours, far lower alpha (0.5 -> 0.14) so the glass
+   panel still reads as translucent without dominating the header. */
+body[data-sentiment="up"] { --wash-color: rgba(76, 215, 135, 0.14); }
+body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 
 .topbar {
   position: sticky; top: 0; z-index: 20;
