@@ -1,9 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryStore } from '../../src/core/data/storage';
-import type { OrderIntent, OrderStatusReport } from '../../src/core/execution/types';
+import type { BrokerAdapter, BrokerPosition, OrderIntent, OrderStatusReport } from '../../src/core/execution/types';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
 import { recordLiveEntryFill } from '../../server/liveExitFlow.mts';
-import { creditLiveCash, debitLiveCash, initLiveCash, liveCash, liveEquity } from '../../server/liveLedger.mts';
+import { creditLiveCash, debitLiveCash, initLiveCash, liveCash, liveEquity, syncLiveCashFromBroker } from '../../server/liveLedger.mts';
+
+/** Minimal fake — only fetchPositions is exercised by these tests. */
+function fakeBroker(positions: BrokerPosition[] | (() => Promise<BrokerPosition[]>)): BrokerAdapter {
+  return {
+    name: 'fake',
+    mode: 'live',
+    submit: () => {
+      throw new Error('not used in these tests');
+    },
+    cancel: () => {
+      throw new Error('not used in these tests');
+    },
+    fetchPositions: () => (typeof positions === 'function' ? positions() : Promise.resolve(positions)),
+  };
+}
 
 function approvedAssessment(): TradeRiskAssessment {
   return {
@@ -72,6 +87,32 @@ describe('debitLiveCash / creditLiveCash', () => {
     expect(liveCash(store)).toBe(60);
     creditLiveCash(store, 25);
     expect(liveCash(store)).toBe(85);
+  });
+});
+
+describe('syncLiveCashFromBroker (real incident, 2026-09-03: tracker said €100.15, real account had €0.11)', () => {
+  it('overwrites the tracked cash with the broker\'s real EUR balance', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100.15);
+    await syncLiveCashFromBroker(store, fakeBroker([{ symbol: 'EUR', quantity: 0.11, avgCost: 0 }]));
+    expect(liveCash(store)).toBe(0.11);
+  });
+
+  it('leaves the tracked cash untouched when the broker reports no EUR balance at all', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100.15);
+    await syncLiveCashFromBroker(store, fakeBroker([{ symbol: 'BTC', quantity: 0.001, avgCost: 0 }]));
+    expect(liveCash(store)).toBe(100.15);
+  });
+
+  it('leaves the tracked cash untouched on a network failure, rather than zeroing out real money', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100.15);
+    await syncLiveCashFromBroker(
+      store,
+      fakeBroker(() => Promise.reject(new Error('network timeout'))),
+    );
+    expect(liveCash(store)).toBe(100.15);
   });
 });
 

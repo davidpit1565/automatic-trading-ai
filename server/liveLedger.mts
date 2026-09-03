@@ -20,6 +20,7 @@
  */
 
 import type { KeyValueStore } from '../src/core/data/storage';
+import type { BrokerAdapter } from '../src/core/execution/types';
 import { openLivePositions } from './liveExitFlow.mts';
 
 const LIVE_CASH_KEY = 'live-cash-eur';
@@ -34,6 +35,31 @@ export function initLiveCash(store: KeyValueStore, startingCash: number): void {
 
 export function liveCash(store: KeyValueStore): number {
   return store.get<number>(LIVE_CASH_KEY) ?? 0;
+}
+
+/**
+ * Overwrites the tracked cash figure with Revolut X's own real EUR balance —
+ * the broker is the only genuine source of truth for real money, and this
+ * project's local debit/credit bookkeeping had never once been checked
+ * against it. Real incident (2026-09-03): the tracker said €100.15 while the
+ * real account had €0.11 available — nothing had ever reconciled the two,
+ * so every live entry all night was sized against a fictional balance.
+ *
+ * Call this at the START of every live cycle, before any entry is sized —
+ * self-heals any drift (a manual trade on the Revolut X app, an untracked
+ * fee, a missed fill) instead of requiring a human to report the true
+ * number by hand. No-ops (keeps the last-known value) on a fetch failure,
+ * rather than zeroing out real cash on a transient network hiccup.
+ */
+export async function syncLiveCashFromBroker(store: KeyValueStore, brokerAdapter: BrokerAdapter): Promise<void> {
+  let positions: Awaited<ReturnType<BrokerAdapter['fetchPositions']>>;
+  try {
+    positions = await brokerAdapter.fetchPositions();
+  } catch {
+    return; // network failure — keep the last-known value, don't zero out real cash
+  }
+  const eur = positions.find((p) => p.symbol === 'EUR');
+  if (eur) store.set(LIVE_CASH_KEY, eur.quantity);
 }
 
 /** Call the moment a live BUY genuinely fills (see `recordLiveEntryFill`) —

@@ -1,5 +1,32 @@
 # PROJECT_STATE
 
+## The live cash tracker was never reconciled against the real Revolut X balance (2026-09-03)
+Real incident: the first order that ever reached the broker after the UUID
+`client_order_id` fix landed got rejected with `HTTP 422 — "Insufficient
+balance of €0.11; required €20.03"`. The bot's internal `live-cash-eur`
+tracker said €100.15 the whole time. Root cause: `server/liveLedger.mts`
+only ever *initializes* cash from `LIVE_STARTING_CASH_EUR` and then
+debits/credits it locally on fills the bot itself observes — nothing had
+ever checked that number against Revolut X's own `/balances` endpoint
+(`RevolutXBrokerAdapter.fetchPositions()` already existed for exactly this
+"reconciliation" purpose per its own doc comment, but was never called
+anywhere). This is a real correctness bug, not cosmetic: every live entry's
+position size (`assessTrade({equity, ...})` in `liveEntryMirror.mts`) was
+sized against the wrong, larger equity figure all night.
+
+Fixed: new `syncLiveCashFromBroker(store, brokerAdapter)` in
+`liveLedger.mts` overwrites the tracked cash with the broker's real EUR
+balance from `fetchPositions()` — called at the start of every live cycle
+in `autopilotRunner.mts`, before anything sizes a trade. Self-heals any
+future drift (a manual trade on the Revolut X app, an untracked fee, a
+missed fill) automatically, rather than needing a human to report the true
+number. No-ops (keeps the last-known value) on a fetch failure rather than
+zeroing out real cash on a transient network hiccup.
+
+Tests: overwrites cash to the broker's real EUR figure; leaves cash
+untouched when no EUR balance is reported; leaves cash untouched on a
+fetch failure. Full gate green (tsc server+app, 1002 tests, build).
+
 ## UI redesign pass 1: chart visual polish (2026-09-03)
 David asked for the whole dashboard visually elevated to Revolut X / Investing.com
 polish, "especially all the graphs." First increment of that pass, scoped to
