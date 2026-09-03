@@ -42,12 +42,24 @@ function fakeConfirmationGate(outcome: ConfirmationDecision): ConfirmationGate {
   };
 }
 
+/**
+ * `intentId` always mirrors whatever `intent.id` the code actually
+ * submitted (never the caller-supplied `report.intentId`) — matching real
+ * `RevolutXBrokerAdapter` behavior, where the report's intentId always
+ * comes from the submitted intent, never the broker's response body. This
+ * matters since 2026-09-03: `intent.id` now embeds the pending entry's own
+ * `queuedAt` (real incident — Revolut X rejected a genuinely new attempt as
+ * a duplicate client_order_id when it was only ever derived from the
+ * symbol), so a test hardcoding the old plain `live-entry:SYMBOL` id would
+ * silently stop matching and `recordLiveEntryFill`'s own intentId check
+ * would then reject every fill.
+ */
 function fakeBrokerAdapter(report: OrderStatusReport): BrokerAdapter {
   return {
     name: 'fake-broker',
     mode: 'live',
-    async submit() {
-      return report;
+    async submit(intent) {
+      return { ...report, intentId: intent.id };
     },
     async cancel(): Promise<OrderStatusReport> {
       throw new Error('not used');
@@ -91,7 +103,7 @@ describe('mirrorApprovedEntries', () => {
     const killSwitch = new PersistedKillSwitch(store);
     const audit = new PersistedAuditLog(store);
     const report: OrderStatusReport = {
-      intentId: 'live-entry:XBTEUR',
+      intentId: 'live-entry:XBTEUR', // overridden by fakeBrokerAdapter to match the real intent.id
       state: 'filled',
       filledQuantity: 0.01,
       avgFillPrice: 100,
@@ -106,7 +118,10 @@ describe('mirrorApprovedEntries', () => {
       flowParams(report, killSwitch, audit),
       1000,
     );
-    expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report }]);
+    // Freshly queued at now=1000 -> queuedAt=1000 -> this exact intent.id.
+    expect(outcomes).toEqual([
+      { symbol: 'XBTEUR', outcome: 'submitted', report: { ...report, intentId: 'live-entry:XBTEUR:1000' } },
+    ]);
 
     // A real, filled buy must actually become a tracked open live position
     // (stop-loss/take-profit enforcement, visibility to the automatic exit
@@ -260,8 +275,10 @@ describe('mirrorApprovedEntries', () => {
     expect(first).toEqual([{ symbol: 'XBTEUR', outcome: 'pending' }]);
 
     // A later cycle, no new opportunity, but this one is still approved.
+    // Still the SAME pending entry (queuedAt stays 1000, set on the first
+    // call above) — a retry of one attempt must keep the same intent.id.
     const report: OrderStatusReport = {
-      intentId: 'live-entry:XBTEUR',
+      intentId: 'live-entry:XBTEUR:1000',
       state: 'filled',
       filledQuantity: 0.01,
       avgFillPrice: 100,
@@ -286,7 +303,7 @@ describe('mirrorApprovedEntries', () => {
     // First attempt: resting order, zero filled — not tracked as an open
     // position, but must still block a second attempt.
     const restingReport: OrderStatusReport = {
-      intentId: 'live-entry:XBTEUR',
+      intentId: 'live-entry:XBTEUR:1000', // freshly queued at now=1000
       state: 'submitted',
       filledQuantity: 0,
       avgFillPrice: null,
@@ -332,7 +349,7 @@ describe('mirrorApprovedEntries', () => {
     const killSwitch = new PersistedKillSwitch(store);
     const audit = new PersistedAuditLog(store);
     const rejectedReport: OrderStatusReport = {
-      intentId: 'live-entry:XBTEUR',
+      intentId: 'live-entry:XBTEUR:1000', // freshly queued at now=1000
       state: 'rejected',
       filledQuantity: 0,
       avgFillPrice: null,
@@ -363,6 +380,49 @@ describe('mirrorApprovedEntries', () => {
       1500,
     );
     expect(second[0]!.outcome).toBe('submitted');
+  });
+
+  it("gives two genuinely SEPARATE attempts for the same symbol different intent.id's (so deterministicClientOrderId differs), but keeps ONE attempt's id stable across a retry — real incident 2026-09-03: Revolut X rejected a brand-new /buy XBTEUR as a duplicate ('client_order_id ... has already been placed') because intent.id used to be just live-entry:${symbol}, identical for every attempt ever made", async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const captured: OrderIntent[] = [];
+    const params = {
+      confirmationGate: fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' }),
+      brokerAdapter: {
+        name: 'fake-broker',
+        mode: 'live' as const,
+        async submit(intent: OrderIntent): Promise<OrderStatusReport> {
+          captured.push(intent);
+          return { intentId: intent.id, state: 'rejected', filledQuantity: 0, avgFillPrice: null, detail: 'rejected' };
+        },
+        async cancel(): Promise<OrderStatusReport> {
+          throw new Error('not used');
+        },
+        async fetchPositions(): Promise<BrokerPosition[]> {
+          return [];
+        },
+      },
+      killSwitch,
+      audit,
+      verifySymbolExists: async () => true,
+    };
+
+    // First attempt: rejected — a real-world outcome that resolves the
+    // pending entry (not 'pending'), so a later /buy for the same symbol is
+    // a genuinely NEW attempt, not a retry of this one. (A retry of the SAME
+    // still-pending attempt correctly reusing one id is already covered by
+    // "keeps a not-yet-approved entry queued... " above.)
+    await mirrorApprovedEntries(store, [opportunity()], [XBT], { XBTEUR: 100 }, params, 1000);
+
+    // A second, later /buy for the same symbol — a genuinely new attempt.
+    await mirrorApprovedEntries(store, [opportunity()], [XBT], { XBTEUR: 100 }, params, 2000);
+
+    expect(captured).toHaveLength(2);
+    expect(captured[0]!.id).not.toBe(captured[1]!.id);
+    expect(captured[0]!.id).toBe('live-entry:XBTEUR:1000');
+    expect(captured[1]!.id).toBe('live-entry:XBTEUR:2000');
   });
 
   it('scales risk by confidence when confidenceRisk is provided, instead of always sizing at the flat ceiling (found in review, 2026-09-03)', async () => {

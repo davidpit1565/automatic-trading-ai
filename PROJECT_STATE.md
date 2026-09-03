@@ -1,5 +1,38 @@
 # PROJECT_STATE
 
+## A genuinely new /buy was rejected as a duplicate order (2026-09-03)
+David sent `/buy XBTEUR` again, approved it, and Revolut X rejected it:
+`"An order with the client_order_id '...' has already been placed."` —
+a real, repeatable bug that would block every future /buy for a symbol
+once it had ever been attempted before.
+
+Root cause: `deterministicClientOrderId` (revolutXBrokerAdapter.mts) derives
+the client_order_id purely from `intent.id` — deliberately deterministic so
+a RETRY of one attempt reuses the same id (idempotency-safety). But
+`intent.id` was built as `live-entry:${symbol}` (`liveEntryMirror.mts`) —
+identical for every /buy ever made on that symbol, not just retries of the
+same attempt. Revolut X remembers client_order_ids it has seen and rejects
+reuse, so a second, entirely separate /buy for a symbol that had ever been
+attempted before would always collide with the first.
+
+Fixed by embedding the pending entry's own `queuedAt` into `intent.id`
+(`live-entry:${symbol}:${queuedAt}`) — `queuedAt` is set once when an
+attempt is first queued and stays fixed across retries of that SAME
+attempt (until it resolves and is deleted from the pending queue), but a
+genuinely later, separate attempt gets a fresh `queuedAt` and therefore a
+different client_order_id. Preserves the original idempotency property
+(retry-safe) while fixing the duplicate-rejection bug.
+
+Tests: a new regression in `liveEntryMirror.test.ts` capturing the actual
+submitted intents across two separate attempts (different ids) plus the
+already-existing "resumes a pending entry on a later call" test (same id
+across a retry of ONE attempt). Updated the fake broker fixtures in both
+`liveEntryMirror.test.ts` and `manualBuyCommand.test.ts` to mirror the
+real `RevolutXBrokerAdapter`'s behavior (`report.intentId` always reflects
+the submitted `intent.id`, never a caller-fabricated value) instead of
+hardcoding the now-outdated plain `live-entry:SYMBOL` format. Full gate
+green (tsc, 1027 tests, build).
+
 ## Correction to the "production frozen since PR #115" entry: the real limit is Vercel's 100-deploys/day cap, not just cancellation (2026-09-03)
 The `autoJobCancelation: false` fix (PR #140) was real and worth keeping,
 but it wasn't the whole story — GitHub started posting `vercel[bot]`
