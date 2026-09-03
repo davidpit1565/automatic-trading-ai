@@ -1,5 +1,21 @@
 # PROJECT_STATE
 
+## Vercel deploys re-enabled, skipping only the noisy state commits (2026-09-03)
+`vercel.json` had `deploymentEnabled: false` since 2026-08-19 — David disabled
+it deliberately because every ~15-minute "Autopilot state (mid-run cycle
+N/70)" commit to `main` triggered its own Vercel deployment, exhausting the
+100/day account-wide quota shared by every project on the account (this one
+starved his separate Bet-El siddur app of deploys for two days). Re-enabled
+now with a targeted fix instead of a blanket one: `ignoreCommand` checks the
+latest commit's message and skips the build ONLY for `Autopilot state`/
+`Stocks autopilot state` commits (exit 0 = Vercel's own "skip this build"
+signal), so a real code change (a PR merge) still deploys normally while the
+bot's own state-persistence commits — the actual source of the quota
+exhaustion — never trigger a build at all. GitHub Pages
+(davidpit1565.github.io/automatic-trading-ai) remains the primary,
+continuously-updated deployment either way; Vercel is now a working SECOND
+mirror, not the noisy one it was before 2026-08-19.
+
 ## Real money is now LIVE (2026-09-03)
 David generated real Revolut X trading credentials, funded the account
 (100.15€), and set `REAL_MONEY_ENABLED=true` as a repo Variable. The
