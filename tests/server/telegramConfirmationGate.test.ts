@@ -4,7 +4,7 @@ import { PersistedAuditLog } from '../../src/core/autopilot/auditLog';
 import type { OrderIntent } from '../../src/core/execution/types';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
 import { ConfirmationPendingError, TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
-import { pollAllTelegramUpdates, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
+import { getSummaryTimezone, pollAllTelegramUpdates, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
 
 function approvedAssessment(): TradeRiskAssessment {
   return {
@@ -177,6 +177,35 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
 
     expect(sent[0]).toContain('20 דקות');
     expect(sent[0]).toContain('בתוקף עד');
+  });
+
+  it("shows the deadline in the SAME timezone as the daily digests (getSummaryTimezone), not a second hardcoded clock — real bug, 2026-09-03: this stayed on 'Asia/Jerusalem' even after digests moved to Europe/Brussels for David's trip, so the two disagreed by an hour", async () => {
+    const ORIGINAL = process.env['SUMMARY_TIMEZONE'];
+    process.env['SUMMARY_TIMEZONE'] = 'America/New_York'; // deliberately far from Asia/Jerusalem
+    try {
+      vi.setSystemTime(0);
+      const empty = Array.from({ length: 5 }, () => [] as never[]);
+      const { fetchFn, sent } = fakeTelegram(empty);
+      const store = new MemoryStore();
+      const audit = new PersistedAuditLog(store);
+      const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+      const promise = gate.requestConfirmation(intent());
+      const assertion = expect(promise).rejects.toThrow(ConfirmationPendingError);
+      await vi.runAllTimersAsync();
+      await assertion;
+
+      const deadlineMs = 20 * 60 * 1000; // MAX_PENDING_MS, sentAt 0
+      const expected = new Intl.DateTimeFormat('he-IL', {
+        timeZone: getSummaryTimezone(),
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(deadlineMs);
+      expect(getSummaryTimezone()).toBe('America/New_York');
+      expect(sent[0]).toContain(expected);
+    } finally {
+      if (ORIGINAL === undefined) delete process.env['SUMMARY_TIMEZONE'];
+      else process.env['SUMMARY_TIMEZONE'] = ORIGINAL;
+    }
   });
 
   it('renders a sell/exit confirmation with the real P&L against the entry price, not the entry-side risk numbers', async () => {

@@ -12,6 +12,29 @@ import type { KeyValueStore } from '../src/core/data/storage';
 import { SHADOW_MEANINGFUL_TRADES, type ShadowStanding } from '../src/core/autopilot/shadowEvaluator';
 import type { ReadinessKey, RealMoneyReadiness } from '../src/core/feedback/realMoneyReadiness';
 
+/**
+ * Timezone every Hebrew-facing clock time in this project shows — the daily
+ * digests (autopilotRunner.mts) AND any absolute deadline shown in a
+ * Telegram message (telegramConfirmationGate.mts's confirmation expiry).
+ * Overridable via the SUMMARY_TIMEZONE repo variable without a code change;
+ * DST is handled automatically by Intl. Read fresh on every call (not a
+ * frozen module-level const) so an override takes effect immediately and
+ * tests can pin their own expected timezone regardless of the fallback.
+ *
+ * Real bug, found 2026-09-03: this used to be two independent hardcoded
+ * values — digests already defaulted to 'Europe/Brussels' for David's trip,
+ * but the confirmation-gate's own deadline clock was hardcoded to
+ * 'Asia/Jerusalem' and never read this override, so the two clocks
+ * disagreed by an hour while he was travelling. One shared source now.
+ *
+ * TEMPORARY: fallback set to Europe/Brussels for a trip (2026-08-10) —
+ * revert to 'Asia/Jerusalem' once back home, or set SUMMARY_TIMEZONE
+ * instead so this fallback never has to move again.
+ */
+export function getSummaryTimezone(): string {
+  return process.env['SUMMARY_TIMEZONE'] || 'Europe/Brussels';
+}
+
 export interface TelegramConfig {
   token: string;
   chatId: string;
