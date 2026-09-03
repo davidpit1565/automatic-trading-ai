@@ -11,10 +11,11 @@ import { KrakenPublicSource } from '../../src/core/data/krakenPublic';
 
 const NOW = 1_700_000_000_000;
 // Mirrors the curated-majors order in src/core/data/krakenPublic.ts — the
-// agent trades exactly these 10, in this order (`slice(0, 10)`).
+// agent trades exactly these 16, in this order (`slice(0, 16)`).
 const CURATED_SYMBOLS = [
   'XBTEUR', 'ETHEUR', 'SOLEUR', 'XRPEUR', 'ADAEUR',
   'DOGEEUR', 'LTCEUR', 'DOTEUR', 'LINKEUR', 'AVAXEUR',
+  'UNIEUR', 'FILEUR', 'AAVEEUR', 'ATOMEUR', 'XLMEUR', 'ALGOEUR',
 ];
 
 /** Kraken OHLC row: [timeSec, open, high, low, close, vwap, volume, count]. */
@@ -62,8 +63,8 @@ describe('instruments', () => {
     const bitcoin = result.value.find((i) => i.symbol === 'XBTEUR')!;
     expect(bitcoin.base).toBe('BTC'); // display name, not Kraken's XBT
     expect(bitcoin.quote).toBe('EUR');
-    expect(result.value.slice(0, 10).map((i) => i.symbol)).toEqual(CURATED_SYMBOLS);
-    // Broadened beyond the curated 10 with the newly-discovered EUR pair.
+    expect(result.value.slice(0, 16).map((i) => i.symbol)).toEqual(CURATED_SYMBOLS);
+    // Broadened beyond the curated 16 with the newly-discovered EUR pair.
     expect(result.value.some((i) => i.symbol === 'FOOEUR')).toBe(true);
     // Wrong-quote and delisted pairs never make it in.
     expect(result.value.some((i) => i.symbol === 'BARUSD')).toBe(false);
@@ -79,8 +80,8 @@ describe('instruments', () => {
     const result = await source.getInstruments();
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.slice(0, 10).map((i) => i.symbol)).toEqual(CURATED_SYMBOLS);
-    expect(result.value.length).toBeGreaterThan(20); // curated 10 + the static fallback extras
+    expect(result.value.slice(0, 16).map((i) => i.symbol)).toEqual(CURATED_SYMBOLS);
+    expect(result.value.length).toBeGreaterThan(20); // curated 16 + the static fallback extras
   });
 
   it('caches the merged instrument list — one network round trip, not one per call', async () => {
