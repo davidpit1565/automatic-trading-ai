@@ -74,6 +74,7 @@ export type LiveEntryOutcome =
   | { readonly symbol: string; readonly outcome: 'entry-already-outstanding' }
   | { readonly symbol: string; readonly outcome: 'not-approved'; readonly reasons: readonly string[] }
   | { readonly symbol: string; readonly outcome: 'no-broker-symbol' }
+  | { readonly symbol: string; readonly outcome: 'error'; readonly detail: string }
   | ({ readonly symbol: string } & LiveOrderFlowResult);
 
 /**
@@ -113,6 +114,30 @@ export interface MirrorApprovedEntriesOptions {
     readonly confidenceFloor: number;
     readonly maxConfidence: number;
   };
+  /**
+   * Symbols allowed to override a portfolio-capacity refusal (max open
+   * positions / per-asset exposure / correlated-cluster exposure) — David
+   * asked for this 2026-09-03: "if it's not a good trade, tell me why, but
+   * still let me buy it if I decide to." ONLY ever set for a human-initiated
+   * `/buy` (`manualBuyCommand.mts`) — NEVER for an autonomous paper-mirrored
+   * entry, which must keep respecting every cap unconditionally.
+   *
+   * When a listed symbol's FIRST assessment is refused, this re-assesses
+   * with `ignorePortfolioCapacityCaps: true` (see riskEngine.ts — covers max
+   * open positions, per-asset/correlated-cluster/total exposure; the
+   * single-position size ceiling still applies regardless). If THAT still
+   * refuses (a fundamental check failed — invalid stop, reward:risk out of
+   * bounds, the daily-loss circuit breaker, or non-positive equity — none of
+   * which are ever overridable), the original refusal stands unchanged. If
+   * it now approves, the entry proceeds sized against the override — but
+   * still goes through every OTHER unconditional safety check exactly as
+   * normal (real free cash, the broker's own symbol list, the kill switch,
+   * and a human's Telegram confirmation tap, which now also SHOWS the
+   * original refusal as a warning — see `telegramConfirmationGate.mts`'s
+   * `buildConfirmationMessage`) — this only widens which SETUPS reach that
+   * confirmation, never what happens after.
+   */
+  readonly allowCapacityOverrideFor?: ReadonlySet<string>;
 }
 
 export async function mirrorApprovedEntries(
@@ -143,114 +168,147 @@ export async function mirrorApprovedEntries(
   if (Object.keys(pending).length === 0) return outcomes;
 
   for (const symbol of Object.keys(pending)) {
-    const { opportunity } = pending[symbol]!;
-    // Re-read equity/open-positions FRESH on every iteration, not once before
-    // the loop — a real bug found in review (2026-09-03): when a cycle has
-    // MULTIPLE symbols pending at once (the paper autopilot can approve
-    // several entries in one scan), a fill from an EARLIER symbol in this
-    // same loop (debited cash, a new tracked position) must be visible to
-    // the NEXT symbol's risk assessment. Sizing every pending symbol against
-    // the SAME stale pre-loop snapshot let two entries jointly blow past
-    // maxOpenPositions/maxTotalExposurePct/per-asset caps that each looked
-    // fine in isolation, and could size a second buy against cash the first
-    // buy had already spent.
-    const openPositions = openLivePositions(store).map((p) => ({
-      symbol: p.entryAssessment.asset,
-      quantity: p.quantity,
-      entryPrice: p.entryPrice,
-      currentPrice: prices[p.entryAssessment.asset] ?? p.entryPrice,
-    }));
-    const equity = liveEquity(store, prices);
-    const cr = options.confidenceRisk;
-    const riskPerTradePct = cr
-      ? confidenceScaledRiskPct(opportunity.confidence, cr.confidenceFloor, cr.maxConfidence, cr.floorPct, cr.ceilingPct)
-      : undefined;
-    const assessment = assessTrade(
-      opportunity,
-      { equity, openPositions },
-      { limits: riskLimits, dailyLossSoFar: options.dailyLossSoFar, riskPerTradePct },
-    );
-    if (!assessment.approved) {
-      outcomes.push({ symbol, outcome: 'not-approved', reasons: assessment.reasons });
-      delete pending[symbol];
-      store.set(PENDING_KEY, pending);
-      continue;
-    }
-    // Found in review, 2026-09-03: `assessment.positionValue` is sized
-    // against total LIVE equity (cash + open positions' current value), but
-    // an order can only actually be paid for out of free CASH — with an
-    // open position already holding some of that equity, an approved
-    // position size can exceed what's actually spendable. Sending a
-    // confirmation for a trade the account can't pay for wastes a human
-    // approval and would only be caught later by the broker rejecting it.
-    const availableCash = liveCash(store);
-    if (assessment.positionValue > availableCash) {
-      outcomes.push({
-        symbol,
-        outcome: 'not-approved',
-        reasons: [
-          `Position value €${assessment.positionValue.toFixed(2)} exceeds available cash €${availableCash.toFixed(2)}`,
-        ],
-      });
-      delete pending[symbol];
-      store.set(PENDING_KEY, pending);
-      continue;
-    }
-    const brokerSymbol = toRevolutXSymbol(assessment.asset, instruments);
-    if (!brokerSymbol) {
-      outcomes.push({ symbol, outcome: 'no-broker-symbol' });
-      delete pending[symbol];
-      store.set(PENDING_KEY, pending);
-      continue;
-    }
-    // 2026-09-03 real incident: Revolut X rejected a genuinely NEW /buy
-    // attempt as a duplicate ("client_order_id ... has already been placed")
-    // because deterministicClientOrderId (revolutXBrokerAdapter.mts) derives
-    // purely from intent.id, and intent.id used to be just `live-entry:
-    // ${symbol}` — identical for EVERY attempt ever made on this symbol, not
-    // only retries of the SAME attempt. Embedding this pending entry's own
-    // queuedAt keeps retries of ONE attempt stable (queuedAt is set once when
-    // first queued above and doesn't change until this entry resolves and is
-    // deleted from `pending`) while giving a genuinely later, separate
-    // attempt for the same symbol a fresh id.
-    const intent = buildLiveOrderIntent(
-      `live-entry:${symbol}:${pending[symbol]!.queuedAt}`,
-      assessment,
-      now,
-      brokerSymbol,
-    );
-    const result = await runLiveOrderFlow({ ...flowParams, intent });
-    outcomes.push({ symbol, ...result });
-    if (result.outcome !== 'pending') delete pending[symbol];
-    // Only a report that represents REAL, still-live exposure (a genuine
-    // fill, partial or full, or a resting order still open at the broker)
-    // should block future attempts for this symbol — a broker-level
-    // 'rejected'/'cancelled' report is a real 'submitted' outcome (it DID
-    // reach runLiveOrderFlow's terminal broker-call branch) but leaves
-    // NOTHING open. Found 2026-09-03: this symbol got stuck "outstanding"
-    // forever after Revolut X rejected an approved order (HTTP 400) — no
-    // position was ever opened, so `clearOutstandingEntry` (only called
-    // when a position is later confirmed closed) could never run, and
-    // every subsequent /buy for the same symbol was silently swallowed by
-    // the `outstanding.has(...)` guard at the top of this function with no
-    // Telegram response at all.
-    const hasRealExposure = result.outcome === 'submitted' && result.report.state !== 'rejected' && result.report.state !== 'cancelled';
-    if (hasRealExposure) {
-      outstanding.add(symbol);
-      writeOutstanding(store, outstanding);
-      // A genuinely (fully or partially) filled buy must actually be
-      // tracked as an open live position — otherwise it's invisible to
-      // stop-loss/take-profit enforcement, to `liveExitMirror.mts`'s
-      // automatic exit checking, and to `liveEquity` (the exact "invisible
-      // real exposure" class of bug already fixed once tonight at the
-      // broker-adapter level for partial fills — reintroduced here at the
-      // caller level, now fixed the same way).
-      if (recordLiveEntryFill(store, intent, result.report, now)) {
-        const fillPrice = result.report.avgFillPrice ?? intent.limitPrice;
-        debitLiveCash(store, result.report.filledQuantity * fillPrice);
+    try {
+      const { opportunity } = pending[symbol]!;
+      // Re-read equity/open-positions FRESH on every iteration, not once
+      // before the loop — a real bug found in review (2026-09-03): when a
+      // cycle has MULTIPLE symbols pending at once (the paper autopilot can
+      // approve several entries in one scan), a fill from an EARLIER symbol
+      // in this same loop (debited cash, a new tracked position) must be
+      // visible to the NEXT symbol's risk assessment. Sizing every pending
+      // symbol against the SAME stale pre-loop snapshot let two entries
+      // jointly blow past maxOpenPositions/maxTotalExposurePct/per-asset
+      // caps that each looked fine in isolation, and could size a second buy
+      // against cash the first buy had already spent.
+      const openPositions = openLivePositions(store).map((p) => ({
+        symbol: p.entryAssessment.asset,
+        quantity: p.quantity,
+        entryPrice: p.entryPrice,
+        currentPrice: prices[p.entryAssessment.asset] ?? p.entryPrice,
+      }));
+      const equity = liveEquity(store, prices);
+      const cr = options.confidenceRisk;
+      const riskPerTradePct = cr
+        ? confidenceScaledRiskPct(opportunity.confidence, cr.confidenceFloor, cr.maxConfidence, cr.floorPct, cr.ceilingPct)
+        : undefined;
+      let assessment = assessTrade(
+        opportunity,
+        { equity, openPositions },
+        { limits: riskLimits, dailyLossSoFar: options.dailyLossSoFar, riskPerTradePct },
+      );
+      if (!assessment.approved && options.allowCapacityOverrideFor?.has(symbol)) {
+        // David asked for this 2026-09-03: a human `/buy` refused only for
+        // exposure/position-count reasons can still be sized and offered to
+        // the human anyway, with the ORIGINAL refusal shown as a warning —
+        // see `MirrorApprovedEntriesOptions.allowCapacityOverrideFor`'s doc
+        // comment. If ignoring those caps STILL doesn't approve it, a
+        // fundamental check failed (never overridable) — fall through with
+        // the ORIGINAL assessment/reasons, unchanged.
+        const overridden = assessTrade(
+          opportunity,
+          { equity, openPositions },
+          { limits: riskLimits, dailyLossSoFar: options.dailyLossSoFar, riskPerTradePct, ignorePortfolioCapacityCaps: true },
+        );
+        if (overridden.approved) {
+          assessment = {
+            ...overridden,
+            warnings: [
+              ...overridden.warnings,
+              `manual override: normally refused — ${assessment.reasons.join('; ')}`,
+            ],
+          };
+        }
       }
+      if (!assessment.approved) {
+        outcomes.push({ symbol, outcome: 'not-approved', reasons: assessment.reasons });
+        delete pending[symbol];
+        store.set(PENDING_KEY, pending);
+        continue;
+      }
+      // Found in review, 2026-09-03: `assessment.positionValue` is sized
+      // against total LIVE equity (cash + open positions' current value),
+      // but an order can only actually be paid for out of free CASH — with
+      // an open position already holding some of that equity, an approved
+      // position size can exceed what's actually spendable. Sending a
+      // confirmation for a trade the account can't pay for wastes a human
+      // approval and would only be caught later by the broker rejecting it.
+      const availableCash = liveCash(store);
+      if (assessment.positionValue > availableCash) {
+        outcomes.push({
+          symbol,
+          outcome: 'not-approved',
+          reasons: [
+            `Position value €${assessment.positionValue.toFixed(2)} exceeds available cash €${availableCash.toFixed(2)}`,
+          ],
+        });
+        delete pending[symbol];
+        store.set(PENDING_KEY, pending);
+        continue;
+      }
+      const brokerSymbol = toRevolutXSymbol(assessment.asset, instruments);
+      if (!brokerSymbol) {
+        outcomes.push({ symbol, outcome: 'no-broker-symbol' });
+        delete pending[symbol];
+        store.set(PENDING_KEY, pending);
+        continue;
+      }
+      // 2026-09-03 real incident: Revolut X rejected a genuinely NEW /buy
+      // attempt as a duplicate ("client_order_id ... has already been
+      // placed") because deterministicClientOrderId
+      // (revolutXBrokerAdapter.mts) derives purely from intent.id, and
+      // intent.id used to be just `live-entry:${symbol}` — identical for
+      // EVERY attempt ever made on this symbol, not only retries of the SAME
+      // attempt. Embedding this pending entry's own queuedAt keeps retries of
+      // ONE attempt stable (queuedAt is set once when first queued above and
+      // doesn't change until this entry resolves and is deleted from
+      // `pending`) while giving a genuinely later, separate attempt for the
+      // same symbol a fresh id.
+      const intent = buildLiveOrderIntent(
+        `live-entry:${symbol}:${pending[symbol]!.queuedAt}`,
+        assessment,
+        now,
+        brokerSymbol,
+      );
+      const result = await runLiveOrderFlow({ ...flowParams, intent });
+      outcomes.push({ symbol, ...result });
+      if (result.outcome !== 'pending') delete pending[symbol];
+      // Only a report that represents REAL, still-live exposure (a genuine
+      // fill, partial or full, or a resting order still open at the broker)
+      // should block future attempts for this symbol — a broker-level
+      // 'rejected'/'cancelled' report is a real 'submitted' outcome (it DID
+      // reach runLiveOrderFlow's terminal broker-call branch) but leaves
+      // NOTHING open. Found 2026-09-03: this symbol got stuck "outstanding"
+      // forever after Revolut X rejected an approved order (HTTP 400) — no
+      // position was ever opened, so `clearOutstandingEntry` (only called
+      // when a position is later confirmed closed) could never run, and
+      // every subsequent /buy for the same symbol was silently swallowed by
+      // the `outstanding.has(...)` guard at the top of this function with no
+      // Telegram response at all.
+      const hasRealExposure = result.outcome === 'submitted' && result.report.state !== 'rejected' && result.report.state !== 'cancelled';
+      if (hasRealExposure) {
+        outstanding.add(symbol);
+        writeOutstanding(store, outstanding);
+        // A genuinely (fully or partially) filled buy must actually be
+        // tracked as an open live position — otherwise it's invisible to
+        // stop-loss/take-profit enforcement, to `liveExitMirror.mts`'s
+        // automatic exit checking, and to `liveEquity` (the exact "invisible
+        // real exposure" class of bug already fixed once tonight at the
+        // broker-adapter level for partial fills — reintroduced here at the
+        // caller level, now fixed the same way).
+        if (recordLiveEntryFill(store, intent, result.report, now)) {
+          const fillPrice = result.report.avgFillPrice ?? intent.limitPrice;
+          debitLiveCash(store, result.report.filledQuantity * fillPrice);
+        }
+      }
+      store.set(PENDING_KEY, pending);
+    } catch (cause) {
+      // One symbol's transient failure (a network error, an unexpected
+      // broker response) must never stop every OTHER pending symbol in this
+      // same cycle from being attempted (found in review, 2026-09-03) — it
+      // stays queued (not deleted from `pending`) and is retried next cycle.
+      console.error(`mirrorApprovedEntries failed for ${symbol}:`, cause instanceof Error ? cause.message : cause);
+      outcomes.push({ symbol, outcome: 'error', detail: cause instanceof Error ? cause.message : String(cause) });
     }
-    store.set(PENDING_KEY, pending);
   }
   return outcomes;
 }
