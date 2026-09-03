@@ -7,7 +7,7 @@
  * covers both.
  */
 
-import { priceChartSvg, candleChartSvg, chartGeometry, candleGeometry, type ChartGeometry } from './charts';
+import { priceChartSvg, candleChartSvg, chartGeometry, candleGeometry, positionChartTip, type ChartGeometry } from './charts';
 import { formatPrice, formatPct } from './format';
 import type { Candle } from '../core/types';
 
@@ -231,8 +231,8 @@ export function mountEquityChartPanel(
             `<span class="pchart-tip-ohlc">O ${currency}${formatPrice(c.open)} · H ${currency}${formatPrice(c.high)} · L ${currency}${formatPrice(c.low)} · C ${currency}${formatPrice(c.close)}</span>` +
             `<span class="pchart-tip-time">${stamp}</span>`
           : `<span class="pchart-tip-price">${currency}${formatPrice(c.close)}</span><span class="pchart-tip-time">${stamp}</span>`;
-      tip.style.left = `${(px / geo.W) * 100}%`;
-      tip.style.top = `${(py / geo.H) * 100}%`;
+      const wrap = container.querySelector<HTMLElement>('.pchart-wrap');
+      if (wrap) positionChartTip(tip, wrap, px / geo.W, py / geo.H);
     };
     const hide = (): void => { cross?.classList.remove('show'); tip.hidden = true; };
     svg.addEventListener('pointermove', (e) => showAt(e.clientX));
