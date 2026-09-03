@@ -1240,6 +1240,31 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .stack-card .empty { border: none; background: transparent; border-radius: 0; }
 .muted-line { color: var(--text-dim); font-size: 0.75rem; text-align: center; margin-top: 1.1rem; }
 
+/* Holdings table (Home's "Open positions"/"Real open positions") — Revolut X
+   shows a real Cash/Crypto table (Total/Price/Value/Allocation/Unrealised
+   P&L), not a bare list. Total/Price/Allocation are desktop-only (.col-*):
+   on a phone the row keeps showing exactly what it always did — name, value,
+   P&L — the extra columns appear once there's room for them (matches the
+   860px sidebar breakpoint used everywhere else on this page). */
+.holdings-table { width: 100%; border-collapse: collapse; }
+.holdings-table th, .holdings-table td {
+  padding: 0.7rem 0.5rem; text-align: right; font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--border);
+}
+.holdings-table th:first-child, .holdings-table td:first-child { text-align: left; padding-inline-start: 1.1rem; }
+.holdings-table th:last-child, .holdings-table td:last-child { padding-inline-end: 1.1rem; }
+.holdings-table thead th {
+  color: var(--text-dim); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding-top: 0.9rem;
+}
+.holdings-table tbody td { font-size: 0.92rem; font-weight: var(--fw-semibold); }
+.holdings-table tbody tr:last-child td { border-bottom: none; padding-bottom: 0.9rem; }
+.holdings-table .holdings-id { display: flex; align-items: center; gap: 0.6rem; }
+.holdings-table .col-total, .holdings-table .col-price, .holdings-table .col-alloc { display: none; }
+@media (min-width: 860px) {
+  .holdings-table .col-total, .holdings-table .col-price, .holdings-table .col-alloc { display: table-cell; }
+}
+
 /* Tools grid - responsive columns */
 .tools-group-title { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
   color: var(--text-dim); margin: 1.4rem 0 0.55rem; }
@@ -1347,9 +1372,15 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 
 /* ===== LARGE DESKTOP: ≥1400px ===== */
 @media (min-width: 1400px) {
+  /* Revolut X runs genuinely full-bleed (chart/table area stretches to fill
+     whatever the sidebar leaves) — capping .content at 1200px here instead
+     left a large dead strip of pure background on an actual wide monitor
+     (confirmed 2026-09-03: David's own screenshot, ~2000px wide, showed a
+     ~600px empty gap past the rail). Drop the cap; the ≥860px rule's
+     `calc(100% - 210px)` already governs every width from there up, and the
+     rail's own fixed column width is what keeps IT from stretching. */
   .content {
     padding: 2rem;
-    max-width: 1200px;
   }
   .tools-grid { grid-template-columns: repeat(3, 1fr); gap: 1rem; }
   .home-grid.active { grid-template-columns: minmax(0, 1fr) 360px; gap: 2rem; }
@@ -1384,6 +1415,23 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .icon-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2;
   stroke-linecap: round; stroke-linejoin: round; }
 .detail-name { font-size: 1.15rem; font-weight: var(--fw-bold); letter-spacing: var(--tracking-tight); }
+/* Pair switcher (David asked for a "BTC-EUR ▾"-style selector like Revolut
+   X's Trade page) — the name itself is the trigger, matching the reference;
+   .detail-name keeps its exact prior look/text so nothing else changes. */
+.detail-name-btn { display: flex; align-items: center; gap: 0.3rem; background: none; border: none;
+  color: inherit; padding: 0; cursor: pointer; }
+.pair-chevron { width: 15px; height: 15px; fill: none; stroke: var(--text-dim); stroke-width: 2.2;
+  stroke-linecap: round; stroke-linejoin: round; }
+.pair-menu { position: relative; z-index: 5; margin: -0.4rem 0 0.9rem; max-height: 320px; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); }
+.pair-menu-item { width: 100%; display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.9rem;
+  background: transparent; border: none; border-bottom: 1px solid var(--border); color: var(--text); cursor: pointer;
+  text-align: left; }
+.pair-menu-item:last-child { border-bottom: none; }
+.pair-menu-item:hover { background: var(--surface-hover); }
+.pair-menu-item.active { background: var(--surface-raised); }
+.pair-menu-item .row-title { flex: 1; font-size: 0.9rem; font-weight: var(--fw-semibold); }
+.pair-menu-item .row-sub { font-size: 0.78rem; }
 .detail-price { text-align: right; }
 .detail-price-row { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.7rem; }
 .star-btn { background: color-mix(in srgb, var(--surface-raised) 55%, transparent);
@@ -1410,6 +1458,22 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .view-tab.active { background: var(--surface-raised); color: #fff; }
 .detail-nonchart { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
   padding: 0.8rem; box-shadow: var(--shadow-xs); min-height: 160px; }
+
+/* Trade tab — mirrors Revolut X's order form visually; every control is
+   inert by design (see orderFormHtml's doc comment in marketsView.ts). */
+.order-form { display: flex; flex-direction: column; gap: 1rem; }
+.of-toggle { display: flex; gap: 0.3rem; background: var(--surface-raised); border-radius: var(--r-pill); padding: 0.3rem; }
+.of-btn { flex: 1; padding: 0.6rem; border: none; border-radius: var(--r-pill); background: transparent;
+  color: var(--text-dim); font-weight: var(--fw-bold); cursor: not-allowed; }
+.of-btn.active.buy { background: var(--hot-tint); color: var(--hot); }
+.of-btn.active.sell { background: var(--cold-tint); color: var(--cold); }
+.of-field { display: flex; flex-direction: column; gap: 0.35rem; }
+.of-field label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.of-input { background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: 0.8rem 1rem; font-weight: var(--fw-bold); font-size: 1.05rem; display: flex; justify-content: space-between; }
+.of-unit { color: var(--text-dim); font-weight: var(--fw-semibold); }
+.of-note { font-size: 0.82rem; color: var(--text-dim); line-height: 1.5; margin: 0; }
+.of-note code { background: var(--surface-raised); padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.9em; color: var(--text); }
 .orderbook-table { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
 .orderbook-head { display: flex; justify-content: space-between; color: var(--text-dim); font-size: 0.72rem;
   padding: 0 0.2rem 0.3rem; }
