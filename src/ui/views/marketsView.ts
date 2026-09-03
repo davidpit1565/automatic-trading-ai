@@ -412,6 +412,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       `<span class="row-sub"><span class="row-clock ${stale ? 'stale' : 'fresh'}" aria-hidden="true"></span>` +
       `${formatClock(m.updatedAt)} · ${escapeHtml(m.symbol)}</span>` +
       `</span>` +
+      `<span class="market-row-vol"><span class="dstat-label">24h Vol</span><span>€${compact(m.quoteVolume)}</span></span>` +
       `<span class="market-row-num">` +
       `<span class="row-price${flash}">€${formatMarketPrice(m.price)}</span>` +
       `<span class="chg ${up ? 'up' : 'down'}">${formatSignedPrice(m.change, m.price)} (${formatPct(m.changePct)})</span>` +
