@@ -28,6 +28,149 @@ tokens from the foundation PR here since it isn't merged yet and those
 custom properties don't exist on `main`; this PR uses plain literals
 matching the surrounding code, to stay safe to merge in any order.
 
+## UI redesign pass: typography/weight/tracking/spacing foundation tokens (2026-09-03)
+Part of David's request to visually elevate the dashboard to Revolut X /
+Investing.com polish. This increment lays the token foundation the task asked
+for first ("cascades everywhere") — `src/ui/styles.css` only, and deliberately
+a **zero-visual-change** pass: every substitution maps an existing literal
+value to a newly-named token with the identical number, so nothing on screen
+moves. Extends the existing `:root` token system (--hot/--cold, --shadow-*,
+--r-*) rather than introducing a parallel one:
+
+- `--fw-medium` (550), `--fw-semibold` (650), `--fw-bold` (750) — the three
+  font-weight values already used dozens of times each across the file — and
+  `--tracking-tight` (-0.01em), `--tracking-wide` (0.06em), likewise the two
+  dominant recurring letter-spacing values. Applied via exact-match
+  substitution everywhere they occurred (49 font-weight + 25 letter-spacing
+  declarations).
+- `--sp-1` through `--sp-7` (0.25rem-2rem, 4px rhythm), applied so far to the
+  top-level shared layout containers (`.content`, `.block`) where an exact
+  match existed.
+- Deliberately NOT done here (left as literals): one-off weight/tracking
+  values used once or twice (600, 680, 700, 800, etc.) — tokenising a value
+  with no reuse adds indirection without a consistency payoff, and would be
+  unnecessary refactoring. Font-size stays un-tokenised for now: the existing
+  sizes are legitimately context-tuned per component rather than drawn from a
+  shared scale, and consolidating ~30 distinct values into a clean scale
+  without visual regression is a larger, separate, higher-risk pass than this
+  one. Card/border/shadow treatment was reviewed and left alone — it's
+  already a consistent, shared system (`--shadow-xs/sm/md/lg`, `--border`,
+  `--r-*` used uniformly across every card class already), not something
+  needing a foundation pass.
+
+Verified visually: dev server + Playwright at a 400px phone viewport with
+`?demo=1`, Home/Crypto and Tools views — pixel-identical to before, as
+expected for a token-naming-only change. Full gate green: `tsc`, `vitest run`
+(999 tests, all passing, none touched), `npm run build`.
+
+Opened as its own PR (branch `claude/ui-redesign-theme-foundation`), based on
+`main` independently of the chart-polish PR (`claude/ui-redesign-charts`) so
+the two can be reviewed and merged separately. Next passes: home view and
+markets view visual polish (spacing/elevation applied at the component level,
+building on these tokens).
+
+## UI redesign pass: press feedback for Tools-grid and remaining-views controls (2026-09-03)
+Last increment of this pass of David's dashboard visual-elevation request,
+covering the lowest-priority bucket ("remaining views — portfolio, grid,
+backtest, validation, stocks, as time allows"): the Tools navigation grid
+that leads to all of them, plus its back button and the Market Scan table
+rows, none of which had press feedback. `src/ui/styles.css` only.
+
+- `.tool-card` (the Backtest/Validation/Grid/Portfolio/Stocks nav grid on the
+  Tools tab) had a hover lift but nothing for the tap itself — added
+  `scale(0.97)` + `--shadow-xs` on `:active`.
+- `.tool-back` (the back button inside every one of those tool panels) —
+  added `scale(0.96)` on `:active`.
+- `.scan-row` (Market Scan's table rows) — a `<tr>` can't take a scale-press
+  without misaligning its cells, so it gets a background darken on `:active`
+  instead, matching what `.tappable`/`.row` cards elsewhere already do for
+  their own press state.
+
+Verified visually: dev server + Playwright, confirmed via `getComputedStyle`
+that `.tool-card` applies `scale(0.97)` on press (matrix confirms it).
+
+Full gate green: `tsc`, `vitest run` (1002 tests — 3 more than earlier today
+from other work landed on `main` meanwhile; none touched by this diff),
+`build`. Branch `claude/ui-redesign-tools-controls`, based on latest `main`.
+
+This closes out the micro-interaction gap across every priority tier from
+the original request (charts → theme tokens → Home → Markets/coin-detail →
+remaining views). Five PRs total from this pass; see each PR's own
+description for specifics. Anything beyond press-state consistency and the
+chart/token work already done — e.g. a full font-size scale consolidation,
+or component-level (not just token-level) spacing/elevation redesign of
+individual remaining views — is intentionally left for a future pass rather
+than attempted as one large, harder-to-review change.
+
+## The live cash tracker was never reconciled against the real Revolut X balance (2026-09-03)
+Real incident: the first order that ever reached the broker after the UUID
+`client_order_id` fix landed got rejected with `HTTP 422 — "Insufficient
+balance of €0.11; required €20.03"`. The bot's internal `live-cash-eur`
+tracker said €100.15 the whole time. Root cause: `server/liveLedger.mts`
+only ever *initializes* cash from `LIVE_STARTING_CASH_EUR` and then
+debits/credits it locally on fills the bot itself observes — nothing had
+ever checked that number against Revolut X's own `/balances` endpoint
+(`RevolutXBrokerAdapter.fetchPositions()` already existed for exactly this
+"reconciliation" purpose per its own doc comment, but was never called
+anywhere). This is a real correctness bug, not cosmetic: every live entry's
+position size (`assessTrade({equity, ...})` in `liveEntryMirror.mts`) was
+sized against the wrong, larger equity figure all night.
+
+Fixed: new `syncLiveCashFromBroker(store, brokerAdapter)` in
+`liveLedger.mts` overwrites the tracked cash with the broker's real EUR
+balance from `fetchPositions()` — called at the start of every live cycle
+in `autopilotRunner.mts`, before anything sizes a trade. Self-heals any
+future drift (a manual trade on the Revolut X app, an untracked fee, a
+missed fill) automatically, rather than needing a human to report the true
+number. No-ops (keeps the last-known value) on a fetch failure rather than
+zeroing out real cash on a transient network hiccup.
+
+Tests: overwrites cash to the broker's real EUR figure; leaves cash
+untouched when no EUR balance is reported; leaves cash untouched on a
+fetch failure. Full gate green (tsc server+app, 1002 tests, build).
+
+## UI redesign pass 1: chart visual polish (2026-09-03)
+David asked for the whole dashboard visually elevated to Revolut X / Investing.com
+polish, "especially all the graphs." First increment of that pass, scoped to
+`src/ui/styles.css` only (no `charts.ts` markup/geometry changes, no view changes) —
+smallest possible diff for a change this visible, and zero risk to the SVG
+structure the chart tests and crosshair-overlay code depend on:
+
+- Candlestick bodies/wicks: solid full-opacity fill (was 0.8/0.88, which
+  muddied the down-candle red especially) with a crisper, thinner stroke and
+  a smaller corner radius — professional charts (Investing.com/TradingView)
+  render solid bodies, not translucent ones.
+- Chart grid lines: solid hairlines instead of a dashed pattern — a dashed
+  grid reads as a sketch, not a finished instrument. Axis labels gained
+  tabular-nums and a touch of letter-spacing so ticks line up cleanly.
+- Support/resistance dashed lines and volume-bar underlay opacity now come
+  from CSS class rules (which the cascade lets win over the low-specificity
+  inline presentation attributes `charts.ts` sets) so they can be tuned
+  without touching the chart-generation code at all; volume bars dialled
+  down to a quiet underlay instead of competing visually with the candles.
+- Sparklines (`.spark polyline`, home/market cards) and the line-mode price
+  chart's polyline both got a hair thinner via the same CSS-overrides-inline-
+  attribute mechanism, for a more restrained "instrument" line vs. the
+  previous thicker default.
+
+Verified visually: ran the dev server, opened the BTC candlestick detail
+chart in a real browser at a 400px phone viewport with `?demo=1` (Playwright,
+`/opt/pw-browsers/chromium`) and inspected the screenshot — crisp solid
+candles, clean hairline grid, subtle volume bars, all rendering correctly.
+(Noted in passing, not fixed here — out of scope for a chart-only diff: the
+"Crypto" hub's portfolio-value hero and open-positions list stay in their
+loading/"waiting for the cloud agent" state in this sandbox even under
+`?demo=1`, because that data comes from a separate cloud-state fetch that
+`?demo=1` does not stub — a pre-existing sandbox network limitation, not a
+regression from this change.)
+
+Full gate green: `tsc --project tsconfig.app.json --noEmit`, `vitest run`
+(999 tests, all passing, none touched), `npm run build`. Opened as its own
+PR (branch `claude/ui-redesign-charts`) rather than folded into a larger
+diff — David asked for focused, reviewable increments, not one big unreviewable
+change. Next passes (not done here): global typography/spacing token
+refinement, then home/markets view polish.
+
 ## The website now shows the REAL Revolut X account, not just the simulated one (2026-09-03)
 David asked why the website "still shows the money as demo" even though
 real money is live — correct: `homeView.ts`'s hero card only ever read the
