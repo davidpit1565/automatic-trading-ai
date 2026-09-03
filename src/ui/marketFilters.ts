@@ -66,6 +66,42 @@ export function sortRows(rows: readonly MarketRow[], key: SortKey): MarketRow[] 
   }
 }
 
+const MOVER_MIN_VOLUME = 25_000;
+/**
+ * Liquidity filter for gainers/losers — only applied when the source
+ * actually reports volume. Just the Kraken batch ticker does; the
+ * per-symbol fallback and the demo source both report zero, which is the
+ * state the deployed app lands in whenever Kraken is unreachable. Applying
+ * the floor unconditionally would empty gainers/losers completely in
+ * exactly that situation.
+ */
+function liquidEnough(rows: readonly MarketRow[]): (row: MarketRow) => boolean {
+  const hasVolume = rows.some((r) => r.quoteVolume > 0);
+  return (row) => !hasVolume || row.quoteVolume >= MOVER_MIN_VOLUME;
+}
+
+/**
+ * Top gaining/losing markets by 24h change, liquidity-filtered when volume
+ * data is available. The ONE shared definition for both the full Markets
+ * browser's Gainers/Losers tabs and the Home screen's Top Movers preview —
+ * so the two can never silently show different rankings.
+ */
+export function topGainers(rows: readonly MarketRow[], limit = Infinity): MarketRow[] {
+  const liquid = liquidEnough(rows);
+  return rows
+    .filter((r) => r.changePct > 0 && liquid(r))
+    .sort((a, b) => b.changePct - a.changePct)
+    .slice(0, limit);
+}
+
+export function topLosers(rows: readonly MarketRow[], limit = Infinity): MarketRow[] {
+  const liquid = liquidEnough(rows);
+  return rows
+    .filter((r) => r.changePct < 0 && liquid(r))
+    .sort((a, b) => a.changePct - b.changePct)
+    .slice(0, limit);
+}
+
 const WATCHLIST_KEY = 'markets-watchlist';
 
 /**

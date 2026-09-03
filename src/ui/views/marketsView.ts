@@ -29,7 +29,7 @@ import { escapeHtml, formatClock, formatMarketPrice, formatPct, formatPrice, for
 import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
 import { fetchCloudState } from '../cloudState';
 import { fetchCoinStats } from '../coinStats';
-import { SORT_OPTIONS, searchRows, sortRows, Watchlist, type SortKey } from '../marketFilters';
+import { SORT_OPTIONS, searchRows, sortRows, topGainers, topLosers, Watchlist, type SortKey } from '../marketFilters';
 import { LocalStorageStore } from '../../core/data/storage';
 import type { ViewHandle } from '../viewLifecycle';
 
@@ -86,44 +86,28 @@ interface Category {
   readonly label: string;
   readonly apply: (rows: readonly MarketRow[]) => MarketRow[];
 }
-/** Ignore microcaps when ranking movers — a 300% move on €40 of volume is noise. */
-const MOVER_MIN_VOLUME = 25_000;
-/**
- * Liquidity filter for the mover tabs — but ONLY when the source actually
- * reports volume. Just the Kraken batch ticker does; the per-symbol fallback
- * and the demo source both report zero, which is the state the deployed app
- * lands in whenever Kraken is unreachable. Applying the floor unconditionally
- * emptied Gainers and Losers completely in exactly that situation.
- */
-function liquidEnough(rows: readonly MarketRow[]): (row: MarketRow) => boolean {
-  const hasVolume = rows.some((r) => r.quoteVolume > 0);
-  return (row) => !hasVolume || row.quoteVolume >= MOVER_MIN_VOLUME;
-}
 const CATEGORIES: Category[] = [
   { key: 'popular', label: 'Popular', apply: (rows) => rows.slice(0, 40) },
   { key: 'all', label: 'All', apply: (rows) => [...rows] },
-  {
-    key: 'gainers',
-    label: 'Gainers',
-    apply: (rows) => {
-      const liquid = liquidEnough(rows);
-      return rows.filter((r) => r.changePct > 0 && liquid(r)).sort((a, b) => b.changePct - a.changePct);
-    },
-  },
-  {
-    key: 'losers',
-    label: 'Losers',
-    apply: (rows) => {
-      const liquid = liquidEnough(rows);
-      return rows.filter((r) => r.changePct < 0 && liquid(r)).sort((a, b) => a.changePct - b.changePct);
-    },
-  },
+  { key: 'gainers', label: 'Gainers', apply: (rows) => topGainers(rows) },
+  { key: 'losers', label: 'Losers', apply: (rows) => topLosers(rows) },
   {
     key: 'volume',
     label: 'Volume',
     apply: (rows) => [...rows].sort((a, b) => b.quoteVolume - a.quoteVolume),
   },
 ];
+
+let pendingCategoryKey: string | null = null;
+/**
+ * Lets another view (Home's "Top movers" preview) open the Markets list
+ * already scoped to a category, instead of always landing on Popular.
+ * Consumed (and cleared) once by the next `renderMarketsView` mount — set
+ * this right before triggering the `[data-nav="markets"]` navigation.
+ */
+export function openMarketsAt(key: string): void {
+  pendingCategoryKey = key;
+}
 
 interface Range {
   readonly key: string;
@@ -315,14 +299,19 @@ function tradesListHtml(trades: RecentTrade[]): string {
 }
 
 export function renderMarketsView(container: HTMLElement, data: ActiveDataSource): ViewHandle {
+  const requestedKey = pendingCategoryKey;
+  pendingCategoryKey = null;
+  const requestedIndex = requestedKey ? CATEGORIES.findIndex((c) => c.key === requestedKey) : -1;
+  const initialIndex = requestedIndex >= 0 ? requestedIndex : 0;
+
   container.innerHTML = `
     <div id="mk-list-view">
       <h2 class="view-title">Markets</h2>
       <p class="view-sub">Every EUR market on Kraken, live. Tap a coin for its chart.</p>
       <div class="mk-tabs" id="mk-tabs" role="tablist">${CATEGORIES.map(
         (c, i) =>
-          `<button class="mk-tab${i === 0 ? ' active' : ''}" role="tab" ` +
-          `aria-selected="${i === 0}" data-cat="${c.key}">${c.label}</button>`,
+          `<button class="mk-tab${i === initialIndex ? ' active' : ''}" role="tab" ` +
+          `aria-selected="${i === initialIndex}" data-cat="${c.key}">${c.label}</button>`,
       ).join('')}<button class="mk-tab" role="tab" aria-selected="false" data-cat="watchlist">★ Watchlist</button></div>
       <div class="mk-controls">
         <input id="mk-search" class="mk-search" type="search" inputmode="search"
@@ -345,7 +334,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   let markets: MarketRow[] = [];
   /** Category + search + sort applied to `markets` — what the list shows. */
   let view: MarketRow[] = [];
-  let category: Category = CATEGORIES[0]!;
+  let category: Category = CATEGORIES[initialIndex]!;
   let query = '';
   let sortKey: SortKey = 'default';
   /** null until the Watchlist tab is first used — nothing touches storage before then. */

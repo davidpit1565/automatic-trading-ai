@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { MemoryStore } from '../../src/core/data/storage';
-import { searchRows, sortRows, matchesQuery, Watchlist } from '../../src/ui/marketFilters';
+import { searchRows, sortRows, matchesQuery, topGainers, topLosers, Watchlist } from '../../src/ui/marketFilters';
 import type { MarketRow } from '../../src/ui/markets';
 
 const row = (over: Partial<MarketRow> & { symbol: string }): MarketRow => ({
@@ -77,6 +77,52 @@ describe('sort', () => {
     const before = [...ROWS];
     sortRows(ROWS, 'change');
     sortRows(ROWS, 'name');
+    expect(ROWS).toEqual(before);
+  });
+});
+
+describe('topGainers / topLosers', () => {
+  it('keeps only positive movers, ranked biggest first', () => {
+    // PEPE is a genuine gainer (+9.9%) but its 10k quoteVolume falls under
+    // the liquidity floor while other rows report real volume — correctly
+    // excluded as noise, not a real "top mover" (see the illiquid-filtering
+    // test below for the fixture where NO row reports volume).
+    expect(topGainers(ROWS).map((r) => r.base)).toEqual(['ETH']);
+  });
+
+  it('keeps only negative movers, ranked biggest drop first', () => {
+    expect(topLosers(ROWS).map((r) => r.base)).toEqual(['ADA', 'BTC']);
+  });
+
+  it('respects a limit', () => {
+    expect(topLosers(ROWS, 1).map((r) => r.base)).toEqual(['ADA']);
+    const gainers: MarketRow[] = [
+      row({ symbol: 'A', base: 'A', changePct: 50, quoteVolume: 0 }),
+      row({ symbol: 'B', base: 'B', changePct: 30, quoteVolume: 0 }),
+    ];
+    expect(topGainers(gainers, 1).map((r) => r.base)).toEqual(['A']);
+  });
+
+  it('filters out illiquid movers ONLY when the source actually reports volume', () => {
+    const withVolume: MarketRow[] = [
+      row({ symbol: 'A', base: 'A', changePct: 50, quoteVolume: 500 }), // below the floor
+      row({ symbol: 'B', base: 'B', changePct: 10, quoteVolume: 100_000 }),
+    ];
+    expect(topGainers(withVolume).map((r) => r.base)).toEqual(['B']);
+
+    // A source reporting zero volume everywhere (e.g. the per-symbol
+    // fallback, or the demo source) must not silently empty the list.
+    const noVolumeData: MarketRow[] = [
+      row({ symbol: 'A', base: 'A', changePct: 50, quoteVolume: 0 }),
+      row({ symbol: 'B', base: 'B', changePct: 10, quoteVolume: 0 }),
+    ];
+    expect(topGainers(noVolumeData).map((r) => r.base)).toEqual(['A', 'B']);
+  });
+
+  it('never mutates the input list', () => {
+    const before = [...ROWS];
+    topGainers(ROWS);
+    topLosers(ROWS);
     expect(ROWS).toEqual(before);
   });
 });

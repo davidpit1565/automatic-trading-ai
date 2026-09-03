@@ -58,7 +58,7 @@ describe('View lifecycle (pause/resume)', () => {
     setSpy.mockRestore();
   });
 
-  it('Home view: pause() clears all three polls and resume() restarts them', async () => {
+  it('Home view: pause() clears all four polls and resume() restarts them', async () => {
     const container = document.createElement('section');
     document.body.appendChild(container);
     const clearSpy = vi.spyOn(window, 'clearInterval');
@@ -66,10 +66,10 @@ describe('View lifecycle (pause/resume)', () => {
 
     const handle = renderHomeView(container, await makeData());
     const mountedSetCalls = setSpy.mock.calls.length;
-    expect(mountedSetCalls).toBe(3);
+    expect(mountedSetCalls).toBe(4);
 
     handle.pause();
-    expect(clearSpy).toHaveBeenCalledTimes(3);
+    expect(clearSpy).toHaveBeenCalledTimes(4);
 
     handle.resume();
     expect(setSpy.mock.calls.length).toBe(mountedSetCalls * 2);

@@ -6,12 +6,17 @@
 
 import type { ActiveDataSource } from '../dataSource';
 import { fetchCloudState, type CloudState } from '../cloudState';
-import { fetchTopMarkets, findBtcSymbol, type MarketSnapshot } from '../markets';
+import { fetchTopMarkets, fetchMarketRows, findBtcSymbol, type MarketSnapshot, type MarketRow } from '../markets';
+import { topGainers, topLosers } from '../marketFilters';
+import { openMarketsAt } from './marketsView';
 import { sparklineSvg } from '../charts';
 import { attachCoinLogoFallback, coinLogoHtml, completedLogoHtml } from '../coinLogo';
 import { formatPrice, formatPct, formatPriceSplit } from '../format';
 import { skeletonRowsHtml } from '../loadingStates';
 import type { ViewHandle } from '../viewLifecycle';
+
+const MOVERS_PREVIEW_COUNT = 5;
+type MoverKey = 'gainers' | 'losers';
 
 const PRICE_REFRESH_MS = 15_000;
 const STATE_REFRESH_MS = 120_000;
@@ -66,6 +71,18 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   marketsStrip.id = 'home-markets';
   marketsWrap.appendChild(marketsStrip);
 
+  const moversWrap = el('section', 'block');
+  moversWrap.innerHTML = `
+    <div class="block-head"><h2>Top movers</h2><button class="link-btn" id="movers-seeall" data-nav="markets">See all</button></div>
+    <div class="mk-tabs movers-toggle" role="tablist">
+      <button class="mk-tab active" role="tab" aria-selected="true" data-mover="gainers">Gainers</button>
+      <button class="mk-tab" role="tab" aria-selected="false" data-mover="losers">Losers</button>
+    </div>`;
+  const moversList = el('div', 'stack stack-card');
+  moversList.id = 'home-movers';
+  moversList.innerHTML = skeletonRowsHtml(4);
+  moversWrap.appendChild(moversList);
+
   const posWrap = el('section', 'block');
   posWrap.innerHTML = `<div class="block-head"><h2>Open positions</h2></div>`;
   const posList = el('div', 'stack stack-card');
@@ -83,15 +100,35 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   const status = el('p', 'muted-line', 'Loading the cloud agent…');
   status.id = 'home-status';
 
-  container.append(hero, posWrap, marketsWrap, readyWrap, actWrap, status);
+  container.append(hero, posWrap, marketsWrap, moversWrap, readyWrap, actWrap, status);
   attachCoinLogoFallback(container);
 
   let state: CloudState | null = null;
+  let moverRows: MarketRow[] = [];
+  let moverKey: MoverKey = 'gainers';
 
   const setText = (id: string, text: string): void => {
     const node = container.querySelector<HTMLElement>(`#${id}`);
     if (node) node.textContent = text;
   };
+
+  function renderMovers(): void {
+    const picked = (moverKey === 'gainers' ? topGainers : topLosers)(moverRows, MOVERS_PREVIEW_COUNT);
+    moversList.innerHTML = '';
+    if (picked.length === 0) {
+      moversList.appendChild(el('div', 'empty', 'No movers to show right now.'));
+      return;
+    }
+    for (const m of picked) {
+      const up = m.changePct >= 0;
+      const row = el('div', 'row tappable');
+      row.dataset['nav'] = 'markets';
+      row.innerHTML = `
+        <div class="row-main">${coinLogoHtml(m.base)}<div><div class="row-title">${m.label}</div><div class="row-sub">${m.base}</div></div></div>
+        <div class="row-side"><span class="row-title">${euro(m.price)}</span><span class="chg ${up ? 'up' : 'down'}">${formatPct(m.changePct)}</span></div>`;
+      moversList.appendChild(row);
+    }
+  }
 
   function renderMarkets(markets: MarketSnapshot[]): void {
     marketsStrip.innerHTML = '';
@@ -272,19 +309,54 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     renderMarkets(await fetchTopMarkets(data, 6));
   }
 
+  async function loadMovers(): Promise<void> {
+    // One cheap batch-ticker request (fetchMarketRows) covers the WHOLE
+    // market, unlike fetchTopMarkets above (one candle fetch per symbol) —
+    // gainers/losers ranking needs the full universe, not just 6 majors.
+    moverRows = await fetchMarketRows(data);
+    renderMovers();
+  }
+
+  // Tapping any individual mover row also deep-links into the SAME
+  // gainers/losers tab that's showing here, not the default "Popular" one.
+  moversList.addEventListener('click', () => openMarketsAt(moverKey));
+
+  moversWrap.querySelector('.movers-toggle')!.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLElement>('[data-mover]');
+    if (!btn) return;
+    const key = btn.dataset['mover'] as MoverKey;
+    if (key === moverKey) return;
+    moverKey = key;
+    for (const tab of moversWrap.querySelectorAll<HTMLElement>('.mk-tab')) {
+      const active = tab === btn;
+      tab.classList.toggle('active', active);
+      tab.setAttribute('aria-selected', String(active));
+    }
+    renderMovers();
+  });
+  // Deep-links "See all" straight into the Markets browser already scoped to
+  // whichever tab (Gainers/Losers) is showing here — set BEFORE the click's
+  // [data-nav="markets"] bubbles to main.ts's delegated navigation handler.
+  container.querySelector<HTMLElement>('#movers-seeall')!.addEventListener('click', () => {
+    openMarketsAt(moverKey);
+  });
+
   let priceTimer = 0;
   let stateTimer = 0;
   let marketsTimer = 0;
+  let moversTimer = 0;
 
   const start = (): void => {
     priceTimer = window.setInterval(() => void refreshPrices(), PRICE_REFRESH_MS);
     stateTimer = window.setInterval(() => void loadState(), STATE_REFRESH_MS);
     marketsTimer = window.setInterval(() => void loadMarkets(), PRICE_REFRESH_MS * 4);
+    moversTimer = window.setInterval(() => void loadMovers(), PRICE_REFRESH_MS * 4);
   };
 
   renderReadiness();
   void loadState();
   void loadMarkets();
+  void loadMovers();
   start();
 
   return {
@@ -292,10 +364,12 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       window.clearInterval(priceTimer);
       window.clearInterval(stateTimer);
       window.clearInterval(marketsTimer);
+      window.clearInterval(moversTimer);
     },
     resume: () => {
       void loadState();
       void loadMarkets();
+      void loadMovers();
       start();
     },
   };

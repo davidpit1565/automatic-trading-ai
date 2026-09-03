@@ -52,6 +52,44 @@ describe('Home view (DOM integration)', () => {
     expect(container.querySelector('#home-markets')!.children.length).toBeGreaterThan(0);
   });
 
+  it('shows Top movers (gainers by default), toggles to losers, and deep-links "See all" into the Markets view scoped to whichever tab is showing', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderHomeView(container, await makeData());
+
+    await waitFor(() => container.querySelector('#home-movers .row, #home-movers .empty') !== null);
+    const gainerRows = container.querySelectorAll('#home-movers .row');
+    if (gainerRows.length > 0) {
+      // Every rendered row's change badge must actually be positive — the
+      // whole point of the Gainers tab.
+      for (const row of Array.from(gainerRows)) {
+        expect(row.querySelector('.chg')!.classList.contains('up')).toBe(true);
+      }
+    }
+
+    // Toggle to Losers — a pure client-side re-render, no new fetch.
+    const losersTab = Array.from(container.querySelectorAll<HTMLButtonElement>('.mk-tab')).find(
+      (b) => b.dataset['mover'] === 'losers',
+    )!;
+    losersTab.click();
+    await waitFor(() => losersTab.classList.contains('active'));
+    expect(losersTab.getAttribute('aria-selected')).toBe('true');
+    const loserRows = container.querySelectorAll('#home-movers .row');
+    for (const row of Array.from(loserRows)) {
+      expect(row.querySelector('.chg')!.classList.contains('down')).toBe(true);
+    }
+
+    // "See all" while on Losers must deep-link the Markets view straight
+    // into its own Losers tab, not the default Popular one.
+    container.querySelector<HTMLElement>('#movers-seeall')!.click();
+    const marketsContainer = document.createElement('section');
+    document.body.appendChild(marketsContainer);
+    renderMarketsView(marketsContainer, await makeData());
+    expect(marketsContainer.querySelector<HTMLElement>('[data-cat="losers"]')!.classList.contains('active')).toBe(
+      true,
+    );
+  });
+
   it('renders the real-money readiness card from cloud state', async () => {
     const raw = {
       'portfolio-engine': { cash: 5954, initialCash: 10000, baseCurrency: 'EUR' },
