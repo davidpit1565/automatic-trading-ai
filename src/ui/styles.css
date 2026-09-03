@@ -964,6 +964,11 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    kind of thing at a glance. */
 .tag-live { font-size: 0.6rem; font-weight: 700; letter-spacing: var(--tracking-wide); background: var(--cold-tint);
   color: var(--cold); border: 1px solid rgba(242, 109, 125, 0.4); padding: 0.12rem 0.45rem; border-radius: var(--r-xs); }
+/* Marks a coin as part of the agent's actual trading universe (as opposed
+ * to just browsable in Markets) — deliberately a neutral colour, not
+ * hot/cold, so it never reads as a price-direction signal on the same row. */
+.tag-traded { font-size: 0.6rem; font-weight: 700; letter-spacing: var(--tracking-wide); background: var(--neutral-tint);
+  color: var(--neutral); border: 1px solid rgba(139, 147, 165, 0.4); padding: 0.12rem 0.45rem; border-radius: var(--r-xs); }
 .kill-switch-banner { display: flex; align-items: center; gap: 0.5rem; background: var(--warn-tint);
   color: var(--warn); border: 1px solid rgba(245, 185, 61, 0.4); border-radius: var(--r-md);
   padding: 0.6rem 0.75rem; font-size: 0.85rem; font-weight: var(--fw-semibold); margin-top: 0.6rem; }
@@ -986,6 +991,13 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    split the reference uses for its balance figure, so the eye lands on the
    whole-euro number first and the exact cents read as secondary detail. */
 .hero-value-minor { font-size: 1.5rem; font-weight: var(--fw-semibold); color: var(--text-dim); }
+/* Generic two-tier price (tieredPriceHtml in format.ts) — the same
+   big-integer/small-decimal treatment as the hero balance above, but sized
+   in `em` so it scales with whatever ambient font-size it's dropped into
+   (a Markets row, a holdings-table cell, a market card), not a fixed size
+   of its own. */
+.tiered-price { font-variant-numeric: tabular-nums; }
+.tiered-price .tiered-minor { font-size: 0.8em; font-weight: 600; color: var(--text-dim); }
 /* The PRIMARY (bare) hero's balance is the loudest thing on the screen —
    ~2.5x the page title and ~4x body text. `--fs-hero` bottoms out around
    50px on a 390px phone and caps near 66px, matching the reference's
@@ -1087,9 +1099,10 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .mk-tabs { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none;
   padding-bottom: 0.5rem; margin-bottom: 0.25rem; -webkit-overflow-scrolling: touch; }
 .mk-tabs::-webkit-scrollbar { display: none; }
-.mk-tab { flex: 0 0 auto; padding: 0.48rem 0.95rem; border-radius: var(--r-pill);
+.mk-tab { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.48rem 0.95rem; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--surface); color: var(--text-dim);
   font-size: 0.86rem; font-weight: var(--fw-semibold); cursor: pointer; transition: all var(--dur-fast) var(--ease); }
+.mk-tab svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; flex-shrink: 0; }
 .mk-tab:hover { color: var(--text); border-color: var(--border-strong); }
 .mk-tab:active { transform: scale(0.96); }
 /* A white outer glow on a pill (the old `box-shadow: 0 4px 14px rgba(255,255,255,.3)`)
@@ -1128,13 +1141,20 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .market-row-wrap { position: relative; display: block; }
 .mk-star { position: absolute; top: 50%; right: 0.35rem; transform: translateY(-50%);
   width: 30px; height: 30px; border: 0; border-radius: 50%; background: transparent;
-  color: var(--border-strong); font-size: 0.95rem; line-height: 1; cursor: pointer; padding: 0;
+  color: var(--border-strong); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 0;
   transition: color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+/* Same outlined-icon family as every other icon (nav, view-tabs) — the star
+   only additionally fills solid once actually starred (.on), the common
+   "favorited" convention, rather than a flat Unicode glyph nothing else
+   on the page uses. */
+.mk-star svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 .mk-star:hover { color: var(--text-dim); }
 /* Keeps the base translateY(-50%) centering — scale alone would re-anchor
    the element and jump its position on press. */
 .mk-star:active { transform: translateY(-50%) scale(0.85); }
 .mk-star.on { color: var(--warn); }
+.mk-star.on svg { fill: currentColor; }
 
 /* The markets list is ONE grouped card with hairline separators, not 60
    individually-outlined floating cards with gaps between them. The reference
@@ -1156,6 +1176,12 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    rest — uneven row heights also undermine the scroll-stable paging. */
 .market-row-id .row-title,
 .market-row-id .row-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Wraps the name + an optional .tag-traded badge on one line — a sibling of
+   .row-title, never nested inside it, so .row-title's own text content stays
+   just the coin name for anything that reads it. */
+.row-title-line { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+.row-title-line .row-title { min-width: 0; flex-shrink: 1; }
+.row-title-line .tag-traded { flex-shrink: 0; }
 .market-row-num { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
 /* Hidden on phone (the row already has 3 real columns there); shown as a 4th
    desktop column below — real information (already fetched with the row,
@@ -1217,11 +1243,14 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .trade.sell { border-inline-start: 3px solid var(--cold); }
 .trade.profit { border-inline-start: 3px solid var(--hot); }
 .trade.loss { border-inline-start: 3px solid var(--cold); }
-.pill { font-size: 0.62rem; font-weight: 800; letter-spacing: var(--tracking-wide); padding: 0.2rem 0.5rem; border-radius: var(--r-xs); }
-.pill.buy { background: var(--hot-tint); color: var(--hot); }
-.pill.sell { background: var(--cold-tint); color: var(--cold); }
-.pill.profit { background: var(--hot-tint); color: var(--hot); }
-.pill.loss { background: var(--cold-tint); color: var(--cold); }
+/* Colored TEXT, not a tinted badge — a table status ("Buy"/"Sell") reads
+   faster scanned down a whole column this way than a pill shape does, and
+   it's what the reference itself uses (Activity's Direction column). */
+.pill { font-size: 0.72rem; font-weight: 800; letter-spacing: var(--tracking-wide); }
+.pill.buy { color: var(--hot); }
+.pill.sell { color: var(--cold); }
+.pill.profit { color: var(--hot); }
+.pill.loss { color: var(--cold); }
 .empty { color: var(--text-dim); background: var(--surface); border: none;
   border-radius: var(--r-xl); padding: 1.6rem 1.15rem; text-align: center; font-size: 0.9rem; }
 
@@ -1363,7 +1392,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
      look) rather than bleeding straight into the page background the way
      a `.block` does inline in the main column. */
   .home-rail .block {
-    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+    background: var(--surface); border-radius: var(--r-lg);
     padding: 1.1rem; margin-bottom: 0;
   }
   .home-rail .markets-strip { flex-direction: column; overflow-x: visible; }
@@ -1437,13 +1466,19 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .star-btn { background: color-mix(in srgb, var(--surface-raised) 55%, transparent);
   backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
   border: 1px solid rgba(255,255,255,0.08); color: var(--text-dim);
-  width: 38px; height: 38px; border-radius: 50%; font-size: 1.1rem; cursor: pointer;
+  width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
   transition: all var(--dur-fast) var(--ease); }
+.star-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.star-btn.active svg { fill: currentColor; }
 .star-btn:hover { background: var(--surface-hover); color: var(--text); }
 .star-btn:active { transform: scale(0.9); }
 .star-btn.active { color: var(--warn); background: var(--warn-tint); }
 .detail-stats-row { display: flex; gap: 0.6rem; margin-bottom: 0.9rem; }
-.dstat { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+/* Fill-difference elevation, no border — the reference separates a card
+   from its background via a barely-there fill contrast, never a visible
+   outline. */
+.dstat { flex: 1; background: var(--surface); border-radius: var(--r-sm);
   padding: 0.5rem 0.6rem; display: flex; flex-direction: column; gap: 0.15rem; }
 .dstat-label { font-size: 0.68rem; color: var(--text-dim); }
 .dstat-value { font-size: 0.85rem; font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }

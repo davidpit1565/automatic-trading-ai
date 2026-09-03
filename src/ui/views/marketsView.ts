@@ -9,6 +9,7 @@
 import type { ActiveDataSource } from '../dataSource';
 import type { Timeframe } from '../../core/types';
 import type { OrderBook, RecentTrade } from '../../core/data/krakenPublic';
+import { CURATED_BASES } from '../../core/data/krakenPublic';
 import {
   fetchMarketRows,
   fetchSeries,
@@ -26,7 +27,7 @@ import {
   type ChartGeometry,
 } from '../charts';
 import { startLivePrice } from '../liveTicker';
-import { escapeHtml, formatClock, formatMarketPrice, formatPct, formatPrice, formatSignedPrice } from '../format';
+import { escapeHtml, formatClock, formatMarketPrice, formatPct, formatPrice, formatSignedPrice, tieredPriceHtml } from '../format';
 import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
 import { fetchCloudState } from '../cloudState';
 import { fetchCoinStats } from '../coinStats';
@@ -215,11 +216,11 @@ function detailHeaderHtml(
           <div class="row-sub">${m.symbol} · EUR</div>
         </div></div>
       </div>
-      <button class="star-btn ${starred ? 'active' : ''}" id="mk-star" aria-label="Watch this market">★</button>
+      <button class="star-btn ${starred ? 'active' : ''}" id="mk-star" aria-label="Watch this market"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
     </div>
     <div class="pair-menu" id="mk-pair-menu" role="listbox" hidden>${menuItems}</div>
     <div class="detail-price-row">
-      <div class="row-title big" id="mk-price">€${formatPrice(price)}</div>
+      <div class="row-title big" id="mk-price">${tieredPriceHtml(`€${formatPrice(price)}`)}</div>
       <div class="chg ${up ? 'up' : 'down'}" id="mk-change">${formatPct(changePct)}</div>
     </div>
     <div class="detail-stats-row">
@@ -360,7 +361,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         (c, i) =>
           `<button class="mk-tab${i === initialIndex ? ' active' : ''}" role="tab" ` +
           `aria-selected="${i === initialIndex}" data-cat="${c.key}">${c.label}</button>`,
-      ).join('')}<button class="mk-tab" role="tab" aria-selected="false" data-cat="watchlist">★ Watchlist</button></div>
+      ).join('')}<button class="mk-tab" role="tab" aria-selected="false" data-cat="watchlist"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Watchlist</button></div>
       <div class="mk-controls">
         <input id="mk-search" class="mk-search" type="search" inputmode="search"
           placeholder="Search 500+ markets…" aria-label="Search markets" autocomplete="off">
@@ -455,13 +456,13 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       `<button class="market-row tappable" data-row="${index}">` +
       coinLogoHtml(m.base, BASE_URL) +
       `<span class="market-row-id">` +
-      `<span class="row-title">${escapeHtml(m.label)}</span>` +
+      `<span class="row-title-line"><span class="row-title">${escapeHtml(m.label)}</span>${CURATED_BASES.has(m.base) ? '<span class="tag-traded">TRADED</span>' : ''}</span>` +
       `<span class="row-sub"><span class="row-clock ${stale ? 'stale' : 'fresh'}" aria-hidden="true"></span>` +
       `${formatClock(m.updatedAt)} · ${escapeHtml(m.symbol)}</span>` +
       `</span>` +
       `<span class="market-row-vol"><span class="dstat-label">24h Vol</span><span>€${compact(m.quoteVolume)}</span></span>` +
       `<span class="market-row-num">` +
-      `<span class="row-price${flash}">€${formatMarketPrice(m.price)}</span>` +
+      `<span class="row-price${flash}">${tieredPriceHtml(`€${formatMarketPrice(m.price)}`)}</span>` +
       `<span class="chg ${up ? 'up' : 'down'}">${formatSignedPrice(m.change, m.price)} (${formatPct(m.changePct)})</span>` +
       `</span>` +
       `</button>` +
@@ -469,7 +470,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       // the inner one's clicks are unreliable across browsers.
       `<button class="mk-star${starred ? ' on' : ''}" data-star="${escapeHtml(m.symbol)}" ` +
       `aria-pressed="${starred}" aria-label="${starred ? 'Remove' : 'Add'} ${escapeHtml(m.label)} ` +
-      `${starred ? 'from' : 'to'} watchlist">★</button>` +
+      `${starred ? 'from' : 'to'} watchlist"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>` +
       `</span>`
     );
   }
@@ -983,7 +984,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       stopLive = startLivePrice(data, cfg.symbol, (tick) => {
         const price = tick.price;
         const priceEl = detailView.querySelector<HTMLElement>('#mk-price');
-        if (priceEl) priceEl.textContent = `€${formatPrice(price)}`;
+        if (priceEl) priceEl.innerHTML = tieredPriceHtml(`€${formatPrice(price)}`);
         const chg = first > 0 ? ((price - first) / first) * 100 : 0;
         const chgEl = detailView.querySelector<HTMLElement>('#mk-change');
         if (chgEl) {

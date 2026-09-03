@@ -19,6 +19,27 @@ export function formatPriceSplit(value: number): { major: string; minor: string 
   return { major: major!, minor };
 }
 
+/**
+ * Wraps an ALREADY-formatted price/amount string (from `formatPrice`,
+ * `formatMarketPrice`, or a `${currency}${...}` template) so its decimal
+ * portion renders smaller and dimmer — the two-tier currency typography
+ * used everywhere in the reference (Revolut X never renders a price as one
+ * flat string). Deliberately splits the STRING at its own last '.' rather
+ * than reformatting the number: whatever precision the caller's formatter
+ * already chose (adaptive per asset scale, or fixed 2dp for a EUR amount)
+ * is exactly what's shown — this only restyles it, never changes it. A
+ * string with no '.' (e.g. a whole-number BTC-scale price) passes through
+ * unchanged, since there's no decimal portion to de-emphasize.
+ */
+export function tieredPriceHtml(formatted: string): string {
+  const dotIndex = formatted.lastIndexOf('.');
+  if (dotIndex === -1) return `<span class="tiered-price">${formatted}</span>`;
+  return (
+    `<span class="tiered-price">${formatted.slice(0, dotIndex)}` +
+    `<span class="tiered-minor">${formatted.slice(dotIndex)}</span></span>`
+  );
+}
+
 export function formatPct(value: number | null, digits = 2): string {
   if (value === null) return '—';
   const sign = value > 0 ? '+' : '';

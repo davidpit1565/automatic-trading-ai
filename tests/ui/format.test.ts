@@ -1,5 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { formatMarketPrice, formatSignedPrice, truncate } from '../../src/ui/format';
+import { formatMarketPrice, formatSignedPrice, tieredPriceHtml, truncate } from '../../src/ui/format';
+
+describe('tieredPriceHtml', () => {
+  it('splits at the last decimal point, keeping the exact digits the caller already formatted', () => {
+    // Correctness requirement: this must never re-round or re-format the
+    // number — a sub-€1 asset price (4 significant figures, not 2dp) must
+    // come through with every digit intact, just visually restyled.
+    expect(tieredPriceHtml('€0.1770')).toBe('<span class="tiered-price">€0<span class="tiered-minor">.1770</span></span>');
+  });
+
+  it('splits a whole-euro-amount price the same way', () => {
+    expect(tieredPriceHtml('€3,391.09')).toBe(
+      '<span class="tiered-price">€3,391<span class="tiered-minor">.09</span></span>',
+    );
+  });
+
+  it('passes a string with no decimal point through unchanged, wrapped but not split', () => {
+    expect(tieredPriceHtml('€69,275')).toBe('<span class="tiered-price">€69,275</span>');
+  });
+});
 
 describe('truncate', () => {
   it('returns short text unchanged, with no ellipsis appended', () => {
