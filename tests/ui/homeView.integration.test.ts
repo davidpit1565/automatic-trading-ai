@@ -132,6 +132,7 @@ describe('Home view (DOM integration)', () => {
     await waitFor(() => container.querySelector('#home-status')?.textContent !== 'Loading the cloud agent…');
     expect(container.querySelector<HTMLElement>('#home-live-hero')!.hidden).toBe(true);
     expect(container.querySelector<HTMLElement>('#home-live-positions-wrap')!.hidden).toBe(true);
+    expect(container.querySelector<HTMLElement>('#home-sim-hero')!.hidden).toBe(false);
   });
 
   it('shows the real-money account (equity, cash, open positions) once the live ledger exists, distinctly labeled from the simulated one', async () => {
@@ -164,6 +165,11 @@ describe('Home view (DOM integration)', () => {
     await waitFor(() => container.querySelectorAll('#home-live-positions tbody tr').length > 0);
     expect(container.querySelector('#home-live-positions')!.textContent).toContain('BTC/USD');
     expect(container.querySelector<HTMLElement>('#hv-kill-switch')!.hidden).toBe(true);
+    // David asked (2026-09-04): once real money is live, the SIMULATED
+    // portfolio card directly below it on this same screen is confusing
+    // clutter, not useful context — hide it here (it's still on the
+    // Profit tab, never removed from the app entirely).
+    expect(container.querySelector<HTMLElement>('#home-sim-hero')!.hidden).toBe(true);
   });
 
   it('shows a paused banner when the kill switch is engaged on the real account', async () => {

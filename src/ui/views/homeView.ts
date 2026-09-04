@@ -165,6 +165,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   // reference opens its wallet screen. Boxing it made it read as one widget
   // among several.
   const hero = el('section', 'hero hero-bare tappable');
+  hero.id = 'home-sim-hero';
   hero.dataset['nav'] = 'value';
   hero.innerHTML = `
     <div class="hero-label">Portfolio value <span class="tag-sim">SIMULATED</span><span class="hero-more">history ›</span></div>
@@ -295,6 +296,14 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     const live = state?.live;
     liveHero.hidden = !live;
     livePosWrap.hidden = !live;
+    // David asked (2026-09-04): once real money is actually live, the
+    // SIMULATED portfolio card directly below it on this same Overview
+    // screen reads as confusing clutter, not useful context — it's still
+    // the algorithm's own track record (never removed from the app; see
+    // the Profit tab, which keeps showing it alongside the real-money
+    // card), just no longer the primary thing to look at on THIS screen
+    // once there's real money to look at instead.
+    hero.hidden = Boolean(live);
     if (!live) return;
 
     const invested = live.positions.reduce((s, p) => s + p.quantity * (prices[p.symbol] ?? p.entryPrice), 0);
