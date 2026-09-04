@@ -170,6 +170,10 @@ describe('Home view (DOM integration)', () => {
     // clutter, not useful context — hide it here (it's still on the
     // Profit tab, never removed from the app entirely).
     expect(container.querySelector<HTMLElement>('#home-sim-hero')!.hidden).toBe(true);
+    // David asked (2026-09-04): same reasoning as the SIMULATED hero above —
+    // once real money is already on, "is it time to turn real money on?"
+    // is a moot question on THIS screen (still shown on the Profit tab).
+    expect(container.querySelector<HTMLElement>('#home-readiness')!.hidden).toBe(true);
   });
 
   it('shows a paused banner when the kill switch is engaged on the real account', async () => {

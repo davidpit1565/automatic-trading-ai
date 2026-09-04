@@ -49,14 +49,28 @@ async function main(): Promise<void> {
     );
   }
 
+  // David asked (2026-09-04) for the alert to also make the manual buy
+  // action immediate, not just report the number — `/buy` already works on
+  // ANY tradable symbol, curated or not (manualBuyCommand.mts verifies
+  // against the broker's own pairs, never CURATED_INSTRUMENTS), so each
+  // row's ready-to-send command is genuinely actionable right now, not
+  // aspirational. Once bought this way, the position gets the SAME fixed
+  // stop/target and automatic per-cycle exit monitoring as any other live
+  // position (checkAutomaticExits iterates every tracked position, not just
+  // curated ones) — no separate "sell suggestion" logic needed here.
   const lines = rows
-    .map((r) => `• ${r.base}: ${r.pctChange >= 0 ? '+' : ''}${r.pctChange.toFixed(1)}% היום, מחיר €${r.price}`)
+    .map(
+      (r) =>
+        `• ${r.base}: ${r.pctChange >= 0 ? '+' : ''}${r.pctChange.toFixed(1)}% היום, מחיר €${r.price}\n  לקנייה: /buy ${r.symbol}`,
+    )
     .join('\n');
   const message =
     `⚡ התראת מומנטום — ספקולטיבי, לא נמדד על היסטוריה\n\n${lines}\n\n` +
     `אלה מטבעות עם קפיצה חדה היום שלא נסחרים אצלנו ומעולם לא נבדקו על נתונים אמיתיים — ` +
     `ייתכן שזה רלוונטי רק לכמה שעות/יום ולא מייצג הזדמנות אמיתית. ` +
-    `זו הודעת מידע בלבד, ההחלטה ידנית לגמרי — הבוט לא קונה שום דבר מזה.`;
+    `זו הודעת מידע בלבד — הבוט לא קונה שום דבר מזה בעצמו; אם תרצה לקנות, שלח את פקודת ה-/buy ` +
+    `למעלה ותעבור דרך אותו תהליך אישור בטוח כמו כל עסקה אחרת. ` +
+    `ואם תקנה, הפוזיציה תיבדק אוטומטית בכל מחזור בדיוק כמו כל פוזיציה אחרת (סטופ/יעד קבועים).`;
   const sent = await sendTelegramMessage(message, {
     token: process.env['TELEGRAM_BOT_TOKEN'] ?? '',
     chatId: process.env['TELEGRAM_CHAT_ID'] ?? '',

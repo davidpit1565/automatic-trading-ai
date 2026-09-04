@@ -304,6 +304,12 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     // card), just no longer the primary thing to look at on THIS screen
     // once there's real money to look at instead.
     hero.hidden = Boolean(live);
+    // Same reasoning, same day: the readiness checklist answers "is it
+    // time to turn real money on?" — once it's already on, that question
+    // is already answered, so this card is redundant clutter on THIS
+    // screen too. Left untouched on the Profit tab (assetHubView.ts),
+    // which deliberately shows real and simulated side by side.
+    readyWrap.hidden = Boolean(live);
     if (!live) return;
 
     const invested = live.positions.reduce((s, p) => s + p.quantity * (prices[p.symbol] ?? p.entryPrice), 0);
