@@ -9,20 +9,12 @@
 # paths-ignore on state/** skips this entirely for the autopilot/stocks
 # bots' own state-only commits (dozens/day, never touch app code) — real
 # code pushes still deploy automatically. Without this, every bot commit
-# forced a fresh gh-pages push, which wasted CI minutes and (via Vercel's
-# separate git integration on this same repo) kept ticking the account-wide
-# Vercel deployment quota even after main itself was excluded there.
-#
-# vercel.json only disables git.deploymentEnabled for `main` (where the
-# autopilot bots push state directly, dozens of times a day) — NOT for
-# `gh-pages`. Since this workflow already limits gh-pages pushes to real
-# code changes only (paths-ignore above), every gh-pages push here is one
-# Vercel should build, so it's left to deploy normally via Vercel's own git
-# integration; no separate trigger is needed. (An earlier version of this
-# fix disabled gh-pages too and refreshed Vercel via a Deploy Hook — that
-# turned out not to work at all: git.deploymentEnabled also blocks
-# Deploy-Hook-triggered builds for a disabled ref, so the hook silently
-# produced zero deployments. Removed in favor of this simpler fix.)
+# forced a fresh gh-pages push, wasting CI minutes for no reason (there
+# used to also be a Vercel mirror of this project whose separate git
+# integration counted every one of those pushes against an account-wide
+# deploy quota — the project was deleted 2026-09-04 since GitHub Pages
+# was always the actual primary site, so that concern no longer applies,
+# but the path filter is still worth keeping for its own sake).
 
 name: Deploy dashboard to GitHub Pages
 

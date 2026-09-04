@@ -1624,6 +1624,25 @@ something any further config change can clear immediately. It's a hard
 daily cap that resets on Vercel's own rolling window as those old
 deployments age out. No further leak source has been found — the fix is
 already in place, the account just needs the clock to catch up.
+
+**Final resolution, same day**: the rate-limit theory above turned out moot
+— the Deploy Hook itself was confirmed not to work at all (see PR #174:
+`git.deploymentEnabled: {"main": false}` blocks Deploy-Hook-triggered
+builds for that ref too, producing zero deployment records despite the
+hook call succeeding). Fixed by dropping `gh-pages` from `deploymentEnabled`
+instead — but by the time PR #174 merged and its own gh-pages push should
+have tested the fix, the Vercel project for `automatic-trading-ai` was
+found to no longer exist at all: gone from `list_projects`, and both
+`automatic-trading-ai.vercel.app` and the `git-main` alias return
+`DEPLOYMENT_NOT_FOUND`. **David confirmed he deleted the Vercel project
+himself** — "it didn't need to be there." This closes out the entire
+multi-day Vercel-quota saga (#165/#167/#169/#170/#173/#174): there is no
+Vercel project for this repo anymore, so there is no quota risk and no
+mirror to keep in sync. GitHub Pages remains the sole, actual production
+site, exactly as it always effectively was. `vercel.json` was deleted from
+the repo as dead config (nothing reads it anymore).
+
+## Real money is now LIVE (2026-09-03)
 David generated real Revolut X trading credentials, funded the account
 (100.15€), and set `REAL_MONEY_ENABLED=true` as a repo Variable. The
 platform is no longer simulated-only — `runLiveMirror` now actually runs
