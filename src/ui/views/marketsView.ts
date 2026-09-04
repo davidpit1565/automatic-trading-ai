@@ -220,12 +220,12 @@ function detailHeaderHtml(
     </div>
     <div class="pair-menu" id="mk-pair-menu" role="listbox" hidden>${menuItems}</div>
     <div class="detail-price-row">
-      <div class="row-title big" id="mk-price">${tieredPriceHtml(`€${formatPrice(price)}`)}</div>
+      <div class="row-title big" id="mk-price">${tieredPriceHtml(`€${formatMarketPrice(price)}`)}</div>
       <div class="chg ${up ? 'up' : 'down'}" id="mk-change">${formatPct(changePct)}</div>
     </div>
     <div class="detail-stats-row">
-      <div class="dstat"><span class="dstat-label">24h High</span><span class="dstat-value">€${formatPrice(m.high)}</span></div>
-      <div class="dstat"><span class="dstat-label">24h Low</span><span class="dstat-value">€${formatPrice(m.low)}</span></div>
+      <div class="dstat"><span class="dstat-label">24h High</span><span class="dstat-value">€${formatMarketPrice(m.high)}</span></div>
+      <div class="dstat"><span class="dstat-label">24h Low</span><span class="dstat-value">€${formatMarketPrice(m.low)}</span></div>
       <div class="dstat"><span class="dstat-label">24h Volume</span><span class="dstat-value">€${compact(m.quoteVolume)}</span></div>
     </div>
     <div class="view-tabs" id="mk-view-tabs">${tabs}</div>`;
@@ -246,7 +246,7 @@ function orderFormHtml(m: MarketRow): string {
         <button class="of-btn sell" disabled>Sell</button>
       </div>
       <div class="of-field"><label>Amount</label><div class="of-input"><span>0</span><span class="of-unit">${escapeHtml(m.base)}</span></div></div>
-      <div class="of-field"><label>Price</label><div class="of-input"><span>€${formatPrice(m.price)}</span></div></div>
+      <div class="of-field"><label>Price</label><div class="of-input"><span>€${formatMarketPrice(m.price)}</span></div></div>
       <p class="of-note">This mirrors Revolut X's order form for reference, but there's no direct submit here — every real order already goes through the cloud agent's own safety checks (confidence gates, risk sizing, a Telegram confirmation prompt). Send <code>/buy ${escapeHtml(m.symbol)}</code> or <code>/sell ${escapeHtml(m.symbol)}</code> to the Telegram bot to actually place one.</p>
     </div>`;
 }
@@ -264,7 +264,7 @@ function tradeRowHtml(m: MarketRow, t: { kind: 'buy' | 'sell'; price: number; qu
   return (
     `<div class="row trade ${t.kind}"><div class="row-main"><span class="pill ${buy ? 'buy' : 'sell'}">${buy ? 'BUY' : 'SELL'}</span>` +
     `<div><div class="row-title">${m.label}</div><div class="row-sub">${t.note ? t.note : buy ? 'opened' : 'closed'}</div></div></div>` +
-    `<div class="row-side"><span class="row-title">€${formatPrice(t.price)}</span>` +
+    `<div class="row-side"><span class="row-title">€${formatMarketPrice(t.price)}</span>` +
     `<span class="row-sub">${t.quantity.toLocaleString('en-US', { maximumFractionDigits: 4 })}</span>` +
     `<span class="row-sub">${new Date(t.at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></div></div>`
   );
@@ -298,8 +298,8 @@ function orderBookTableHtml(book: OrderBook): string {
     const ask = book.asks[i];
     html +=
       '<div class="orderbook-row">' +
-      `<span class="ob-bid">${bid ? `${bid.volume.toFixed(4)} @ €${formatPrice(bid.price)}` : ''}</span>` +
-      `<span class="ob-ask">${ask ? `€${formatPrice(ask.price)} @ ${ask.volume.toFixed(4)}` : ''}</span>` +
+      `<span class="ob-bid">${bid ? `${bid.volume.toFixed(4)} @ €${formatMarketPrice(bid.price)}` : ''}</span>` +
+      `<span class="ob-ask">${ask ? `€${formatMarketPrice(ask.price)} @ ${ask.volume.toFixed(4)}` : ''}</span>` +
       '</div>';
   }
   return `${html}</div>`;
@@ -991,7 +991,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       stopLive = startLivePrice(data, cfg.symbol, (tick) => {
         const price = tick.price;
         const priceEl = detailView.querySelector<HTMLElement>('#mk-price');
-        if (priceEl) priceEl.innerHTML = tieredPriceHtml(`€${formatPrice(price)}`);
+        if (priceEl) priceEl.innerHTML = tieredPriceHtml(`€${formatMarketPrice(price)}`);
         const chg = first > 0 ? ((price - first) / first) * 100 : 0;
         const chgEl = detailView.querySelector<HTMLElement>('#mk-change');
         if (chgEl) {

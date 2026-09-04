@@ -6,10 +6,11 @@
 
 import { fetchStocksState } from '../cloudState';
 import { sparklineSvg } from '../charts';
-import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
+import { attachCoinLogoFallback } from '../coinLogo';
 import { formatPrice, formatPct, formatPriceSplit } from '../format';
 import { skeletonRowsHtml } from '../loadingStates';
 import type { ViewHandle } from '../viewLifecycle';
+import { buildHoldingsRows, holdingsTableHtml } from './homeView';
 
 const REFRESH_MS = 60_000;
 const dollar = (v: number): string => `$${formatPrice(v)}`;
@@ -75,26 +76,19 @@ export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
       heroEl.classList.remove('up', 'down');
     }
 
-    positionsEl.innerHTML = '';
-    const cashRow = document.createElement('div');
-    cashRow.className = 'row';
-    cashRow.innerHTML = `
-      <div class="row-main">${coinLogoHtml('USD')}<div><div class="row-title">Cash</div><div class="row-sub">Available balance</div></div></div>
-      <div class="row-side"><span class="row-title">${dollar(state.cash)}</span></div>`;
-    positionsEl.appendChild(cashRow);
-
+    // Same Cash/Total/Price/Value/Allocation/Unrealised-P&L table as Home's
+    // crypto positions (buildHoldingsRows/holdingsTableHtml) — "open
+    // positions" should look identical everywhere, dollars instead of
+    // euros. Prices come from the periodic market-snapshot (not live
+    // per-tick, see the file header), same source stocksMarketPanel uses.
+    const prices: Record<string, number> = {};
+    for (const s of state.marketSnapshot) prices[s.symbol] = s.price;
+    positionsEl.innerHTML = holdingsTableHtml(
+      buildHoldingsRows(state.cash, state.positions, prices, equity, (sym) => sym, dollar, 'USD'),
+      dollar,
+    );
     if (state.positions.length === 0) {
       positionsEl.appendChild(Object.assign(document.createElement('div'), { className: 'empty', textContent: 'Holding cash — no open positions.' }));
-    } else {
-      for (const p of state.positions) {
-        const row = document.createElement('div');
-        row.className = 'row';
-        row.innerHTML = `
-          <div class="row-main">${coinLogoHtml(p.symbol)}<div><div class="row-title">${p.symbol}</div>
-            <div class="row-sub">entry ${dollar(p.entryPrice)}</div></div></div>
-          <div class="row-side"><span class="row-title">${p.quantity.toLocaleString('en-US', { maximumFractionDigits: 4 })} sh</span></div>`;
-        positionsEl.appendChild(row);
-      }
     }
   }
 
