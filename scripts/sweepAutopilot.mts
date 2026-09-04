@@ -158,7 +158,11 @@ const CONFIGS: Cfg[] = [
 const source = new KrakenPublicSource();
 const inst = await source.getInstruments();
 if (!inst.ok) throw new Error('no instruments');
-const symbols = inst.value.slice(0, 10).map((i) => i.symbol);
+// Widened 10→20 (2026-09-04) to match the traded universe as of the
+// 2026-09-03 curated-list expansion (krakenPublic.ts's CURATED_INSTRUMENTS,
+// autopilotRunner.mts's `instruments.value.slice(0, 20)`) — before this the
+// "honest" harness silently measured only half of what production trades.
+const symbols = inst.value.slice(0, 20).map((i) => i.symbol);
 const btcSymbol = symbols.find((s) => /XBT|BTC/i.test(s));
 if (!btcSymbol) throw new Error('no BTC symbol in the measured universe');
 
