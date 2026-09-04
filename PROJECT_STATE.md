@@ -1605,7 +1605,25 @@ on every real code change — no hook, no secret, no manual dashboard step.
 `main` stays disabled (the autopilot bots still push state there directly,
 dozens of times a day) so the account-wide quota risk this whole effort
 started from remains fixed.
-## Real money is now LIVE (2026-09-03)
+
+**Verified via Vercel API, same day**: pulled every deployment on this
+project and confirmed the `main`-branch fix has held perfectly since PR
+#165 merged (2026-09-03T22:45:05Z) — every single `CANCELED` deployment
+with `githubCommitRef: "main"` (autopilot/stocks-autopilot state pushes,
+several per hour) has a timestamp strictly *before* that merge; zero after
+it. So the original root cause (bot noise on `main` burning the quota) has
+been fully stopped, not just theoretically fixed.
+
+**However**, opening PR #174 (the gh-pages/Deploy-Hook fix above) hit a new
+symptom: its own PR-preview build immediately failed with Vercel status
+`"Deployment rate limited — retry in 24 hours."` This is the account-wide
+100/day quota, still exhausted right now from the pre-fix burn earlier
+today (dozens of CANCELED `main` + `gh-pages` deployments accumulated
+before #165/#167/#169/#170 fully landed) — not a new leak, and not
+something any further config change can clear immediately. It's a hard
+daily cap that resets on Vercel's own rolling window as those old
+deployments age out. No further leak source has been found — the fix is
+already in place, the account just needs the clock to catch up.
 David generated real Revolut X trading credentials, funded the account
 (100.15€), and set `REAL_MONEY_ENABLED=true` as a repo Variable. The
 platform is no longer simulated-only — `runLiveMirror` now actually runs
