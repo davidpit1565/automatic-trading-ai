@@ -173,6 +173,23 @@ body {
   padding-inline: 0;
 }
 
+/* The demo-fallback banner's technical diagnostics (raw failed fetch URLs)
+   live inside this collapsed <details> so the banner itself stays a single
+   line by default — see the doc comment on showBanner() in main.ts. */
+.data-source-banner-details { margin-top: 0.3rem; }
+.data-source-banner-details summary {
+  cursor: pointer; font-weight: var(--fw-semibold); font-size: 0.8rem;
+  color: var(--warn); opacity: 0.85; list-style: none; display: inline-block;
+}
+.data-source-banner-details summary::-webkit-details-marker { display: none; }
+.data-source-banner-details summary:hover { opacity: 1; }
+.data-source-banner-details[open] summary::after { content: ' ▲'; }
+.data-source-banner-details summary::after { content: ' ▾'; font-size: 0.7em; }
+.data-source-banner-reasons {
+  margin-top: 0.35rem; font-size: 0.75rem; line-height: 1.5; color: var(--warn);
+  opacity: 0.8; word-break: break-all;
+}
+
 /* ---------- Tabs ---------- */
 
 .tab-bar {
