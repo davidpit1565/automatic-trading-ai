@@ -1630,7 +1630,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788535003283,
+    "at": 1788535353372,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -41849,6 +41849,20 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1788535371547,
+      "intentId": "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788534303316",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram"
+    },
+    {
+      "timestamp": 1788535372017,
+      "intentId": "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788534303316",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "order d41aa328-3331-4f59-99c0-809317e2da9f placed; status not yet confirmable — kill switch engaged, verify manually"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -41856,8 +41870,8 @@
   "education-tip-last-sent-at": 1788408526525,
   "education-tip-index": 1,
   "live:kill-switch": {
-    "engaged": false,
-    "reason": null
+    "engaged": true,
+    "reason": "order live-entry:ADAEUR:manual-reconcile-20260904:exit:1788534303316 (venue d41aa328-3331-4f59-99c0-809317e2da9f): placed, but its fill status could not be confirmed — verify manually in the Revolut X app (and reconcile any real position this project doesn't yet track) before /resume"
   },
   "live:live-external-btc-qty": 0.00090327,
   "live:live-equity-history": [
@@ -42388,10 +42402,15 @@
     {
       "at": 1788535003283,
       "equity": 101.22
+    },
+    {
+      "at": 1788535353372,
+      "equity": 101.24
     }
   ],
   "live:revolut-x-order-map": {
-    "live-entry:XBTEUR:1788446384199": "3572a080-9e2a-4dbf-9802-b259845a4675"
+    "live-entry:XBTEUR:1788446384199": "3572a080-9e2a-4dbf-9802-b259845a4675",
+    "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788534303316": "d41aa328-3331-4f59-99c0-809317e2da9f"
   },
   "live:live-open-positions": {
     "live-entry:ADAEUR:manual-reconcile-20260904": {
@@ -42419,7 +42438,8 @@
         "warnings": [
           "MANUAL RECONCILIATION (2026-09-04): combines two real /buy ADAEUR fills (42.2331 @ 0.19028 and 33.8098 @ 0.19006, per Revolut X Activity) that a workflow-cancellation gap left completely untracked — see PROJECT_STATE.md. Entry/stop/target are recomputed off the weighted-average fill price using the same fixed 1.5%/3% manual-override levels the original /buy commands used, not independently re-derived."
         ]
-      }
+      },
+      "outstandingExitSubmittedAt": 1788535353372
     }
   },
   "telegram-unclaimed-messages": [],
@@ -42431,6 +42451,18 @@
     {
       "id": "7383943996259670632",
       "data": "confirm:reject:mtmxpy49.o2duwd"
+    },
+    {
+      "id": "7383943996259500285",
+      "data": "confirm:approve:mtn35nb9.131wn6w"
+    },
+    {
+      "id": "7383943998031709853",
+      "data": "confirm:reject:mtn35nb9.131wn6w"
+    },
+    {
+      "id": "7383943995036902705",
+      "data": "confirm:reject:mtn35nb9.131wn6w"
     }
   ],
   "live:blackout-windows-cache": {
@@ -42529,19 +42561,8 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904703,
+  "telegram-shared-update-offset": 447904715,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "live-entry:ADAEUR:manual-reconcile-20260904": {
-      "reason": "stop-loss",
-      "queuedAt": 1788534303316
-    }
-  },
-  "live:confirmation-gate-pending": {
-    "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788534303316": {
-      "sentAt": 1788534322245,
-      "messageId": 483,
-      "token": "mtn35nb9.131wn6w"
-    }
-  }
+  "live:live-exit-pending": {},
+  "live:confirmation-gate-pending": {}
 }
