@@ -4544,3 +4544,78 @@ going much wider than 80 starts measuring illiquid dust that a real-money
 bot shouldn't trade regardless of backtest PF. Gate: tsc clean, 1133 vitest
 (all passing, no new/changed tests needed), vite build ok. No file under
 `server/**` touched.
+
+## Bull-run gap re-investigated: trend-exit's crash-window sample finally measured, still not adopted (2026-09-04)
+
+David saw the Telegram digest's "agent +2.53% vs BTC +21.21% since tracking
+started" line during a sharp BTC run and asked whether the gap can be
+honestly narrowed without giving up crash protection. This is the same,
+already-accepted structural tradeoff re-measured above (production lags a
+strong BTC trend, beats both benchmarks by 24-51pt in the 2-year crash
+window) — not a bug. The one genuinely open question left by this file's own
+history was `trendExit` (hold through trend via a trailing EMA instead of a
+fixed take-profit, `exitDecision.ts`): 2026-08-31 called it "inconclusive" on
+crypto specifically because the only window available then (30-day) gave it
+just 5-6 trades, and the choppy 120-day window had no clear long-horizon
+crash data to check the OTHER side of the tradeoff. Today's `sweepAutopilot.mts`
+widening (above) added exactly that missing window — a real 2-year daily
+crash sample — so this re-runs the same three EMA periods (10/20/50) against
+all three windows, closing the gap in the evidence rather than the strategy.
+
+**Real Kraken data, current production config (regime EMA50 + confRisk
+.5-1% + BTC market-regime EMA50 + 80% exposure cap) as the baseline, in vs.
+out-of-sample:**
+
+| Window | config | full ret | full PF | trades | OOS ret | OOS PF |
+|---|---|---|---|---|---|---|
+| 1h/30d (BTC bull, bh +24.01%) | PROD live (no trail) | +18.26% | 4.08 | 27 | **+1.33%** | 1.51 |
+| | trend-exit EMA10 | +16.85% | 6.49 | 24 | -0.12% | 1.33 |
+| | trend-exit EMA20 | +23.18% | 48.99 | 7 | -1.19% | 0.52 |
+| | trend-exit EMA50 | +21.27% | 9.07 | 12 | -0.96% | 0.31 |
+| 4h/120d (flat, bh +11.21%) | PROD live (no trail) | +0.86% | 1.53 | 10 | **+1.60%** | 1.78 |
+| | trend-exit EMA10 | -0.19% | 1.14 | 17 | +0.21% | 1.29 |
+| | trend-exit EMA20 | +1.11% | 0.59 | 14 | +1.52% | 0.63 |
+| | trend-exit EMA50 | -1.22% | 0.32 | 12 | -0.61% | 0.36 |
+| 2yr daily (crash, bh -27.42%) | PROD live (no trail) | -3.44% | 0.00 | 5 | **-1.28%** | 0.00 |
+| | trend-exit EMA10 | -0.96% | 0.19 | 6 | -0.37% | 0.39 |
+| | trend-exit EMA20 | -0.56% | 0.53 | 5 | -0.44% | 0.32 |
+| | trend-exit EMA50 | -2.12% | 0.00 | 5 | -0.77% | 0.00 |
+
+**Bull-run side: overfit, not a real edge.** In-sample, EMA20/EMA50 beat PROD
+(+23.18%/+21.27% vs +18.26%) — the number David would want to see. But
+every trend-exit variant's OOS return is **negative** (-0.12% to -1.19%)
+while PROD's OOS is **positive** (+1.33%) — the classic in-sample-good/
+OOS-bad signature this file has flagged repeatedly (2026-07-29's lookback
+sensitivity, today's "TF far target late trail" rejection above). Trade
+counts (7-24) never clear this file's own trust bar either. The apparent
+gain is noise from a handful of trades, not a real improvement.
+
+**Crash side: no clean win either.** Nominal losses are smaller
+(-0.56% to -2.12% vs PROD's -3.44%), but on only 5-6 trades each — the exact
+small-sample illusion flagged for this same lever on 2026-08-31 — and profit
+factor is at or near the worst possible value (0.00-0.53) for every variant,
+PROD included: this window just doesn't generate enough qualifying setups to
+say anything with confidence, in either direction.
+
+**Conclusion: trend-exit is not promoted on crypto.** The missing long-horizon
+sample this file flagged on 2026-08-31 has now been measured — it does not
+rescue the lead; if anything it confirms the bull-run gain was overfitting.
+Stocks keeps `trendExit: { emaPeriod: 50 }` (2026-08-31, real edge on 459-778
+pooled trades across 41 symbols); crypto's production config is unchanged.
+
+**Confirms non-participation, not a bad exit, is the actual mechanism.**
+PROD's own trade counts in the bull window (27 full-sample, fewer in either
+half) against a 20-symbol universe over 30 days show the strategy selective
+and often out of the market during the run — matching the diagnosis already
+reached for stocks (2026-07-29: "the entries are still the bottleneck, not
+the exits") and for crypto's exposure-cap test (2026-08-21: "structural cost
+of a risk-managed strategy that isn't 100%-invested during a strong trend").
+No exit-side change measured here or before (trailing width, trend-exit)
+closes that gap without an OOS or crash-window cost — the selectivity itself
+is what protects capital in the 2-year window, so loosening it is the
+tradeoff, not a free fix.
+
+Nothing shipped to strategy or config; this is a documentation-only close-out
+of the 2026-08-31 "inconclusive" finding, using the long-horizon window added
+earlier in this same pass. Full gate: tsc clean, 1133 vitest passed, vite
+build ok (no source changes).
