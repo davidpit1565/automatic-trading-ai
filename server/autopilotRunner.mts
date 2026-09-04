@@ -189,6 +189,20 @@ function liveCredentials(): RevolutXCredentials | null {
  * set/removed) overlaid on top. Real data loss now only if both runs wrote
  * the exact same key in the same race window, not the whole file.
  */
+/**
+ * True only if at least one outcome represents a REAL order that just
+ * reached the broker (`'submitted'` — see LiveOrderFlowResult) — every
+ * other outcome ('pending', 'rejected', 'no-price-data', a routine Telegram
+ * poll that found nothing, etc.) is either a no-op or safely retried next
+ * cycle, so losing it to an untimely process kill costs nothing. Used to
+ * gate the mid-cycle persist calls below to the moments that actually
+ * matter, not literally every call (see persistStateToGit's own doc
+ * comment for the real incident, 2026-09-04, this distinction fixes).
+ */
+function hasSubmittedOrder(outcomes: readonly { readonly outcome: string }[]): boolean {
+  return outcomes.some((o) => o.outcome === 'submitted');
+}
+
 function persistStateToGit(store: FileStore, label: string): void {
   if (process.env['GITHUB_ACTIONS'] !== 'true') return;
   const run = (cmd: string): string => execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
@@ -206,7 +220,17 @@ function persistStateToGit(store: FileStore, label: string): void {
     run(`git add ${STATE_PATH}`);
     if (!hasStagedChanges()) return;
     run(`git commit -m "Autopilot state (mid-run ${label})"`);
-    for (let attempt = 1; attempt <= 5; attempt++) {
+    // 3, not 5 — a real incident, 2026-09-04: each attempt spawns a handful
+    // of subprocesses (fetch/show/reset/add/commit), and calling this
+    // function from 4 separate points every cycle over a multi-hour run,
+    // with near-constant external pushes racing it, exhausted the
+    // runner's process/pipe resources (every retry started failing with
+    // `spawnSync ENOBUFS`) after roughly 90 minutes — silently breaking
+    // EVERY subsequent persist for the rest of that run. Fewer attempts
+    // per call, combined with only calling this at points that actually
+    // submitted a real order (see hasSubmittedOrder), cuts the total
+    // subprocess volume by roughly an order of magnitude.
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         run('git push origin HEAD:main');
         console.log(`State persisted mid-run (${label}).`);
@@ -935,19 +959,30 @@ export async function runLiveMirror(
     // key, could never find it. Silently broken despite the bot clearly
     // being alive (other commands answered fine).
     await checkManualKillSwitchCommands(store, telegram, killSwitch, audit, 'david', now);
-    await checkManualSellRequests(liveStore, telegram, source, ENTRY_TF, flowParams, now, recordLiveRealizedPnl, store);
-    // Persisted immediately after EACH real-money action point below, not
-    // only once at the very end of this whole function (which itself only
-    // runs once per OUTER cycle) — a real incident, 2026-09-03 (twice, the
-    // second time while writing this very fix): a manual /buy genuinely
-    // reached Revolut X (a real order placed, Telegram already notified)
-    // but the surrounding cycle was killed (a stuck job cancelled and
-    // redispatched) before ever reaching runCycle's own end-of-loop persist,
-    // silently losing every bit of bookkeeping for an order that had
-    // already, irreversibly, happened. persistStateToGit no-ops cheaply
-    // when nothing actually changed, so calling it after every step here is
-    // safe even on a quiet cycle.
-    persistStateToGit(store, 'live-mirror: after manual sell');
+    const manualSellOutcomes = await checkManualSellRequests(
+      liveStore, telegram, source, ENTRY_TF, flowParams, now, recordLiveRealizedPnl, store,
+    );
+    // Persisted immediately once a real order actually reaches the broker,
+    // not only once at the very end of this whole function (which itself
+    // only runs once per OUTER cycle) — a real incident, 2026-09-03: a
+    // manual /buy genuinely reached Revolut X (a real order placed,
+    // Telegram already notified) but the surrounding cycle was killed (a
+    // stuck job cancelled and redispatched) before ever reaching runCycle's
+    // own end-of-loop persist, silently losing every bit of bookkeeping for
+    // an order that had already, irreversibly, happened.
+    //
+    // Gated on hasSubmittedOrder (not called unconditionally after every
+    // step) — a SECOND real incident, 2026-09-04: calling this after every
+    // single manual-command check regardless of outcome meant it ran its
+    // full conflict-retry path on nearly every cycle (routine Telegram
+    // polling alone dirties the shared offset key even when nothing
+    // matched), and over a multi-hour run with constant external pushes
+    // racing it, exhausted the runner's process/pipe resources
+    // (`spawnSync ENOBUFS`) after ~90 minutes — silently breaking EVERY
+    // subsequent persist, mid-cycle AND end-of-cycle, for the rest of that
+    // run. Only a genuine broker submission is worth the cost; everything
+    // else is either a no-op or safely retried next cycle regardless.
+    if (hasSubmittedOrder(manualSellOutcomes)) persistStateToGit(store, 'live-mirror: after manual sell');
     const manualBuyOutcomes = await checkManualBuyRequests(
       liveStore,
       telegram,
@@ -961,7 +996,7 @@ export async function runLiveMirror(
       store,
     );
     await notifyLiveEntryOutcomes(telegram, manualBuyOutcomes);
-    persistStateToGit(store, 'live-mirror: after manual buy');
+    if (hasSubmittedOrder(manualBuyOutcomes)) persistStateToGit(store, 'live-mirror: after manual buy');
     const newlyApproved = cycleOpened
       .map((o) => o.opportunity)
       .filter((o): o is NonNullable<typeof o> => o !== undefined);
@@ -975,7 +1010,7 @@ export async function runLiveMirror(
       liveEntryOptions,
     );
     await notifyLiveEntryOutcomes(telegram, mirroredOutcomes);
-    persistStateToGit(store, 'live-mirror: after auto-approved entries');
+    if (hasSubmittedOrder(mirroredOutcomes)) persistStateToGit(store, 'live-mirror: after auto-approved entries');
     // Shabbat/Yom Tov: the confirmation above is still sent as always —
     // David asked (2026-09-03) to keep the option to approve any time he's
     // actually available. This only remembers what was proposed so
@@ -993,7 +1028,7 @@ export async function runLiveMirror(
       if (message) await sendTelegramMessage(message, telegram);
     }
     liveStore.set('live-blackout-active', activeBlackout !== null);
-    await checkAutomaticExits(
+    const exitOutcomes = await checkAutomaticExits(
       liveStore,
       source,
       ENTRY_TF,
@@ -1003,7 +1038,7 @@ export async function runLiveMirror(
       150,
       recordLiveRealizedPnl,
     );
-    persistStateToGit(store, 'live-mirror: after automatic exits');
+    if (hasSubmittedOrder(exitOutcomes)) persistStateToGit(store, 'live-mirror: after automatic exits');
   } catch (cause) {
     // Never let a live-money problem take down the paper cycle that already
     // completed above — log and retry next cycle, same contract as every
