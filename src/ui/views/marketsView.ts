@@ -232,22 +232,61 @@ function detailHeaderHtml(
 }
 
 /** The Trade tab: visually mirrors Revolut X's order form (Buy/Sell,
- * amount/price fields) so the page shows what David asked for — but every
- * field is inert. Real orders already go through the cloud agent's own
- * safety checks (confidence gates, risk sizing, a Telegram confirmation
- * prompt) via `/buy`/`/sell`; a direct submit button here would bypass all
- * of that, so this deliberately only points at the real path instead of
- * faking one. */
+ * amount/price fields) so the page shows what David asked for. The
+ * amount/price fields stay inert (real orders already go through the cloud
+ * agent's own safety checks — confidence gates, risk sizing, a Telegram
+ * confirmation prompt — via `/buy`/`/sell`; a direct submit button here
+ * would bypass all of that), but the Buy/Sell segmented control itself now
+ * really toggles (see `wireOrderForm`) — a control that LOOKS like a
+ * two-state switch but silently ignored taps on one whole side of itself
+ * was worse than not having the affordance at all. */
 function orderFormHtml(m: MarketRow): string {
   return `
     <div class="order-form">
       <div class="of-toggle">
-        <button class="of-btn buy active" disabled>Buy</button>
-        <button class="of-btn sell" disabled>Sell</button>
+        <button class="of-btn buy active" data-side="buy">Buy</button>
+        <button class="of-btn sell" data-side="sell">Sell</button>
       </div>
       <div class="of-field"><label>Amount</label><div class="of-input"><span>0</span><span class="of-unit">${escapeHtml(m.base)}</span></div></div>
       <div class="of-field"><label>Price</label><div class="of-input"><span>€${formatMarketPrice(m.price)}</span></div></div>
-      <p class="of-note">This mirrors Revolut X's order form for reference, but there's no direct submit here — every real order already goes through the cloud agent's own safety checks (confidence gates, risk sizing, a Telegram confirmation prompt). Send <code>/buy ${escapeHtml(m.symbol)}</code> or <code>/sell ${escapeHtml(m.symbol)}</code> to the Telegram bot to actually place one.</p>
+      <p class="of-note" id="mk-of-note">This mirrors Revolut X's order form for reference, but there's no direct submit here — every real order already goes through the cloud agent's own safety checks (confidence gates, risk sizing, a Telegram confirmation prompt). Send <code>/buy ${escapeHtml(m.symbol)}</code> to the Telegram bot to actually place one.</p>
+    </div>`;
+}
+
+/** Wires the Trade tab's Buy/Sell toggle (visual side only — see
+ * `orderFormHtml`'s doc comment for why nothing actually submits). */
+function wireOrderForm(detailView: HTMLElement, m: MarketRow): void {
+  const buttons = detailView.querySelectorAll<HTMLButtonElement>('.of-btn');
+  const note = detailView.querySelector<HTMLElement>('#mk-of-note');
+  if (buttons.length === 0 || !note) return;
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const side = btn.dataset['side'] as 'buy' | 'sell';
+      buttons.forEach((b) => b.classList.toggle('active', b === btn));
+      note.innerHTML =
+        `This mirrors Revolut X's order form for reference, but there's no direct submit here — every real order already goes through the cloud agent's own safety checks (confidence gates, risk sizing, a Telegram confirmation prompt). Send <code>/${side} ${escapeHtml(m.symbol)}</code> to the Telegram bot to actually place one.`;
+    });
+  });
+}
+
+/** Prev/next pager, shared by every non-chart AND chart render path — a
+ * plain "‹ Prev / N of M / Next ›" gave no reason to tap either button
+ * before landing; naming the neighbouring coin (what the reference's own
+ * swipe-through pickers always show) does. */
+function pagerHtml(detailRows: readonly MarketRow[], coin: number): string {
+  const prev = detailRows[coin - 1];
+  const next = detailRows[coin + 1];
+  return `
+    <div class="detail-nav">
+      <button class="pager" id="mk-prev" ${coin === 0 ? 'disabled' : ''}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        <span>${prev ? escapeHtml(prev.base) : 'Prev'}</span>
+      </button>
+      <span class="pager-count">${coin + 1} / ${detailRows.length}</span>
+      <button class="pager" id="mk-next" ${coin === detailRows.length - 1 ? 'disabled' : ''}>
+        <span>${next ? escapeHtml(next.base) : 'Next'}</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
     </div>`;
 }
 
@@ -288,21 +327,43 @@ function statsSectionHtml(stats: Awaited<ReturnType<typeof fetchCoinStats>>): st
   return head + rows.join('');
 }
 
-/** Numeric bid/ask ladder — the Table view mode. */
+/** Numeric bid/ask ladder — the Table view mode. Each row now carries a
+ * cumulative-depth bar behind its own number (bid bars grow from the right,
+ * ask bars from the left, both toward the shared centre) — the standard
+ * exchange-order-book read where a wall of liquidity a few rows down is
+ * visible at a glance, not just as a longer list of numbers to scan. Same
+ * cumulative math as the Depth tab's step chart, so the two views agree. */
 function orderBookTableHtml(book: OrderBook): string {
   if (book.bids.length === 0 && book.asks.length === 0) return '<div class="empty">No order book depth right now.</div>';
-  const rows = Math.max(book.bids.length, book.asks.length);
-  let html = '<div class="orderbook-table"><div class="orderbook-head"><span>Bid</span><span>Ask</span></div>';
+  const bids = [...book.bids].sort((a, b) => b.price - a.price);
+  const asks = [...book.asks].sort((a, b) => a.price - b.price);
+  let cumBid = 0;
+  const bidCum = bids.map((l) => (cumBid += l.volume));
+  let cumAsk = 0;
+  const askCum = asks.map((l) => (cumAsk += l.volume));
+  const maxCum = Math.max(cumBid, cumAsk, 1e-9);
+  const rows = Math.max(bids.length, asks.length);
+  let html = '<div class="orderbook-table"><div class="orderbook-head"><span>Bid (EUR)</span><span>Ask (EUR)</span></div>';
   for (let i = 0; i < rows; i++) {
-    const bid = book.bids[i];
-    const ask = book.asks[i];
+    const bid = bids[i];
+    const ask = asks[i];
+    const bidBar = bid ? ((bidCum[i]! / maxCum) * 100).toFixed(1) : '0';
+    const askBar = ask ? ((askCum[i]! / maxCum) * 100).toFixed(1) : '0';
     html +=
       '<div class="orderbook-row">' +
-      `<span class="ob-bid">${bid ? `${bid.volume.toFixed(4)} @ €${formatMarketPrice(bid.price)}` : ''}</span>` +
-      `<span class="ob-ask">${ask ? `€${formatMarketPrice(ask.price)} @ ${ask.volume.toFixed(4)}` : ''}</span>` +
+      `<span class="ob-bid" style="--bar:${bidBar}%">${bid ? `${bid.volume.toFixed(4)} @ €${formatMarketPrice(bid.price)}` : ''}</span>` +
+      `<span class="ob-ask" style="--bar:${askBar}%">${ask ? `€${formatMarketPrice(ask.price)} @ ${ask.volume.toFixed(4)}` : ''}</span>` +
       '</div>';
   }
-  return `${html}</div>`;
+  html += '</div>';
+  const bestBid = bids[0]?.price;
+  const bestAsk = asks[0]?.price;
+  if (bestBid !== undefined && bestAsk !== undefined) {
+    const spread = bestAsk - bestBid;
+    const spreadPct = bestBid > 0 ? (spread / bestBid) * 100 : 0;
+    html += `<div class="orderbook-spread"><span>Spread</span><span>€${formatPrice(spread)} (${spreadPct.toFixed(2)}%)</span></div>`;
+  }
+  return html;
 }
 
 /** Cumulative depth as a two-sided step chart — the Depth view mode. */
@@ -324,27 +385,43 @@ function orderBookDepthHtml(book: OrderBook): string {
   const askPath = askPoints
     .map((p, i) => `${i === 0 ? 'M' : 'L'} ${(mid + (i / Math.max(askPoints.length - 1, 1)) * mid).toFixed(1)} ${(H - (p.cum / maxCum) * H).toFixed(1)}`)
     .join(' ');
+  const bestBid = bids[0]?.price;
+  const bestAsk = asks[0]?.price;
+  const midPrice = bestBid !== undefined && bestAsk !== undefined ? (bestBid + bestAsk) / 2 : null;
+  const stats =
+    midPrice !== null
+      ? `<div class="detail-stats-row depth-stats">
+          <div class="dstat"><span class="dstat-label">Best bid</span><span class="dstat-value hot">€${formatMarketPrice(bestBid!)}</span></div>
+          <div class="dstat"><span class="dstat-label">Mid</span><span class="dstat-value">€${formatMarketPrice(midPrice)}</span></div>
+          <div class="dstat"><span class="dstat-label">Best ask</span><span class="dstat-value cold">€${formatMarketPrice(bestAsk!)}</span></div>
+        </div>`
+      : '';
   return (
     `<svg class="orderbook-depth" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">` +
     `<path d="${bidPath} L ${mid} ${H} Z" class="depth-bid"/>` +
     `<path d="${askPath} L ${mid} ${H} Z" class="depth-ask"/>` +
     `<line x1="${mid}" y1="0" x2="${mid}" y2="${H}" class="depth-mid"/>` +
-    `</svg>`
+    `</svg>${stats}`
   );
 }
 
-/** Recent public trades, newest first — the Trades (list) view mode. */
+/** Recent public trades, newest first — the Trades (list) view mode. A real
+ * exchange tape always names its own columns and tints each print by side
+ * (a wash of colour bleeding in from the price, not just the price text
+ * itself) so a fast-scrolling list still reads at a glance — this used to
+ * have neither, just three unlabelled numbers per row. */
 function tradesListHtml(trades: RecentTrade[]): string {
   if (trades.length === 0) return '<div class="empty">No recent trades.</div>';
-  return trades
+  const rows = trades
     .slice(0, 30)
     .map(
       (t) =>
-        `<div class="row"><span class="chg ${t.side === 'buy' ? 'up' : 'down'}">€${formatPrice(t.price)}</span>` +
+        `<div class="trade-tape-row ${t.side}"><span class="chg ${t.side === 'buy' ? 'up' : 'down'}">€${formatPrice(t.price)}</span>` +
         `<span class="row-sub">${t.volume.toFixed(5)}</span>` +
         `<span class="row-sub">${formatClock(t.time)}</span></div>`,
     )
     .join('');
+  return `<div class="trade-tape-head"><span>Price</span><span>Amount</span><span>Time</span></div><div class="trade-tape">${rows}</div>`;
 }
 
 export function renderMarketsView(container: HTMLElement, data: ActiveDataSource): ViewHandle {
@@ -749,13 +826,11 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       detailView.innerHTML =
         detailHeaderHtml(m, m.price, m.changePct, viewMode, getWatchlist().has(m.symbol), detailRows, coin) +
         `<div class="detail-nonchart">${body}</div>` +
-        `<div class="detail-nav">` +
-        `<button class="pager" id="mk-prev" ${coin === 0 ? 'disabled' : ''}>‹ Prev</button>` +
-        `<span class="row-sub">${coin + 1} / ${detailRows.length}</span>` +
-        `<button class="pager" id="mk-next" ${coin === detailRows.length - 1 ? 'disabled' : ''}>Next ›</button>` +
-        `</div>${EXTRAS_HTML}`;
+        pagerHtml(detailRows, coin) +
+        EXTRAS_HTML;
 
       wireCommonControls(m);
+      if (viewMode === 'trade') wireOrderForm(detailView, m);
       attachExtras(m);
     };
 
@@ -867,12 +942,8 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
             <button class="ctoggle-btn ${mode === 'line' ? 'active' : ''}" data-mode="line" ${range.long ? 'disabled' : ''}>Line</button>
           </div>
         </div>
-        <div class="detail-chart"><div class="pchart-wrap">${chart}<div class="pchart-tip" hidden></div></div></div>
-        <div class="detail-nav">
-          <button class="pager" id="mk-prev" ${coin === 0 ? 'disabled' : ''}>‹ Prev</button>
-          <span class="row-sub">${coin + 1} / ${detailRows.length}</span>
-          <button class="pager" id="mk-next" ${coin === detailRows.length - 1 ? 'disabled' : ''}>Next ›</button>
-        </div>` +
+        <div class="detail-chart"><div class="pchart-wrap">${chart}<div class="pchart-tip" hidden></div></div></div>` +
+        pagerHtml(detailRows, coin) +
         EXTRAS_HTML;
 
       wireCommonControls(m);
