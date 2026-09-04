@@ -187,6 +187,13 @@ export interface DailySummaryInput {
    * Null/omitted if it hasn't run yet.
    */
   readonly longTermShadow?: ShadowStanding | null;
+  /**
+   * Forward-test standing for the 13 new-candidate symbols, run on real live
+   * data in paper mode only — NOT part of the curated trading universe (see
+   * `autopilotRunner.mts`'s `CANDIDATE_WATCH_CANDIDATES`). Null/omitted if it
+   * hasn't run yet.
+   */
+  readonly candidateWatch?: ShadowStanding | null;
 }
 
 /** One line for a long-term shadow wallet's standing — shared by crypto and
@@ -228,6 +235,24 @@ function shadowSummaryLines(standings: readonly ShadowStanding[]): string[] {
     `🧪 אסטרטגיה מובילה בבדיקה: ${best.label} — ${sign}${best.returnPct.toFixed(2)}% ` +
       `(${best.trades} עסקאות, PF ${best.profitFactor === null ? 'n/a' : best.profitFactor.toFixed(2)}). ` +
       `כסף מדומה, לא משפיע על החשבון האמיתי.`,
+  ];
+}
+
+/**
+ * One line for the 13 new-candidate forward test — deliberately spells out
+ * "not real, not in real trading" so it can never be confused with the
+ * curated universe or the real account (see `autopilotRunner.mts`'s
+ * `CANDIDATE_WATCH_CANDIDATES`).
+ */
+function candidateWatchLines(standing: ShadowStanding): string[] {
+  const prefix = '🧭 מעקב 13 מטבעות מועמדים (לא במסחר האמיתי, כסף מדומה בלבד):';
+  if (standing.trades < SHADOW_MEANINGFUL_TRADES) {
+    return [`${prefix} עדיין צובר נתונים (${standing.trades}/${SHADOW_MEANINGFUL_TRADES} עסקאות) — מוקדם לדרג.`];
+  }
+  const sign = standing.returnPct >= 0 ? '+' : '';
+  return [
+    `${prefix} ${sign}${standing.returnPct.toFixed(2)}% ` +
+      `(${standing.trades} עסקאות, PF ${standing.profitFactor === null ? 'n/a' : standing.profitFactor.toFixed(2)}).`,
   ];
 }
 
@@ -295,6 +320,9 @@ export function buildDailySummary(input: DailySummaryInput): string {
   }
   if (input.longTermShadow) {
     lines.push(...longTermShadowLines(input.longTermShadow, '🌱 ארנק השקעות לטווח ארוך:'));
+  }
+  if (input.candidateWatch) {
+    lines.push(...candidateWatchLines(input.candidateWatch));
   }
   if (input.stocks) {
     const s = input.stocks;

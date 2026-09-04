@@ -99,6 +99,37 @@ export const CURATED_INSTRUMENTS: Instrument[] = [
   { symbol: 'ENAEUR', base: 'ENA', quote: 'EUR' },
 ];
 
+/**
+ * Candidates under LIVE FORWARD TEST only (`shadow:candidate-watch` in
+ * `server/autopilotRunner.mts`) — NEVER included in `CURATED_INSTRUMENTS`
+ * and NEVER read by the real-trading symbol slice. Measured net-positive on
+ * real Kraken backtest history (2026-09-04, ≥10 trades each, clear profit
+ * factor) but — same lesson as the BREAKOUT rejection the same night
+ * (backtest +6.48% vs real forward record -2.05%) — backtest alone is not
+ * enough to trust with real money here. These run the production-default
+ * strategy on real live data in paper mode to build an honest forward
+ * record before any decision to add them to `CURATED_INSTRUMENTS`. All 13
+ * verified `online` on Kraken's live `AssetPairs` (2026-09-04); altname
+ * equals base+EUR for every one, no `ASSET_ALIASES` needed.
+ * USELESS/EUR was in the same candidate batch but is excluded here — confirmed
+ * not tradable on the real broker (Revolut X).
+ */
+export const CANDIDATE_INSTRUMENTS: Instrument[] = [
+  { symbol: 'PUMPEUR', base: 'PUMP', quote: 'EUR' },
+  { symbol: 'XMREUR', base: 'XMR', quote: 'EUR' },
+  { symbol: 'SPXEUR', base: 'SPX', quote: 'EUR' },
+  { symbol: 'CRVEUR', base: 'CRV', quote: 'EUR' },
+  { symbol: 'DASHEUR', base: 'DASH', quote: 'EUR' },
+  { symbol: 'ZROEUR', base: 'ZRO', quote: 'EUR' },
+  { symbol: 'BONKEUR', base: 'BONK', quote: 'EUR' },
+  { symbol: 'OPEUR', base: 'OP', quote: 'EUR' },
+  { symbol: 'SYRUPEUR', base: 'SYRUP', quote: 'EUR' },
+  { symbol: 'MINAEUR', base: 'MINA', quote: 'EUR' },
+  { symbol: 'TIAEUR', base: 'TIA', quote: 'EUR' },
+  { symbol: 'CHIPEUR', base: 'CHIP', quote: 'EUR' },
+  { symbol: 'PENDLEEUR', base: 'PENDLE', quote: 'EUR' },
+];
+
 /** Base asset codes (BTC, ETH, …) actually traded by the agent — for the UI's
  * "TRADED" badge (Markets list, Home's Markets rail widget). Compared by
  * base rather than symbol since the display data source can be Kraken,

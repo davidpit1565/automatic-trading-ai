@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { KrakenPublicSource } from '../../src/core/data/krakenPublic';
+import { CANDIDATE_INSTRUMENTS, CURATED_INSTRUMENTS, KrakenPublicSource } from '../../src/core/data/krakenPublic';
 
 const NOW = 1_700_000_000_000;
 // Mirrors the curated-majors order in src/core/data/krakenPublic.ts — the
@@ -567,5 +567,23 @@ describe('transient failure handling', () => {
     expect(seen.attempts).toBe(4); // initial + 3 retries
     if (result.ok) return;
     expect(result.error).toContain('retries');
+  });
+});
+
+describe('CANDIDATE_INSTRUMENTS (forward-test-only, never real trading)', () => {
+  it('lists exactly the 13 measured candidates, each a valid EUR pair', () => {
+    expect(CANDIDATE_INSTRUMENTS).toHaveLength(13);
+    for (const i of CANDIDATE_INSTRUMENTS) {
+      expect(i.quote).toBe('EUR');
+      expect(i.symbol).toBe(`${i.base}EUR`); // no Kraken alias needed for any of these
+    }
+    expect(CANDIDATE_INSTRUMENTS.map((i) => i.base)).toEqual([
+      'PUMP', 'XMR', 'SPX', 'CRV', 'DASH', 'ZRO', 'BONK', 'OP', 'SYRUP', 'MINA', 'TIA', 'CHIP', 'PENDLE',
+    ]);
+  });
+
+  it('never overlaps the curated real-trading universe', () => {
+    const curatedSymbols = new Set(CURATED_INSTRUMENTS.map((i) => i.symbol));
+    expect(CANDIDATE_INSTRUMENTS.every((i) => !curatedSymbols.has(i.symbol))).toBe(true);
   });
 });

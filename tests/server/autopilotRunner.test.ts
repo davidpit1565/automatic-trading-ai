@@ -444,6 +444,27 @@ describe('maybeSendSummaries (the exact bug class already found once)', () => {
     expect(capturedText).toContain('🌱 ארנק השקעות לטווח ארוך:');
     expect(capturedText).toContain('+8.00%');
   });
+
+  it('folds the new-candidate forward-test standing into the digest text, clearly marked not real', async () => {
+    let capturedText = '';
+    const fetchFn = (async (_url: string | URL, init?: RequestInit) => {
+      capturedText = JSON.parse(String(init?.body)).text;
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const telegram = { token: 'T', chatId: 'C', fetchFn };
+    const { portfolio, journal } = buildPortfolio();
+    store.set('candidate-watch-standings', {
+      at: 0,
+      standings: [
+        { key: 'candidate-watch', label: '13 new candidates', equity: 10_300, returnPct: 3, trades: 22, winRatePct: 55, profitFactor: 1.3, openPositions: 1, startedAt: 0 },
+      ],
+    });
+
+    await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, Date.parse('2026-07-28T12:30:00Z'));
+    expect(capturedText).toContain('מעקב 13 מטבעות מועמדים');
+    expect(capturedText).toContain('לא במסחר האמיתי');
+    expect(capturedText).toContain('+3.00%');
+  });
 });
 
 describe('maybeSendPeriodicReports — elapsed-time gating survives a coverage gap', () => {

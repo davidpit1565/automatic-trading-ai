@@ -15,7 +15,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CURATED_INSTRUMENTS, KrakenPublicSource } from '../src/core/data/krakenPublic';
+import { CANDIDATE_INSTRUMENTS, CURATED_INSTRUMENTS, KrakenPublicSource } from '../src/core/data/krakenPublic';
 import { CoinbasePublicSource } from '../src/core/data/coinbasePublic';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import { PersistedAuditLog } from '../src/core/autopilot/auditLog';
@@ -803,6 +803,7 @@ async function runCycle(
   await runLiveMirror(store, source, instruments, telegram, cycle.opened, cyclePrices, now);
   await runShadows(store, source, symbols, now, cyclePrices);
   await runLongTermShadow(store, source, symbols, now);
+  await runCandidateWatch(store, source, now);
   await recordEquity(store, source, portfolio, journal, now, cyclePrices);
   await maybeSendSummaries(store, source, portfolio, journal, telegram, now);
   await maybeSendPeriodicReports(store, source, portfolio, journal, telegram, now);
@@ -1260,6 +1261,74 @@ async function runShadows(
   }
 }
 
+/**
+ * Live forward test of the 13 new-candidate symbols (see `CANDIDATE_INSTRUMENTS`
+ * in `krakenPublic.ts` for why: measured net-positive on real Kraken backtest
+ * history, but backtest alone was already caught being wrong once tonight —
+ * the BREAKOUT lead — so these earn a real live forward record before any
+ * decision to add them to `CURATED_INSTRUMENTS`. David: "תריץ קודם ואז תוסיף
+ * אחרי ההרצה" (run it first, then add after the run) — nothing here decides
+ * that; it only builds the honest record to decide from later.
+ *
+ * Deliberately its OWN `runShadowCycle` call with its OWN symbols array, not
+ * folded into `SHADOW_CANDIDATES`/`symbols` above: those test alternate
+ * STRATEGIES on the curated universe, this tests the PRODUCTION-DEFAULT
+ * strategy on a DIFFERENT universe. One candidate, no `evaluate` override —
+ * production's own minConfidence/maxRsiForLong/trailing/confirmation, so the
+ * record answers exactly the question "would these have done well trading
+ * like the real bot does." Isolated by construction (own namespace, own
+ * portfolio, own kill switch, real account and SHADOW_CANDIDATES scoreboard
+ * both untouched) and 100% simulated — `runShadowCycle` never has a live-order
+ * path. Bounded extra cost: 13 symbols' worth of candle fetches through the
+ * same throttled `KrakenPublicSource` queue as everything else, not a new
+ * fetch pattern.
+ */
+const CANDIDATE_WATCH_STANDINGS_KEY = 'candidate-watch-standings';
+const CANDIDATE_WATCH_SYMBOLS = CANDIDATE_INSTRUMENTS.map((i) => i.symbol);
+const CANDIDATE_WATCH_CANDIDATES: readonly ShadowCandidate[] = [
+  {
+    key: 'candidate-watch',
+    label: '13 new candidates, production defaults (forward test only — not real trading)',
+    minConfidence: AUTOPILOT_MIN_CONFIDENCE,
+    maxRsiForLong: AUTOPILOT_MAX_RSI_FOR_LONG,
+    trailing: AUTOPILOT_TRAILING,
+    confirmationTimeframe: CONFIRMATION_TF,
+  },
+];
+
+/**
+ * One cycle of the new-candidate forward test, on their own symbol universe.
+ * Purely diagnostic/simulated — a failure here is logged and never allowed
+ * to affect the real cycle, which has already completed by this point (same
+ * contract as `runShadows`/`runLongTermShadow`).
+ */
+async function runCandidateWatch(
+  store: FileStore,
+  source: MarketDataSource,
+  now: number,
+): Promise<void> {
+  try {
+    const caching = new CachingSource(source);
+    const prices = await latestPrices(caching, CANDIDATE_WATCH_SYMBOLS);
+    const { standings, failures } = await runShadowCycle(CANDIDATE_WATCH_CANDIDATES, {
+      source: caching,
+      symbols: CANDIDATE_WATCH_SYMBOLS,
+      timeframe: ENTRY_TF,
+      initialCash: INITIAL_CASH,
+      costRate: COST_RATE,
+      store,
+      now,
+      prices,
+    });
+    store.set(CANDIDATE_WATCH_STANDINGS_KEY, { at: now, standings });
+    for (const failure of failures) {
+      console.error(`Candidate watch '${failure.key}' failed: ${failure.reason}`);
+    }
+  } catch (cause) {
+    console.error('Candidate watch evaluation skipped:', cause instanceof Error ? cause.message : cause);
+  }
+}
+
 const EQUITY_HISTORY_KEY = 'equity-history';
 const EQUITY_HISTORY_CAP = 5000;
 /** Position ids already announced via Telegram, so alerts never repeat. */
@@ -1561,6 +1630,8 @@ export async function maybeSendSummaries(
   const shadowSaved = store.get<{ standings: ShadowStanding[] }>(SHADOW_STANDINGS_KEY);
   const longTermShadowSaved = store.get<{ standings: ShadowStanding[] }>(LONGTERM_SHADOW_STANDINGS_KEY);
   const longTermShadow = longTermShadowSaved?.standings.find((s) => s.key === 'long-term') ?? null;
+  const candidateWatchSaved = store.get<{ standings: ShadowStanding[] }>(CANDIDATE_WATCH_STANDINGS_KEY);
+  const candidateWatch = candidateWatchSaved?.standings.find((s) => s.key === 'candidate-watch') ?? null;
   for (const slot of dueSlots) {
     const result = await sendTelegramMessage(
       buildDailySummary({
@@ -1568,6 +1639,7 @@ export async function maybeSendSummaries(
         heading: slot.heading,
         ...(shadowSaved ? { shadows: shadowSaved.standings } : {}),
         ...(longTermShadow ? { longTermShadow } : {}),
+        ...(candidateWatch ? { candidateWatch } : {}),
       }),
       telegram,
     );
