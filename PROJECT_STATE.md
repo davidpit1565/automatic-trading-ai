@@ -1,5 +1,26 @@
 # PROJECT_STATE
 
+## Bare /buy and /sell (no symbol) silently did nothing — real incident, David's own screenshot (2026-09-04)
+David tapped the "לקנייה: /buy <SYMBOL>" line inside a momentum-spike alert
+(`detectMomentumSpikes.mts`) and only the bare text `/buy` was sent — no
+symbol, no bot reply, nothing. Root cause is a Telegram platform behavior,
+not fixable in the message text: tapping a `bot_command` entity always
+inserts just the command token into the compose box, never any text after
+it on the same line, so `/buy <SYMBOL>` as plain text can never be tapped
+as one unit. `parseBuyCommand`/`parseSellCommand` already correctly
+rejected the bare command (return `null`), but the caller silently stashed
+it as an "unclaimed message" with zero feedback — indistinguishable from
+the bot being broken or ignoring the human.
+
+Fixed in both `manualBuyCommand.mts` and `manualSellCommand.mts`: a
+message that starts with `/buy`/`/sell` but doesn't match the full
+`<command> <SYMBOL>` pattern now gets an immediate Telegram reply
+("❌ /buy צריך סימבול, למשל: /buy USELESSEUR") instead of vanishing.
+Doesn't change `parseBuyCommand`/`parseSellCommand` themselves or any
+trade-execution path — purely adds feedback for input that already did
+nothing. Regression tests added for both. Full gate green (tsc, 1132
+tests, build).
+
 ## ENOBUFS recurred a SECOND time same night — real trigger was pipe buffers, not hours of accumulation (2026-09-04)
 The earlier fix (gate mid-cycle persists on `hasSubmittedOrder`, retries
 5→3) reduced how OFTEN the conflict-retry path runs, but didn't stop it

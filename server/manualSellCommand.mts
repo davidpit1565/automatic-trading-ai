@@ -30,6 +30,7 @@ import { proposeLiveExit } from './liveExitMirror.mts';
 import type { LiveOrderFlowParams, LiveOrderFlowResult } from './liveOrchestrator.mts';
 import {
   pollAllTelegramUpdates,
+  sendTelegramMessage,
   stashUnclaimedTelegramUpdates,
   type TelegramConfig,
   type TelegramTextMessage,
@@ -124,8 +125,20 @@ export async function checkManualSellRequests(
   const unclaimedMessages: TelegramTextMessage[] = [];
   for (const message of polled.messages) {
     const symbol = parseSellCommand(message.text);
-    if (symbol) pendingSymbols.add(symbol);
-    else unclaimedMessages.push(message);
+    if (symbol) {
+      pendingSymbols.add(symbol);
+      continue;
+    }
+    unclaimedMessages.push(message);
+    // Real incident, 2026-09-04: a bare `/sell` (no symbol) used to be
+    // silently swallowed here with zero feedback — exactly what happens
+    // when a human taps a `/sell` mention inside a longer message (Telegram
+    // only ever inserts the bare command token when you tap a bot-command
+    // entity, never any text after it, by platform design), so the tap
+    // silently did nothing and looked like the bot ignored them.
+    if (/^\/sell\b/i.test(message.text.trim())) {
+      await sendTelegramMessage('❌ /sell צריך סימבול, למשל: /sell XBTEUR', telegram);
+    }
   }
   stashUnclaimedTelegramUpdates(telegramStore, { messages: unclaimedMessages, callbacks: polled.callbacks });
   if (pendingSymbols.size === 0) return [];

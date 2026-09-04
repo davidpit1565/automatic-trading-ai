@@ -45,6 +45,7 @@ import { mirrorApprovedEntries, type LiveEntryOutcome, type MirrorApprovedEntrie
 import type { LiveOrderFlowParams } from './liveOrchestrator.mts';
 import {
   pollAllTelegramUpdates,
+  sendTelegramMessage,
   stashUnclaimedTelegramUpdates,
   type TelegramConfig,
   type TelegramTextMessage,
@@ -101,8 +102,21 @@ export async function checkManualBuyRequests(
   const unclaimedMessages: TelegramTextMessage[] = [];
   for (const message of polled.messages) {
     const symbol = parseBuyCommand(message.text);
-    if (symbol) pendingSymbols.add(symbol);
-    else unclaimedMessages.push(message);
+    if (symbol) {
+      pendingSymbols.add(symbol);
+      continue;
+    }
+    unclaimedMessages.push(message);
+    // Real incident, 2026-09-04: a bare `/buy` (no symbol) used to be
+    // silently swallowed here with zero feedback. Confirmed live — David
+    // tapped the "לקנייה: /buy <SYMBOL>" line in a momentum-spike alert
+    // (detectMomentumSpikes.mts) and only "/buy" got sent, because Telegram
+    // only ever inserts the bare command token when you tap a bot-command
+    // entity, never any text after it (platform behavior, not something a
+    // message format can work around) — so the tap silently did nothing.
+    if (/^\/buy\b/i.test(message.text.trim())) {
+      await sendTelegramMessage('❌ /buy צריך סימבול, למשל: /buy USELESSEUR', telegram);
+    }
   }
   stashUnclaimedTelegramUpdates(telegramStore, { messages: unclaimedMessages, callbacks: polled.callbacks });
   if (pendingSymbols.size === 0) return [];

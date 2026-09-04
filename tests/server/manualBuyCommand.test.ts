@@ -225,6 +225,38 @@ describe('checkManualBuyRequests', () => {
     expect(unclaimed).toHaveLength(1);
   });
 
+  it("replies with a usage hint for a bare /buy with no symbol, instead of silently doing nothing — real incident, 2026-09-04: tapping the '/buy <SYMBOL>' line in a momentum-spike alert only sends the bare '/buy' token (Telegram never includes the argument when you tap a bot-command entity), and this used to vanish with zero feedback", async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const sentTexts: string[] = [];
+    const fetchFn = (async (url: string, init?: { body?: string }) => {
+      if (String(url).includes('/sendMessage')) {
+        sentTexts.push((JSON.parse(init!.body!) as { text: string }).text);
+        return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 });
+      }
+      return new Response(
+        JSON.stringify({ ok: true, result: [{ update_id: 1, message: { text: '/buy', chat: { id: 'C' } } }] }),
+        { status: 200 },
+      );
+    }) as unknown as typeof fetch;
+    const telegram = { token: 'T', chatId: 'C', fetchFn };
+
+    const outcomes = await checkManualBuyRequests(
+      store,
+      telegram,
+      fakeSource(),
+      '1h',
+      [XBT],
+      {},
+      flowParams({ intentId: 'x', state: 'filled', filledQuantity: 0, avgFillPrice: null, detail: '' }, killSwitch, audit),
+      1000,
+    );
+    expect(outcomes).toEqual([]);
+    expect(sentTexts).toEqual(['❌ /buy צריך סימבול, למשל: /buy USELESSEUR']);
+  });
+
   it('respects the kill switch — no manual buy can bypass it', async () => {
     const store = new MemoryStore();
     initLiveCash(store, 100);

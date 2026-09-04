@@ -136,6 +136,39 @@ describe('checkManualSellRequests', () => {
     expect(outcomes).toEqual([]);
   });
 
+  it("replies with a usage hint for a bare /sell with no symbol, instead of silently doing nothing — same class of real incident as the /buy side, 2026-09-04: tapping a '/sell <SYMBOL>' bot-command mention in Telegram only ever sends the bare '/sell' token, never the argument", async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const killSwitch = new PersistedKillSwitch(store);
+    const sentTexts: string[] = [];
+    const fetchFn = (async (url: string, init?: { body?: string }) => {
+      if (String(url).includes('/sendMessage')) {
+        sentTexts.push((JSON.parse(init!.body!) as { text: string }).text);
+        return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 });
+      }
+      return new Response(
+        JSON.stringify({ ok: true, result: [{ update_id: 1, message: { text: '/sell', chat: { id: 'C' } } }] }),
+        { status: 200 },
+      );
+    }) as unknown as typeof fetch;
+    const outcomes = await checkManualSellRequests(
+      store,
+      { token: 'T', chatId: 'C', fetchFn },
+      fakeSource(),
+      '1h',
+      {
+        confirmationGate: fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' }),
+        brokerAdapter: fakeBrokerAdapter(filledReport()),
+        killSwitch,
+        audit,
+        verifySymbolExists: async () => true,
+      },
+      9000,
+    );
+    expect(outcomes).toEqual([]);
+    expect(sentTexts).toEqual(['❌ /sell צריך סימבול, למשל: /sell XBTEUR']);
+  });
+
   it('reports no-open-position for a /sell command with no matching tracked live position', async () => {
     const store = new MemoryStore();
     const audit = new PersistedAuditLog(store);
