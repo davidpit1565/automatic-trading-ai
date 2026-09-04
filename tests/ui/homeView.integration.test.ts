@@ -133,6 +133,9 @@ describe('Home view (DOM integration)', () => {
     expect(container.querySelector<HTMLElement>('#home-live-hero')!.hidden).toBe(true);
     expect(container.querySelector<HTMLElement>('#home-live-positions-wrap')!.hidden).toBe(true);
     expect(container.querySelector<HTMLElement>('#home-sim-hero')!.hidden).toBe(false);
+    // No real account yet → the SIMULATED "Open positions" table stays the
+    // one shown, not hidden alongside a live account that doesn't exist.
+    expect(container.querySelector<HTMLElement>('#home-positions-wrap')!.hidden).toBe(false);
   });
 
   it('shows the real-money account (equity, cash, open positions) once the live ledger exists, distinctly labeled from the simulated one', async () => {
@@ -174,6 +177,14 @@ describe('Home view (DOM integration)', () => {
     // once real money is already on, "is it time to turn real money on?"
     // is a moot question on THIS screen (still shown on the Profit tab).
     expect(container.querySelector<HTMLElement>('#home-readiness')!.hidden).toBe(true);
+    // Same reasoning completed for the SIMULATED "Open positions" table,
+    // which the comment above already named as clutter but previously never
+    // actually hid (still fully reachable on the Profit tab).
+    expect(container.querySelector<HTMLElement>('#home-positions-wrap')!.hidden).toBe(true);
+    // The real balance is now the ONE dominant hero on this screen (the
+    // giant, centered, sparkline-bearing treatment), not a boxed secondary
+    // card — since the SIMULATED hero that used to hold that role is hidden.
+    expect(container.querySelector<HTMLElement>('#home-live-hero')!.classList.contains('hero-bare')).toBe(true);
   });
 
   it('shows a paused banner when the kill switch is engaged on the real account', async () => {

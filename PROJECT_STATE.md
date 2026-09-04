@@ -1,5 +1,70 @@
 # PROJECT_STATE
 
+## Creative upgrade pass #1: Home's real-money hero was the wrong shape for what it now is (2026-09-04)
+David asked for genuine UPGRADES, not a bug hunt ("אני לא מחפש פגמים... מחפש
+שידרוגים"). Verified with real before/after screenshots (built `dist/`,
+served locally, mocked `autopilot-state.json`/`stocks-state.json` with the
+real committed content, network aborted so the app takes its own fail-soft
+path) at a 400px phone width.
+
+**Structural finding**: `.hero-bare` (the giant, centered, sparkline-bearing
+"ONE dominant hero" treatment) exists specifically so the screen's single
+most important number gets the visual weight a boxed secondary card can't
+give it. Home already does this correctly for the SIMULATED balance — but
+the moment a live ledger actually exists, that sim hero is hidden entirely
+(correct — it's no longer primary) and NOTHING takes over the dominant
+role: the real balance, now the only balance on the page, stayed a small
+boxed "Real money" card literally sized for a widget among several. On
+David's own live account (currently real money IS on, €100.99) this was
+visibly wrong — the screen's one number that matters most looked the
+smallest.
+
+Fixed in `homeView.ts`: once `state.live` exists, the real-money hero gets
+`hero-bare` (giant centered figure, same scale the sim balance used when
+it was primary), its own equity sparkline (`live.equityHistory`, real
+recorded samples — nothing fabricated), an up/down glow + "X% since
+tracking began" line (using the first recorded sample as baseline, the
+same method `assetHubView.ts`'s Profit-tab real-money card already uses —
+deliberately NOT "all time", since the live ledger has no `initialCash`
+field and that word would overclaim what the number measures), and a
+"profit ›" deep link into the Profit tab's own real equity chart (reuses
+the existing chart rather than pointing at `valueView.ts`, which is
+hardcoded to the SIMULATED curve only). The page-wide ambient sentiment
+wash (`document.body.dataset.sentiment`) now also tracks the real
+account's own direction once it's dominant, instead of a hidden
+simulated account's.
+
+**Consistency finding, same root cause**: a 2026-09-04 comment already on
+this file said the SIMULATED "Open positions" table is confusing clutter
+once real money is live — but the code only ever hid the sim hero and the
+readiness card, never that table. Finished it: `posWrap.hidden =
+Boolean(live)` now matches the other two. Nothing lost — the Profit tab
+still shows both real and simulated side by side, unchanged, exactly as
+the original comment already said it would.
+
+**Real (pre-existing) bug surfaced while wiring the new "profit ›" link**:
+`assetHubView.ts`'s tab-click handler matched the active tab by object
+identity (`b === btn`) instead of by tab value. Any deep-link button
+elsewhere on the page that carries `data-hub` but isn't itself one of the
+`.hub-tab` pills — this already included Home's "Recent activity → See
+all" (`data-hub="history"`) before today — correctly switched the panel
+content (that part compares the STRING value) but could never actually
+highlight any tab pill, since no `.hub-tab` element is ever `=== btn`. So
+tapping "See all" already silently left the tab bar showing no active tab
+at all, for months, on the History deep-link, and would have repeated the
+same silent glitch on the new one. Fixed by matching `b.dataset.hub ===
+tab` instead. Verified with a real click in a running instance (not just
+inference from source): the Profit pill now correctly lights up.
+
+Added test coverage for both: `homeView.integration.test.ts` now asserts
+`#home-positions-wrap` hides with live active (and stays visible without
+it) and that the live hero gets `hero-bare`; `assetHubView.test.ts` adds a
+dedicated case for a deep-link button that isn't a `.hub-tab` pill.
+
+Full gate green: `tsc --noEmit` clean, 1140/1140 tests (1 new), `npm run
+build` clean. Pure `src/ui/` + `tests/ui/` diff (4 files) — nothing under
+`server/**`, `state/**`, or trading/signal/risk logic touched.
+
 ## Real duplicate Telegram digests, caused by tonight's own ENOBUFS firefighting (2026-09-04)
 David: "אני ממשיך לקבל את הסיכום היומי הרבה פעמים, סיכמנו פעם ביום" (I keep
 getting the daily summary many times, we agreed on once a day). Root cause:
