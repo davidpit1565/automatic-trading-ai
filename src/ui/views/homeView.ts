@@ -7,7 +7,6 @@
 import type { ActiveDataSource } from '../dataSource';
 import { fetchCloudState, type CloudState } from '../cloudState';
 import { fetchTopMarkets, fetchMarketRows, findBtcSymbol, type MarketSnapshot, type MarketRow } from '../markets';
-import { CURATED_BASES } from '../../core/data/krakenPublic';
 import { topGainers, topLosers } from '../marketFilters';
 import { openMarketsAt } from './marketsView';
 import { sparklineSvg } from '../charts';
@@ -39,7 +38,7 @@ function baseFor(data: ActiveDataSource, symbol: string): string {
   return (inst?.base ?? symbol.replace(/EUR$|USD$/, '')).toUpperCase();
 }
 
-interface PositionLike {
+export interface PositionLike {
   readonly symbol: string;
   readonly entryPrice: number;
   readonly quantity: number;
@@ -48,7 +47,7 @@ interface PositionLike {
 /** One row of the Revolut-style holdings table: identity + Total/Price/
  * Allocation (desktop-only columns, see .col-total/.col-price/.col-alloc in
  * styles.css) + Value/Unrealised P&L (shown at every width). */
-interface HoldingRow {
+export interface HoldingRow {
   readonly logoHtml: string;
   readonly name: string;
   readonly sub: string;
@@ -63,17 +62,23 @@ interface HoldingRow {
 /** Cash + every open position, as real portfolio-table rows (Revolut X's own
  * Home shows a "Cash"/"Crypto" holdings table, not a bare list) — shared by
  * the SIMULATED and REAL (live) position tables since both have the same
- * cash + positions shape. */
-function buildHoldingsRows(
+ * cash + positions shape, and reused by the Stocks Overview panel (same
+ * shape, dollar-denominated) so "open positions" looks identical everywhere
+ * instead of each screen inventing its own row layout. `money` formats a
+ * raw number in the caller's own currency (`euro`/`dollar`); `cashLogoCode`
+ * picks the right cash icon ('EUR' vs 'USD'). */
+export function buildHoldingsRows(
   cash: number,
   positions: readonly PositionLike[],
   prices: Record<string, number>,
   equity: number,
   baseOf: (symbol: string) => string,
+  money: (v: number) => string,
+  cashLogoCode = 'EUR',
 ): HoldingRow[] {
   const rows: HoldingRow[] = [
     {
-      logoHtml: coinLogoHtml('EUR'),
+      logoHtml: coinLogoHtml(cashLogoCode),
       name: 'Cash',
       sub: 'Available balance',
       qty: null,
@@ -90,9 +95,9 @@ function buildHoldingsRows(
     rows.push({
       logoHtml: coinLogoHtml(baseOf(p.symbol)),
       name: p.symbol,
-      sub: `entry ${euro(p.entryPrice)}`,
+      sub: `entry ${money(p.entryPrice)}`,
       qty: p.quantity.toLocaleString('en-US', { maximumFractionDigits: 4 }),
-      price: euro(price),
+      price: money(price),
       value,
       allocationPct: equity > 0 ? (value / equity) * 100 : 0,
       pnl: { abs: (price - p.entryPrice) * p.quantity, pct: movePct },
@@ -101,17 +106,17 @@ function buildHoldingsRows(
   return rows;
 }
 
-function holdingsTableHtml(rows: readonly HoldingRow[]): string {
+export function holdingsTableHtml(rows: readonly HoldingRow[], money: (v: number) => string): string {
   const body = rows
     .map((r) => {
       const pnlCell = r.pnl
-        ? `<span class="chg ${r.pnl.abs >= 0 ? 'up' : 'down'}">${tieredPriceHtml(euro(r.pnl.abs))} (${formatPct(r.pnl.pct)})</span>`
+        ? `<span class="chg ${r.pnl.abs >= 0 ? 'up' : 'down'}">${tieredPriceHtml(money(r.pnl.abs))} (${formatPct(r.pnl.pct)})</span>`
         : '—';
       return `<tr>
         <td class="holdings-id">${r.logoHtml}<div><div class="row-title">${r.name}</div><div class="row-sub">${r.sub}</div></div></td>
         <td class="col-total">${r.qty ?? '—'}</td>
         <td class="col-price">${r.price ? tieredPriceHtml(r.price) : '—'}</td>
-        <td>${tieredPriceHtml(euro(r.value))}</td>
+        <td>${tieredPriceHtml(money(r.value))}</td>
         <td class="col-alloc">${r.allocationPct.toFixed(1)}%</td>
         <td>${pnlCell}</td>
       </tr>`;
@@ -268,9 +273,11 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       const card = el('div', 'market-card tappable');
       card.dataset['nav'] = 'markets';
       card.innerHTML = `
-        <div class="market-top"><div class="market-id">${coinLogoHtml(base)}<span class="market-name">${m.label}</span>${CURATED_BASES.has(base) ? '<span class="tag-traded">TRADED</span>' : ''}</div>
-          <span class="chg ${up ? 'up' : 'down'}">${formatPct(m.changePct)}</span></div>
-        <div class="market-price">${tieredPriceHtml(euro(m.price))}</div>
+        <div class="market-top"><div class="market-id">${coinLogoHtml(base)}<span class="market-name">${m.label}</span></div></div>
+        <div class="market-price-row">
+          <span class="market-price">${tieredPriceHtml(euro(m.price))}</span>
+          <span class="chg ${up ? 'up' : 'down'}">${formatPct(m.changePct)}</span>
+        </div>
         <div class="market-spark" style="color:${up ? HOT : COLD}">${sparklineSvg(m.closes, { stroke: up ? HOT : COLD, fill: true, width: 150, height: 44 })}</div>`;
       marketsStrip.appendChild(card);
     }
@@ -285,7 +292,8 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     const invested = state.positions.reduce((s, p) => s + p.quantity * (prices[p.symbol] ?? p.entryPrice), 0);
     const equity = state.cash + invested;
     posList.innerHTML = holdingsTableHtml(
-      buildHoldingsRows(state.cash, state.positions, prices, equity, (sym) => baseFor(data, sym)),
+      buildHoldingsRows(state.cash, state.positions, prices, equity, (sym) => baseFor(data, sym), euro),
+      euro,
     );
     if (state.positions.length === 0) {
       posList.appendChild(el('div', 'empty', 'Holding cash and waiting for a good setup.'));
@@ -336,7 +344,8 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     }
 
     livePosList.innerHTML = holdingsTableHtml(
-      buildHoldingsRows(live.cash, live.positions, prices, equity, (sym) => baseFor(data, sym)),
+      buildHoldingsRows(live.cash, live.positions, prices, equity, (sym) => baseFor(data, sym), euro),
+      euro,
     );
     if (live.positions.length === 0) {
       livePosList.appendChild(el('div', 'empty', 'No real positions open — holding cash.'));

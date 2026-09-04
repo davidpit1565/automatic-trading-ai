@@ -14,7 +14,7 @@
 import { fetchStocksState, type MarketSnapshotEntry } from '../cloudState';
 import { BROWSABLE_STOCK_INSTRUMENTS } from '../../core/data/alpacaStocks';
 import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
-import { escapeHtml, formatPrice, formatPct } from '../format';
+import { escapeHtml, formatMarketPrice, formatPct, tieredPriceHtml } from '../format';
 import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 60_000;
@@ -89,7 +89,7 @@ function rowHtml(r: Row): string {
     `${snap ? 'live' : 'no data yet'}</span>` +
     `</span>` +
     `<span class="market-row-num">` +
-    `<span class="row-price">${snap ? `$${formatPrice(snap.price)}` : '—'}</span>` +
+    `<span class="row-price">${snap ? tieredPriceHtml(`$${formatMarketPrice(snap.price)}`) : '—'}</span>` +
     `${snap ? `<span class="chg ${up ? 'up' : 'down'}">${formatPct(snap.changePct)}</span>` : ''}` +
     `</span>` +
     `</div></div>`

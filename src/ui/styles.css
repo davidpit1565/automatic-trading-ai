@@ -1171,8 +1171,13 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    swap on true black (cards have none), so the lift itself carries the
    hover affordance. */
 .market-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-.market-top { display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; }
+.market-top { display: flex; font-size: 0.82rem; }
 .market-id { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
+/* Price + change share their own row (below the name, not squeezed next to
+   it) — a narrow 178px card has no room for logo+name+change on one line
+   without either colliding or truncating a still-short name like "Bitcoin". */
+.market-price-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+.market-price-row .chg { flex-shrink: 0; }
 .market-id .coin-logo { width: 26px; height: 26px; }
 .market-name { color: var(--text-dim); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .market-price { font-weight: 780; font-size: 1.32rem; letter-spacing: -0.025em; margin: 0.5rem 0 0.15rem; font-variant-numeric: tabular-nums; }
