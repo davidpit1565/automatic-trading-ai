@@ -41592,6 +41592,20 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1788477600000,
+      "intentId": "live-entry:XBTEUR:1788446384199:manual-reconcile-sell",
+      "event": "filled",
+      "mode": "live",
+      "detail": "MANUAL RECONCILIATION (2026-09-04): this position was actually sold on Revolut X (Activity tab: Sell 0.00011673 BTC-EUR @ €69,875.14, \"Today 01:20\" Israel time) but the workflow processing the exit confirmation was cancelled before this could be recorded — see PROJECT_STATE.md's 2026-09-03 entry. Realized P&L (real entry €68,560.62 -> real exit €69,875.14): +€0.1534."
+    },
+    {
+      "timestamp": 1788478320000,
+      "intentId": "live-entry:ADAEUR:manual-reconcile-20260904",
+      "event": "filled",
+      "mode": "live",
+      "detail": "MANUAL RECONCILIATION (2026-09-04): two real ADA/EUR buys (42.2331 @ €0.19028 + 33.8098 @ €0.19006, per Revolut X Activity) merged into one tracked position (76.0429 ADA @ weighted-avg €0.190182) after a workflow-cancellation gap left both untracked — see PROJECT_STATE.md's 2026-09-03 entry."
     }
   ],
   "live:confirmation-gate-pending": {
@@ -41605,9 +41619,7 @@
       "token": "mtm56hn5.1b51x5h"
     }
   },
-  "live:live-entry-outstanding-symbols": [
-    "XBTEUR"
-  ],
+  "live:live-entry-outstanding-symbols": [],
   "live:kill-switch-keyboard-sent": true,
   "education-tip-last-sent-at": 1788408526525,
   "education-tip-index": 1,
@@ -41774,32 +41786,30 @@
     "live-entry:XBTEUR:1788446384199": "3572a080-9e2a-4dbf-9802-b259845a4675"
   },
   "live:live-open-positions": {
-    "live-entry:XBTEUR:1788446384199": {
-      "id": "live-entry:XBTEUR:1788446384199",
-      "symbol": "BTC/EUR",
-      "quantity": 0.00011673,
-      "entryPrice": 68620,
-      "stopLoss": 67571,
-      "takeProfit": 70658,
-      "highestPrice": 70179.5,
-      "openedAt": 1788446384199,
+    "live-entry:ADAEUR:manual-reconcile-20260904": {
+      "id": "live-entry:ADAEUR:manual-reconcile-20260904",
+      "symbol": "ADA/EUR",
+      "quantity": 76.0429,
+      "entryPrice": 0.1901821847404557,
+      "stopLoss": 0.18732945196934886,
+      "takeProfit": 0.19588765028266938,
+      "highestPrice": 0.1901821847404557,
+      "openedAt": 1788478320000,
       "entryAssessment": {
         "approved": true,
-        "asset": "XBTEUR",
-        "entry": 68620,
-        "stopLoss": 67571,
-        "takeProfit": 70658,
-        "positionSize": 0.00011673469387755104,
-        "positionValue": 8.008000000000001,
-        "riskAmount": 0.12012000000000002,
-        "riskPercentage": 0.30000000000000004,
+        "asset": "ADAEUR",
+        "entry": 0.1901821847404557,
+        "stopLoss": 0.18732945196934886,
+        "takeProfit": 0.19588765028266938,
+        "positionSize": 76.0429,
+        "positionValue": 14.462004856,
+        "riskAmount": 0.21693007284000046,
+        "riskPercentage": 0.3,
         "rewardRiskRatio": 2,
-        "portfolioExposure": 20.000000000000004,
-        "reasons": [
-          "risking 0.12 (0.30% of equity) for a 2.0:1 reward/risk — within every configured limit"
-        ],
+        "portfolioExposure": 40.3,
+        "reasons": [],
         "warnings": [
-          "size capped: size capped by the 20% single-position limit"
+          "MANUAL RECONCILIATION (2026-09-04): combines two real /buy ADAEUR fills (42.2331 @ 0.19028 and 33.8098 @ 0.19006, per Revolut X Activity) that a workflow-cancellation gap left completely untracked — see PROJECT_STATE.md. Entry/stop/target are recomputed off the weighted-average fill price using the same fixed 1.5%/3% manual-override levels the original /buy commands used, not independently re-derived."
         ]
       }
     }
