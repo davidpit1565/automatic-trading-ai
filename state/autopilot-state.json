@@ -1643,7 +1643,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788525170373,
+    "at": 1788525520500,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1659,10 +1659,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1786692096517,
-      "equity": 9568.52
-    },
     {
       "at": 1786692404235,
       "equity": 9568.52
@@ -21658,6 +21654,10 @@
     {
       "at": 1788525170373,
       "equity": 10269.93
+    },
+    {
+      "at": 1788525520500,
+      "equity": 10271.22
     }
   ],
   "trade-journal": [
@@ -22907,7 +22907,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -19.29% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -19.35% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23005,13 +23005,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1788525170373,
+    "at": 1788525520500,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10655.21627864984,
-        "returnPct": 6.552162786498393,
+        "equity": 10656.557016986852,
+        "returnPct": 6.565570169868515,
         "trades": 26,
         "winRatePct": 61.53846153846154,
         "profitFactor": 2.1372296363676755,
@@ -23021,8 +23021,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10655.21627864984,
-        "returnPct": 6.552162786498393,
+        "equity": 10656.557016986852,
+        "returnPct": 6.565570169868515,
         "trades": 26,
         "winRatePct": 61.53846153846154,
         "profitFactor": 2.1372296363676755,
@@ -23032,8 +23032,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10655.21627864984,
-        "returnPct": 6.552162786498393,
+        "equity": 10656.557016986852,
+        "returnPct": 6.565570169868515,
         "trades": 26,
         "winRatePct": 61.53846153846154,
         "profitFactor": 2.1372296363676755,
@@ -23054,8 +23054,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9313.854406151879,
-        "returnPct": -6.861455938481213,
+        "equity": 9334.139285265534,
+        "returnPct": -6.658607147344664,
         "trades": 68,
         "winRatePct": 41.17647058823529,
         "profitFactor": 0.6145397176351992,
@@ -23076,8 +23076,8 @@
       {
         "key": "whale-flow",
         "label": "Refuses entries during heavy net selling by large traders",
-        "equity": 10770.298047579592,
-        "returnPct": 7.70298047579592,
+        "equity": 10771.653266574293,
+        "returnPct": 7.716532665742926,
         "trades": 17,
         "winRatePct": 70.58823529411765,
         "profitFactor": 2.900209681216966,
@@ -23098,8 +23098,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10462.360848059461,
-        "returnPct": 4.623608480594612,
+        "equity": 10463.677319533886,
+        "returnPct": 4.636773195338865,
         "trades": 14,
         "winRatePct": 64.28571428571429,
         "profitFactor": 2.161554818032245,
@@ -31931,7 +31931,7 @@
       "takeProfit": 0.6743572848453006,
       "feesPaid": 5.598626635368458,
       "realizedPnl": 0,
-      "highestPrice": 0.644,
+      "highestPrice": 0.647,
       "lowestPrice": 0.644,
       "confidence": 34.03716142025624,
       "validationVerdict": null,
@@ -41704,6 +41704,27 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1788525541101,
+      "intentId": "verify-symbol-exists",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "'USELESS/EUR' not found among 382 tradable pairs from revolut-x; no pair with base 'USELESS/EUR' listed at all"
+    },
+    {
+      "timestamp": 1788525541111,
+      "intentId": "live-entry:USELESSEUR:1788525520500",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "could not verify 'USELESS/EUR' as a currently tradable instrument on revolut-x (either it doesn't exist there, or the check itself failed) — refusing rather than guessing a symbol mapping"
+    },
+    {
+      "timestamp": 1788525545350,
+      "intentId": "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788525170373",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "rejected via Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -42171,6 +42192,10 @@
     {
       "at": 1788525170373,
       "equity": 102.13
+    },
+    {
+      "at": 1788525520500,
+      "equity": 101.93
     }
   ],
   "live:revolut-x-order-map": {
@@ -42206,7 +42231,16 @@
     }
   },
   "telegram-unclaimed-messages": [],
-  "telegram-unclaimed-callbacks": [],
+  "telegram-unclaimed-callbacks": [
+    {
+      "id": "7383943995548587904",
+      "data": "confirm:reject:mtmxpy49.o2duwd"
+    },
+    {
+      "id": "7383943996259670632",
+      "data": "confirm:reject:mtmxpy49.o2duwd"
+    }
+  ],
   "live:blackout-windows-cache": {
     "fetchedAt": 1788465760364,
     "windows": [
@@ -42303,7 +42337,7 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904676,
+  "telegram-shared-update-offset": 447904683,
   "move-alert-buckets": {
     "ADAEUR:1788474790551:0": {
       "neg": 0,
@@ -42311,17 +42345,6 @@
     }
   },
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "live-entry:ADAEUR:manual-reconcile-20260904": {
-      "reason": "stop-loss",
-      "queuedAt": 1788525170373
-    }
-  },
-  "live:confirmation-gate-pending": {
-    "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788525170373": {
-      "sentAt": 1788525191673,
-      "messageId": 467,
-      "token": "mtmxpy49.o2duwd"
-    }
-  }
+  "live:live-exit-pending": {},
+  "live:confirmation-gate-pending": {}
 }
