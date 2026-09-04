@@ -1554,6 +1554,39 @@ concurrency group, but still non-zero). Added `"gh-pages": false` alongside
 `"main": false` in `deploymentEnabled` — GitHub Pages serves `gh-pages`
 directly, so Vercel building that branch was always redundant, not just for
 the bot's commits.
+
+**Second follow-up, same day**: also found a small residual leak — `gh-pages`
+still produced an occasional `CANCELED` Vercel deployment despite the
+exclusion above, likely because `deploy-pages.yml` force-pushes a brand-new
+orphan history to `gh-pages` every run rather than an incremental update,
+which may confuse Vercel's per-branch matching. Added `ignoreCommand` in
+`vercel.json` as an independent second check (reads `$VERCEL_GIT_COMMIT_REF`
+at build time) so the build itself is always skipped for `main`/`gh-pages`
+even on a `deploymentEnabled` miss — stops wasted build compute, though the
+CANCELED record can still tick the quota on that rare miss. Then found the
+actual dominant residual source: `deploy-pages.yml` ran (and force-pushed a
+fresh `gh-pages`) on *every* push to `main`, including the bots' own
+state-only commits (dozens/day) — added `paths-ignore: [state/**]` there so
+it only runs for real code changes, cutting `gh-pages` pushes from "every
+few minutes" to "a few times a day" (normal PR-merge cadence).
+
+**Known accepted trade-off**: disabling `main` in `deploymentEnabled` was the
+only way to stop the autopilot bots' frequent `main`-branch state commits
+(they push directly to `main`, not through any workflow this repo can path-
+filter) from exhausting the account-wide Vercel quota — but it means Vercel's
+own production URLs (`automatic-trading-ai.vercel.app` and the `git-main`
+alias) now **never update again**, real code changes included, since Vercel
+can't distinguish a bot commit from a real one at the branch level. Confirmed
+2026-09-04: those URLs still serve the build from just before this fix
+(`index-4LQ5VYXt.js`) while GitHub Pages is fully current
+(`index-q0Drm1xS.js` and later). This is an accepted trade-off, not a bug —
+GitHub Pages is the actual primary, continuously-updated site either way.
+`deploy-pages.yml` has an optional "Refresh Vercel mirror" step (a Vercel
+Deploy Hook — a plain POST, not a git push, so it isn't subject to
+`deploymentEnabled`) that only runs if the `VERCEL_DEPLOY_HOOK_URL` repo
+secret is set; without it, the step is a no-op and the Vercel mirror stays
+frozen. Creating that hook requires the Vercel dashboard (Settings → Git →
+Deploy Hooks, ref `main`) — outside what a git-only session can do.
 ## Real money is now LIVE (2026-09-03)
 David generated real Revolut X trading credentials, funded the account
 (100.15€), and set `REAL_MONEY_ENABLED=true` as a repo Variable. The
