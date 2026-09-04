@@ -305,6 +305,39 @@ describe('buildDailySummary', () => {
     expect(msg).not.toContain('🌱');
   });
 
+  it('reports the new-candidate forward test as "still gathering data" below the meaningful-trades bar, clearly marked not real', () => {
+    const msg = buildDailySummary({
+      ...base,
+      positions: [],
+      candidateWatch: {
+        key: 'candidate-watch', label: '13 new candidates', equity: 10_050, returnPct: 0.5,
+        trades: 4, winRatePct: null, profitFactor: null, openPositions: 0, startedAt: 0,
+      },
+    });
+    expect(msg).toContain('מעקב 13 מטבעות מועמדים');
+    expect(msg).toContain('לא במסחר האמיתי');
+    expect(msg).toContain('4/20');
+    expect(msg).not.toContain('+0.50%');
+  });
+
+  it('reports the new-candidate forward test\'s real return once past the meaningful-trades bar', () => {
+    const msg = buildDailySummary({
+      ...base,
+      positions: [],
+      candidateWatch: {
+        key: 'candidate-watch', label: '13 new candidates', equity: 10_900, returnPct: 9,
+        trades: 22, winRatePct: 55, profitFactor: 1.6, openPositions: 2, startedAt: 0,
+      },
+    });
+    expect(msg).toContain('+9.00%');
+    expect(msg).toContain('PF 1.60');
+  });
+
+  it('omits the new-candidate forward-test line entirely when not provided', () => {
+    const msg = buildDailySummary({ ...base, positions: [] });
+    expect(msg).not.toContain('🧭');
+  });
+
   it('reports the long-term investing wallet\'s real return once past the meaningful-trades bar', () => {
     const msg = buildDailySummary({
       ...base,

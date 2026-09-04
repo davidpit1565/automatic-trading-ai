@@ -26,16 +26,11 @@ which coins actually trade — both are pure correctness fixes to keep the
 live and fallback trading universes in sync with `CURATED_INSTRUMENTS`
 going forward.
 
-**Not yet decided — a real judgment call, not a bug fix:** the
-coin-expansion agent's 13 backtest-measured candidates (USELESS excluded —
-confirmed NOT tradable on Revolut X earlier tonight) have real Kraken
-backtest evidence (≥10 trades, clear PF) but, unlike the BREAKOUT lead
-rejected earlier tonight, NONE of them have a live shadow forward-test
-record to cross-check against — and that exact cross-check is what caught
-BREAKOUT's backtest being wrong (+6.48% backtest vs -2.05% real, same
-night). Adding several at once straight to real trading on backtest alone
-repeats the exact mistake that lesson was about. Flagged to David directly
-rather than decided here.
+**Update (2026-09-04, later same night):** the 13 candidates now have that
+missing forward-test record being built — see "New-candidate forward test
+wired up" below. Still NOT added to `CURATED_INSTRUMENTS` or real trading;
+that decision waits for weeks of real forward data, per David's own
+"תריץ קודם ואז תוסיף אחרי ההרצה" (run it first, then add after the run).
 
 ## ENOBUFS, take 4 — the real cause: piping a 1MB+ file through Node (2026-09-04)
 Neither of the previous two fixes (stdio 'ignore' for unread output, then a
@@ -4656,3 +4651,68 @@ Nothing shipped to strategy or config; this is a documentation-only close-out
 of the 2026-08-31 "inconclusive" finding, using the long-horizon window added
 earlier in this same pass. Full gate: tsc clean, 1133 vitest passed, vite
 build ok (no source changes).
+
+## New-candidate forward test wired up — nothing added to real trading (2026-09-04)
+
+David's instruction on the 13 backtest-measured candidates above (PUMP, XMR,
+SPX, CRV, DASH, ZRO, BONK, OP, SYRUP, MINA, TIA, CHIP, PENDLE — USELESS
+excluded, confirmed not tradable on Revolut X): "תריץ קודם ואז תוסיף אחרי
+ההרצה" (run it first, then add after the run). This session built and wired
+up the tracking mechanism only — it does NOT add anything to real trading,
+and nothing will be added automatically; that stays David's own call once a
+real forward record exists.
+
+**What was built:**
+- `CANDIDATE_INSTRUMENTS` (`src/core/data/krakenPublic.ts`) — the 13 symbols
+  as their own exported list, deliberately separate from `CURATED_INSTRUMENTS`
+  and never merged into it or into `getInstruments()`'s browsable universe.
+  Each symbol verified `online` against Kraken's live `AssetPairs` the same
+  night; altname is base+EUR for all 13, no alias mapping needed.
+- `CANDIDATE_WATCH_CANDIDATES` / `runCandidateWatch` (`server/autopilotRunner.mts`)
+  — a second, fully independent `runShadowCycle` call (the existing
+  `SHADOW_CANDIDATES` mechanism, already proven to isolate a candidate's
+  portfolio/positions/journal/kill-switch into its own storage namespace and
+  cost nothing extra in requests beyond the symbols it's given). One
+  candidate, key `candidate-watch`, running production's OWN default
+  parameters (`AUTOPILOT_MIN_CONFIDENCE`/`AUTOPILOT_MAX_RSI_FOR_LONG`/
+  `AUTOPILOT_TRAILING`/4h confirmation — no alternate `evaluate`) against the
+  13 candidate symbols instead of the curated 20. This answers "would these
+  have done well trading exactly like the real bot does," not "does a new
+  strategy idea work." Runs every cycle (same cadence as `SHADOW_CANDIDATES`,
+  on `ENTRY_TF`), reading through its own `CachingSource` wrapping the same
+  throttled `KrakenPublicSource` queue as everything else — bounded extra
+  cost (~13 symbols × 2 timeframes of candle fetches per cycle), no new fetch
+  pattern. Standings persisted at `candidate-watch-standings`.
+- Digest: the daily Telegram summary and `/status` now show a
+  `🧭 מעקב 13 מטבעות מועמדים (לא במסחר האמיתי, כסף מדומה בלבד)` line once
+  `candidate-watch-standings` has data — explicitly labeled not-real, same
+  "still gathering data" bar (`SHADOW_MEANINGFUL_TRADES` = 20 closed trades)
+  as every other shadow candidate before it's trusted.
+- Tests added: `CANDIDATE_INSTRUMENTS` shape/no-overlap
+  (`tests/data/krakenPublic.test.ts`), the new digest line's two states —
+  gathering data / real return shown (`tests/server/telegram.test.ts`), and
+  the digest fold from the new storage key (`tests/server/autopilotRunner.test.ts`,
+  mirroring the existing `shadow-longterm-standings` test exactly). No new
+  test needed for `runShadowCycle`'s own isolation/no-extra-cost guarantees —
+  already covered generically and reused as-is.
+
+**What was explicitly NOT touched:** `CURATED_INSTRUMENTS`, the
+`instruments.value.slice(0, CURATED_INSTRUMENTS.length)` real-trading symbol
+list, `SHADOW_CANDIDATES`/`SHADOW_STANDINGS_KEY` (the existing
+strategy-comparison scoreboard — different storage key, never collides), and
+every live-order code path. Real money and the primary paper autopilot trade
+exactly the same 20 curated symbols as before this change.
+
+**How long before this is worth deciding from:** the BREAKOUT lead earlier
+this same night is the trust bar this project now holds itself to — its
+backtest (+6.48%) was wrong, and only a real 37.9-day / 147-trade live
+forward record caught it (-2.05% real). Expect a comparable order of
+magnitude here: WEEKS of real cycles, not a check tomorrow. `SHADOW_MEANINGFUL_TRADES`
+(20 closed trades) is the absolute floor before any single candidate's number
+means anything at all, and even that is a thin sample — treat it the way
+every other shadow candidate's early record has been treated in this file
+(informative, not decisive) until it is comfortably past that floor with a
+consistent sign over real time.
+
+Gate: tsc clean, 1139 vitest passed (152/152 in the touched files — 6 new),
+vite build ok.
