@@ -63,7 +63,7 @@ import {
   type RealMoneyReadiness,
 } from '../src/core/feedback/realMoneyReadiness';
 import { FileStore } from './fileStore.mts';
-import { checkManualKillSwitchCommands } from './manualKillSwitchCommand.mts';
+import { checkManualKillSwitchCommands, type ManualKillSwitchOutcome } from './manualKillSwitchCommand.mts';
 import { checkManualSellRequests } from './manualSellCommand.mts';
 import { checkManualBuyRequests } from './manualBuyCommand.mts';
 import { checkTipRequests } from './manualTipCommand.mts';
@@ -869,6 +869,39 @@ async function notifyLiveEntryOutcomes(
   }
 }
 
+/**
+ * Found in a full-system safety re-audit, 2026-09-04: `/pause` and `/resume`
+ * (both the typed command and the persistent keyboard button, which sends
+ * the same text — `killSwitchKeyboard()`) DID engage/disengage the kill
+ * switch correctly and DID audit it, but `runLiveMirror` discarded
+ * `checkManualKillSwitchCommands`'s return value, so a human tapping the
+ * one-and-only emergency stop got zero Telegram confirmation it actually
+ * took effect — the exact same "silently did nothing" shape as the bare
+ * /buy and /sell bug fixed earlier tonight, but on the safety control
+ * itself. `applied: false` (already in the requested state) still gets a
+ * reply — an unconfirmed no-op reads identically to an unconfirmed success
+ * from the human's side of the chat.
+ */
+function buildKillSwitchOutcomeMessage(o: ManualKillSwitchOutcome): string {
+  if (o.command === 'pause') {
+    return o.applied
+      ? "⏸ קיל סוויץ' הופעל — נעצר כל מסחר חדש בכסף אמיתי. פוזיציות פתוחות ממשיכות להיות מנוטרות."
+      : "⏸ קיל סוויץ' כבר היה מופעל — אין שינוי.";
+  }
+  return o.applied
+    ? "▶️ קיל סוויץ' כובה — המסחר האמיתי חזר לפעול."
+    : "▶️ קיל סוויץ' כבר היה כבוי — אין שינוי.";
+}
+
+async function notifyKillSwitchOutcomes(
+  telegram: { token: string; chatId: string },
+  outcomes: readonly ManualKillSwitchOutcome[],
+): Promise<void> {
+  for (const outcome of outcomes) {
+    await sendTelegramMessage(buildKillSwitchOutcomeMessage(outcome), telegram);
+  }
+}
+
 export async function runLiveMirror(
   store: FileStore,
   source: MarketDataSource,
@@ -986,7 +1019,8 @@ export async function runLiveMirror(
     // got stashed where these handlers, reading the live-prefixed unclaimed
     // key, could never find it. Silently broken despite the bot clearly
     // being alive (other commands answered fine).
-    await checkManualKillSwitchCommands(store, telegram, killSwitch, audit, 'david', now);
+    const killSwitchOutcomes = await checkManualKillSwitchCommands(store, telegram, killSwitch, audit, 'david', now);
+    await notifyKillSwitchOutcomes(telegram, killSwitchOutcomes);
     const manualSellOutcomes = await checkManualSellRequests(
       liveStore, telegram, source, ENTRY_TF, flowParams, now, recordLiveRealizedPnl, store,
     );

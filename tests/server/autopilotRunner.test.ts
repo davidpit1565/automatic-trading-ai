@@ -563,6 +563,46 @@ describe('runLiveMirror (real-money wiring stays off until deliberately turned o
     expect(keyboardSendsAfterSecondCycle).toHaveLength(1); // still just the one
   });
 
+  // Regression, 2026-09-04 (full-system safety re-audit): `/pause`/`/resume`
+  // (typed, or via the persistent keyboard button above, which sends the
+  // same text) engaged/disengaged the kill switch correctly but David never
+  // got any Telegram confirmation it worked — `runLiveMirror` discarded
+  // `checkManualKillSwitchCommands`'s return value. Same "silently did
+  // nothing" shape as the bare /buy and /sell bug, on the emergency stop
+  // itself this time.
+  it('replies on Telegram when a /pause command is applied', async () => {
+    process.env['REAL_MONEY_ENABLED'] = 'true';
+    process.env['REVOLUT_X_API_KEY'] = 'key';
+    process.env['REVOLUT_X_PRIVATE_KEY_PEM'] = 'pem';
+    const sendMessageCalls: { text: string }[] = [];
+    let getUpdatesCallCount = 0;
+    const trackingFetch = (async (url: string, init?: { body?: string }) => {
+      const u = String(url);
+      if (u.includes('/sendMessage')) {
+        sendMessageCalls.push(JSON.parse(init!.body!));
+        return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 });
+      }
+      if (u.includes('/getUpdates')) {
+        getUpdatesCallCount += 1;
+        // Only the very first getUpdates poll (the kill-switch command
+        // checker, first in runLiveMirror's sequence) sees the /pause —
+        // every later poll this cycle must see nothing new.
+        const result = getUpdatesCallCount === 1
+          ? [{ update_id: 1, message: { text: '/pause', chat: { id: 'C' } } }]
+          : [];
+        return new Response(JSON.stringify({ ok: true, result }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const trackingTelegram = { token: 'T', chatId: 'C', fetchFn: trackingFetch };
+
+    await runLiveMirror(store, fakeSource(), [btcInstrument], trackingTelegram, [], {}, 1000);
+
+    const pauseReplies = sendMessageCalls.filter((c) => c.text.includes("קיל סוויץ'") && c.text.includes('הופעל'));
+    expect(pauseReplies).toHaveLength(1);
+    expect(store.get<{ engaged: boolean }>('live:kill-switch')?.engaged).toBe(true);
+  });
+
   // Regression, 2026-09-03: the live account's daily-loss circuit breaker
   // (`DailyLossTracker`) was never actually wired into `runLiveMirror` —
   // nothing read today's real realized loss when sizing a new live entry, so
