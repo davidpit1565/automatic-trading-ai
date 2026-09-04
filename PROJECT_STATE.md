@@ -1,5 +1,24 @@
 # PROJECT_STATE
 
+## Momentum alert can flag a coin Revolut X doesn't even list (2026-09-04)
+Real incident: the momentum-spike alert flagged USELESS (+27% on Kraken)
+with a ready `/buy USELESSEUR` line claiming (per the script's own old doc
+comment) that it's "genuinely actionable right now." David tried it —
+correctly rejected by the broker-symbol check ("'USELESS/EUR' not found
+among 382 tradable pairs from revolut-x"). No money at risk (the safety
+check did exactly its job), but a misleading promise: the scan reads
+Kraken's full public instrument list, a much larger universe than Revolut
+X's own ~382 tradable pairs, so a real Kraken spike can exist for a coin
+Revolut X never lists at all.
+
+Not fixed by checking tradability at scan time — that needs real Revolut
+X credentials this Telegram-only script deliberately doesn't have
+(`momentum-spike-alert.yml` injects only the Telegram secrets). Fixed by
+being honest instead: the alert message now says a `/buy` might get
+safely rejected if Revolut X doesn't list that coin, rather than
+promising every row is actionable. `detectMomentumSpikes.mts`'s doc
+comment corrected to match.
+
 ## ENOBUFS, take 3: the stdio-piping fix wasn't it — missing backoff was (2026-09-04)
 The previous entry's fix (stdio 'ignore' instead of piping every
 subprocess's output) shipped, ran clean for ~6 hours (64 cycles, no

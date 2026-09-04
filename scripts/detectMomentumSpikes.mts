@@ -50,14 +50,21 @@ async function main(): Promise<void> {
   }
 
   // David asked (2026-09-04) for the alert to also make the manual buy
-  // action immediate, not just report the number — `/buy` already works on
-  // ANY tradable symbol, curated or not (manualBuyCommand.mts verifies
-  // against the broker's own pairs, never CURATED_INSTRUMENTS), so each
-  // row's ready-to-send command is genuinely actionable right now, not
-  // aspirational. Once bought this way, the position gets the SAME fixed
-  // stop/target and automatic per-cycle exit monitoring as any other live
-  // position (checkAutomaticExits iterates every tracked position, not just
-  // curated ones) — no separate "sell suggestion" logic needed here.
+  // action immediate, not just report the number. Corrected same day: the
+  // original claim here — "`/buy` already works on ANY tradable symbol...
+  // so each row's ready-to-send command is genuinely actionable right now"
+  // — is FALSE for a real coin this scan flagged (USELESS): this scan
+  // reads Kraken's public instrument list (KrakenPublicSource), which is a
+  // much larger universe than Revolut X's own ~382 tradable pairs — the
+  // actual broker `/buy` verifies against. A spike can be real on Kraken
+  // for a coin Revolut X never lists at all, and the resulting /buy is
+  // correctly (safely) rejected by the broker-symbol check — no money at
+  // risk, but a misleading "go ahead and buy this" promise. Checking
+  // tradability here would need real Revolut X credentials this
+  // Telegram-only script deliberately doesn't have (momentum-spike-alert.yml
+  // injects only TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID) — simpler and just as
+  // safe to be honest in the message instead of promising something this
+  // script can't actually verify.
   const lines = rows
     .map(
       (r) =>
@@ -70,7 +77,9 @@ async function main(): Promise<void> {
     `ייתכן שזה רלוונטי רק לכמה שעות/יום ולא מייצג הזדמנות אמיתית. ` +
     `זו הודעת מידע בלבד — הבוט לא קונה שום דבר מזה בעצמו; אם תרצה לקנות, שלח את פקודת ה-/buy ` +
     `למעלה ותעבור דרך אותו תהליך אישור בטוח כמו כל עסקה אחרת. ` +
-    `ואם תקנה, הפוזיציה תיבדק אוטומטית בכל מחזור בדיוק כמו כל פוזיציה אחרת (סטופ/יעד קבועים).`;
+    `שים לב: חלק מהמטבעות האלה לא בהכרח נסחרים ברבולוט X — אם ה-/buy יידחה, זה אומר שהמטבע הזה ` +
+    `פשוט לא זמין לקנייה אצלנו, בלי שום נזק. ` +
+    `ואם תקנה בהצלחה, הפוזיציה תיבדק אוטומטית בכל מחזור בדיוק כמו כל פוזיציה אחרת (סטופ/יעד קבועים).`;
   const sent = await sendTelegramMessage(message, {
     token: process.env['TELEGRAM_BOT_TOKEN'] ?? '',
     chatId: process.env['TELEGRAM_CHAT_ID'] ?? '',
