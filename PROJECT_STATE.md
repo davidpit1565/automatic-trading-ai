@@ -4482,3 +4482,65 @@ than spending the API calls to confirm the obvious.
 The only kept change is the two-line measurement-tooling widening above
 (`sweepAutopilot.mts`, `foldRobustness.mts`), verified with the full gate:
 tsc clean, 1132 vitest passed, vite build ok.
+
+## Coin discovery re-run wider: nothing added, real blocker found (2026-09-04)
+
+David asked to "add more coins, no bugs this time." Read
+`scripts/discoverCryptoCandidates.mts` and its shared engine
+(`src/core/validation/candidateScan.ts`) fully first. Finding: the pool was
+NOT a fixed list — `scanCandidates` already ranks by real 24h volume from
+Kraken's live `AssetPairs`/`Ticker` (520 online EUR pairs total, 20 already
+curated), so genuinely all of Kraken's EUR market is reachable already; the
+only narrow thing was `DEFAULT_TOP_N` capping the weekly scan at the top 40
+non-curated pairs by volume.
+
+Ran `npx tsx scripts/discoverCryptoCandidates.mts 80` for real against
+Kraken (real ~720 1h + 720 4h candles/symbol, live decision pipeline,
+production criteria — same methodology as every prior addition). Sample
+size: 80 symbols, ranks 21-100 by 24h volume. 33 passed the scan's loose
+bar (net-positive, PF>1, >5 trades) — but most of those 33 sit on the
+`MIN_TRADES_TO_TRUST` floor (6-9 trades over one 30-day window), the exact
+small-sample pattern this project's own history (ARB, FORTH, BCH/TRX) has
+repeatedly rejected as "too thin to call." Applying the stricter bar
+actually used for every past addition (≥10 trades, clearly-positive PF, not
+a coin-flip) narrows it to ~14 candidates with real signal in this single
+window: USELESS, PUMP, XMR, SPX, CRV, DASH, ZRO, BONK, OP, SYRUP, MINA, TIA,
+CHIP, PENDLE (trades 10-17, PF 1.24-3.78). Re-confirmed BCH (-0.40%, PF
+0.82) and NEAR (-0.99%, PF 0.79) still fail, consistent with the existing
+"left out" record in `krakenPublic.ts` — not new news either way.
+
+**Nothing was added to `CURATED_INSTRUMENTS`, even from that narrowed list,
+because of a real architectural blocker the "no bugs" checklist explicitly
+asked to check for and found:** `server/autopilotRunner.mts` trades exactly
+`instruments.value.slice(0, 20)` — a hardcoded count matching today's 20
+curated entries, not `CURATED_INSTRUMENTS.length`. Appending any new symbol
+to the array would NOT make the live agent trade it (silently excluded by
+the slice) while `CURATED_BASES` (derived from the same array, drives the
+UI's "TRADED" badge) would still claim it as traded — a real, user-visible
+lie, exactly the class of silent bug this session was asked to avoid. Fixing
+that slice lives in `server/autopilotRunner.mts`, which is the live
+real-money path this task was explicitly scoped OUT of touching — so this
+is reported, not fixed, per that instruction. **Whoever adds coins next:
+the slice bound in `autopilotRunner.mts` must move in the same reviewed
+change as any `CURATED_INSTRUMENTS` addition, never after it.** The 14
+candidates above are a reasonable starting shortlist once that's true, but
+should be re-measured fresh at that time rather than trusted from tonight's
+single window — one 30-day window per symbol is exactly the "single lucky
+window" this project's own rigor bar warns against, several of the 14 are
+recently-listed/meme-adjacent tokens (USELESS, PUMP, SPX) worth extra
+scrutiny beyond the raw numbers, and there is no live shadow forward-test
+record for any of them (they've never been traded) to cross-check the
+backtest against, unlike the BREAKOUT rejection earlier tonight.
+
+**Shipped instead, small and safe:** widened the weekly scan's own search
+breadth, `DEFAULT_TOP_N` in `candidateScan.ts` (40 → 80) and the matching
+workflow default in `discover-crypto-candidates.yml` — this is the
+discovery scan's measurement breadth, not a trading/strategy/sizing
+parameter, and it changes nothing about what actually trades (read-only,
+side-effect-free, same as before). Justified qualitatively rather than by
+backtest: at 80, real still-liquid candidates (PENDLE, TIA, CHIP, down to
+~45-50K EUR 24h volume) were surfacing that 40 would have missed weekly;
+going much wider than 80 starts measuring illiquid dust that a real-money
+bot shouldn't trade regardless of backtest PF. Gate: tsc clean, 1133 vitest
+(all passing, no new/changed tests needed), vite build ok. No file under
+`server/**` touched.

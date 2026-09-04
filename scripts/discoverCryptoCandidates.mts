@@ -19,7 +19,7 @@
  * Telegram command (server/manualDiscoverCommand.mts) uses the exact same
  * shared scan, just triggered by a message instead of a schedule.
  *
- *   npx tsx scripts/discoverCryptoCandidates.mts        # top 40 by volume
+ *   npx tsx scripts/discoverCryptoCandidates.mts        # top 80 by volume
  *   npx tsx scripts/discoverCryptoCandidates.mts 25     # top 25 by volume
  */
 

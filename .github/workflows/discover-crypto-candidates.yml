@@ -19,7 +19,7 @@ on:
       top_n:
         description: 'How many non-curated EUR pairs to measure, ranked by 24h volume'
         type: string
-        default: '40'
+        default: '80'
 
 permissions:
   contents: read
@@ -42,5 +42,5 @@ jobs:
           # Routed through an env var rather than interpolated straight into
           # the run: string, so a manual-dispatch input can never reach a
           # shell command unquoted.
-          TOP_N: ${{ inputs.top_n || '40' }}
+          TOP_N: ${{ inputs.top_n || '80' }}
         run: npx tsx scripts/discoverCryptoCandidates.mts "$TOP_N"
