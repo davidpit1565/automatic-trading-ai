@@ -129,7 +129,10 @@ function renderScanTable(container: HTMLElement, scan: MarketScan, risk: RiskCon
       <td>${formatNumber(result.snapshot.rsi)}</td>
       <td>${formatNumber(result.snapshot.adx)}</td>
       <td>${result.snapshot.relativeVolume === null ? '—' : `${result.snapshot.relativeVolume.toFixed(2)}×`}</td>
-      <td class="${signClass(result.score)}">${result.score.toFixed(0)}</td>
+      <td class="scan-score">
+        <span class="${signClass(result.score)}">${result.score.toFixed(0)}</span>
+        <span class="score-bar"><span class="score-bar-fill ${result.score >= 0 ? 'up' : 'down'}" style="width:${Math.min(100, Math.abs(result.score)).toFixed(0)}%"></span></span>
+      </td>
       <td>${temperatureBadge(result)}</td>
     `;
 
@@ -146,7 +149,10 @@ function renderScanTable(container: HTMLElement, scan: MarketScan, risk: RiskCon
   }
 
   table.appendChild(tbody);
-  container.appendChild(table);
+  const tableWrap = document.createElement('div');
+  tableWrap.className = 'table-scroll';
+  tableWrap.appendChild(table);
+  container.appendChild(tableWrap);
   renderFailures(container, scan);
 }
 

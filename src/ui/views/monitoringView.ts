@@ -79,7 +79,7 @@ export function renderMonitoringView(container: HTMLElement, data: ActiveDataSou
         <button class="secondary" id="mon-scan-now">Scan now</button>
         <button class="secondary" id="mon-notify-perm">Enable browser notifications</button>
       </div>
-      <div class="status-line" id="mon-status">Monitoring stopped.</div>
+      <div class="stat-row" id="mon-status"></div>
     </section>
     <section class="block">
       <div class="block-head"><h2>Current opportunities</h2></div>
@@ -113,21 +113,32 @@ export function renderMonitoringView(container: HTMLElement, data: ActiveDataSou
 
   const statusLine = container.querySelector<HTMLElement>('#mon-status')!;
 
+  /** A run-on "· "-joined sentence made a viewer parse four unrelated facts
+   * (is it running, when did it last scan, when's the next one, what did it
+   * find) out of one paragraph — a `.stat-tile` per fact, the same
+   * component every other result screen in the app now uses for exactly
+   * this shape of "small label + value", reads at a glance instead. */
   function refreshStatus(): void {
     const status = engine.status();
-    const parts = [
-      status.running ? `Monitoring RUNNING (every ${status.interval})` : 'Monitoring stopped.',
-      status.lastScanAt !== null ? `Last scan: ${new Date(status.lastScanAt).toLocaleString()}` : 'No scan yet.',
-      status.running && status.nextScanAt !== null
-        ? `Next scan: ${new Date(status.nextScanAt).toLocaleString()}`
-        : '',
+    const running = status.running;
+    const lastScanText = status.lastScanAt !== null ? new Date(status.lastScanAt).toLocaleString() : 'No scan yet';
+    const outcomeTile =
       status.lastResult !== null
-        ? `${status.lastResult.outcomes.filter((o) => o.outcome === 'qualified').length} qualified / ` +
+        ? `<div class="stat-tile"><div class="stat-tile-value">` +
+          `${status.lastResult.outcomes.filter((o) => o.outcome === 'qualified').length} qualified / ` +
           `${status.lastResult.outcomes.filter((o) => o.outcome === 'watch').length} watch / ` +
-          `${status.lastResult.failures.length} failed`
-        : '',
-    ].filter(Boolean);
-    statusLine.textContent = parts.join(' · ');
+          `${status.lastResult.failures.length} failed</div><div class="stat-tile-label">Last scan outcome</div></div>`
+        : '';
+    const nextScanTile =
+      running && status.nextScanAt !== null
+        ? `<div class="stat-tile"><div class="stat-tile-value">${new Date(status.nextScanAt).toLocaleString()}</div><div class="stat-tile-label">Next scan</div></div>`
+        : '';
+    statusLine.innerHTML = `
+      <div class="stat-tile"><div class="stat-tile-value ${running ? 'up' : ''}">${running ? `RUNNING (every ${status.interval})` : 'stopped'}</div><div class="stat-tile-label">Status</div></div>
+      <div class="stat-tile"><div class="stat-tile-value">${lastScanText}</div><div class="stat-tile-label">Last scan</div></div>
+      ${nextScanTile}
+      ${outcomeTile}
+    `;
   }
 
   function refreshAll(): void {
@@ -177,6 +188,7 @@ function renderOpportunities(element: Element, engine: MonitoringEngine): void {
     return;
   }
   element.innerHTML = `
+    <div class="table-scroll">
     <table class="data-table">
       <thead><tr>
         <th>Market</th><th>Price</th><th>Confidence</th><th>Entry</th><th>Stop</th>
@@ -198,6 +210,7 @@ function renderOpportunities(element: Element, engine: MonitoringEngine): void {
           .join('')}
       </tbody>
     </table>
+    </div>
   `;
 }
 
@@ -213,6 +226,7 @@ function renderWatchlist(
     return;
   }
   element.innerHTML = `
+    <div class="table-scroll">
     <table class="data-table">
       <thead><tr>
         <th>Market</th><th>Source</th><th>Status</th><th>Best confidence</th>
@@ -237,6 +251,7 @@ function renderWatchlist(
           .join('')}
       </tbody>
     </table>
+    </div>
   `;
   element.querySelectorAll<HTMLButtonElement>('[data-fav]').forEach((button) =>
     button.addEventListener('click', () => {
@@ -259,6 +274,7 @@ function renderHistory(element: Element, engine: MonitoringEngine): void {
     return;
   }
   element.innerHTML = `
+    <div class="table-scroll">
     <table class="data-table">
       <thead><tr>
         <th>Detected</th><th>Market</th><th>Confidence</th><th>Entry</th>
@@ -285,6 +301,7 @@ function renderHistory(element: Element, engine: MonitoringEngine): void {
           .join('')}
       </tbody>
     </table>
+    </div>
   `;
 }
 
@@ -295,6 +312,7 @@ function renderAlerts(element: Element, engine: MonitoringEngine): void {
     return;
   }
   element.innerHTML = `
+    <div class="table-scroll">
     <table class="data-table">
       <thead><tr><th>Time</th><th>Market</th><th>Confidence</th><th>Message</th></tr></thead>
       <tbody>
@@ -310,5 +328,6 @@ function renderAlerts(element: Element, engine: MonitoringEngine): void {
           .join('')}
       </tbody>
     </table>
+    </div>
   `;
 }

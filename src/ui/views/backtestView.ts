@@ -156,7 +156,10 @@ function renderComparisonTable(container: HTMLElement, results: BacktestResult[]
         .join('')}
     </tbody>
   `;
+  const tableWrap = document.createElement('div');
+  tableWrap.className = 'table-scroll';
+  tableWrap.appendChild(table);
   container.innerHTML = '';
   container.appendChild(summary);
-  container.appendChild(table);
+  container.appendChild(tableWrap);
 }

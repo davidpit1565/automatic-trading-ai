@@ -64,6 +64,15 @@ describe('Market Scan view (DOM integration)', () => {
     }
   });
 
+  it('shows a filled score bar sized to the evidence strength, and scrolls the wide table horizontally', async () => {
+    const { container } = await renderAndScan();
+    expect(container.querySelector('.table-scroll table.data-table')).not.toBeNull();
+    const bar = container.querySelector<HTMLElement>('.score-bar-fill')!;
+    expect(bar).not.toBeNull();
+    expect(bar.className).toMatch(/\b(up|down)\b/);
+    expect(bar.style.width).toMatch(/^\d+%$/);
+  });
+
   it('expands on click, collapses on second click', async () => {
     const { container } = await renderAndScan();
     const firstRow = container.querySelector<HTMLTableRowElement>('.scan-row')!;
