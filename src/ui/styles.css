@@ -404,6 +404,18 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
 
 /* ---------- Tables ---------- */
 
+/* Every data-table in the app (Backtest/Validation/Market Scan/Monitoring)
+   is 7-9 columns wide — comfortably readable on a desktop-width `.content`
+   column, but wider than a 390-430px phone can show without either
+   crushing every column illegibly or forcing the whole PAGE to scroll
+   sideways. Neither happened before because `.data-table` was `width:
+   100%` with no scroll container of its own. A dedicated horizontally-
+   scrolling wrapper — `width: max-content` lets the table claim its
+   natural content width, `min-width: 100%` keeps it filling a wide
+   container as before — contains that scroll to just the table itself. */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-scroll .data-table { width: max-content; min-width: 100%; }
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -551,6 +563,16 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
   margin: 0.15rem 0;
 }
 
+/* The scan score is -100..+100 evidence strength — a bare number makes the
+   reader do the "how strong is this really" math themselves every row; a
+   small filled bar answers it at a glance, the same idea as the order
+   book's depth bars. */
+.scan-score { display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
+.score-bar { width: 48px; height: 4px; border-radius: 2px; background: var(--surface-raised); overflow: hidden; }
+.score-bar-fill { display: block; height: 100%; }
+.score-bar-fill.up { background: var(--hot); }
+.score-bar-fill.down { background: var(--cold); }
+
 .scan-failures {
   margin-top: 1rem;
   font-size: 0.85rem;
@@ -566,9 +588,12 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
   font-size: 0.85rem;
 }
 
+/* Tint-fill only, no drawn border — same "elevation via fill difference,
+   never a stroke" rule as .badge-hot/.dstat elsewhere; this panel (and
+   .risk-approved/.risk-refused, .verdict-* below) were the one surface
+   left still outlining its own tint in a matching colour. */
 .signal-opportunity {
   background: var(--hot-tint);
-  border: 1px solid rgba(76, 215, 135, 0.4);
 }
 
 .signal-rejected {
@@ -620,12 +645,10 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
 
 .risk-approved {
   background: var(--accent-tint);
-  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .risk-refused {
   background: var(--warn-tint);
-  border: 1px solid rgba(245, 185, 61, 0.4);
   color: var(--text);
 }
 
@@ -640,22 +663,18 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
 
 .verdict-robust {
   background: var(--hot-tint);
-  border: 1px solid rgba(76, 215, 135, 0.4);
 }
 
 .verdict-caution {
   background: var(--warn-tint);
-  border: 1px solid rgba(245, 185, 61, 0.4);
 }
 
 .verdict-overfitted {
   background: var(--cold-tint);
-  border: 1px solid rgba(242, 109, 125, 0.4);
 }
 
 .verdict-insufficient-data {
   background: var(--neutral-tint);
-  border: 1px solid rgba(139, 147, 165, 0.35);
 }
 
 .equity-curve {

@@ -186,6 +186,7 @@ function renderReport(
     </div>
 
     <div class="block-head"><h2>Per-fold results (${escapeHtml(report.strategyName)})</h2></div>
+    <div class="table-scroll">
     <table class="data-table">
       <thead>
         <tr>
@@ -213,6 +214,7 @@ function renderReport(
           .join('')}
       </tbody>
     </table>
+    </div>
   `;
 }
 

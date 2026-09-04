@@ -61,6 +61,18 @@ describe('Monitoring view (DOM integration)', () => {
     expect(container.querySelector('#mon-status')!.textContent).toContain('stopped');
   });
 
+  it('renders status as separate stat tiles, not one run-on sentence', async () => {
+    const container = await renderView();
+    // Stopped, no scan yet: just the two tiles that always apply.
+    expect(container.querySelectorAll('#mon-status .stat-tile').length).toBe(2);
+
+    container.querySelector<HTMLButtonElement>('#mon-start')!.click();
+    const labels = [...container.querySelectorAll('#mon-status .stat-tile-label')].map((el) => el.textContent);
+    // "Next scan" only joins once the engine has actually computed a fire
+    // time (not yet, right after start()) — always Status + Last scan.
+    expect(labels.slice(0, 2)).toEqual(['Status', 'Last scan']);
+  });
+
   it('a manual scan populates status, watchlist, history, and alerts from the engine', async () => {
     const container = await renderView();
     container.querySelector<HTMLButtonElement>('#mon-scan-now')!.click();
