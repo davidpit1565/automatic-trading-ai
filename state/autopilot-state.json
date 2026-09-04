@@ -1643,7 +1643,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788531884451,
+    "at": 1788532218819,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1659,10 +1659,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1786694856534,
-      "equity": 9568.52
-    },
     {
       "at": 1786695162843,
       "equity": 9568.52
@@ -21658,6 +21654,10 @@
     {
       "at": 1788531884451,
       "equity": 10247.87
+    },
+    {
+      "at": 1788532218819,
+      "equity": 10250.91
     }
   ],
   "trade-journal": [
@@ -23005,13 +23005,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1788531884451,
+    "at": 1788532218819,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10632.287380649052,
-        "returnPct": 6.322873806490516,
+        "equity": 10635.446069273541,
+        "returnPct": 6.354460692735412,
         "trades": 26,
         "winRatePct": 61.53846153846154,
         "profitFactor": 2.1372296363676755,
@@ -23021,8 +23021,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10632.287380649052,
-        "returnPct": 6.322873806490516,
+        "equity": 10635.446069273541,
+        "returnPct": 6.354460692735412,
         "trades": 26,
         "winRatePct": 61.53846153846154,
         "profitFactor": 2.1372296363676755,
@@ -23032,8 +23032,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10632.287380649052,
-        "returnPct": 6.322873806490516,
+        "equity": 10635.446069273541,
+        "returnPct": 6.354460692735412,
         "trades": 26,
         "winRatePct": 61.53846153846154,
         "profitFactor": 2.1372296363676755,
@@ -23076,8 +23076,8 @@
       {
         "key": "whale-flow",
         "label": "Refuses entries during heavy net selling by large traders",
-        "equity": 10747.121505788897,
-        "returnPct": 7.4712150578889664,
+        "equity": 10750.314309861154,
+        "returnPct": 7.503143098611545,
         "trades": 17,
         "winRatePct": 70.58823529411765,
         "profitFactor": 2.900209681216966,
@@ -23098,8 +23098,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10439.846954539227,
-        "returnPct": 4.398469545392272,
+        "equity": 10442.948472080667,
+        "returnPct": 4.429484720806667,
         "trades": 14,
         "winRatePct": 64.28571428571429,
         "profitFactor": 2.161554818032245,
@@ -41753,6 +41753,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1788532237910,
+      "intentId": "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788532218819",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -42256,6 +42263,10 @@
     {
       "at": 1788531884451,
       "equity": 101.34
+    },
+    {
+      "at": 1788532218819,
+      "equity": 101.43
     }
   ],
   "live:revolut-x-order-map": {
@@ -42405,6 +42416,17 @@
     }
   },
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {}
+  "live:live-exit-pending": {
+    "live-entry:ADAEUR:manual-reconcile-20260904": {
+      "reason": "stop-loss",
+      "queuedAt": 1788532218819
+    }
+  },
+  "live:confirmation-gate-pending": {
+    "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788532218819": {
+      "sentAt": 1788532237742,
+      "messageId": 478,
+      "token": "mtn1wywe.98pjl7"
+    }
+  }
 }
