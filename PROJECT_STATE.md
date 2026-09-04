@@ -1,5 +1,32 @@
 # PROJECT_STATE
 
+## ENOBUFS, take 4 — the real cause: piping a 1MB+ file through Node (2026-09-04)
+Neither of the previous two fixes (stdio 'ignore' for unread output, then a
+backoff between retry attempts) stopped this from recurring — confirmed
+under a real conflict: the backoff delays measurably happened (~3s then
+~6s between attempts, exactly as coded), and it still failed all 3
+attempts with the identical `spawnSync ENOBUFS`.
+
+The one thing every single failure had in common, that neither previous
+fix touched: `git show origin/main:${STATE_PATH}` piping the state file's
+FULL content (over 1MB now) through `execSync`'s own captured stdout —
+the only call in this whole retry path that ever moves a meaningful
+amount of data through a Node-managed pipe, rather than a git subprocess
+talking directly to disk or network. Fixed by redirecting it straight to
+a file via the shell (`git show ... > path.origin-tmp`) and reading that
+file back with `readFileSync` instead — nothing pipes real data through
+Node anymore anywhere in this function. `run()` no longer captures stdout
+at all (nothing read it once `git show` stopped needing to); stderr stays
+piped since it's always small and keeps failure messages readable. Same
+fix in both `autopilotRunner.mts` and `stocksRunner.mts`. Kept the backoff
+from the previous attempt too — harmless, still matches the YAML step's
+own never-failed retry loop. Full gate green (tsc, 1133 tests, build).
+
+Learned the hard way across four attempts tonight: guess-and-check on an
+intermittent infra failure wastes real capital-protection time. The thing
+that actually found this was comparing exact failure timestamps against
+what each fix changed, not re-theorizing from first principles.
+
 ## Full safety re-audit: /pause and /resume gave zero Telegram feedback (2026-09-04)
 David asked for a full re-check of correctness/safety after tonight's earlier
 fixes. Verified as genuinely fine (not just "looks fine"): the mid-cycle

@@ -24,7 +24,7 @@
  */
 
 import { execSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AlpacaStockSource, CURATED_STOCK_INSTRUMENTS, BROWSABLE_STOCK_INSTRUMENTS } from '../src/core/data/alpacaStocks';
@@ -105,15 +105,15 @@ function sleepSyncMs(ms: number): void {
 
 function persistStateToGit(store: FileStore, label: string): void {
   if (process.env['GITHUB_ACTIONS'] !== 'true') return;
-  // 3 retries (not 5) and `stdio: 'ignore'` by default, capturing output only
-  // for `git show` — same ENOBUFS incident and fix as the crypto runner's
-  // own helper (2026-09-04, second recurrence same night, PROJECT_STATE.md):
-  // piping every subprocess's stdout/stderr even when nothing reads it
-  // allocates pipe buffers that a tight back-to-back retry burst can exhaust
-  // on this runner, reliably, on the FIRST conflict of a freshly-started
-  // job — not just after hours of accumulation as first suspected.
-  const run = (cmd: string, capture = false): string =>
-    execSync(cmd, { encoding: 'utf8', stdio: capture ? ['ignore', 'pipe', 'pipe'] : ['ignore', 'ignore', 'ignore'] });
+  // 3 retries (not 5); never captures stdout (2026-09-04, THIRD ENOBUFS
+  // recurrence same night, same real cause as the crypto runner's own
+  // helper — see its retry-loop comment): nothing here reads a returned
+  // value, `git show` now redirects straight to a file via the shell
+  // instead of piping its (over 1MB) output through Node. stderr stays
+  // piped — small, never the problem, keeps failure messages readable.
+  const run = (cmd: string): void => {
+    execSync(cmd, { stdio: ['ignore', 'ignore', 'pipe'] });
+  };
   const hasStagedChanges = (): boolean => {
     try {
       run('git diff --staged --quiet');
@@ -141,7 +141,10 @@ function persistStateToGit(store: FileStore, label: string): void {
           // done (`sleep $((attempt * 3))`) and never failed with.
           sleepSyncMs(attempt * 3000);
           run('git fetch origin main');
-          const origin = JSON.parse(run(`git show origin/main:${STATE_PATH}`, true)) as Record<string, unknown>;
+          const originTmpPath = `${STATE_PATH}.origin-tmp`;
+          run(`git show origin/main:${STATE_PATH} > ${originTmpPath}`);
+          const origin = JSON.parse(readFileSync(originTmpPath, 'utf8')) as Record<string, unknown>;
+          rmSync(originTmpPath, { force: true });
           for (const key of store.dirtyKeys()) origin[key] = store.get(key);
           // Fully sync EVERYTHING to origin/main FIRST — a real incident,
           // 2026-09-03: `git reset --soft origin/main` alone moves HEAD but

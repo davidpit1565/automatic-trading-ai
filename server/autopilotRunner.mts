@@ -12,7 +12,7 @@
  */
 
 import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { KrakenPublicSource } from '../src/core/data/krakenPublic';
@@ -211,19 +211,16 @@ function sleepSyncMs(ms: number): void {
 
 function persistStateToGit(store: FileStore, label: string): void {
   if (process.env['GITHUB_ACTIONS'] !== 'true') return;
-  // `stdio: 'ignore'` by default (2026-09-04, second ENOBUFS recurrence same
-  // night — see the retry-loop comment below): every call here used to pipe
-  // stdout+stderr even though only `git show` (capture: true) ever reads the
-  // result. Piping a subprocess's output means the OS allocates pipe buffers
-  // for it; a whole retry attempt fires ~5 of these execSync calls back to
-  // back with no yield in between, and on this runner that was enough to
-  // exhaust available pipe buffer space on the VERY FIRST conflict of a
-  // freshly-started job (not just after hours of accumulation, as first
-  // suspected) — every retry then failed identically for the rest of that
-  // run. Only allocating a pipe for the one call that actually needs output
-  // cuts the per-attempt pipe count roughly in half.
-  const run = (cmd: string, capture = false): string =>
-    execSync(cmd, { encoding: 'utf8', stdio: capture ? ['ignore', 'pipe', 'pipe'] : ['ignore', 'ignore', 'ignore'] });
+  // Never captures stdout (2026-09-04, THIRD ENOBUFS recurrence same night,
+  // after both an earlier stdio-piping fix and a retry backoff still didn't
+  // stop it — see the retry-loop comment for the real cause found this
+  // time): nothing here reads a returned value anymore, `git show` (the one
+  // call that used to) now redirects straight to a file via the shell
+  // instead. stderr stays piped — small, never the problem, and keeps
+  // failure messages below readable instead of a bare exit code.
+  const run = (cmd: string): void => {
+    execSync(cmd, { stdio: ['ignore', 'ignore', 'pipe'] });
+  };
   const hasStagedChanges = (): boolean => {
     try {
       run('git diff --staged --quiet');
@@ -255,18 +252,27 @@ function persistStateToGit(store: FileStore, label: string): void {
         return;
       } catch {
         try {
-          // A real incident, 2026-09-04: the stdio-piping fix above didn't
-          // stop ENOBUFS — it recurred again, still on this same
-          // fetch/show/reset/add/commit burst, even with piping removed.
-          // The end-of-run YAML step's own equivalent retry loop (see
-          // autopilot.yml's "Commit updated state" step) has ALWAYS backed
-          // off between attempts (`sleep $((attempt * 3))`) and has never
-          // hit this; this loop fired all 3 attempts back to back with NO
-          // delay. Matching that backoff here is the one difference between
-          // the loop that's never failed and the one that kept failing.
+          // A real incident, 2026-09-04: neither the stdio-piping fix above
+          // NOR a backoff between attempts (tried next, tested under a real
+          // conflict — the delays measurably happened, ~3s/~6s between
+          // attempts) stopped ENOBUFS; it kept failing on EVERY attempt
+          // regardless. The one thing every failure had in common: `git
+          // show origin/main:${STATE_PATH}` piping this file's full content
+          // (over 1MB now) through execSync's own captured stdout pipe —
+          // the only call in this whole function that ever moved a
+          // meaningful amount of data through a Node-managed pipe, rather
+          // than a git subprocess talking directly to the filesystem or
+          // network. Redirecting it to a file via the shell instead (git
+          // writes straight to disk; Node just reads the file back) means
+          // NOTHING here pipes real data through Node anymore. Kept the
+          // backoff too — harmless, and still matches the YAML step's own
+          // never-failed retry loop.
           sleepSyncMs(attempt * 3000);
           run('git fetch origin main');
-          const origin = JSON.parse(run(`git show origin/main:${STATE_PATH}`, true)) as Record<string, unknown>;
+          const originTmpPath = `${STATE_PATH}.origin-tmp`;
+          run(`git show origin/main:${STATE_PATH} > ${originTmpPath}`);
+          const origin = JSON.parse(readFileSync(originTmpPath, 'utf8')) as Record<string, unknown>;
+          rmSync(originTmpPath, { force: true });
           for (const key of store.dirtyKeys()) origin[key] = store.get(key);
           // Fully sync EVERYTHING to origin/main FIRST — a real incident,
           // 2026-09-03: `git reset --soft origin/main` alone moves HEAD but
