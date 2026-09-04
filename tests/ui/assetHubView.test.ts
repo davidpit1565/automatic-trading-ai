@@ -148,6 +148,12 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
     expect(container.querySelector<HTMLElement>('#hub-real-money')!.hidden).toBe(false);
     // No equity-history point yet, so falls back to 50 cash + 0.001 * 95000 invested = 145
     expect(container.querySelector('#hub-real-equity')!.textContent).toContain('145');
+    // No first-recorded sample to measure a return against yet — the
+    // "since tracking began" line (mirroring Home's identical hero) must
+    // stay hidden rather than show a meaningless number.
+    expect(container.querySelector<HTMLElement>('#hub-real-change')!.hidden).toBe(true);
+    // Cash still gets its own line even with no equity history to report.
+    expect(container.querySelector('#hub-real-breakdown')!.textContent).toContain('Cash');
   });
 
   it('shows the untracked-BTC breakdown and feeds the real equity chart once external BTC and history exist', async () => {
@@ -180,6 +186,13 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
     expect(breakdown.hidden).toBe(false);
     // 0.001 BTC * 100,000 = 100 EUR untracked holding value.
     expect(breakdown.textContent).toContain('100');
+    // 100 -> 150 since the first recorded sample = +50% "since tracking began"
+    // (same wording and baseline homeView.ts's identical hero uses).
+    const change = container.querySelector<HTMLElement>('#hub-real-change')!;
+    expect(change.hidden).toBe(false);
+    expect(change.textContent).toContain('50');
+    expect(change.textContent).toContain('since tracking began');
+    expect(change.classList.contains('up')).toBe(true);
   });
 });
 

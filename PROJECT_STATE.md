@@ -1,5 +1,53 @@
 # PROJECT_STATE
 
+## Creative upgrade pass #2: assetHubView's Profit-tab "Real money" card had the glow but not the number, plus a hero-token audit (2026-09-04)
+Continuation of pass #1 (below), same mandate — genuine upgrades, not a bug
+hunt. Rebased this worktree onto `main` first to pick up PR #184
+(`be337777`).
+
+**Real gap found in `assetHubView.ts`'s Profit-tab "Real money" secondary
+card** (`#hub-real-money`): pass #1 gave Home's live hero an up/down glow
+*and* a "X% since tracking began" line backing it up. This card already had
+the glow (`.up`/`.down` toggled off the same first-recorded-sample baseline)
+but never surfaced the number — a viewer could see the card tint green/red
+with no text anywhere explaining by how much. Verified with a real
+before/after screenshot (built `dist/`, `vite preview`, mocked
+`autopilot-state.json` with its real committed live-account content —
+David's actual €115.32 balance, +14.51% since tracking began — network
+aborted for everything else) at 400px: before, the card jumped straight from
+"€115.32" to the cash breakdown with no percentage at all; after, "▲ 14.51%
+since tracking began" sits between them, exact same wording and baseline as
+`homeView.ts`'s `#hv-live-change`. Also fixed the cash/BTC breakdown line
+being `hidden` entirely whenever there's no untracked BTC holding — Home's
+identical line always shows "Cash €X" regardless; this card now matches.
+Added test coverage: both the new "since tracking began" text/class and the
+always-visible cash line, for both the has-BTC and no-BTC cases.
+
+**Hero-token audit** (the other half of David's ask — "are there other
+screens that should use hero-bare for their own single most important
+number"): checked every view under `src/ui/views/`. `homeView.ts`,
+`portfolioView.ts`, `stocksOverviewPanel.ts`, `stocksLongTermPanel.ts`, and
+`valueView.ts` (via `equityChartPanel.ts`'s own built-in `hero-bare`) already
+use it correctly and consistently — each is exactly one account's own
+balance, alone on its screen, exactly where the pattern is for. Deliberately
+did NOT extend it to `marketsView.ts`'s coin-detail price (`.detail-price-row
+.row-title.big`, 2.4rem): that number lives in a header row with a back
+button, pair-switcher and star button around it — `hero-bare`'s whole
+premise is a lone centered figure with nothing else competing for the same
+visual weight, and it's a market quote for whatever coin you're browsing,
+not "your money" (no page-wide sentiment wash makes sense for it either).
+Forcing the pattern there would fight the layout for a number that isn't the
+personal-stakes kind hero-bare exists for. `monitoringView.ts`,
+`backtestView.ts`, `validationView.ts`, `marketScanView.ts`, `gridView.ts`
+are scan/tool screens with no single dominant balance — also correctly left
+alone.
+
+Full gate green: `tsc --noEmit` clean, 1140/1140 tests (same count — 2 new
+assertions added to existing cases, no new cases), `npm run build` clean.
+Pure `src/ui/views/assetHubView.ts` + `tests/ui/assetHubView.test.ts` diff (2
+files) — nothing under `server/**`, `state/**`, or trading/signal/risk logic
+touched.
+
 ## Creative upgrade pass #1: Home's real-money hero was the wrong shape for what it now is (2026-09-04)
 David asked for genuine UPGRADES, not a bug hunt ("אני לא מחפש פגמים... מחפש
 שידרוגים"). Verified with real before/after screenshots (built `dist/`,
