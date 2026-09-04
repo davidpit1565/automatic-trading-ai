@@ -170,19 +170,19 @@ function renderReport(
     ${equityCurveSvg(report.oosEquityCurve)}
 
     <div class="block-head"><h2>Training vs unseen data</h2></div>
-    <div class="result-cards">
-      <div class="stat-card"><div class="stat-label">Avg return (train)</div>
-        <div class="stat-value ${signClass(a.avgTrainReturnPct)}">${formatPct(a.avgTrainReturnPct)}</div></div>
-      <div class="stat-card"><div class="stat-label">Avg return (unseen)</div>
-        <div class="stat-value ${signClass(a.avgTestReturnPct)}">${formatPct(a.avgTestReturnPct)}</div></div>
-      <div class="stat-card"><div class="stat-label">Degradation</div>
-        <div class="stat-value">${a.degradationPct === null ? '—' : formatPct(a.degradationPct, 0)}</div></div>
-      <div class="stat-card"><div class="stat-label">Sharpe (unseen)</div>
-        <div class="stat-value">${a.avgTestSharpe === null ? '—' : a.avgTestSharpe.toFixed(2)}</div></div>
-      <div class="stat-card"><div class="stat-label">Win rate (unseen)</div>
-        <div class="stat-value">${a.avgTestWinRatePct === null ? '—' : formatPct(a.avgTestWinRatePct, 0)}</div></div>
-      <div class="stat-card"><div class="stat-label">OOS trades</div>
-        <div class="stat-value">${a.totalTestTrades}</div></div>
+    <div class="stat-row">
+      <div class="stat-tile"><div class="stat-tile-value ${signClass(a.avgTrainReturnPct)}">${formatPct(a.avgTrainReturnPct)}</div>
+        <div class="stat-tile-label">Avg return (train)</div></div>
+      <div class="stat-tile"><div class="stat-tile-value ${signClass(a.avgTestReturnPct)}">${formatPct(a.avgTestReturnPct)}</div>
+        <div class="stat-tile-label">Avg return (unseen)</div></div>
+      <div class="stat-tile"><div class="stat-tile-value">${a.degradationPct === null ? '—' : formatPct(a.degradationPct, 0)}</div>
+        <div class="stat-tile-label">Degradation</div></div>
+      <div class="stat-tile"><div class="stat-tile-value">${a.avgTestSharpe === null ? '—' : a.avgTestSharpe.toFixed(2)}</div>
+        <div class="stat-tile-label">Sharpe (unseen)</div></div>
+      <div class="stat-tile"><div class="stat-tile-value">${a.avgTestWinRatePct === null ? '—' : formatPct(a.avgTestWinRatePct, 0)}</div>
+        <div class="stat-tile-label">Win rate (unseen)</div></div>
+      <div class="stat-tile"><div class="stat-tile-value">${a.totalTestTrades}</div>
+        <div class="stat-tile-label">OOS trades</div></div>
     </div>
 
     <div class="block-head"><h2>Per-fold results (${escapeHtml(report.strategyName)})</h2></div>

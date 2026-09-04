@@ -7,9 +7,29 @@ import { runBacktest } from '../../core/backtest/engine';
 import { gridStrategy } from '../../core/strategies';
 import type { Timeframe } from '../../core/types';
 import type { ActiveDataSource } from '../dataSource';
+import { lineChartSvg } from '../charts';
 import { escapeHtml, formatPct, formatPrice, signClass } from '../format';
 
 const CANDLE_LIMIT = 300;
+
+/** Plain SVG polyline of the simulated equity curve — same shape as
+ * validationView's own private helper (small enough that sharing it isn't
+ * worth coupling two independent tool screens together). Grid previously
+ * showed five numbers and nothing else, the only backtest-style tool in the
+ * app with no visual result at all despite running a full time-series
+ * simulation to get them. */
+function equityCurveSvg(curve: readonly { timestamp: number; equity: number }[]): string {
+  if (curve.length < 2) return '';
+  const first = curve[0]!.equity;
+  const last = curve[curve.length - 1]!.equity;
+  return lineChartSvg(
+    curve.map((p) => ({ timestamp: p.timestamp, value: p.equity })),
+    {
+      lineClass: last >= first ? 'equity-line-up' : 'equity-line-down',
+      ariaLabel: `Simulated equity curve from ${formatPrice(first)} to ${formatPrice(last)}`,
+    },
+  );
+}
 
 export function renderGridView(container: HTMLElement, data: ActiveDataSource): void {
   container.innerHTML = `
@@ -84,18 +104,25 @@ export function renderGridView(container: HTMLElement, data: ActiveDataSource): 
       status.textContent =
         `${symbol} · grid ${formatPrice(lowerBound)} – ${formatPrice(upperBound)} · ` +
         `${candles.value.length} candles (${timeframe}) · source: ${data.source.name}`;
+      // Headline first (equity + return, the two numbers the simulation was
+      // actually run to answer), then the curve that got them there, then
+      // the supporting metrics — a hierarchy, not five equally-weighted
+      // boxes with no visual result behind any of them.
       results.innerHTML = `
-        <div class="result-cards">
-          <div class="stat-card"><div class="stat-label">Final equity</div>
-            <div class="stat-value">${formatPrice(result.finalEquity)}</div></div>
-          <div class="stat-card"><div class="stat-label">Return</div>
-            <div class="stat-value ${signClass(result.totalReturnPct)}">${formatPct(result.totalReturnPct)}</div></div>
-          <div class="stat-card"><div class="stat-label">Max drawdown</div>
-            <div class="stat-value">${result.maxDrawdownPct.toFixed(2)}%</div></div>
-          <div class="stat-card"><div class="stat-label">Closed trades</div>
-            <div class="stat-value">${result.stats.tradeCount}</div></div>
-          <div class="stat-card"><div class="stat-label">Win rate</div>
-            <div class="stat-value">${result.stats.winRatePct === null ? '—' : `${result.stats.winRatePct.toFixed(0)}%`}</div></div>
+        <div class="stat-row">
+          <div class="stat-tile"><div class="stat-tile-value ${signClass(result.totalReturnPct)}">${formatPrice(result.finalEquity)}</div>
+            <div class="stat-tile-label">Final equity</div></div>
+          <div class="stat-tile"><div class="stat-tile-value ${signClass(result.totalReturnPct)}">${formatPct(result.totalReturnPct)}</div>
+            <div class="stat-tile-label">Return</div></div>
+        </div>
+        ${equityCurveSvg(result.equityCurve)}
+        <div class="stat-row">
+          <div class="stat-tile"><div class="stat-tile-value">${result.maxDrawdownPct.toFixed(2)}%</div>
+            <div class="stat-tile-label">Max drawdown</div></div>
+          <div class="stat-tile"><div class="stat-tile-value">${result.stats.tradeCount}</div>
+            <div class="stat-tile-label">Closed trades</div></div>
+          <div class="stat-tile"><div class="stat-tile-value">${result.stats.winRatePct === null ? '—' : `${result.stats.winRatePct.toFixed(0)}%`}</div>
+            <div class="stat-tile-label">Win rate</div></div>
         </div>
       `;
     } catch (cause) {
