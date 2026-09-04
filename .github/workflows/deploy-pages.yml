@@ -12,6 +12,23 @@
 # forced a fresh gh-pages push, which wasted CI minutes and (via Vercel's
 # separate git integration on this same repo) kept ticking the account-wide
 # Vercel deployment quota even after main itself was excluded there.
+#
+# The optional "Refresh Vercel mirror" step at the end (only runs if the
+# VERCEL_DEPLOY_HOOK_URL repo secret is set) exists because git.deploymentEnabled
+# in vercel.json now disables ALL git-triggered deployments for `main` — that
+# was the only way to stop the autopilot bots' frequent state commits (they
+# land on `main` directly, not through this workflow) from exhausting the
+# account-wide 100/day Vercel quota. A side effect: Vercel's production URL
+# stopped updating entirely, even for real code changes, since Vercel can't
+# tell a bot commit from a real one at the branch level. A Deploy Hook is a
+# separate trigger (a plain POST, not a git push event) that isn't subject to
+# deploymentEnabled, so calling it here — only on the same real-code-only
+# runs this workflow already limited itself to — refreshes the Vercel mirror
+# without reopening the quota problem. To enable: Vercel dashboard → this
+# project → Settings → Git → Deploy Hooks → create one for the `main` branch,
+# then add its URL as the repo secret VERCEL_DEPLOY_HOOK_URL. Until that
+# secret exists, this step is a no-op and the Vercel mirror stays frozen —
+# harmless, since GitHub Pages (see README.md) is the actual primary site.
 
 name: Deploy dashboard to GitHub Pages
 
@@ -55,3 +72,8 @@ jobs:
             gh-pages:gh-pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Refresh Vercel mirror (only if a deploy hook is configured)
+        if: ${{ env.VERCEL_DEPLOY_HOOK_URL != '' }}
+        run: curl -fsS -X POST "$VERCEL_DEPLOY_HOOK_URL"
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
