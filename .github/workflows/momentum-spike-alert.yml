@@ -1,0 +1,42 @@
+# Speculative momentum-spike alert — every 3 days (David's requested cadence,
+# 2026-09-04), deliberately more frequent than the measured weekly discovery
+# workflow (discover-crypto-candidates.yml). Looks for non-curated coins
+# moving sharply RIGHT NOW; unlike that weekly survey, this is NOT measured
+# against real history (a multi-hour spike has no meaningful backtest
+# window) — purely a "heads up" alert for a manual decision.
+#
+# Cron day-of-month step (*/3) is an approximation of "every 3 days" — it
+# resets at each month boundary (e.g. fires on the 1st and 4th of a new
+# month, only 3 days apart there too, but the step can occasionally land 1-2
+# days off right at a month's end/start). Good enough for a speculative
+# heads-up; not used anywhere real-money-critical.
+#
+# Read-only and side-effect-free: never edits CURATED_INSTRUMENTS, commits,
+# opens a PR, or trades anything — job log + one Telegram message only.
+
+name: Momentum spike alert (speculative, every ~3 days)
+
+on:
+  schedule:
+    - cron: '0 8 */3 * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  momentum-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Scan for momentum spikes
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: npx tsx scripts/detectMomentumSpikes.mts
