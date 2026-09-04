@@ -1630,7 +1630,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788533954791,
+    "at": 1788534303316,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1646,10 +1646,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1786696695973,
-      "equity": 9568.52
-    },
     {
       "at": 1786697002182,
       "equity": 9568.52
@@ -21645,6 +21641,10 @@
     {
       "at": 1788533954791,
       "equity": 10233.4
+    },
+    {
+      "at": 1788534303316,
+      "equity": 10233.4
     }
   ],
   "trade-journal": [
@@ -22918,7 +22918,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -18.09% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -18.20% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23016,7 +23016,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1788533954791,
+    "at": 1788534303316,
     "standings": [
       {
         "key": "live-mirror",
@@ -23065,8 +23065,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9316.752246025259,
-        "returnPct": -6.832477539747416,
+        "equity": 9322.547925772016,
+        "returnPct": -6.774520742279838,
         "trades": 68,
         "winRatePct": 41.17647058823529,
         "profitFactor": 0.6145397176351992,
@@ -41842,6 +41842,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "rejected via Telegram"
+    },
+    {
+      "timestamp": 1788534322386,
+      "intentId": "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788534303316",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -42369,6 +42376,10 @@
     {
       "at": 1788533954791,
       "equity": 100.95
+    },
+    {
+      "at": 1788534303316,
+      "equity": 100.99
     }
   ],
   "live:revolut-x-order-map": {
@@ -42512,6 +42523,17 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447904703,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {}
+  "live:live-exit-pending": {
+    "live-entry:ADAEUR:manual-reconcile-20260904": {
+      "reason": "stop-loss",
+      "queuedAt": 1788534303316
+    }
+  },
+  "live:confirmation-gate-pending": {
+    "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788534303316": {
+      "sentAt": 1788534322245,
+      "messageId": 483,
+      "token": "mtn35nb9.131wn6w"
+    }
+  }
 }
