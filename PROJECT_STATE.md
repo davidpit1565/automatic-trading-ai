@@ -1,5 +1,39 @@
 # PROJECT_STATE
 
+## Full safety re-audit: /pause and /resume gave zero Telegram feedback (2026-09-04)
+David asked for a full re-check of correctness/safety after tonight's earlier
+fixes. Verified as genuinely fine (not just "looks fine"): the mid-cycle
+persist backoff fix has held for 10+ hours straight with no ENOBUFS and a
+steady ~5-5.5min cadence; `brokerAdapter.submit` has exactly ONE call site in
+the whole codebase (`liveOrchestrator.mts`'s `runLiveOrderFlow`), gated on
+`killSwitch.isEngaged()` first — every buy/sell path (manual and automatic)
+goes through it, so the kill switch cannot be bypassed by any current path;
+the confirmation gate's 20-minute auto-expiry correctly resolves to
+`approved: false` with no order ever submitted and the shared exit-pending
+queue correctly cleared; the /buy, /sell, and synthetic-price fixes from
+earlier tonight are all still intact in the current code.
+
+**Found and fixed — same bug class as tonight's /buy and /sell fix, this
+time on the emergency stop itself**: `/pause` and `/resume` (typed, or via
+the always-visible persistent keyboard button, which sends the identical
+text) correctly engaged/disengaged the kill switch and correctly audited it
+— `checkManualKillSwitchCommands` itself was never the problem. But
+`runLiveMirror` (`autopilotRunner.mts`) called it and discarded the return
+value, so David got no Telegram confirmation his tap did anything — an
+unconfirmed emergency-stop tap is indistinguishable from a bot that's stopped
+responding. Fixed by sending a short Hebrew confirmation for every outcome
+(including the already-in-that-state no-op case, so a repeated tap doesn't
+read as ignored either). Regression test added
+(`tests/server/autopilotRunner.test.ts`). Full gate green (tsc, 1133 tests,
+build).
+
+**Left for a human decision, not touched**: at the time of this audit there
+is a live, real stop-loss exit for the open ADAEUR position awaiting
+David's Telegram tap (confirmation sent ~12:44 UTC, auto-expires ~20 minutes
+later if unanswered — safe either way per the verified expiry behavior
+above, but flagging it since it's a real pending decision, not a hypothetical
+one).
+
 ## Momentum alert can flag a coin Revolut X doesn't even list (2026-09-04)
 Real incident: the momentum-spike alert flagged USELESS (+27% on Kraken)
 with a ready `/buy USELESSEUR` line claiming (per the script's own old doc
