@@ -1581,12 +1581,30 @@ can't distinguish a bot commit from a real one at the branch level. Confirmed
 (`index-4LQ5VYXt.js`) while GitHub Pages is fully current
 (`index-q0Drm1xS.js` and later). This is an accepted trade-off, not a bug —
 GitHub Pages is the actual primary, continuously-updated site either way.
-`deploy-pages.yml` has an optional "Refresh Vercel mirror" step (a Vercel
-Deploy Hook — a plain POST, not a git push, so it isn't subject to
-`deploymentEnabled`) that only runs if the `VERCEL_DEPLOY_HOOK_URL` repo
-secret is set; without it, the step is a no-op and the Vercel mirror stays
-frozen. Creating that hook requires the Vercel dashboard (Settings → Git →
-Deploy Hooks, ref `main`) — outside what a git-only session can do.
+`deploy-pages.yml` had an optional "Refresh Vercel mirror" step (a Vercel
+Deploy Hook, ref `main`) meant to fix this — David created the hook via the
+Vercel dashboard and added its URL as the `VERCEL_DEPLOY_HOOK_URL` repo
+secret. **Tested 2026-09-04 and confirmed not to work**: the hook call
+itself succeeded (`{"job":{"state":"PENDING",...}}`), but `list_deployments`
+showed **zero** new deployment records were ever created from it, even
+minutes later — `git.deploymentEnabled: {"main": false}` turns out to block
+Deploy-Hook-triggered builds for that ref too, not just git-push-triggered
+ones (unlike `ignoreCommand`, which still creates a `CANCELED` record; this
+blocked the deployment from being created at all). So a Deploy Hook against
+a disabled branch can never work as a workaround.
+
+**Real fix, same day**: removed the Deploy Hook entirely and dropped
+`"gh-pages": false` from `deploymentEnabled` (and the matching
+`ignoreCommand` clause) in `vercel.json` — now only `main` is disabled.
+This is safe now (wasn't, when `gh-pages` was first excluded) because
+`paths-ignore: [state/**]` in `deploy-pages.yml` already made every
+`gh-pages` push real-code-only; there is no longer any bot noise on that
+branch to guard against, so every `gh-pages` push is exactly one Vercel
+should build. Vercel's own git integration now deploys `gh-pages` normally
+on every real code change — no hook, no secret, no manual dashboard step.
+`main` stays disabled (the autopilot bots still push state there directly,
+dozens of times a day) so the account-wide quota risk this whole effort
+started from remains fixed.
 ## Real money is now LIVE (2026-09-03)
 David generated real Revolut X trading credentials, funded the account
 (100.15€), and set `REAL_MONEY_ENABLED=true` as a repo Variable. The
