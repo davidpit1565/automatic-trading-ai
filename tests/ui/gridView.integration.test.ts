@@ -59,3 +59,28 @@ describe('Grid view — win rate / drawdown formatting', () => {
     expect(results.textContent).not.toMatch(/\+\d+%/); // win rate must not carry a "+"
   });
 });
+
+describe('Grid view — result presentation', () => {
+  it('renders an equity curve alongside the stat tiles, not just five numbers', async () => {
+    const candles = generateSyntheticCandles({
+      seed: 3, startPrice: 100, count: 200, timeframe: '1h',
+      startTimestamp: 1_700_000_000_000, drift: 0.001, volatility: 0.01,
+    });
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderGridView(container, fakeSource(async () => ({ ok: true, value: candles })));
+
+    container.querySelector<HTMLButtonElement>('#grid-run')!.click();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    const results = container.querySelector('#grid-results')!;
+    expect(results.querySelector('svg.equity-curve')).not.toBeNull();
+    // Final equity and Return lead as their own hero-ish row, ahead of the
+    // curve; the supporting metrics (drawdown/trades/win rate) follow it.
+    const tiles = results.querySelectorAll('.stat-tile-label');
+    expect([...tiles].map((t) => t.textContent)).toEqual([
+      'Final equity', 'Return', 'Max drawdown', 'Closed trades', 'Win rate',
+    ]);
+  });
+});

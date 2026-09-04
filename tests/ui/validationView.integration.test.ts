@@ -59,7 +59,7 @@ describe('Validation view (DOM integration)', () => {
     expect(verdict!.textContent).not.toMatch(/guaranteed/i);
 
     expect(container.querySelector('svg.equity-curve')).not.toBeNull();
-    expect(container.querySelectorAll('.stat-card').length).toBeGreaterThanOrEqual(6);
+    expect(container.querySelectorAll('.stat-tile').length).toBeGreaterThanOrEqual(6);
 
     const foldRows = container.querySelectorAll('tbody tr');
     expect(foldRows.length).toBeGreaterThanOrEqual(3);

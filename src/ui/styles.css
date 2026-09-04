@@ -677,48 +677,6 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
 
 /* ---------- Cards ---------- */
 
-.result-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.75rem;
-  margin: 1rem 0;
-}
-
-.stat-card {
-  /* Gradient fill, not flat — matches the elevation treatment every other
-     card in the app already uses (.market-card/.tool-card/.hero); a flat
-     `var(--surface)` fill here was the one card type in the app that never
-     got that pass. */
-  background: linear-gradient(160deg, var(--surface-raised), var(--surface));
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 0.8rem 1.05rem;
-  box-shadow: var(--shadow-xs);
-  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
-}
-/* Same hairline-lift hover every other card gets — result cards (Backtest)
-   are the one place this component appears today, and comparing several of
-   them side by side is exactly the "scannable grid of cards" case the
-   reference always gives a hover affordance. */
-.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-@media (prefers-reduced-motion: reduce) { .stat-card:hover { transform: none; } }
-
-.stat-card .stat-label {
-  font-size: 0.72rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wide);
-  font-weight: var(--fw-semibold);
-}
-
-.stat-card .stat-value {
-  font-size: 1.3rem;
-  font-weight: var(--fw-bold);
-  letter-spacing: var(--tracking-tight);
-  margin-top: 0.2rem;
-  font-variant-numeric: tabular-nums;
-}
-
 .learn-card {
   background: linear-gradient(160deg, var(--surface-raised), var(--surface));
   border: 1px solid var(--border);

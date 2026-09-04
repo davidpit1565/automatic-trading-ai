@@ -85,8 +85,9 @@ try {
   await page.click('[data-nav="tools"]');
   await page.click('[data-tab="grid"]');
   await page.click('#grid-run');
-  await page.waitForSelector('#grid-results .stat-card', { timeout: 20000 });
-  check('grid result cards', (await page.$$('#grid-results .stat-card')).length >= 4);
+  await page.waitForSelector('#grid-results .stat-tile', { timeout: 20000 });
+  check('grid result tiles', (await page.$$('#grid-results .stat-tile')).length >= 4);
+  check('grid equity curve rendered', (await page.$('#grid-results svg.equity-curve')) !== null);
 
   // Paper Portfolio: the manual buy/sell simulator (PaperPortfolio, localStorage-
   // backed). This is the only client-side portfolio panel left — the old
