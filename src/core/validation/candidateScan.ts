@@ -27,7 +27,15 @@ const MIN_CONFIDENCE = 20;
  * (e.g. a 100% win rate on 5 trades) every manual addition so far has been
  * screened against. */
 export const MIN_TRADES_TO_TRUST = 6;
-export const DEFAULT_TOP_N = 40;
+/** Widened 40 -> 80 (2026-09-04): a live run at 80 surfaced real candidates
+ * as far down as ~45-50K EUR 24h volume (e.g. PENDLE, TIA, CHIP) that 40
+ * would have missed entirely — the previous default was leaving real,
+ * still-liquid-enough coins unscanned every week, not just excluding dust.
+ * Still bounded well short of Kraken's full ~500 non-curated EUR pairs:
+ * past this volume rank the pairs get thin enough that a passing backtest
+ * would be measuring illiquidity, not a real edge. Read-only/no-op scan —
+ * widening it changes nothing about what actually trades. */
+export const DEFAULT_TOP_N = 80;
 /** Smaller default for the on-demand `/discover` Telegram command, which
  * blocks a live reply — the weekly scheduled job can afford the full 40
  * since nothing is waiting on it synchronously. */
