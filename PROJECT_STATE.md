@@ -1,5 +1,85 @@
 # PROJECT_STATE
 
+## Creative upgrade pass #4: full passes on the remaining tool screens (2026-09-04, PRs #188/#189/#190)
+Continuation of pass #3 (below) — same mandate, this time the eight screens
+David explicitly listed as "not yet done at all": `stocksMarketPanel.ts`,
+`cryptoView.ts`, `stocksView.ts`, `gridView.ts`, `backtestView.ts`,
+`validationView.ts`, `marketScanView.ts`, `monitoringView.ts`. Rebased onto
+`main` before and between each batch to pick up PR #186/#187 and each
+subsequent merge.
+
+**cryptoView.ts / stocksView.ts**: reviewed, no changes — both are thin
+composition wrappers with no markup of their own (`renderCryptoView` just
+calls `renderAssetHub` with `renderHomeView`/`renderMarketsView` as panel
+renderers; `renderStocksView` the same with the stocks panels). Everything
+they render is covered by this pass or an earlier one.
+
+**Grid Simulation + Validation (PR #188)**: Grid was the only backtest-style
+tool in the app with NO visual result at all — five equal `.stat-card`
+boxes and nothing else, despite running a full time-series simulation to
+produce them. Added an equity curve (the same `lineChartSvg` validationView
+already uses) and restructured the five numbers into a real hierarchy:
+Final equity + Return lead as their own hero-ish `.stat-row` (the two
+numbers the simulation was actually run to answer), the curve that
+produced them follows, the supporting metrics (drawdown/trades/win rate)
+come after as a secondary row. Validation's own `.result-cards`/`.stat-card`
+tiles were swapped for the `.stat-row`/`.stat-tile` pattern backtestView's
+comparison summary already established as the shared "big number + small
+label" component — same data, verdict panel, equity chart and per-fold
+table untouched, just the card chrome unified. `.result-cards`/`.stat-card`
+removed from styles.css afterward — grepped, no remaining consumer anywhere.
+
+**Market Scan + Monitoring + Backtest (PR #189)**: two shared infrastructure
+gaps found across every `.data-table` screen (Backtest/Validation/Market
+Scan/Monitoring): (1) every table is 7-9 columns wide and was `width: 100%`
+with no scroll container — on a 390-430px phone that either crushed every
+column illegibly or forced the whole PAGE to scroll sideways. Added a
+`.table-scroll` wrapper (`overflow-x: auto`; table gets `width: max-content;
+min-width: 100%`) at all four call sites — confirmed by actually scrolling
+a live table via Playwright (`element.scrollLeft`), not just reading the
+CSS. (2) `.signal-opportunity`/`.risk-approved`/`.risk-refused`/`.verdict-*`
+were the one surface left drawing a coloured RGBA border around their own
+tint fill, contradicting the true-black pass's own "fill difference only,
+never a stroke" rule already applied to `.badge-hot`/`.dstat`/etc. — removed
+the six leftover borders. Market Scan's own gap: the -100..+100 score was a
+bare number; added a small filled bar (green/red, sized to |score|) beside
+it, same idea as marketsView's order-book depth bars from PR #186 applied
+to a different "how strong is this" number. Monitoring's own gap: the
+status line was one run-on "· "-joined sentence carrying four unrelated
+facts (running?, last scan, next scan, last outcome) — split into
+`.stat-tile`s, preserving every exact substring `scripts/e2e.mjs` and the
+existing integration test assert on ('stopped', 'RUNNING', the interval
+string, 'Last scan', 'qualified').
+
+**Stocks Market (PR #190)**: already inherited the crypto Markets list's
+polished row styling wholesale (logo, freshness dot, category tabs,
+search+sort) — the one real gap was that it carries the identical curated
+(actually-traded) vs browsable (display-only) split as crypto
+(`CURATED_STOCK_INSTRUMENTS` vs `BROWSABLE_STOCK_INSTRUMENTS`) but never
+surfaced it. Added the same `.tag-traded` TRADED badge marketsView.ts
+already shows for its own curated majors.
+
+Verified with real screenshots throughout: built `dist/`, `vite preview` on
+port 4177 (checked `lsof` first — 4173/4174 were bound by other worktrees),
+Playwright at 400px, `?demo=1` for the five tool screens (no live-network
+mocking needed, same convention `scripts/e2e.mjs` already uses).
+
+Full gate green after every batch (never re-verified stale): tsc --noEmit
+clean throughout, vitest 1146 → 1148 → 1149 (net +4 new tests across the
+three PRs, none weakened), `npm run build` clean throughout. Pure `src/ui/`
++ `tests/ui/` (+ `scripts/e2e.mjs` selector updates for one CSS class
+rename) diff across all three PRs — nothing under `server/**`, `state/**`,
+or trading/signal/risk logic touched.
+
+Left for a future round: `backtestView.ts`'s per-strategy comparison could
+in principle get its own small equity-curve-per-row treatment (Grid and
+Validation both got one this round); not attempted here since overlaying
+several strategies' curves legibly in one small area is a materially
+different, harder design problem than a single curve, and backtestView
+already had the best structure of the five tool screens going in (stat-row
+summary + BEST badge + data-table) — the genuine, low-risk gap there was
+just the shared table-scroll fix, which is done.
+
 ## Creative upgrade pass #3: finished marketsView's coin-detail tabs — order book, depth, trades, trade form, pager (2026-09-04, PR #186)
 Continuation of pass #1/#2 (below) — rebased onto `main` first to pick up
 PR #184/#185. David's ask named exactly what was left uncovered: only ~600
