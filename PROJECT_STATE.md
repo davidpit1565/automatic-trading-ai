@@ -5072,3 +5072,53 @@ Full gate: tsc clean, 1139/1139 vitest (all pre-existing, no test changes
 needed — the change is additive markup/CSS, covered by existing DOM tests),
 `npm run build` clean. Pure `src/ui/main.ts` + `src/ui/styles.css` diff (43
 lines). No file under `server/**`, `state/**`, or `src/core/**` touched.
+
+## Manual Revolut X trades (outside the bot) now auto-reconciled (2026-09-04)
+
+David: "sometimes I also buy or sell directly through Revolut, so it needs
+to know and update automatically." Before this, a fill made directly in the
+Revolut X app was completely invisible to the bot — no stop-loss, no
+take-profit, no P&L tracking — until a human noticed and hand-fixed the
+state file, which had already happened twice this account (see the
+2026-09-03/09-04 manual-reconciliation notes earlier in this file).
+
+**What was built:** `server/liveManualTradeSync.mts`,
+`syncManualTradesFromBroker(store, brokerAdapter, source, telegram, now, onRealizedPnl?)`,
+called once per cycle in `autopilotRunner.mts`'s `main()` right after
+`recordLiveRealizedPnl` is constructed — before `runLiveMirror`'s own
+entry/exit checks that same cycle, so a fill from between cycles is caught
+before this cycle's own logic runs against a stale baseline. For every
+`CURATED_INSTRUMENTS` symbol, compares `BrokerAdapter.fetchPositions()`'s
+real balance against what this bot currently tracks:
+- broker qty > tracked qty → a manual BUY: opens a tracked position for the
+  excess at the CURRENT market price (Revolut X's balance endpoint reports
+  no cost basis, so the true fill price is unknowable — a documented
+  approximation, not a bug), with the same fixed manual-override stop/target
+  (`-1.5%` / `+3%`) a manual `/buy` uses, so it gets the same automatic exit
+  protection going forward.
+- broker qty < tracked qty → a manual SELL (or this bot's own resting exit
+  order quietly filling between cycles, before its own bookkeeping noticed —
+  same code path, same fix): reduces/closes the tracked position for the
+  difference and feeds `recordLiveRealizedPnl` at the current market price
+  as an estimated exit, so the daily-loss circuit breaker isn't blind to a
+  loss David causes by selling manually. Never touches the cash ledger
+  directly — `syncLiveCashFromBroker` (pre-existing) already keeps cash
+  correct from this same broker balance read.
+- A network failure or a symbol the current-price fetch can't reach is a
+  no-op that retries next cycle — never guesses a price. A diff within
+  `1e-6` is treated as float noise, not a trade.
+- Sends one Telegram message (Hebrew) whenever it reconciles anything, so
+  this is never a silent change to the account, explicitly noting the
+  reported price may not be the real fill/sale price.
+
+**Scope, deliberately:** `CURATED_INSTRUMENTS` only — the same limitation
+`syncLiveExternalBtc`'s BTC-only special case already had, just generalized
+to every curated symbol instead of just BTC. A manual trade in a coin
+outside the curated 20 stays as invisible as it always was.
+
+Tests added: `tests/server/liveManualTradeSync.test.ts` (9 new) — new-position
+open, top-up on an existing tracked position, full close + P&L, partial
+reduce + proportional P&L, no-price no-op (buy and sell), dust-quantity
+tolerance, broker-fetch-failure no-op, multi-symbol independence.
+
+Gate: tsc clean, 1158 vitest passed (9 new), vite build ok.
