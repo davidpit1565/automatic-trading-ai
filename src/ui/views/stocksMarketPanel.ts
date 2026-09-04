@@ -12,13 +12,19 @@
  */
 
 import { fetchStocksState, type MarketSnapshotEntry } from '../cloudState';
-import { BROWSABLE_STOCK_INSTRUMENTS } from '../../core/data/alpacaStocks';
+import { BROWSABLE_STOCK_INSTRUMENTS, CURATED_STOCK_INSTRUMENTS } from '../../core/data/alpacaStocks';
 import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
 import { escapeHtml, formatMarketPrice, formatPct, tieredPriceHtml } from '../format';
 import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 60_000;
 const STALE_AFTER_MS = 5 * 60_000;
+/** The crypto Markets list marks its curated (actually-traded) majors with a
+ * "TRADED" badge among the full browsable universe — this list had the same
+ * curated-vs-browsable split (`CURATED_STOCK_INSTRUMENTS` vs
+ * `BROWSABLE_STOCK_INSTRUMENTS`) but never surfaced it, so every row looked
+ * equally "real" regardless of whether the stocks agent can actually trade it. */
+const CURATED_STOCK_SYMBOLS = new Set(CURATED_STOCK_INSTRUMENTS.map((i) => i.symbol));
 type SortKey = 'default' | 'name' | 'price' | 'change';
 type CategoryKey = 'popular' | 'all' | 'gainers' | 'losers';
 
@@ -86,7 +92,8 @@ function rowHtml(r: Row): string {
     `<span class="market-row-id">` +
     `<span class="row-title">${escapeHtml(r.symbol)}</span>` +
     `<span class="row-sub"><span class="row-clock ${stale ? 'stale' : 'fresh'}" aria-hidden="true"></span>` +
-    `${snap ? 'live' : 'no data yet'}</span>` +
+    `${snap ? 'live' : 'no data yet'}` +
+    `${CURATED_STOCK_SYMBOLS.has(r.symbol) ? '<span class="tag-traded">TRADED</span>' : ''}</span>` +
     `</span>` +
     `<span class="market-row-num">` +
     `<span class="row-price">${snap ? tieredPriceHtml(`$${formatMarketPrice(snap.price)}`) : '—'}</span>` +

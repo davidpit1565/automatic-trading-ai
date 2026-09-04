@@ -9,7 +9,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderStocksMarketPanel } from '../../src/ui/views/stocksMarketPanel';
-import { BROWSABLE_STOCK_INSTRUMENTS } from '../../src/core/data/alpacaStocks';
+import { BROWSABLE_STOCK_INSTRUMENTS, CURATED_STOCK_INSTRUMENTS } from '../../src/core/data/alpacaStocks';
 
 async function waitFor(condition: () => boolean, tries = 200): Promise<void> {
   for (let i = 0; i < tries && !condition(); i++) {
@@ -55,5 +55,23 @@ describe('Stocks Market panel — category/sort interaction (DOM integration)', 
 
     const symbolsInOrder = Array.from(container.querySelectorAll('.row-title')).map((el) => el.textContent);
     expect(symbolsInOrder.slice(0, 3)).toEqual([third!.symbol, second!.symbol, first!.symbol]);
+  });
+
+  it('marks the curated (actually-traded) majors with the same TRADED badge the crypto Markets list uses', async () => {
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('offline')));
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderStocksMarketPanel(container);
+    await waitFor(() => container.querySelector('.market-row') !== null);
+    container.querySelector<HTMLButtonElement>('[data-cat="all"]')!.click();
+    await waitFor(() => container.querySelectorAll('.market-row').length === BROWSABLE_STOCK_INSTRUMENTS.length);
+
+    const rows = [...container.querySelectorAll('.market-row')];
+    const curatedSymbols = new Set(CURATED_STOCK_INSTRUMENTS.map((i) => i.symbol));
+    for (const row of rows) {
+      const symbol = row.querySelector('.row-title')!.textContent!;
+      const badge = row.querySelector('.tag-traded');
+      expect(badge !== null).toBe(curatedSymbols.has(symbol));
+    }
   });
 });
