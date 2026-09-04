@@ -81,6 +81,7 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
       <section class="hero" id="hub-real-money" hidden>
         <div class="hero-label">Real money <span class="tag-live">REAL</span></div>
         <div class="hero-value" id="hub-real-equity"><span class="hero-value-major">—</span></div>
+        <div class="hero-change" id="hub-real-change" hidden></div>
         <div class="hero-bench" id="hub-real-breakdown"></div>
         <div id="hub-real-equity-chart"></div>
       </section>
@@ -109,6 +110,7 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
   const realActivityListEl = container.querySelector<HTMLElement>('#hub-real-activity-list')!;
   const realMoneyWrap = container.querySelector<HTMLElement>('#hub-real-money')!;
   const realEquityEl = container.querySelector<HTMLElement>('#hub-real-equity')!;
+  const realChangeEl = container.querySelector<HTMLElement>('#hub-real-change')!;
   const realBreakdownEl = container.querySelector<HTMLElement>('#hub-real-breakdown')!;
   const realEquityChartSlot = container.querySelector<HTMLElement>('#hub-real-equity-chart')!;
 
@@ -190,21 +192,35 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     // track whether the real account is actually up or down since tracking
     // began, not sit permanently colourless the way this secondary card
     // always has.
+    // Same "since tracking began" figure as Home's identical live hero
+    // (homeView.ts's #hv-live-change) — this card previously drove its
+    // up/down glow from the same first-recorded-sample baseline but never
+    // surfaced the number itself, so the glow had no text backing it up
+    // anywhere on this tab.
     const firstEquity = live.equityHistory[0]?.equity;
-    if (firstEquity !== undefined) {
-      const up = equity >= firstEquity;
+    if (firstEquity !== undefined && firstEquity > 0) {
+      const liveReturn = ((equity - firstEquity) / firstEquity) * 100;
+      const up = liveReturn >= 0;
       realMoneyWrap.classList.toggle('up', up);
       realMoneyWrap.classList.toggle('down', !up);
+      realChangeEl.hidden = false;
+      realChangeEl.textContent = `${formatPct(liveReturn).replace(/^[+-]/, '')} since tracking began`;
+      realChangeEl.className = `hero-change ${up ? 'up' : 'down'}`;
     } else {
       realMoneyWrap.classList.remove('up', 'down');
+      realChangeEl.hidden = true;
     }
 
+    // Always show cash (matches Home's #hv-live-cash) — previously this
+    // whole line vanished whenever there was no untracked BTC holding,
+    // leaving the card with no cash/composition detail at all.
     const btcPrice = state.marketSnapshot.find((m) => m.symbol === 'XBTEUR')?.price ?? 0;
     const btcValue = live.externalBtcQuantity * btcPrice;
-    realBreakdownEl.hidden = live.externalBtcQuantity <= 0;
-    if (live.externalBtcQuantity > 0) {
-      realBreakdownEl.textContent = `Cash ${money(live.cash)} · BTC holding ${money(btcValue)} (untracked)`;
-    }
+    realBreakdownEl.hidden = false;
+    realBreakdownEl.textContent =
+      live.externalBtcQuantity > 0
+        ? `Cash ${money(live.cash)} · BTC holding ${money(btcValue)} (untracked)`
+        : `Cash ${money(live.cash)}`;
     realEquityChart.setHistory(live.equityHistory);
   }
 
