@@ -300,8 +300,16 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     const btn = target.closest<HTMLElement>('[data-hub]');
     if (!btn) return;
     const tab = btn.dataset['hub'] as HubTab;
+    // Match by the target tab VALUE, not object identity to `btn` — a
+    // deep-link button elsewhere on the page (Home's "Recent activity → See
+    // all", now also its "Real money → profit ›") also carries `data-hub`
+    // and correctly switches the panel below via this same value, but is
+    // never itself one of the `.hub-tab` pills, so `b === btn` could never
+    // match any of them: the panel changed while the tab bar quietly showed
+    // no active tab at all. Real, pre-existing bug for "See all", surfaced
+    // again by wiring the new real-money deep link the same way.
     container.querySelectorAll<HTMLElement>('.hub-tab').forEach((b) => {
-      const active = b === btn;
+      const active = b.dataset['hub'] === tab;
       b.classList.toggle('active', active);
       b.setAttribute('aria-selected', String(active));
     });

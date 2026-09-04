@@ -148,14 +148,27 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   // boxed SECONDARY card rather than also going `hero-bare`: #117's point
   // was ONE dominant bare hero (the sim balance, what David actually looks
   // at) with everything else — including this real-money card — boxed.
-  const liveHero = el('section', 'hero');
+  // Once the live ledger has ever been initialized, this real balance IS the
+  // one dominant figure on Home — the SIMULATED hero below yields the
+  // `hero-bare` treatment to it (see hero.hidden below), so this needs the
+  // same giant, centered, sparkline-bearing presentation the sim hero always
+  // had when IT was primary. A boxed secondary card was correct only while
+  // nothing else on the page claimed the dominant-hero role; now something
+  // does. Tappable straight into the Profit tab, which already mounts the
+  // real equity chart in full (`hub-real-equity-chart` in assetHubView.ts) —
+  // reusing that existing deep-dive rather than pointing at valueView.ts,
+  // which is hardcoded to the SIMULATED curve only.
+  const liveHero = el('section', 'hero hero-bare tappable');
   liveHero.id = 'home-live-hero';
+  liveHero.dataset['hub'] = 'profit';
   liveHero.hidden = true;
   liveHero.innerHTML = `
-    <div class="hero-label">Real money <span class="tag-live">REAL</span></div>
+    <div class="hero-label">Real money <span class="tag-live">REAL</span><span class="hero-more">profit ›</span></div>
     <div class="hero-value" id="hv-live-equity"><span class="hero-value-major">—</span></div>
+    <div class="hero-change" id="hv-live-change" hidden></div>
     <div class="hero-split"><span id="hv-live-cash"></span></div>
     <div class="kill-switch-banner" id="hv-kill-switch" hidden></div>
+    <div class="hero-spark" id="hv-live-spark"></div>
   `;
   const livePosWrap = el('section', 'block');
   livePosWrap.id = 'home-live-positions-wrap';
@@ -203,6 +216,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   moversWrap.appendChild(moversList);
 
   const posWrap = el('section', 'block');
+  posWrap.id = 'home-positions-wrap';
   posWrap.innerHTML = `<div class="block-head"><h2>Open positions <span class="tag-sim">SIMULATED</span></h2></div>`;
   const posList = el('div', 'stack stack-card');
   posList.id = 'home-positions';
@@ -318,6 +332,13 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     // screen too. Left untouched on the Profit tab (assetHubView.ts),
     // which deliberately shows real and simulated side by side.
     readyWrap.hidden = Boolean(live);
+    // Same reasoning again: once real money is the dominant account on this
+    // screen, the SIMULATED "Open positions" table directly beneath it is
+    // exactly the clutter the comment above already named — it just never
+    // actually got hidden alongside the hero and readiness card. Still fully
+    // reachable (nothing removed): the Profit tab shows both real and
+    // simulated side by side on purpose.
+    posWrap.hidden = Boolean(live);
     if (!live) return;
 
     const invested = live.positions.reduce((s, p) => s + p.quantity * (prices[p.symbol] ?? p.entryPrice), 0);
@@ -328,6 +349,36 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     const { major, minor } = formatPriceSplit(equity);
     const equityEl = liveHero.querySelector<HTMLElement>('#hv-live-equity')!;
     equityEl.innerHTML = `<span class="hero-value-currency">€</span><span class="hero-value-major">${major}</span><span class="hero-value-minor">.${minor}</span>`;
+
+    // Mirrors the SIMULATED hero's own up/down glow + ambient page wash, now
+    // driven by the account that's actually dominant on screen. Uses the
+    // first RECORDED sample as the baseline (same method the Profit tab's
+    // "Real money" card already uses), not `initialCash` — the live ledger
+    // has no such field, and "since tracking began" is the honest label for
+    // what this number actually measures.
+    const changeEl = liveHero.querySelector<HTMLElement>('#hv-live-change')!;
+    const firstEquity = live.equityHistory[0]?.equity;
+    if (firstEquity !== undefined && firstEquity > 0) {
+      const liveReturn = ((equity - firstEquity) / firstEquity) * 100;
+      const up = liveReturn >= 0;
+      liveHero.classList.toggle('up', up);
+      liveHero.classList.toggle('down', !up);
+      document.body.dataset['sentiment'] = up ? 'up' : 'down';
+      changeEl.hidden = false;
+      changeEl.textContent = `${formatPct(liveReturn).replace(/^[+-]/, '')} since tracking began`;
+      changeEl.className = `hero-change ${up ? 'up' : 'down'}`;
+    } else {
+      liveHero.classList.remove('up', 'down');
+      changeEl.hidden = true;
+    }
+    const liveSpark = liveHero.querySelector<HTMLElement>('#hv-live-spark')!;
+    liveSpark.innerHTML =
+      live.equityHistory.length >= 2
+        ? sparklineSvg(
+            live.equityHistory.map((e) => e.equity),
+            { stroke: 'var(--accent-text)', fill: false, width: 320, height: 64 },
+          )
+        : '';
     const btcSymbol = findBtcSymbol(data);
     const btcValue = live.externalBtcQuantity * (btcSymbol ? prices[btcSymbol] ?? 0 : 0);
     liveHero.querySelector<HTMLElement>('#hv-live-cash')!.textContent =

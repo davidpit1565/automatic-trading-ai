@@ -86,6 +86,26 @@ describe('renderAssetHub — optional Long-Term sub-tab', () => {
     tabBtn!.click(); // clicking again must not remount
     expect(mounts).toBe(1);
   });
+
+  it('highlights the correct tab pill when a deep-link button elsewhere on the page (not itself a .hub-tab) switches tabs (real bug: matched by object identity, not tab value)', () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      renderOverview: (panel) => {
+        // Mirrors Home's own deep links ("See all" → history, "profit ›" on
+        // the real-money hero): a button elsewhere on the page carrying
+        // `data-hub`, distinct from any of the actual `.hub-tab` pills.
+        panel.innerHTML = '<button class="deep-link" data-hub="profit">profit ›</button>';
+        return undefined;
+      },
+    });
+
+    container.querySelector<HTMLButtonElement>('.deep-link')!.click();
+    expect(container.querySelector('[data-hub-panel="profit"]')!.classList.contains('active')).toBe(true);
+    expect(container.querySelector('[data-hub="profit"].hub-tab')!.classList.contains('active')).toBe(true);
+    expect(container.querySelector('[data-hub="overview"].hub-tab')!.classList.contains('active')).toBe(false);
+  });
 });
 
 describe('renderAssetHub — real-money sections on History and Profit (real bug, 2026-09-03)', () => {
