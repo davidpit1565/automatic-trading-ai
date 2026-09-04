@@ -413,21 +413,28 @@ const EDUCATION_TIP_LAST_SENT_KEY = 'education-tip-last-sent-at';
  * asked for "a tip or two every day or two", 2026-09-03) — never gated
  * behind REAL_MONEY_ENABLED, since paper trading benefits just as much.
  * Wraps around the list forever rather than stopping once it runs out. */
+/** Returns true iff a tip was actually sent this call — callers with a
+ * git-backed store should persist immediately when true (see
+ * autopilotRunner.mts's `maybeSendSummaries` for why: this "already sent"
+ * fact otherwise only survives via the routine per-cycle commit, and a
+ * cancelled run right after a send loses it, causing a real duplicate the
+ * next fresh run — the exact bug found live, 2026-09-04). */
 export async function maybeSendEducationTip(
   store: KeyValueStore,
   telegram: TelegramConfig,
   now: number,
-): Promise<void> {
-  if (!telegram.token || !telegram.chatId) return;
+): Promise<boolean> {
+  if (!telegram.token || !telegram.chatId) return false;
   const lastSentAt = store.get<number>(EDUCATION_TIP_LAST_SENT_KEY);
-  if (lastSentAt !== undefined && now - lastSentAt < EDUCATION_TIP_INTERVAL_MS) return;
+  if (lastSentAt !== undefined && now - lastSentAt < EDUCATION_TIP_INTERVAL_MS) return false;
 
   const index = store.get<number>(EDUCATION_TIP_INDEX_KEY) ?? 0;
   const tip = EDUCATION_TIPS[index % EDUCATION_TIPS.length]!;
   const result = await sendTelegramMessage(tip, telegram);
-  if (!result.sent) return; // retry next cycle rather than skipping ahead
+  if (!result.sent) return false; // retry next cycle rather than skipping ahead
   store.set(EDUCATION_TIP_LAST_SENT_KEY, now);
   store.set(EDUCATION_TIP_INDEX_KEY, index + 1);
+  return true;
 }
 
 export function buildKillSwitchKeyboardIntro(): string {

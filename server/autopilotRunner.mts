@@ -807,7 +807,10 @@ async function runCycle(
   await recordEquity(store, source, portfolio, journal, now, cyclePrices);
   await maybeSendSummaries(store, source, portfolio, journal, telegram, now);
   await maybeSendPeriodicReports(store, source, portfolio, journal, telegram, now);
-  await maybeSendEducationTip(store, telegram, now);
+  // See maybeSendEducationTip's own doc comment — persists immediately only
+  // on the rare cycle a tip actually sent, closing the same duplicate-digest
+  // gap fixed above for the daily/periodic reports.
+  if (await maybeSendEducationTip(store, telegram, now)) persistStateToGit(store, 'after education tip');
   await maybeSendAllClear(store, telegram, now);
 
   return cycle.opened.length > 0 || cycle.closed.length > 0;
@@ -1645,6 +1648,18 @@ export async function maybeSendSummaries(
     );
     if (result.sent) {
       store.set(slot.key, today);
+      // Real incident, 2026-09-04: this "already sent today" fact only used
+      // to persist via the routine per-cycle commit — if the process got
+      // killed or cancelled before that commit landed (a cancelled/stuck
+      // run being cancelled+redispatched, exactly what happened repeatedly
+      // tonight fighting the ENOBUFS incidents above), the fact was lost;
+      // the next fresh run re-checked against the last COMMITTED state,
+      // still saw the digest as unsent, and sent it again — a real
+      // duplicate digest David actually received. A digest send is rare
+      // (at most once a day per slot) so persisting it immediately, like
+      // the hasSubmittedOrder-gated live-order persists above, costs
+      // nothing and closes this specific gap.
+      persistStateToGit(store, `after daily summary (${slot.key})`);
       console.log(`Summary sent (${slot.key}).`);
     } else {
       console.log(`Summary not sent (${slot.key}): ${result.reason}`);
@@ -1759,6 +1774,12 @@ async function maybeSendAllClear(
   const result = await sendTelegramMessage(buildAllClearMessage(), telegram);
   if (result.sent) {
     store.set(ALLCLEAR_KEY, now);
+    // Same real duplicate-notification gap as the daily digest (see
+    // maybeSendSummaries) — a cancelled run right after this send loses the
+    // "already sent" fact if it never made it into a committed persist,
+    // and the next fresh run sends it again. Rare enough (interval-gated)
+    // that persisting immediately costs nothing.
+    persistStateToGit(store, 'after all-clear message');
     console.log('All-clear message sent.');
   }
 }
@@ -1854,6 +1875,10 @@ async function sendPeriodReport(
   if (result.sent) {
     store.set(cfg.anchorKey, { equity, at: now });
     store.set(cfg.lastKey, cfg.day);
+    // Same real duplicate-notification gap as the daily digest (see
+    // maybeSendSummaries) — weekly/monthly, rare enough that an immediate
+    // persist costs nothing and closes it for good.
+    persistStateToGit(store, `after ${cfg.title} report`);
     console.log(`${cfg.title} report sent.`);
   }
 }

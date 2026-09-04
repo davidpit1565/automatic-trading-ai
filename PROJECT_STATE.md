@@ -1,5 +1,31 @@
 # PROJECT_STATE
 
+## Real duplicate Telegram digests, caused by tonight's own ENOBUFS firefighting (2026-09-04)
+David: "אני ממשיך לקבל את הסיכום היומי הרבה פעמים, סיכמנו פעם ביום" (I keep
+getting the daily summary many times, we agreed on once a day). Root cause:
+`maybeSendSummaries` (and the same-shaped `sendPeriodReport`/
+`maybeSendAllClear`/`maybeSendEducationTip`) only recorded "already sent
+today/this period" in the in-memory store — that fact became durable only
+via the routine per-cycle git commit at the end of that same cycle. Every
+time this session cancelled a stuck run tonight (fighting the ENOBUFS
+incidents above) before its own persist landed, that "sent" fact was lost;
+the next freshly-dispatched run re-checked against the last COMMITTED
+state, still saw the digest as unsent, and sent it again — a real, visible
+duplicate, not a one-off glitch. This session's own repeated cancel+
+redispatch cycles tonight are exactly what triggered it repeatedly.
+
+Fixed: all four "send once, remember it" functions now call
+`persistStateToGit` immediately right after a successful send (matching
+the same immediate-persist pattern already used for a real order
+submission) — each fires at most once a day (digest), once an interval
+(all-clear), or once a week/month (periodic reports)/two days (tip), so
+persisting immediately on the rare cycle it actually happens costs
+nothing and can't reintroduce the ENOBUFS-triggering high-frequency
+pattern from earlier tonight. `maybeSendEducationTip` (telegram.mts) now
+returns whether it sent (was `Promise<void>`) so its caller in
+autopilotRunner.mts — the only place `persistStateToGit` is defined — can
+persist on that signal. Full gate green (tsc, 1139 tests, build).
+
 ## Two real bugs found while scoping "add more coins" (2026-09-04)
 A coin-expansion agent correctly stopped short of adding anything after
 finding `server/autopilotRunner.mts` traded exactly
