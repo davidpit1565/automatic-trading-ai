@@ -155,7 +155,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   const livePosWrap = el('section', 'block');
   livePosWrap.id = 'home-live-positions-wrap';
   livePosWrap.hidden = true;
-  livePosWrap.innerHTML = `<div class="block-head"><h2>Real open positions</h2></div>`;
+  livePosWrap.innerHTML = `<div class="block-head"><h2>Real open positions <span class="tag-live">REAL</span></h2></div>`;
   const livePosList = el('div', 'stack stack-card');
   livePosList.id = 'home-live-positions';
   livePosWrap.appendChild(livePosList);
@@ -198,7 +198,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   moversWrap.appendChild(moversList);
 
   const posWrap = el('section', 'block');
-  posWrap.innerHTML = `<div class="block-head"><h2>Open positions</h2></div>`;
+  posWrap.innerHTML = `<div class="block-head"><h2>Open positions <span class="tag-sim">SIMULATED</span></h2></div>`;
   const posList = el('div', 'stack stack-card');
   posList.id = 'home-positions';
   posList.innerHTML = skeletonRowsHtml(2);

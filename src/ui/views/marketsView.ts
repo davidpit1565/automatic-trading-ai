@@ -456,9 +456,16 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       `<button class="market-row tappable" data-row="${index}">` +
       coinLogoHtml(m.base, BASE_URL) +
       `<span class="market-row-id">` +
-      `<span class="row-title-line"><span class="row-title">${escapeHtml(m.label)}</span>${CURATED_BASES.has(m.base) ? '<span class="tag-traded">TRADED</span>' : ''}</span>` +
+      // The coin's own name is the thing a user actually scans this column
+      // for — a "TRADED" badge sharing this line with it used to steal a
+      // fixed ~64px from the name's flexible width, clipping even short
+      // names like "Bitcoin" to "Bitc…" on a phone-width row (found from a
+      // real screenshot, not assumed). The badge now rides the secondary
+      // (clock/symbol) line instead, which loses far less by truncating.
+      `<span class="row-title-line"><span class="row-title">${escapeHtml(m.label)}</span></span>` +
       `<span class="row-sub"><span class="row-clock ${stale ? 'stale' : 'fresh'}" aria-hidden="true"></span>` +
-      `${formatClock(m.updatedAt)} · ${escapeHtml(m.symbol)}</span>` +
+      `<span class="row-sub-text">${formatClock(m.updatedAt)} · ${escapeHtml(m.symbol)}</span>` +
+      `${CURATED_BASES.has(m.base) ? '<span class="tag-traded">TRADED</span>' : ''}</span>` +
       `</span>` +
       `<span class="market-row-vol"><span class="dstat-label">24h Vol</span><span>€${compact(m.quoteVolume)}</span></span>` +
       `<span class="market-row-num">` +
