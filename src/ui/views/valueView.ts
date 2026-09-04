@@ -19,7 +19,14 @@ export function renderValueView(container: HTMLElement, _data: ActiveDataSource)
     <button class="tool-back" data-nav="crypto">← Home</button>
     <h2 class="view-title">Portfolio value</h2>
     <p class="view-sub">Simulated portfolio value over time.</p>
-    <div id="pv-body"><div class="empty">Loading…</div></div>`;
+    <!-- A shimmering skeleton instead of bare "Loading…" text — the same
+         first-paint treatment every other screen already uses, so this page
+         (previously the one screen left with a plain loading message) no
+         longer looks unfinished for the second it takes to fetch. -->
+    <div id="pv-body">
+      <div class="skeleton skeleton-title" style="width:40%"></div>
+      <div class="skeleton skeleton-line" style="height:210px"></div>
+    </div>`;
   const body = container.querySelector<HTMLElement>('#pv-body')!;
   const panel = mountEquityChartPanel(body);
   let loadedOnce = false;

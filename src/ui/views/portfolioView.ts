@@ -7,7 +7,8 @@ import { PaperPortfolio } from '../../core/portfolio/paperPortfolio';
 import { LocalStorageStore } from '../../core/data/storage';
 import type { ActiveDataSource } from '../dataSource';
 import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
-import { escapeHtml, formatPct, formatPrice, formatPriceSplit } from '../format';
+import { escapeHtml, formatPct, formatPrice, formatPriceSplit, tieredPriceHtml } from '../format';
+import { skeletonRowsHtml } from '../loadingStates';
 
 const STARTING_CASH = 10_000;
 
@@ -42,6 +43,10 @@ export function renderPortfolioView(container: HTMLElement, data: ActiveDataSour
 
     <section class="block">
       <div class="block-head"><h2>Trade</h2></div>
+      <!-- Inputs and actions as two visually separate rows — cramming a
+           select, a quantity field and three unrelated-weight buttons into
+           one flex row (the original layout) is exactly the cramped,
+           un-stepped-back density the reference never has. -->
       <div class="controls">
         <label class="control">Market
           <select id="pp-symbol">
@@ -51,8 +56,14 @@ export function renderPortfolioView(container: HTMLElement, data: ActiveDataSour
         <label class="control">Quantity
           <input id="pp-quantity" type="number" value="0.1" min="0" step="any" />
         </label>
-        <button class="primary" id="pp-buy">Buy at market</button>
-        <button class="primary" id="pp-sell">Sell at market</button>
+      </div>
+      <!-- Buy/Sell get the reference's own semantic tint pair (green/red),
+           not two identical black-on-white pills — Reset is deliberately a
+           quieter, lower-emphasis action set apart from the two real trade
+           actions. -->
+      <div class="controls">
+        <button class="btn-buy" id="pp-buy">Buy at market</button>
+        <button class="btn-sell" id="pp-sell">Sell at market</button>
         <button class="secondary" id="pp-reset">Reset portfolio</button>
       </div>
       <div class="status-line" id="pp-status"></div>
@@ -60,12 +71,12 @@ export function renderPortfolioView(container: HTMLElement, data: ActiveDataSour
 
     <section class="block">
       <div class="block-head"><h2>Positions</h2></div>
-      <div class="stack stack-card" id="pp-positions"></div>
+      <div class="stack stack-card" id="pp-positions">${skeletonRowsHtml(2)}</div>
     </section>
 
     <section class="block">
       <div class="block-head"><h2>Trade journal</h2></div>
-      <div class="stack stack-card" id="pp-trades"></div>
+      <div class="stack stack-card" id="pp-trades">${skeletonRowsHtml(3)}</div>
     </section>
   `;
   attachCoinLogoFallback(container);
@@ -149,11 +160,11 @@ function renderHero(heroEl: HTMLElement, portfolio: PaperPortfolio, prices: Reco
   heroEl.classList.toggle('up', totalReturnPct >= 0);
   heroEl.classList.toggle('down', totalReturnPct < 0);
 
-  heroEl.querySelector('#pp-cash')!.textContent = `Cash ${formatPrice(portfolio.cash)}`;
+  heroEl.querySelector('#pp-cash')!.innerHTML = `Cash ${tieredPriceHtml(formatPrice(portfolio.cash))}`;
   heroEl.querySelector('#pp-realized')!.innerHTML =
-    `Realized <span class="chg ${portfolio.realizedPnl < 0 ? 'down' : 'up'}">${formatPrice(portfolio.realizedPnl)}</span>`;
+    `Realized <span class="chg ${portfolio.realizedPnl < 0 ? 'down' : 'up'}">${tieredPriceHtml(formatPrice(portfolio.realizedPnl))}</span>`;
   heroEl.querySelector('#pp-unrealized')!.innerHTML =
-    `Unrealized <span class="chg ${unrealized < 0 ? 'down' : 'up'}">${formatPrice(unrealized)}</span>`;
+    `Unrealized <span class="chg ${unrealized < 0 ? 'down' : 'up'}">${tieredPriceHtml(formatPrice(unrealized))}</span>`;
 }
 
 function renderPositions(
@@ -176,7 +187,7 @@ function renderPositions(
           <div class="row-main">${coinLogoHtml(baseFor(data, p.symbol))}
             <div><div class="row-title">${escapeHtml(p.symbol)}</div>
               <div class="row-sub">${p.quantity.toLocaleString('en-US', { maximumFractionDigits: 8 })} @ ${formatPrice(p.avgCost)}</div></div></div>
-          <div class="row-side"><span class="row-title">${price === undefined ? '—' : formatPrice(price)}</span>
+          <div class="row-side"><span class="row-title">${price === undefined ? '—' : tieredPriceHtml(formatPrice(price))}</span>
             <span class="chg ${pnlPct !== null && pnlPct < 0 ? 'down' : 'up'}">${formatPct(pnlPct)}</span></div>
         </div>`;
     })
@@ -200,7 +211,7 @@ function renderTrades(element: Element, portfolio: PaperPortfolio, data: ActiveD
           <div class="row-main">${coinLogoHtml(baseFor(data, t.symbol))}
             <div><div class="row-title"><span class="pill ${t.side}">${t.side.toUpperCase()}</span> ${escapeHtml(t.symbol)}</div>
               <div class="row-sub">${new Date(t.timestamp).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</div></div></div>
-          <div class="row-side"><span class="row-title">${formatPrice(t.price)}</span>
+          <div class="row-side"><span class="row-title">${tieredPriceHtml(formatPrice(t.price))}</span>
             <span class="row-sub">${t.quantity.toLocaleString('en-US', { maximumFractionDigits: 8 })}</span>
             ${pnlHtml}</div>
         </div>`;

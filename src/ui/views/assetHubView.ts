@@ -11,7 +11,7 @@
 
 import { mountEquityChartPanel } from '../equityChartPanel';
 import { attachCoinLogoFallback, baseCodeFromSymbol, completedLogoHtml } from '../coinLogo';
-import { formatPrice, formatPct } from '../format';
+import { formatPrice, formatPct, formatPriceSplit } from '../format';
 import type { CloudState } from '../cloudState';
 import type { ViewHandle } from '../viewLifecycle';
 
@@ -80,14 +80,14 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
            dominant figure on this tab), hidden until a live account exists. -->
       <section class="hero" id="hub-real-money" hidden>
         <div class="hero-label">Real money <span class="tag-live">REAL</span></div>
-        <div class="hero-value" id="hub-real-equity">—</div>
+        <div class="hero-value" id="hub-real-equity"><span class="hero-value-major">—</span></div>
         <div class="hero-bench" id="hub-real-breakdown"></div>
         <div id="hub-real-equity-chart"></div>
       </section>
       <!-- hero-bare matches Home's balance treatment: same dominant-figure
            pattern for this sub-screen (shared by Crypto's and Stocks' Profit
            tab), not a secondary boxed widget. -->
-      <section class="hero hero-bare">
+      <section class="hero hero-bare" id="hub-sim-hero">
         <div class="hero-label">Total return <span class="tag-sim">SIMULATED</span></div>
         <div class="hero-value" id="hub-return">—</div>
         <div class="hero-bench" id="hub-bench" hidden></div>
@@ -171,7 +171,25 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     // holding at its real current price) — only fall back to the
     // entry-price approximation before the very first cycle to record one.
     const equity = live.equityHistory.at(-1)?.equity ?? live.cash + invested;
-    realEquityEl.textContent = money(equity);
+    // Same big-integer/small-decimal split as Home's identical "Real money"
+    // card (hv-live-equity) — this widget is the exact same concept shown a
+    // second time (Crypto/Stocks Profit tab), and previously rendered as one
+    // flat string here while Home tiered it, two different typographic
+    // treatments for one idea.
+    const { major, minor } = formatPriceSplit(equity);
+    realEquityEl.innerHTML = `<span class="hero-value-currency">${opts.currencySymbol}</span><span class="hero-value-major">${major}</span><span class="hero-value-minor">.${minor}</span>`;
+    // Mirrors Home's own hero glow: the ambient tint behind this card should
+    // track whether the real account is actually up or down since tracking
+    // began, not sit permanently colourless the way this secondary card
+    // always has.
+    const firstEquity = live.equityHistory[0]?.equity;
+    if (firstEquity !== undefined) {
+      const up = equity >= firstEquity;
+      realMoneyWrap.classList.toggle('up', up);
+      realMoneyWrap.classList.toggle('down', !up);
+    } else {
+      realMoneyWrap.classList.remove('up', 'down');
+    }
 
     const btcPrice = state.marketSnapshot.find((m) => m.symbol === 'XBTEUR')?.price ?? 0;
     const btcValue = live.externalBtcQuantity * btcPrice;
@@ -187,6 +205,12 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     const totalReturn = state.initialCash > 0 ? ((equity - state.initialCash) / state.initialCash) * 100 : 0;
     returnEl.textContent = formatPct(totalReturn);
     returnEl.className = `hero-value ${totalReturn >= 0 ? 'up' : 'down'}`;
+    // Drives the card's own ambient glow (::before), the same signal Home's
+    // hero uses — previously only the number itself changed colour and the
+    // card stayed permanently colourless behind it.
+    const simHero = container.querySelector<HTMLElement>('#hub-sim-hero');
+    simHero?.classList.toggle('up', totalReturn >= 0);
+    simHero?.classList.toggle('down', totalReturn < 0);
 
     const btcPriceNow = state.marketSnapshot.find((m) => m.symbol === 'XBTEUR')?.price ?? 0;
     if (
@@ -217,7 +241,20 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     const badge = r.ready
       ? `<span class="ready-badge go">READY</span>`
       : `<span class="ready-badge no">NOT READY</span>`;
-    const items = r.criteria.map((c) => `<li class="${c.ok ? 'ok' : 'no'}">${c.ok ? '✓' : '✗'} ${c.detail}</li>`).join('');
+    // Same outlined SVG icon family Home's identical readiness list uses
+    // (renderReadiness in homeView.ts) — this list previously fell back to
+    // raw ✓/✗ text glyphs, the one place in the app still mixing an
+    // unrelated icon style into an otherwise consistent outlined set.
+    const items = r.criteria
+      .map(
+        (c) =>
+          `<li class="${c.ok ? 'ok' : 'no'}"><svg class="crit-icon" viewBox="0 0 24 24" aria-hidden="true">${
+            c.ok
+              ? '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>'
+              : '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v6"/><path d="M12 16.5h.01"/>'
+          }</svg><span>${c.detail}</span></li>`,
+      )
+      .join('');
     readinessEl.innerHTML =
       `<div class="block-head"><h2>Real-money readiness</h2>${badge}</div><ul class="readiness-list">${items}</ul>`;
   }
