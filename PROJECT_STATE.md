@@ -1,5 +1,56 @@
 # PROJECT_STATE
 
+## Creative upgrade pass #3: finished marketsView's coin-detail tabs — order book, depth, trades, trade form, pager (2026-09-04, PR #186)
+Continuation of pass #1/#2 (below) — rebased onto `main` first to pick up
+PR #184/#185. David's ask named exactly what was left uncovered: only ~600
+of `marketsView.ts`'s 1112 lines got real design attention in the prior
+round (header/list/pull-to-refresh/chart); the Table/Depth/Trades/Trade
+view-tabs and the prev/next pager were still bare fetch-and-dump markup.
+
+- **Order book (Table)**: each row now carries a cumulative-depth bar behind
+  its own number (bid bars grow from the right, ask bars from the left,
+  both toward the shared centre) — the standard exchange read where a wall
+  of liquidity several rows down is visible at a glance. Added a spread
+  readout below the ladder. Two real CSS bugs found and fixed while
+  building this (verified via `getComputedStyle` + real screenshots, not
+  assumed): (1) the bar's `width: var(--bar)%` was relative to each cell's
+  own text-length-dependent box (a flex item with no `flex:1`), so bars
+  weren't comparable across rows — fixed by giving `.ob-bid`/`.ob-ask`
+  `flex: 1` so both fill their half of the row; (2) the bar's `z-index: -1`
+  had no LOCAL stacking context to sit inside (`position: relative` alone
+  doesn't create one — it needs an explicit `z-index` too), so it escaped
+  to the page's root stacking context and rendered behind the entire app
+  rather than just behind its own cell's text. Both were invisible in a
+  static code read; only showed up once actually screenshotted.
+- **Depth chart**: added a Best bid / Mid / Best ask stats row under the
+  step chart, which previously had no numeric anchor at all.
+- **Trades tape**: added a labelled Price/Amount/Time header and a per-row
+  colour wash by side, so a fast-scrolling tape of otherwise-identical rows
+  still reads at a glance.
+- **Trade tab**: the Buy/Sell segmented control now actually toggles (still
+  no submit — real orders stay behind the Telegram `/buy`/`/sell` safety
+  path, per the existing doc comment). It previously looked like a
+  two-state switch but silently ignored every tap on its Sell half.
+- **Prev/next pager**: names the neighbouring coin (e.g. "ETH ›") instead of
+  a bare "Next ›" — the reference's own swipe-through pickers always do
+  this. Also de-duplicated: one shared `pagerHtml` helper replaces markup
+  that was copy-pasted between the chart and non-chart render paths.
+
+Verified with real screenshots: built `dist/`, `vite preview` on port 4177
+(4173/4174 were already bound by other worktrees — checked with `lsof`
+first), one `page.route` handler mocking Kraken's public
+AssetPairs/Ticker/OHLC/Depth/Trades endpoints (everything else aborted so
+the app takes its own fail-soft path), Playwright at 400px, before/after
+for every view mode. Added `tests/ui/marketsDetail.integration.test.ts` (5
+new tests) covering the depth bar/spread, the depth-chart stats, the trades
+tape header/tint, the Buy/Sell toggle actually toggling, and the pager
+naming the neighbour — this detail view previously had NO integration
+tests at all (only the list did).
+
+Full gate green: `tsc --noEmit` clean, 1145/1145 tests (5 new), `npm run
+build` clean. Pure `src/ui/` + `tests/ui/` diff (3 files) — nothing under
+`server/**`, `state/**`, or trading/signal/risk logic touched.
+
 ## Creative upgrade pass #2: assetHubView's Profit-tab "Real money" card had the glow but not the number, plus a hero-token audit (2026-09-04)
 Continuation of pass #1 (below), same mandate — genuine upgrades, not a bug
 hunt. Rebased this worktree onto `main` first to pick up PR #184
