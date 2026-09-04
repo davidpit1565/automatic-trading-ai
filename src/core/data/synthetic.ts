@@ -8,7 +8,7 @@
  */
 
 import type { Candle, Instrument, Result, Timeframe } from '../types';
-import { ok, TIMEFRAME_MS } from '../types';
+import { err, ok, TIMEFRAME_MS } from '../types';
 import type { MarketDataSource } from './revolutClient';
 
 /** Mulberry32: small, fast, deterministic 32-bit PRNG. */
@@ -130,11 +130,28 @@ export class SyntheticDataSource implements MarketDataSource {
   }
 
   getCandles(symbol: string, timeframe: Timeframe, limit: number): Promise<Result<Candle[]>> {
+    // Found in review, 2026-09-04: this used to default an unlisted symbol's
+    // startPrice to a hardcoded 100 — harmless for the market SCANNER (which
+    // only ever asks about symbols from getInstruments(), all listed), but a
+    // real money-display bug for homeView's real/simulated position tables,
+    // which ask this same demo fallback for a REAL position's own symbol
+    // (e.g. 'ADAEUR') whenever live market data is unavailable (a real,
+    // recurring situation — see the "DEMO data" banner). That symbol is
+    // never in DEMO_START_PRICE, so it silently got a fake ~100 current
+    // price fed straight into the Value/Unrealised P&L calculation —
+    // producing a wildly wrong number (e.g. a real ~€14 ADA position shown
+    // as worth over €7,000) that looks like a real, live figure. Returning
+    // an error for an unlisted symbol instead lets the caller's own
+    // `prices[symbol] ?? entryPrice` fallback (homeView.ts) show a correct,
+    // flat 0%-change figure rather than a fabricated one.
+    if (!(symbol in DEMO_START_PRICE)) {
+      return Promise.resolve(err(`No demo data for unlisted symbol: ${symbol}`));
+    }
     const step = TIMEFRAME_MS[timeframe];
     const startTimestamp = this.anchorTimestamp - limit * step;
     const candles = generateSyntheticCandles({
       seed: hashSeed(`${symbol}:${timeframe}`),
-      startPrice: DEMO_START_PRICE[symbol] ?? 100,
+      startPrice: DEMO_START_PRICE[symbol]!,
       count: limit,
       timeframe,
       startTimestamp,

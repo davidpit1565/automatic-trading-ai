@@ -1,5 +1,37 @@
 # PROJECT_STATE
 
+## Real money-display bug: demo-fallback price fed into a real position's P&L (2026-09-04)
+Found while personally verifying (via the same Playwright-screenshot method
+used for the design passes below) whether a requested design overhaul was
+actually needed — it wasn't (see the entry below this one), but the
+screenshot surfaced something worse: Home's "Real open positions" table
+showed the live ADAEUR position (76.0429 ADA, real value ~€14.46) as worth
+**€7,452 with a +51428.19% unrealized gain** — a wildly wrong number, not a
+cosmetic one.
+
+Root cause: `homeView.ts`'s `livePrices()` asks `data.source.getCandles(symbol, ...)`
+for each open position's own symbol to get its current price. When live
+market data is unavailable (Kraken/Coinbase both failing — shown by the
+"DEMO data" banner, a real, recurring situation, not a test-only edge case),
+`data.source` falls back to `SyntheticDataSource`. Its `getCandles` used to
+default ANY symbol not in its 8-pair demo whitelist (`DEMO_START_PRICE`,
+all `*/USD` pairs) to a hardcoded `startPrice: 100` — and a real position's
+symbol (`ADAEUR`) is never in that whitelist. That fake ~€100 anchor price
+then got multiplied into the position's Value/Unrealised P&L exactly like a
+real price would, with no visual distinction from a genuine live figure.
+
+Fixed: `SyntheticDataSource.getCandles` now returns an error result for any
+symbol outside its demo whitelist instead of fabricating a price
+(`src/core/data/synthetic.ts`) — `homeView.ts`'s existing
+`prices[symbol] ?? entryPrice` fallback then correctly shows a flat,
+sane 0%-change figure instead. Regression test added
+(`tests/data/synthetic.test.ts`). Full gate green (tsc, 1129→1130 tests,
+build); verified visually before/after via the established
+build+preview+Playwright screenshot method. Other callers of
+`getCandles` (markets scanner, backtest/grid/validation views, live
+ticker) were checked — all already handle a non-ok result, so this is
+strictly safer everywhere, not just on Home.
+
 ## Deep design pass #2: cross-screen price-formatting bugs found via real screenshots (2026-09-04, PR #176)
 Continuation of the entry directly below (same day, same complaint — David
 still wasn't seeing real improvement after that pass). Same method: built

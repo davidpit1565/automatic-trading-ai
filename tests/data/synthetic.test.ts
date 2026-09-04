@@ -66,4 +66,10 @@ describe('SyntheticDataSource', () => {
       if (candles.ok) expect(candles.value).toHaveLength(100);
     }
   });
+
+  it("refuses a symbol outside the demo list instead of fabricating a fake ~100 price — real bug found 2026-09-04: a real position's own symbol (e.g. 'ADAEUR') isn't in the demo list, so this used to silently return a fake price around 100 that homeView.ts then multiplied into the position's displayed Value/Unrealised P&L, showing a real ~€14 holding as worth thousands", async () => {
+    const source = new SyntheticDataSource(ANCHOR);
+    const candles = await source.getCandles('ADAEUR', '1h', 2);
+    expect(candles.ok).toBe(false);
+  });
 });
