@@ -106,10 +106,17 @@ export interface EquityChartPanelHandle {
  */
 export function mountEquityChartPanel(
   container: HTMLElement,
-  options: { readonly currencySymbol?: string; readonly live?: boolean } = {},
+  options: { readonly currencySymbol?: string; readonly live?: boolean; readonly showHero?: boolean } = {},
 ): EquityChartPanelHandle {
   const currency = options.currencySymbol ?? '€';
   const tag = options.live ? '<span class="tag-live">REAL</span>' : '<span class="tag-sim">SIMULATED</span>';
+  // David flagged (2026-09-04): the Profit tab's real-money chart sits
+  // directly under a "Real money" hero already showing this exact figure —
+  // this panel's own big "Now €X" header just repeats it a few pixels
+  // below, reading as a giant, disproportionate duplicate. Defaults to
+  // true (every OTHER caller — the History tab, the Portfolio/Value view —
+  // genuinely needs this as its only headline number).
+  const showHero = options.showHero ?? true;
   let history: readonly EquityPoint[] = [];
   let rangeKey = 'All';
   let chartMode: 'candle' | 'line' = 'line';
@@ -176,7 +183,9 @@ export function mountEquityChartPanel(
     ).join('');
 
     container.innerHTML = `
-      <!-- hero-bare matches Home's balance treatment: same dominant-figure
+      ${
+        showHero
+          ? `<!-- hero-bare matches Home's balance treatment: same dominant-figure
            pattern for this sub-screen (shared by Crypto's and Stocks' History
            tab), not a secondary boxed widget. -->
       <div class="hero hero-bare">
@@ -184,7 +193,9 @@ export function mountEquityChartPanel(
         <div class="hero-value">${currency}${formatPrice(last)}</div>
         <div class="hero-change ${up ? 'up' : 'down'}">${formatPct(ret)} · ${rangeKey}</div>
         <div class="hero-split"><span>since ${new Date(pts[0]!.at).toLocaleDateString('en-GB')}</span></div>
-      </div>
+      </div>`
+          : `<div class="hero-change compact ${up ? 'up' : 'down'}">${formatPct(ret)} · ${rangeKey}</div>`
+      }
       <div class="chart-controls">
         <div class="range-bar">${rangeBar}</div>
         <div class="chart-toggle">

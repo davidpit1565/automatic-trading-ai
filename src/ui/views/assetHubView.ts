@@ -113,7 +113,15 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
   const realEquityChartSlot = container.querySelector<HTMLElement>('#hub-real-equity-chart')!;
 
   const historyChart = mountEquityChartPanel(historyChartSlot, { currencySymbol: opts.currencySymbol });
-  const realEquityChart = mountEquityChartPanel(realEquityChartSlot, { currencySymbol: opts.currencySymbol, live: true });
+  // showHero: false — the "Real money" hero just above this chart (a few
+  // pixels up in the same section) already shows this exact figure; the
+  // chart's own big "Now €X" header would just repeat it (David flagged
+  // this 2026-09-04 as a disproportionate duplicate).
+  const realEquityChart = mountEquityChartPanel(realEquityChartSlot, {
+    currencySymbol: opts.currencySymbol,
+    live: true,
+    showHero: false,
+  });
 
   let marketMounted = false;
   let marketHandle: ViewHandle | void;
@@ -231,6 +239,13 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     } else {
       benchEl.hidden = true;
     }
+
+    // David asked (2026-09-04): once real money is live, "is it time to
+    // turn real money on?" is already answered on every screen, not just
+    // Overview — same reasoning and pattern as homeView.ts's readiness
+    // card, applied here too since this tab kept showing it regardless.
+    readinessEl.hidden = Boolean(state.live);
+    if (state.live) return;
 
     const r = state.readiness;
     if (!r) {

@@ -1104,6 +1104,13 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .hero-change { font-weight: 700; font-size: 1.05rem; letter-spacing: -0.01em; }
 .hero-change.up::before { content: '▲ '; font-size: 0.7em; }
 .hero-change.down::before { content: '▼ '; font-size: 0.7em; }
+/* Used where the chart's own big "Now €X" hero is suppressed (David asked
+   2026-09-04: it duplicated a number a caller already showed just above) —
+   only the range's return% survives as a small standalone line, so it needs
+   its own color rule since it's no longer inside a `.hero` ancestor. */
+.hero-change.compact { font-size: 0.85rem; margin-bottom: 0.6rem; }
+.hero-change.compact.up { color: var(--hot); }
+.hero-change.compact.down { color: var(--cold); }
 .hero-split { display: flex; gap: 1.5rem; color: var(--text-dim); font-size: var(--fs-sub); margin-top: 1.1rem; }
 .hero-bench { margin-top: 0.8rem; font-size: 0.82rem; background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border); border-radius: var(--r-sm); padding: 0.48rem 0.75rem; }
