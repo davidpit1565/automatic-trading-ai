@@ -4742,3 +4742,89 @@ consistent sign over real time.
 
 Gate: tsc clean, 1139 vitest passed (152/152 in the touched files — 6 new),
 vite build ok.
+
+## Deep design pass #3: comprehensive real-screenshot audit against 2 prior passes, one real cross-screen fix found (2026-09-04)
+
+David asked for a third, much more thorough design pass ("more than 100... even
+200 or 300 things"), comparing against real trading apps, loading the
+account's other design-taste skills in addition to `fintech-dashboard-polish`.
+Loaded `apple-design` and `design-taste-frontend` for general principles
+(the latter's own scope note says it targets landing pages/portfolios, not
+dashboards — used only for the universal typography/spacing/motion sections,
+not its landing-page-specific rules). Read all of `styles.css` (2051 lines)
+end to end before touching anything, per this file's own two prior entries
+above (Deep design pass #1 and #2, same day) — both already did exhaustive,
+screenshot-verified work: two-tier tabular-nums pricing unified across every
+screen, sparklines, order-book depth bars, the true-black palette with
+tokenised type/spacing/motion scales, badge-overlap fixes, the hub-tabs
+track, real/sim tags, scientific-notation dust-price bug, and more.
+
+**Method**: `npm run build` + `vite preview` + the established
+Playwright-core + single-route-handler + real committed
+`state/autopilot-state.json`/`state/stocks-state.json` screenshot method,
+390×844 (iPhone-width) viewport, `waitUntil:'load'` + 3.5s settle. Screenshotted
+all 10 primary screens (Home, Markets list, Stocks, Tools menu, Scan,
+Backtest, Validation, Portfolio, Grid, Monitoring) plus coin-detail, Crypto
+Profit tab, Stocks Long-Term tab, and Crypto History/Market tabs — 16 real
+screenshots reviewed as images, not reasoned about from CSS.
+
+**Found and fixed — one real, cross-screen issue, confirmed by looking at
+the actual pixels, not by reading the markup:** the "Live data unavailable —
+showing DEMO data" banner (`showBanner()` in `main.ts`) inlined its full
+diagnostics — three raw failed-fetch URLs and error strings — directly in
+the banner text. That made the banner ~180px tall, and since it renders
+above `<main>` on literally every one of the 10+ screens, roughly a fifth of
+a real phone viewport was technical stack-trace-like text on every single
+screen in the app, pushing all real content down by the same amount (visibly
+confirmed: the Tools menu showed only 3 of 8 tool cards above the fold
+before the fix, 5 after). Fixed by collapsing the diagnostics behind a
+native `<details>`/`<summary>` disclosure ("Why? ▾") — the short one-line
+message is what shows by default everywhere, the raw URLs are one tap away
+for anyone actually debugging a data-source outage, and `<details>` needs no
+JS. The two other banner branches (`revolut`/`public`, already short) are
+untouched. New CSS is additive only (`.data-source-banner-details` and
+`-reasons`), no existing rule changed.
+
+**Investigated, deliberately reverted after catching a mistake against a
+newer decision:** `homeView.ts`'s own comment (from an earlier PR, #117) says
+the intent was "ONE dominant bare hero (the sim balance)... with the
+real-money card boxed" — and the DOM order (`liveHero` before `hero`)
+appeared to contradict that, so a fix was drafted and briefly applied
+(reordering to put the sim hero first). A second screenshot caught the
+regression before committing: a LATER, same-day, more specific comment a few
+dozen lines down (`renderLiveAccount`, "David asked 2026-09-04") explicitly
+hides the sim hero (`hero.hidden = Boolean(live)`) once real money is live,
+specifically so the real-money card leads on this screen — the exact
+opposite of what the earlier comment implied out of context. The reorder was
+reverted in full before the gate/commit; screenshotted again to confirm the
+live-money Home screen still shows Real money → Real open positions first,
+matching David's actual later instruction. Lesson for next time: a design
+comment that looks like unclaimed intent can be superseded by a later one
+further down the same file — check the whole file's history of decisions on
+a component before trusting the first comment found, and always re-screenshot
+before committing a "fix" driven by a code comment rather than a pixel.
+
+**Covered by screenshot, no defect found**: Markets list/detail, Stocks
+Overview/Market, Crypto History/Market/Profit, coin-detail (candlestick
+chart, stat tiles, range bar), Stocks Long-Term. `toastNotifications.ts` and
+`loadingStates.ts`'s empty-state/toast icon set were checked for an
+emoji-vs-SVG icon-language inconsistency (a real category of issue worth
+checking per the task) — both turn out to be dead code with zero call sites
+in any view file, so nothing on screen is actually affected; not worth
+"fixing" code nothing renders.
+
+**Honest calibration, not a shortfall being hidden**: this file's own history
+shows two already-exhaustive, screenshot-verified passes earlier the same
+day covering almost every item on the standard fintech-dashboard checklist
+(typography hierarchy, tabular-nums, sparklines, depth bars, spacing/motion
+tokens, corner-radius consistency, hover/press states, empty states, badge
+placement). Given that starting point, a genuinely-warranted, non-manufactured
+third pass surfaces one real cross-screen fix, not another 100+ — inflating
+the count with cosmetic non-issues (e.g. re-tokenising a value already
+correct, or "fixing" unused dead code) was avoided on purpose per this task's
+own explicit instruction not to pad the number.
+
+Full gate: tsc clean, 1139/1139 vitest (all pre-existing, no test changes
+needed — the change is additive markup/CSS, covered by existing DOM tests),
+`npm run build` clean. Pure `src/ui/main.ts` + `src/ui/styles.css` diff (43
+lines). No file under `server/**`, `state/**`, or `src/core/**` touched.

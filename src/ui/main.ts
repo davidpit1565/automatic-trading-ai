@@ -77,8 +77,32 @@ function showBanner(data: ActiveDataSource): void {
     banner.classList.add('live');
     banner.textContent = `Live market data (${data.source.name.replace(' (read-only)', '')}) — read-only.`;
   } else {
-    const reasons = data.diagnostics.length > 0 ? ` [${data.diagnostics.join(' · ')}]` : '';
-    banner.textContent = `Live data unavailable — showing DEMO data, not real prices.${reasons}`;
+    // The raw diagnostics (failed fetch URLs, full error text) are real and
+    // worth keeping for anyone actually debugging a data-source outage, but
+    // showing them inline made this banner ~180px tall on EVERY screen (the
+    // first thing rendered, above literally all real content) — confirmed
+    // via screenshot, not just reasoning about the markup. A consumer-facing
+    // trading app should never open with a wall of stack-trace-like text.
+    // Collapsed behind a native <details> disclosure: the short one-line
+    // message is all that shows by default, the technical detail is one tap
+    // away for whoever needs it (David debugging, or this session's own
+    // verification screenshots), and <details> needs no JS to toggle.
+    banner.textContent = '';
+    const summary = document.createElement('span');
+    summary.textContent = 'Live data unavailable — showing DEMO data, not real prices.';
+    banner.appendChild(summary);
+    if (data.diagnostics.length > 0) {
+      const details = document.createElement('details');
+      details.className = 'data-source-banner-details';
+      const toggle = document.createElement('summary');
+      toggle.textContent = 'Why?';
+      details.appendChild(toggle);
+      const reasons = document.createElement('div');
+      reasons.className = 'data-source-banner-reasons';
+      reasons.textContent = data.diagnostics.join(' · ');
+      details.appendChild(reasons);
+      banner.appendChild(details);
+    }
   }
 }
 
