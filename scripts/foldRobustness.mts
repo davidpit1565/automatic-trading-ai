@@ -70,7 +70,9 @@ const CANDIDATES: Cand[] = [
 const source = new KrakenPublicSource();
 const inst = await source.getInstruments();
 if (!inst.ok) throw new Error('no instruments');
-const symbols = inst.value.slice(0, 10).map((i) => i.symbol);
+// Widened 10→20 (2026-09-04), same reason as sweepAutopilot.mts: match the
+// traded universe as of the 2026-09-03 curated-list expansion.
+const symbols = inst.value.slice(0, 20).map((i) => i.symbol);
 
 const data: { symbol: string; h1: Candle[]; h4: Candle[] }[] = [];
 for (const symbol of symbols) {

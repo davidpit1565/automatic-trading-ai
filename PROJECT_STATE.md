@@ -4372,3 +4372,86 @@ intents (`telegram-unclaimed-callbacks` and its `live:`-prefixed
 counterpart) — none of it referenced the current real position
 (`live-entry:ADAEUR:manual-reconcile-20260904`); logged as one audit-log
 entry rather than silently edited.
+
+## Profits/market-scan pass: baseline re-measured on the widened universe, BREAKOUT lead investigated and correctly rejected on live evidence (2026-09-04)
+
+David asked for a general profits + market-scan improvement pass (a separate
+session handled safety). Per this file's history, parameter space (confidence
+floor, RSI ceiling, trailing/target geometry, timeframe, cost sensitivity) was
+already exhaustively swept and closed out on the OLD 10-symbol universe
+(2026-07-27 through 2026-08-31) — nothing there was reopened without new
+information. The one thing that had actually changed since the last honest
+scoreboard run is the traded universe itself: `CURATED_INSTRUMENTS` grew
+10→20 symbols on 2026-09-03, but `sweepAutopilot.mts` and `foldRobustness.mts`
+(the harnesses that replay the REAL shared-account autopilot / pool real
+per-symbol trades into folds) still hardcoded `slice(0, 10)` — silently
+measuring only half of what production actually trades. Widened both to
+`slice(0, 20)` (measurement-only change, zero effect on trading behaviour;
+`discoverCryptoCandidates.mts`/`validateStrategy.mts` were unaffected since
+they already used the real curated list or explicit candidate lists).
+
+**Re-measured current baseline, real Kraken data, all 20 traded symbols**
+(`sweepAutopilot.mts`, `PROD live (no trail, current)` = the exact config
+running today — regime EMA50 + confRisk .5-1% + BTC market-regime EMA50 +
+80% exposure cap, no trailing):
+
+| Window | buy&hold BTC | buy&hold basket(20) | PROD live | trades | OOS ret | OOS PF |
+|---|---|---|---|---|---|---|
+| 1h entry / 30d | +24.52% | +37.57% | **+17.95%**, PF 4.08, win 70.4% | 27 | +1.06% | 1.51 |
+| 4h entry / 120d | +11.28% | +10.82% | **+0.75%**, PF 1.53, win 40.0% | 10 | +1.49% | 1.78 |
+| 1d entry / ~2y | -27.28% | -54.08% | **-3.44%**, PF 0.00 (0 wins) | 5 | -1.28% | 0.00 |
+
+Same pattern already documented on the old 10-symbol universe, now confirmed
+on the current 20: production is profitable with a real, fold-plausible
+sample when the market is flat-to-trending, defends capital hard in a crash
+(beats both benchmarks by 24-51 points in the 2-year down window by trading
+almost nothing), and structurally lags a strong bull run (this window's ~7-20pt
+BTC/basket gap) — the same accepted, already-explained tradeoff from
+2026-08-21, not a regression from widening the universe.
+
+**A real lead surfaced, then was correctly killed by live evidence — exactly
+the workflow this file's methodology exists for.** On the widened universe,
+BREAKOUT (already a shadow candidate, never production) looked meaningfully
+better than every prior measurement of it: `sweepAutopilot.mts`'s 4h/120d
+window showed +42.74% return, PF 2.51, 86 trades, OOS PF 3.25; `foldRobustness.mts`
+(pooled per-symbol folds, real Kraken) cleared **2/3 folds on all three
+timeframes tested** (1h: PF 1.08/233 trades; 4h: PF 1.29/187 trades; 1d: PF
+1.04/148 trades) — every other family/geometry tested this session (PROD,
+target-3R, mean-reversion, three trend-following geometries) still failed
+0/3 or 1/3, matching this file's entire prior history. This is the most
+consistent backtest result for a non-momentum family this project has ever
+measured, and it is directly explainable: the 10 coins added 2026-09-03 are
+smaller, more volatile alts (HNT/VELO/AERO/ENA etc.) with real breakout moves
+the original 10 majors rarely produce.
+
+**Checked against the one thing that outranks any backtest: `breakout`'s own
+live forward record** (`shadowStandings.mts`, reads real cycle-by-cycle data
+the candidate could not have been fitted to). Over 37.9 days and **147 real
+trades** — comfortably past this file's own 20-trade trust bar —
+`breakout` has actually returned **-2.05%, PF 1.18, 40% win rate**, while the
+production-mirror shadow candidates sit at **+6.48%, PF 2.14, 62% win** on the
+same real bars over the same window. The backtest and live reality disagree,
+and reality wins: **not promoted.** (One extra data point in the same
+standings, not actionable yet: `whale-flow` leads everything at +7.63%/PF 2.90
+but only 17 trades, 3 short of the trust bar — worth reading again once it
+clears 20, not before.)
+
+**Also deliberately not chased**: "TF far target late trail" (far ATR target
++ late trail, same momentum family) cleared 3/3 folds on the 1h/30d window
+(PF 2.29, 116 trades) — but failed on 4h/120d (0/3, PF 0.54) and 1d/2y (1/3,
+PF 0.35), the exact knife-edge-across-timeframes signature this file has
+flagged as overfitting before (2026-07-29's lookback/rebalance sensitivity).
+A result that only survives on one timeframe is noise dressed as a lead, not
+a candidate to backtest further or shadow.
+
+**Not re-run**: `discoverCryptoCandidates.mts`'s weekly market-scan already
+ran 2026-09-03 (yesterday) and is what produced the 10-symbol expansion above
+— re-running it 24 hours later against the same market was judged very
+unlikely to surface anything the previous run didn't already see, and skipped
+per this file's own "never re-read/redo unchanged work" discipline rather
+than spending the API calls to confirm the obvious.
+
+**Nothing shipped to strategy, sizing, confidence, or the curated universe.**
+The only kept change is the two-line measurement-tooling widening above
+(`sweepAutopilot.mts`, `foldRobustness.mts`), verified with the full gate:
+tsc clean, 1132 vitest passed, vite build ok.
