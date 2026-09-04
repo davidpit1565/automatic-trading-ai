@@ -1,5 +1,63 @@
 # PROJECT_STATE
 
+## Deep design pass #2: cross-screen price-formatting bugs found via real screenshots (2026-09-04, PR #176)
+Continuation of the entry directly below (same day, same complaint — David
+still wasn't seeing real improvement after that pass). Same method: built
+`dist/`, served it locally, mocked `autopilot-state.json`/`stocks-state.json`
+with the real committed files, screenshotted every screen (Home, Crypto
+Overview/History/Market/Profit, Markets list + coin detail, Stocks
+Overview/Market/Long-Term/Profit, all Tools panels) before AND after each
+change, and looked at the images rather than reasoning from CSS.
+
+**Found and fixed — all four are the same root cause: a value type (a
+market price, an "open positions" table) rendered differently depending on
+which screen you're looking at it from, because each screen had its own
+copy-pasted formatting instead of sharing one:**
+- **Home's "Markets" preview cards**: the `TRADED` badge shared the
+  coin-name line inside a 178px card with no room for it — it visually
+  overlapped the %-change text (confirmed by a cropped screenshot: "Bitcoin"
+  and "+5.41%" touching with zero gap). Deleting the badge alone just traded
+  the overlap for truncating "Bitcoin" to "Bitc…" (same 178px squeeze).
+  Fixed properly by moving price+change onto their own row below the name
+  (`homeView.ts`), the same restructuring PR #172 already did for the badge
+  colliding with the name on the full Markets list.
+- **Coin-detail page** (hero price, 24h High/Low, order form, past trades,
+  order book, live ticks) used `formatPrice`, which drops to 0 decimals
+  above €1,000 — so tapping Bitcoin from the Markets list (which correctly
+  shows "€69,274.80") landed on a detail page showing the flat "€65,478".
+  Switched every price on `marketsView.ts`'s detail page to
+  `formatMarketPrice` (what the list row itself already uses), so the
+  number and its two-tier typography are identical between list and detail.
+- **Stocks "Market" list** (`stocksMarketPanel.ts`): prices were flat
+  strings (`$328.46`) despite the row using the exact same `.row-price` CSS
+  class as the crypto Markets list, which is two-tier (`$328`.`46`).
+  Wrapped in `tieredPriceHtml` + switched to `formatMarketPrice`.
+- **Stocks "Overview" open positions** (`stocksOverviewPanel.ts`) showed
+  only entry price + share count — no Value or Unrealised P&L column at
+  all, unlike the identical "open positions" concept on Home (Crypto),
+  which has a full Cash/Total/Price/Value/Allocation/P&L table. Rather than
+  writing a second copy of that table logic, generalized `homeView.ts`'s
+  `buildHoldingsRows`/`holdingsTableHtml` (now exported; takes a `money`
+  formatter + cash icon code instead of a hardcoded euro symbol) and reused
+  them here against the stocks market-snapshot prices this panel already
+  fetches — both Overview screens now render the identical table shape.
+
+**Covered per the process but found nothing further to fix**: crypto
+History/Profit tabs, Stocks Long-Term and Profit tabs, and every Tools
+panel (Scan/Backtest/Validation/Portfolio/Grid/Monitoring) — all already
+consistent with the established two-tier/tabular-nums/restrained-palette
+conventions, or legitimately empty states in this offline sandbox (external
+Kraken/Coinbase/Alpaca calls fail soft, same as the prior entry).
+Deliberately left alone: the History feed's raw `MANUAL RECONCILIATION`
+audit notes read as verbose developer text in a consumer feed, but they're
+real audit-trail content from the committed state, not something the view
+fabricates — truncating them trades transparency for tidiness on a
+live-money screen, not a trade worth making unasked.
+
+Full gate green: `tsc --noEmit` clean, 1129/1129 tests (all pre-existing,
+none needed changes), `npm run build` clean. Pure `src/ui/` diff (5 files),
+no behavior or data-model changes.
+
 ## Visual audit against REAL rendered screenshots, after "I don't see the 30 changes" (2026-09-04)
 David said he genuinely couldn't see the previous design-pass PR's claimed
 improvements, and separately flagged the hub tab bar as "uncomfortable,
