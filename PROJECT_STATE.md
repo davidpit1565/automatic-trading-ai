@@ -1,5 +1,34 @@
 # PROJECT_STATE
 
+## ENOBUFS recurred a SECOND time same night — real trigger was pipe buffers, not hours of accumulation (2026-09-04)
+The earlier fix (gate mid-cycle persists on `hasSubmittedOrder`, retries
+5→3) reduced how OFTEN the conflict-retry path runs, but didn't stop it
+from breaking on the FIRST conflict it hits. Confirmed twice tonight, on
+two different fresh runner VMs: cancelling+redispatching the stalled
+autopilot run, a brand-new job hit `spawnSync ENOBUFS` on literally its
+first git-push conflict (cycle 1, ~3 minutes in) — not after 90 minutes of
+accumulation as originally diagnosed — and then failed identically on
+every subsequent cycle for the rest of that run too. Both times the
+trigger was this session's own direct push to `main` landing at the same
+moment as the routine per-cycle persist.
+
+Real root cause: `persistStateToGit`'s `run()` helper piped stdout+stderr
+(`stdio: ['ignore','pipe','pipe']`) for EVERY subprocess call, even the
+ones whose output nothing reads (`git config`, `git add`, `git commit`,
+`git push`, `git fetch`, `git reset --hard`) — only `git show` needs the
+captured string. A single retry attempt fires ~5 of these back to back
+with no yield; allocating pipe buffers for all of them was apparently
+enough to exhaust something on this runner immediately, not gradually.
+Fixed in both `server/autopilotRunner.mts` and `server/stocksRunner.mts`
+(same duplicated vulnerable shape): `stdio: 'ignore'` by default, piped
+output only for the one call that actually reads it. Also brought
+`stocksRunner.mts`'s retry loop down from 5 to 3 attempts (it had never
+received that half of the earlier fix). No real trades were at risk
+either time — every stalled cycle logged `opened 0, closed 0`, so only
+observability data (equity history, shadow standings) was briefly delayed,
+never a live order's own bookkeeping. Full gate green (tsc, 1130 tests,
+build).
+
 ## Real money-display bug: demo-fallback price fed into a real position's P&L (2026-09-04)
 Found while personally verifying (via the same Playwright-screenshot method
 used for the design passes below) whether a requested design overhaul was

@@ -205,7 +205,19 @@ function hasSubmittedOrder(outcomes: readonly { readonly outcome: string }[]): b
 
 function persistStateToGit(store: FileStore, label: string): void {
   if (process.env['GITHUB_ACTIONS'] !== 'true') return;
-  const run = (cmd: string): string => execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  // `stdio: 'ignore'` by default (2026-09-04, second ENOBUFS recurrence same
+  // night — see the retry-loop comment below): every call here used to pipe
+  // stdout+stderr even though only `git show` (capture: true) ever reads the
+  // result. Piping a subprocess's output means the OS allocates pipe buffers
+  // for it; a whole retry attempt fires ~5 of these execSync calls back to
+  // back with no yield in between, and on this runner that was enough to
+  // exhaust available pipe buffer space on the VERY FIRST conflict of a
+  // freshly-started job (not just after hours of accumulation, as first
+  // suspected) — every retry then failed identically for the rest of that
+  // run. Only allocating a pipe for the one call that actually needs output
+  // cuts the per-attempt pipe count roughly in half.
+  const run = (cmd: string, capture = false): string =>
+    execSync(cmd, { encoding: 'utf8', stdio: capture ? ['ignore', 'pipe', 'pipe'] : ['ignore', 'ignore', 'ignore'] });
   const hasStagedChanges = (): boolean => {
     try {
       run('git diff --staged --quiet');
@@ -238,7 +250,7 @@ function persistStateToGit(store: FileStore, label: string): void {
       } catch {
         try {
           run('git fetch origin main');
-          const origin = JSON.parse(run(`git show origin/main:${STATE_PATH}`)) as Record<string, unknown>;
+          const origin = JSON.parse(run(`git show origin/main:${STATE_PATH}`, true)) as Record<string, unknown>;
           for (const key of store.dirtyKeys()) origin[key] = store.get(key);
           // Fully sync EVERYTHING to origin/main FIRST — a real incident,
           // 2026-09-03: `git reset --soft origin/main` alone moves HEAD but

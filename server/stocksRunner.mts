@@ -99,7 +99,15 @@ const STATE_COMMIT_EVERY = Math.max(0, Number(process.env['STOCKS_STATE_COMMIT_E
  */
 function persistStateToGit(store: FileStore, label: string): void {
   if (process.env['GITHUB_ACTIONS'] !== 'true') return;
-  const run = (cmd: string): string => execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  // 3 retries (not 5) and `stdio: 'ignore'` by default, capturing output only
+  // for `git show` — same ENOBUFS incident and fix as the crypto runner's
+  // own helper (2026-09-04, second recurrence same night, PROJECT_STATE.md):
+  // piping every subprocess's stdout/stderr even when nothing reads it
+  // allocates pipe buffers that a tight back-to-back retry burst can exhaust
+  // on this runner, reliably, on the FIRST conflict of a freshly-started
+  // job — not just after hours of accumulation as first suspected.
+  const run = (cmd: string, capture = false): string =>
+    execSync(cmd, { encoding: 'utf8', stdio: capture ? ['ignore', 'pipe', 'pipe'] : ['ignore', 'ignore', 'ignore'] });
   const hasStagedChanges = (): boolean => {
     try {
       run('git diff --staged --quiet');
@@ -114,7 +122,7 @@ function persistStateToGit(store: FileStore, label: string): void {
     run(`git add ${STATE_PATH}`);
     if (!hasStagedChanges()) return;
     run(`git commit -m "Stocks autopilot state (mid-run ${label})"`);
-    for (let attempt = 1; attempt <= 5; attempt++) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         run('git push origin HEAD:main');
         console.log(`Stocks state persisted mid-run (${label}).`);
@@ -122,7 +130,7 @@ function persistStateToGit(store: FileStore, label: string): void {
       } catch {
         try {
           run('git fetch origin main');
-          const origin = JSON.parse(run(`git show origin/main:${STATE_PATH}`)) as Record<string, unknown>;
+          const origin = JSON.parse(run(`git show origin/main:${STATE_PATH}`, true)) as Record<string, unknown>;
           for (const key of store.dirtyKeys()) origin[key] = store.get(key);
           // Fully sync EVERYTHING to origin/main FIRST — a real incident,
           // 2026-09-03: `git reset --soft origin/main` alone moves HEAD but
