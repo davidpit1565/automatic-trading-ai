@@ -1139,18 +1139,27 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
   mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%); }
 
-/* Reference-style segmented control: no outer container chrome at all, just
-   a row of plain labels where the active one wears a filled pill. The old
-   bordered track read as a form widget. */
-.hub-tabs { display: flex; gap: 0.25rem; background: none; border: none;
-  border-radius: var(--r-pill); padding: 0; margin-bottom: 1.5rem; }
+/* A borderless row of equal-width labels (tried first) read as a handful of
+   floating, disconnected buttons rather than one control — nothing tied the
+   4-5 tabs together, and unequal label lengths ("Overview" vs "Market") made
+   the gaps between them look arbitrary. A visible track (a filled, rounded
+   container the whole row sits inside, like a real segmented control) gives
+   the group a boundary so it reads as ONE thing with a moving selection,
+   not several unrelated buttons — this was flagged directly as "uncomfortable,
+   unclear" and confirmed by screenshot, not just theorized. */
+.hub-tabs { display: flex; gap: 0.2rem; background: var(--surface);
+  border-radius: var(--r-pill); padding: 0.3rem; margin-bottom: 1.5rem; }
 .hub-tab { flex: 1; background: none; border: none; color: var(--text-dim); font-size: 0.94rem;
-  font-weight: 650; padding: 0.62rem 0.4rem; border-radius: var(--r-pill); cursor: pointer;
+  font-weight: 650; padding: 0.55rem 0.4rem; border-radius: var(--r-pill); cursor: pointer;
   letter-spacing: -0.01em;
   transition: all var(--dur-fast) var(--ease); }
 .hub-tab:hover { color: var(--text); }
 .hub-tab:active { transform: scale(0.96); }
-.hub-tab.active { background: var(--surface-raised); color: #fff; font-weight: 750; }
+/* One step lighter than the track itself (surface-hover, not surface-raised)
+   so the active pill actually separates from its own container instead of
+   nearly blending into it. */
+.hub-tab.active { background: var(--surface-hover); color: #fff; font-weight: 750;
+  box-shadow: var(--shadow-sm); }
 /* Stocks adds a 5th tab (Long-Term) — shrink to fit without wrapping. */
 .hub-tabs:has(.hub-tab:nth-child(5)) .hub-tab { font-size: 0.7rem; padding: 0.5rem 0.15rem; letter-spacing: var(--tracking-tight); }
 .hub-panel { display: none; }
@@ -1272,14 +1281,21 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 /* Both lines truncate rather than wrap. A wide change value ("+0.0019 (+0.22%)")
    squeezes this column, and a wrapped symbol made those rows taller than the
    rest — uneven row heights also undermine the scroll-stable paging. */
-.market-row-id .row-title,
-.market-row-id .row-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Wraps the name + an optional .tag-traded badge on one line — a sibling of
-   .row-title, never nested inside it, so .row-title's own text content stays
-   just the coin name for anything that reads it. */
+.market-row-id .row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Wraps the name on its own line — a sibling of .row-title, never nested
+   inside it, so .row-title's own text content stays just the coin name for
+   anything that reads it. */
 .row-title-line { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
 .row-title-line .row-title { min-width: 0; flex-shrink: 1; }
-.row-title-line .tag-traded { flex-shrink: 0; }
+/* .row-sub carries the clock/symbol text plus an optional .tag-traded badge.
+   The badge used to share the NAME's line and claim a fixed ~64px from it,
+   clipping even short names ("Bitcoin" -> "Bitc…") on a phone-width row —
+   found from a real screenshot. It rides here instead: flex with only the
+   text portion allowed to shrink/ellipsis, so the badge itself is never
+   partially clipped. */
+.market-row-id .row-sub { display: flex; align-items: center; gap: 0.35rem; min-width: 0; overflow: hidden; }
+.market-row-id .row-sub-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.market-row-id .row-sub .tag-traded { flex-shrink: 0; }
 .market-row-num { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
 /* Hidden on phone (the row already has 3 real columns there); shown as a 4th
    desktop column below — real information (already fetched with the row,

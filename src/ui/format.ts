@@ -4,7 +4,17 @@ export function formatPrice(value: number): string {
   const abs = Math.abs(value);
   if (abs >= 1000) return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
   if (abs >= 1) return value.toFixed(2);
-  return value.toPrecision(4);
+  // Floating-point dust from a subtraction that should land on exactly zero
+  // (e.g. cash computed as equity minus the sum of positions) must never
+  // surface as scientific notation like "-1.137e-12" — this is many orders
+  // of magnitude below any real price or amount this app ever displays, and
+  // toPrecision(4) on plain 0 also reads "0.000" rather than "0.00".
+  if (abs < 1e-8) return (0).toFixed(2);
+  // toPrecision(4) itself falls back to exponential notation below 1e-6 —
+  // the same failure mode formatMarketPrice already guards against — so
+  // mirror that guard here for any genuinely small (but real) value.
+  const precise = value.toPrecision(4);
+  return precise.includes('e') ? value.toFixed(10).replace(/0+$/, '').replace(/\.$/, '') : precise;
 }
 
 /**

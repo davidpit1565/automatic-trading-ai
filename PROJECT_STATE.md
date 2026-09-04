@@ -1,5 +1,64 @@
 # PROJECT_STATE
 
+## Visual audit against REAL rendered screenshots, after "I don't see the 30 changes" (2026-09-04)
+David said he genuinely couldn't see the previous design-pass PR's claimed
+improvements, and separately flagged the hub tab bar as "uncomfortable,
+unclear" and numbers as disproportionate. Rather than reading CSS and
+guessing, built and served `dist/` locally, mocked the app's own state
+fetches with the REAL committed `state/autopilot-state.json` /
+`state/stocks-state.json` (Kraken/Coinbase calls aborted → the app's own
+fail-soft DEMO-data banner, expected), and screenshotted every real screen
+with Playwright before touching anything.
+
+**Confirmed already fixed** (previous session): the Profit tab's duplicate
+giant €95.14 (`equityChartPanel.ts`'s `showHero`) — only one hero renders now.
+
+**Found and fixed, each verified with a before/after screenshot:**
+- **`formatPrice` (`format.ts`) emitted scientific notation for near-zero
+  floating-point dust** — the Stocks Overview hero showed `Cash $-1.137e-12`
+  literally on screen, and Portfolio/Stocks showed `0.000` (three decimals)
+  for exact zero. `toPrecision(4)` falls back to exponential below 1e-6 and
+  renders 0 as "0.000" — same class of bug `formatMarketPrice` already had a
+  guard for, now mirrored here. Values below 1e-8 now render as `0.00`.
+- **Market list truncated coin names that had plenty of room** — "Bitcoin"
+  rendered as "Bitc…", "Dogecoin" as "Doge…", on every curated row, because
+  the "TRADED" badge shared the name's line and claimed a fixed ~64px from
+  its flexible width (measured: 127px column − 64px badge − gap left only
+  57px for a 63px-wide "Bitcoin"). Moved the badge to the secondary
+  (clock/symbol) line in `marketsView.ts`, which now truncates instead —
+  losing far less than the asset's own name.
+- **The hub tab bar** (`.hub-tabs` in `styles.css`) had no container — a row
+  of equal-width flex labels with no shared background reads as several
+  disconnected floating buttons rather than one control, and gaps looked
+  arbitrary because word lengths differ ("Overview" vs "Market"). Added a
+  visible rounded track (`var(--surface)`) the whole row sits inside, with
+  the active pill one step lighter (`--surface-hover`, not
+  `--surface-raised`) so it actually separates from the track.
+- **Real vs. simulated positions were visually identical** — Home's "Real
+  open positions" and "Open positions" (simulated) tables sat back-to-back
+  with no REAL/SIMULATED tag, unlike every other real-vs-sim pairing in the
+  app (Profit tab's heroes, History's "Real activity"). Added the same
+  `tag-live`/`tag-sim` badges used everywhere else — this is a genuine
+  clarity/safety concern given the app also mirrors real money.
+
+**Looked at, decided NOT to change:** the Backtest Lab's number inputs
+(read as slightly flat against the dark theme but not actually broken);
+Portfolio's Cash/Realized/Unrealized showing no currency symbol (the paper
+portfolio trades multiple pairs — EUR and USD markets — so a single
+hardcoded symbol would be actively wrong, not just inconsistent); the
+Bitcoin coin-detail page's price differing from the Markets-list price for
+the same symbol (both are independently-generated DEMO fallback data since
+Kraken/Coinbase are unreachable here — a data-source artifact of this
+environment, not a UI bug); the full-page-screenshot bottom-nav "ghosting"
+artifact (confirmed via CSS: `position: fixed; bottom: 20px` with matching
+`.content` padding — Chromium's `fullPage` capture re-lays-out fixed
+elements against its synthetic full-height viewport; not a real bug in
+normal scrolled use).
+
+Full gate green: `tsc --noEmit` clean, 1128/1128 tests (all pre-existing,
+none needed changes — markup edits were additive), `npm run build` clean.
+Pure `src/ui/` visual/markup/CSS diff, no behavior or data-model changes.
+
 ## CRITICAL self-inflicted incident: the state-merge fix itself reverted PR #152 out of main, restored (2026-09-03)
 While shipping the low-priority-findings batch below, routine verification
 caught that `main` no longer had PR #152's code — `proposeLiveExit`
