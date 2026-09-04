@@ -1633,6 +1633,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ADAEUR: 10930.514162234536 @ 0.18863 (stop 0.18334219471811453, target 0.19920561056377095, confidence 50)"
+    },
+    {
+      "timestamp": 1788493964494,
+      "intentId": "manual-cleanup:orphaned-pending-keys:20260904",
+      "event": "cancelled",
+      "mode": "live",
+      "detail": "MANUAL CLEANUP (2026-09-04): removed stale bookkeeping left over from the 2026-09-04 manual reconciliation (a real, already-closed XBTEUR exit and a real, already-merged ADAEUR entry) — none of it referenced the current open position (live-entry:ADAEUR:manual-reconcile-20260904), and each stale key was independently confirmed harmless before removal (see PROJECT_STATE.md). Cleared: live:live-exit-pending (queued exit for the removed XBTEUR position:1788446384199), live:confirmation-gate-pending (a stale ADAEUR entry-confirmation and the same stale XBTEUR exit-confirmation), and 6 stale Telegram button-tap callbacks (3 in telegram-unclaimed-callbacks, 3 in live:telegram-unclaimed-callbacks) referencing those same superseded intents."
     }
   ],
   "autopilot-last-run": {
@@ -41198,20 +41205,7 @@
       "text": "/buy"
     }
   ],
-  "live:telegram-unclaimed-callbacks": [
-    {
-      "id": "7383943998221651844",
-      "data": "confirm:approve:live-entry:XBTEUR"
-    },
-    {
-      "id": "7383943996165317609",
-      "data": "confirm:reject:live-entry:XBTEUR"
-    },
-    {
-      "id": "7383943997552726638",
-      "data": "confirm:approve:live-entry:XBTEUR"
-    }
-  ],
+  "live:telegram-unclaimed-callbacks": [],
   "live:live-entry-pending": {},
   "live:manual-buy-pending-symbols": [],
   "live:audit-log": [
@@ -41594,17 +41588,6 @@
       "detail": "MANUAL RECONCILIATION (2026-09-04): two real ADA/EUR buys (42.2331 @ €0.19028 + 33.8098 @ €0.19006, per Revolut X Activity) merged into one tracked position (76.0429 ADA @ weighted-avg €0.190182) after a workflow-cancellation gap left both untracked — see PROJECT_STATE.md's 2026-09-03 entry."
     }
   ],
-  "live:confirmation-gate-pending": {
-    "live-entry:ADAEUR:1788476528105": {
-      "sentAt": 1788476544823,
-      "messageId": 441
-    },
-    "live-entry:XBTEUR:1788446384199:exit:1788476199224": {
-      "sentAt": 1788477254609,
-      "messageId": 443,
-      "token": "mtm56hn5.1b51x5h"
-    }
-  },
   "live:live-entry-outstanding-symbols": [],
   "live:kill-switch-keyboard-sent": true,
   "education-tip-last-sent-at": 1788408526525,
@@ -41845,20 +41828,7 @@
     }
   },
   "telegram-unclaimed-messages": [],
-  "telegram-unclaimed-callbacks": [
-    {
-      "id": "7383943998569254626",
-      "data": "confirm:approve:1788474807393:live-entry:ADAEUR:1788474790551"
-    },
-    {
-      "id": "7383943996301939673",
-      "data": "confirm:approve:1788474807393:live-entry:ADAEUR:1788474790551"
-    },
-    {
-      "id": "7383943998729941292",
-      "data": "confirm:approve:1788474807393:live-entry:ADAEUR:1788474790551"
-    }
-  ],
+  "telegram-unclaimed-callbacks": [],
   "live:blackout-windows-cache": {
     "fetchedAt": 1788465760364,
     "windows": [
@@ -41960,12 +41930,6 @@
     "ADAEUR:1788474790551:0": {
       "neg": 0,
       "pos": 0
-    }
-  },
-  "live:live-exit-pending": {
-    "live-entry:XBTEUR:1788446384199": {
-      "reason": "manual",
-      "queuedAt": 1788476199224
     }
   },
   "live:manual-sell-pending-symbols": []

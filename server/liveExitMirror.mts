@@ -141,26 +141,50 @@ export async function proposeLiveExit(
     // triggered the exit attempt in the first place. Mirrors the identical
     // fix already shipped on the entry side (`liveEntryMirror.mts`'s
     // `hasRealExposure`).
-    const hasRealExposure = result.report.state !== 'rejected' && result.report.state !== 'cancelled';
-    if (hasRealExposure) {
-      markExitSubmitted(store, position.id, now);
-      const fillPrice = result.report.avgFillPrice ?? price;
-      if (result.report.state === 'filled') {
-        creditLiveCash(store, result.report.filledQuantity * fillPrice);
-        params.onRealizedPnl?.((fillPrice - position.entryPrice) * result.report.filledQuantity, now);
-        forgetLivePosition(store, position.id);
-        // Releases this symbol for a FUTURE fresh entry — see
-        // `liveEntryMirror.mts`'s `clearOutstandingEntry` doc comment.
-        clearOutstandingEntry(store, position.entryAssessment.asset);
-      } else if (result.report.filledQuantity > 0) {
-        // Partial fill: credit only what genuinely sold and shrink the
-        // tracked quantity by that much — the remainder is still real,
-        // still open exposure. outstandingExitSubmittedAt stays set (above)
-        // since a resting order for the rest is still live at the broker.
-        creditLiveCash(store, result.report.filledQuantity * fillPrice);
-        params.onRealizedPnl?.((fillPrice - position.entryPrice) * result.report.filledQuantity, now);
-        reduceLivePositionQuantity(store, position.id, result.report.filledQuantity);
+    //
+    // Wrapped in its own try/catch (found in a full-system review,
+    // 2026-09-04): every caller of this function pushes `{symbol, ...result}`
+    // onto its own outcomes array using the RETURN VALUE of this call — if
+    // the bookkeeping below threw and that throw escaped this function
+    // entirely, the caller's `await proposeLiveExit(...)` would throw too,
+    // so it would never even reach its own `outcomes.push`, and the true
+    // `'submitted'` fact (a real order that already reached the broker,
+    // possibly already filled) would be invisible to autopilotRunner.mts's
+    // `hasSubmittedOrder` gate — silently skipping the immediate mid-cycle
+    // persist for exactly the highest-stakes moment it exists to protect.
+    // The already-applied store writes below aren't lost either way (the
+    // cycle's own end-of-cycle persist still picks them up), but the
+    // decision of WHETHER this was worth an immediate persist must never
+    // depend on bookkeeping succeeding — only on whether a broker
+    // submission genuinely happened, which by this point it already has.
+    try {
+      const hasRealExposure = result.report.state !== 'rejected' && result.report.state !== 'cancelled';
+      if (hasRealExposure) {
+        markExitSubmitted(store, position.id, now);
+        const fillPrice = result.report.avgFillPrice ?? price;
+        if (result.report.state === 'filled') {
+          creditLiveCash(store, result.report.filledQuantity * fillPrice);
+          params.onRealizedPnl?.((fillPrice - position.entryPrice) * result.report.filledQuantity, now);
+          forgetLivePosition(store, position.id);
+          // Releases this symbol for a FUTURE fresh entry — see
+          // `liveEntryMirror.mts`'s `clearOutstandingEntry` doc comment.
+          clearOutstandingEntry(store, position.entryAssessment.asset);
+        } else if (result.report.filledQuantity > 0) {
+          // Partial fill: credit only what genuinely sold and shrink the
+          // tracked quantity by that much — the remainder is still real,
+          // still open exposure. outstandingExitSubmittedAt stays set
+          // (above) since a resting order for the rest is still live at
+          // the broker.
+          creditLiveCash(store, result.report.filledQuantity * fillPrice);
+          params.onRealizedPnl?.((fillPrice - position.entryPrice) * result.report.filledQuantity, now);
+          reduceLivePositionQuantity(store, position.id, result.report.filledQuantity);
+        }
       }
+    } catch (cause) {
+      console.error(
+        `proposeLiveExit: bookkeeping failed after a real broker submission for ${position.id}:`,
+        cause instanceof Error ? cause.message : cause,
+      );
     }
   }
   return result;

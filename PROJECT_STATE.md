@@ -4066,3 +4066,43 @@ action but before persistence, cancelling can itself cause the exact
 mitigated by the fix above (persist after every action point, not just
 per-cycle), but still worth checking a run isn't mid-cycle-with-recent-
 Telegram-activity before cancelling it, not just "it looks stuck."
+
+## 2026-09-04: the mid-cycle-persist fix caused its own regression (ENOBUFS), then a follow-up gap
+
+The "persist after every action point" fix above (2026-09-03) turned out
+to spawn far more git subprocesses per cycle than expected — routine
+Telegram-offset polling dirties the store almost every cycle, so with
+constant external pushes racing it, all 4 new call sites hit their full
+retry path nearly every cycle for hours. After ~90 minutes this
+exhausted the runner's process/pipe resources: every persist attempt
+started failing silently with `spawnSync ENOBUFS` for the rest of that
+run (found by fetching the cancelled run's job logs directly). Fixed by
+gating all 4 mid-cycle persists behind a new `hasSubmittedOrder(outcomes)`
+check — only persist immediately when a real broker order actually
+submitted (`outcome === 'submitted'`), not on every dirtying poll — and
+reducing the retry loop from 5 to 3 attempts (autopilotRunner.mts).
+
+A full-system audit (requested explicitly: "check there's no bug, 0
+mistakes") then found one narrower related gap: `proposeLiveExit`
+(liveExitMirror.mts) ran its post-fill bookkeeping (`markExitSubmitted`,
+`creditLiveCash`, etc.) BEFORE `return result`, with no internal
+try/catch — if bookkeeping threw, the exception escaped before the
+caller ever got a `result` to push, so the caller's own outer catch
+substituted a misleading non-`'submitted'` outcome, hiding from
+`hasSubmittedOrder` that a real order had already reached the broker.
+Confirmed the entry-side equivalent (`mirrorApprovedEntries`) does NOT
+have this bug (pushes its outcome before running bookkeeping). Fixed by
+wrapping the bookkeeping block in its own try/catch so `return result`
+always runs regardless; added a regression test
+(`tests/server/liveExitMirror.test.ts`) with a throwing `onRealizedPnl`
+that asserts the outcome still comes back `'submitted'`.
+
+Also cleaned up orphaned bookkeeping left over from the 2026-09-03
+manual reconciliation: a queued exit for the already-removed XBTEUR
+position (`live:live-exit-pending`), two stale confirmation-gate entries
+for superseded ADAEUR/XBTEUR intents (`live:confirmation-gate-pending`),
+and 6 stale Telegram button-tap callbacks referencing those same
+intents (`telegram-unclaimed-callbacks` and its `live:`-prefixed
+counterpart) — none of it referenced the current real position
+(`live-entry:ADAEUR:manual-reconcile-20260904`); logged as one audit-log
+entry rather than silently edited.
