@@ -1,5 +1,42 @@
 # PROJECT_STATE
 
+## Two real bugs found while scoping "add more coins" (2026-09-04)
+A coin-expansion agent correctly stopped short of adding anything after
+finding `server/autopilotRunner.mts` traded exactly
+`instruments.value.slice(0, 20)` — a hardcoded count, not
+`CURATED_INSTRUMENTS.length`. Appending symbols would have left them
+silently untraded while the UI's "TRADED" badge (same source array) kept
+claiming they trade. Fixed: the slice now derives from
+`CURATED_INSTRUMENTS.length` directly, so it can never drift out of sync
+with the array again.
+
+While fixing that, found a second, independent, pre-existing gap:
+`CoinbasePublicSource` (the fallback source used when Kraken's own probe
+fails) had its own hardcoded 10-symbol instrument list, never updated
+when `CURATED_INSTRUMENTS` grew to 20 on 2026-09-03 — a Kraken outage
+would have silently traded a smaller, stale universe with no error.
+Verified live which of the 10 newer curated symbols are actually listed
+on Coinbase (`GET /products/<SYM>-EUR`): UNI/FIL/AAVE/ATOM/XLM/ALGO are
+(200), HNT/VELO/AERO/ENA are not (404) — added the 6 real ones; the other
+4 stay a genuine, permanent Kraken-only gap for this fallback, not an
+oversight.
+
+Full gate green (tsc, 1133 tests, build). Neither fix adds or changes
+which coins actually trade — both are pure correctness fixes to keep the
+live and fallback trading universes in sync with `CURATED_INSTRUMENTS`
+going forward.
+
+**Not yet decided — a real judgment call, not a bug fix:** the
+coin-expansion agent's 13 backtest-measured candidates (USELESS excluded —
+confirmed NOT tradable on Revolut X earlier tonight) have real Kraken
+backtest evidence (≥10 trades, clear PF) but, unlike the BREAKOUT lead
+rejected earlier tonight, NONE of them have a live shadow forward-test
+record to cross-check against — and that exact cross-check is what caught
+BREAKOUT's backtest being wrong (+6.48% backtest vs -2.05% real, same
+night). Adding several at once straight to real trading on backtest alone
+repeats the exact mistake that lesson was about. Flagged to David directly
+rather than decided here.
+
 ## ENOBUFS, take 4 — the real cause: piping a 1MB+ file through Node (2026-09-04)
 Neither of the previous two fixes (stdio 'ignore' for unread output, then a
 backoff between retry attempts) stopped this from recurring — confirmed

@@ -15,7 +15,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { KrakenPublicSource } from '../src/core/data/krakenPublic';
+import { CURATED_INSTRUMENTS, KrakenPublicSource } from '../src/core/data/krakenPublic';
 import { CoinbasePublicSource } from '../src/core/data/coinbasePublic';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import { PersistedAuditLog } from '../src/core/autopilot/auditLog';
@@ -586,14 +586,18 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  // Trade ONLY the validated majors (the first 20 curated instruments — see
-  // the CURATED_INSTRUMENTS doc comment in krakenPublic.ts for the 2026-09-03
-  // measurements that added 6, then 4 more, to the original 10). The
-  // instrument list was broadened for display/browsing; capping here keeps
-  // the capital-risking universe exactly the measured majors — broadening
-  // trading further is a separate, must-be-measured change (see
-  // PROJECT_STATE pending queue).
-  const symbols = instruments.value.slice(0, 20).map((i) => i.symbol);
+  // Trade ONLY the validated majors — see the CURATED_INSTRUMENTS doc
+  // comment in krakenPublic.ts for the real-history measurements behind
+  // each addition. The instrument list is broadened beyond this for
+  // display/browsing (see getInstruments there: CURATED_INSTRUMENTS always
+  // comes first, in order, so this slice always lines up with it exactly).
+  // Derived from CURATED_INSTRUMENTS.length rather than a hardcoded count —
+  // found in review, 2026-09-04: a hardcoded 20 here required remembering
+  // to bump it in the SAME change as every future addition to
+  // CURATED_INSTRUMENTS, or a newly-curated symbol would be silently
+  // excluded from real trading while the UI's "TRADED" badge (CURATED_BASES,
+  // the same source array) kept claiming it traded.
+  const symbols = instruments.value.slice(0, CURATED_INSTRUMENTS.length).map((i) => i.symbol);
 
   const journal = new TradeJournal(store);
   const positions = new PositionEngine(store, journal);

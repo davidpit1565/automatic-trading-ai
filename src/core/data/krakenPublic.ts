@@ -40,10 +40,12 @@ const INTERVAL_MINUTES: Record<Timeframe, number> = {
 /**
  * Curated majors, EUR-quoted. Kraken names Bitcoin XBT; we display BTC.
  * TRADED by the agent (`server/autopilotRunner.mts` trades exactly
- * `instruments.slice(0, 20)`) — this order is load-bearing. Do NOT reorder
- * or insert above this line; broadening the browsable universe happens by
- * appending more instruments after it (see `getInstruments` below), never by
- * changing what these first 20 are.
+ * `instruments.slice(0, CURATED_INSTRUMENTS.length)` — derives the count
+ * from this array's own length, not a hardcoded number, since 2026-09-04)
+ * — this order is load-bearing. Do NOT reorder or insert above this line;
+ * broadening the browsable universe happens by appending more instruments
+ * after it (see `getInstruments` below), never by changing what these
+ * curated ones are.
  *
  * The first 10 (XBT…AVAX) are the original measured majors. UNI/FIL/AAVE/
  * ATOM/XLM/ALGO were added 2026-09-03 after measuring each candidate on real

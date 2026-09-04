@@ -35,6 +35,18 @@ const PLAN: Record<Timeframe, { granularitySec: number; group: number }> = {
   '1w': { granularitySec: 86_400, group: 7 },
 };
 
+/**
+ * Found in review, 2026-09-04: this list only ever had the original 10
+ * curated majors, never updated when `CURATED_INSTRUMENTS` (krakenPublic.ts)
+ * grew to 20 on 2026-09-03 — so a Kraken outage (this is the FALLBACK
+ * source, used when Kraken's own probe fails) silently traded a smaller,
+ * stale universe, missing every symbol added since, with no error or
+ * indication anything was different. Added the 6 that are genuinely listed
+ * here (verified via a live products lookup, 2026-09-04) — UNI/FIL/AAVE/
+ * ATOM/XLM/ALGO. HNT/VELO/AERO/ENA are NOT listed on Coinbase at all
+ * (verified 404 on `/products/<SYM>-EUR`) — a real, permanent gap for this
+ * fallback specifically, not an oversight: those 4 stay Kraken-only.
+ */
 const INSTRUMENTS: Instrument[] = [
   { symbol: 'BTC-EUR', base: 'BTC', quote: 'EUR' },
   { symbol: 'ETH-EUR', base: 'ETH', quote: 'EUR' },
@@ -46,6 +58,12 @@ const INSTRUMENTS: Instrument[] = [
   { symbol: 'DOT-EUR', base: 'DOT', quote: 'EUR' },
   { symbol: 'LINK-EUR', base: 'LINK', quote: 'EUR' },
   { symbol: 'AVAX-EUR', base: 'AVAX', quote: 'EUR' },
+  { symbol: 'UNI-EUR', base: 'UNI', quote: 'EUR' },
+  { symbol: 'FIL-EUR', base: 'FIL', quote: 'EUR' },
+  { symbol: 'AAVE-EUR', base: 'AAVE', quote: 'EUR' },
+  { symbol: 'ATOM-EUR', base: 'ATOM', quote: 'EUR' },
+  { symbol: 'XLM-EUR', base: 'XLM', quote: 'EUR' },
+  { symbol: 'ALGO-EUR', base: 'ALGO', quote: 'EUR' },
 ];
 
 export interface CoinbasePublicSourceOptions {
