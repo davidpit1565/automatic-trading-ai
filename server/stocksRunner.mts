@@ -97,6 +97,12 @@ const STATE_COMMIT_EVERY = Math.max(0, Number(process.env['STOCKS_STATE_COMMIT_E
  * fix as the crypto runner's own helper (2026-09-03, PROJECT_STATE.md) —
  * applied here too since this file duplicates the same vulnerable shape.
  */
+/** Blocking sleep with no subprocess spawn (Atomics.wait on a throwaway
+ * SharedArrayBuffer) — see persistStateToGit's retry loop for why. */
+function sleepSyncMs(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
 function persistStateToGit(store: FileStore, label: string): void {
   if (process.env['GITHUB_ACTIONS'] !== 'true') return;
   // 3 retries (not 5) and `stdio: 'ignore'` by default, capturing output only
@@ -129,6 +135,11 @@ function persistStateToGit(store: FileStore, label: string): void {
         return;
       } catch {
         try {
+          // Same real incident and fix as the crypto runner's own helper
+          // (2026-09-04) — a backoff between retry attempts, matching what
+          // autopilot.yml's own "Commit updated state" YAML step has always
+          // done (`sleep $((attempt * 3))`) and never failed with.
+          sleepSyncMs(attempt * 3000);
           run('git fetch origin main');
           const origin = JSON.parse(run(`git show origin/main:${STATE_PATH}`, true)) as Record<string, unknown>;
           for (const key of store.dirtyKeys()) origin[key] = store.get(key);

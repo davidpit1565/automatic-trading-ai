@@ -1,5 +1,23 @@
 # PROJECT_STATE
 
+## ENOBUFS, take 3: the stdio-piping fix wasn't it — missing backoff was (2026-09-04)
+The previous entry's fix (stdio 'ignore' instead of piping every
+subprocess's output) shipped, ran clean for ~6 hours (64 cycles, no
+conflicts ever arose to test it), then a LATER run hit a real push
+conflict and failed with the identical `spawnSync ENOBUFS` anyway —
+proof the stdio theory was wrong, or at least incomplete. Told David
+plainly rather than re-asserting the earlier "confirmed fix" claim.
+
+The real difference, found by comparing against the ONE retry loop in
+this codebase that has never once failed this way: `autopilot.yml`'s own
+end-of-run "Commit updated state" YAML step has always backed off between
+push retries (`sleep $((attempt * 3))`). `persistStateToGit`'s in-process
+retry loop fired all 3 attempts back to back with zero delay between
+them. Added the same backoff (`sleepSyncMs`, a blocking `Atomics.wait` —
+no subprocess spawned, unlike shelling out to `sleep`) before each retry
+attempt in both `autopilotRunner.mts` and `stocksRunner.mts`. Redispatched
+a fresh run afterward to verify. Full gate green (tsc, 1132 tests, build).
+
 ## Bare /buy and /sell (no symbol) silently did nothing — real incident, David's own screenshot (2026-09-04)
 David tapped the "לקנייה: /buy <SYMBOL>" line inside a momentum-spike alert
 (`detectMomentumSpikes.mts`) and only the bare text `/buy` was sent — no

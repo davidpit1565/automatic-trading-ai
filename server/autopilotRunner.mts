@@ -203,6 +203,12 @@ function hasSubmittedOrder(outcomes: readonly { readonly outcome: string }[]): b
   return outcomes.some((o) => o.outcome === 'submitted');
 }
 
+/** Blocking sleep with no subprocess spawn (Atomics.wait on a throwaway
+ * SharedArrayBuffer) — see persistStateToGit's retry loop for why. */
+function sleepSyncMs(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
 function persistStateToGit(store: FileStore, label: string): void {
   if (process.env['GITHUB_ACTIONS'] !== 'true') return;
   // `stdio: 'ignore'` by default (2026-09-04, second ENOBUFS recurrence same
@@ -249,6 +255,16 @@ function persistStateToGit(store: FileStore, label: string): void {
         return;
       } catch {
         try {
+          // A real incident, 2026-09-04: the stdio-piping fix above didn't
+          // stop ENOBUFS — it recurred again, still on this same
+          // fetch/show/reset/add/commit burst, even with piping removed.
+          // The end-of-run YAML step's own equivalent retry loop (see
+          // autopilot.yml's "Commit updated state" step) has ALWAYS backed
+          // off between attempts (`sleep $((attempt * 3))`) and has never
+          // hit this; this loop fired all 3 attempts back to back with NO
+          // delay. Matching that backoff here is the one difference between
+          // the loop that's never failed and the one that kept failing.
+          sleepSyncMs(attempt * 3000);
           run('git fetch origin main');
           const origin = JSON.parse(run(`git show origin/main:${STATE_PATH}`, true)) as Record<string, unknown>;
           for (const key of store.dirtyKeys()) origin[key] = store.get(key);
