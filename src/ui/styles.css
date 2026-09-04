@@ -226,11 +226,12 @@ body {
 .control {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.35rem;
   font-size: 0.78rem;
   color: var(--text-dim);
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
 }
 
 .control input,
@@ -238,9 +239,13 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
-  border-radius: var(--r-sm);
-  padding: 0.55rem 0.75rem;
+  /* A step rounder than the old --r-sm, matching how every other input-like
+     surface built since (mk-search, of-input) reads noticeably softer than
+     this original form-control treatment. */
+  border-radius: var(--r-md);
+  padding: 0.7rem 0.9rem;
   font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
   min-width: 7rem;
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
@@ -335,6 +340,40 @@ button.secondary:active {
   transform: scale(0.98);
 }
 
+/* Buy/Sell as two semantically distinct actions, not two identical black-on-
+   white pills — the reference never renders its own Buy/Sell pair the same
+   colour (see .of-btn.active.buy/.sell, the same tint pair reused here for
+   an actual clickable button rather than the inert order-form preview). */
+button.btn-buy,
+button.btn-sell {
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 0.95rem 1.9rem;
+  font-size: 1rem;
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease);
+}
+button.btn-buy { background: var(--hot-tint); color: var(--hot); }
+button.btn-sell { background: var(--cold-tint); color: var(--cold); }
+button.btn-buy:hover,
+button.btn-sell:hover { filter: brightness(1.15); }
+button.btn-buy:active,
+button.btn-sell:active { transform: scale(0.98); }
+button.btn-buy:disabled,
+button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: none; }
+
+/* A repeatable "big number + small label" tile — the single most-reused
+   component in the reference's own UI (price/change/high/low on every
+   screen) that this app had never built as its own generic class; every
+   place needing it so far improvised a bespoke one-off instead. */
+.stat-row { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 0.9rem 0; }
+.stat-tile { display: flex; flex-direction: column; gap: 0.15rem; }
+.stat-tile-value { font-size: 1.05rem; font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; letter-spacing: var(--tracking-tight); }
+.stat-tile-value.up { color: var(--hot); }
+.stat-tile-value.down { color: var(--cold); }
+.stat-tile-label { font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: var(--tracking-wide); }
+
 .status-line {
   color: var(--text-dim);
   font-size: 0.85rem;
@@ -361,9 +400,20 @@ button.secondary:active {
 
 .data-table th,
 .data-table td {
-  padding: 0.6rem 0.8rem;
+  padding: 0.7rem 0.8rem;
   text-align: right;
   border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A hover highlight was the one row-level affordance every other table/list
+   in the app already has (.scan-row, .market-row, .row) and this table
+   never got. */
+.data-table tbody tr {
+  transition: background var(--dur-fast) var(--ease);
+}
+.data-table tbody tr:hover {
+  background: var(--surface-hover);
 }
 
 .data-table th:first-child,
@@ -423,22 +473,22 @@ button.secondary:active {
   letter-spacing: var(--tracking-wide);
 }
 
+/* Tint-fill only, no drawn border — the same "elevation via fill
+   difference, never a stroke" rule the rest of the app already applies to
+   cards; these three were the one surface still keeping a visible outline. */
 .badge-hot {
   background: var(--hot-tint);
   color: var(--hot);
-  border: 1px solid rgba(76, 215, 135, 0.4);
 }
 
 .badge-cold {
   background: var(--cold-tint);
   color: var(--cold);
-  border: 1px solid rgba(242, 109, 125, 0.4);
 }
 
 .badge-neutral {
   background: var(--neutral-tint);
   color: var(--neutral);
-  border: 1px solid rgba(139, 147, 165, 0.35);
 }
 
 .scan-detail td {
@@ -618,12 +668,23 @@ button.secondary:active {
 }
 
 .stat-card {
-  background: var(--surface);
+  /* Gradient fill, not flat — matches the elevation treatment every other
+     card in the app already uses (.market-card/.tool-card/.hero); a flat
+     `var(--surface)` fill here was the one card type in the app that never
+     got that pass. */
+  background: linear-gradient(160deg, var(--surface-raised), var(--surface));
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   padding: 0.8rem 1.05rem;
   box-shadow: var(--shadow-xs);
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
+/* Same hairline-lift hover every other card gets — result cards (Backtest)
+   are the one place this component appears today, and comparing several of
+   them side by side is exactly the "scannable grid of cards" case the
+   reference always gives a hover affordance. */
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+@media (prefers-reduced-motion: reduce) { .stat-card:hover { transform: none; } }
 
 .stat-card .stat-label {
   font-size: 0.72rem;
@@ -790,7 +851,33 @@ button.secondary:active {
 /* ============================================================= */
 /* v2 shell — professional phone-first app (Home/Markets/etc.)   */
 /* ============================================================= */
-.app { min-height: 100dvh; }
+.app { min-height: 100dvh; position: relative; }
+
+/* Every OTHER screen (Markets, Tools, Backtest, Portfolio, the asset hubs)
+   has no hero card to carry an ambient wash of its own, so next to Home they
+   read as flat dead-black voids — David asked directly to "pay attention to
+   the background too". Two fixed, near-imperceptible radial highlights
+   pinned to opposite corners of the viewport give every page the same
+   sense of depth a hero's own glow gives Home, without inventing a second
+   colour signal (pure neutral white, not hot/cold). z-index sits below the
+   ambient-wash's sentiment colour (-1) so Home's own wash still paints on
+   top of this baseline rather than fighting it. */
+.app::before {
+  content: ''; position: fixed; inset: 0; z-index: -3; pointer-events: none;
+  background:
+    radial-gradient(60% 40% at 12% -6%, rgba(255, 255, 255, 0.05) 0%, transparent 62%),
+    radial-gradient(55% 38% at 108% 100%, rgba(255, 255, 255, 0.035) 0%, transparent 65%);
+}
+/* A whisper of film grain over the flat black — the single cheapest fix for
+   the "dead void" look a pure flat fill has under real screen brightness.
+   Generated noise, not an image asset; opacity is low enough that it reads
+   as texture, not as visible speckle. */
+.app::after {
+  content: ''; position: fixed; inset: 0; z-index: -2; pointer-events: none;
+  opacity: 0.025; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
 
 /* Fixed, full-bleed colour wash pinned behind the topbar and the gap above
    the hero — the iOS 26 "liquid glass" look needs something colourful
@@ -799,11 +886,15 @@ button.secondary:active {
    Tracks the hero's own up/down sentiment class (mirrored onto <body> by
    homeView.ts) rather than inventing a second, meaningless colour signal.
    z-index: -1 keeps it behind ordinary (z-index: auto) page content while
-   still showing through the topbar, which sits above it at z-index: 20. */
+   still showing through the topbar, which sits above it at z-index: 20.
+   The fallback (no sentiment set — every screen besides Home) is now a
+   quiet neutral tint rather than fully transparent, so this wash still
+   contributes a little life to every OTHER page instead of switching off
+   completely the moment you leave Home. */
 .ambient-wash {
   position: fixed; top: 0; left: 0; right: 0; height: 460px; z-index: -1;
   pointer-events: none; filter: blur(8px);
-  background: radial-gradient(110% 65% at 35% -15%, var(--wash-color, transparent) 0%, transparent 75%);
+  background: radial-gradient(110% 65% at 35% -15%, var(--wash-color, rgba(255, 255, 255, 0.035)) 0%, transparent 75%);
   transition: opacity var(--dur-slow) var(--ease);
 }
 /* David compared this against Revolut X directly (2026-09-03): its own
@@ -1478,7 +1569,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 /* Fill-difference elevation, no border — the reference separates a card
    from its background via a barely-there fill contrast, never a visible
    outline. */
-.dstat { flex: 1; background: var(--surface); border-radius: var(--r-sm);
+.dstat { flex: 1; background: linear-gradient(160deg, var(--surface-raised), var(--surface)); border-radius: var(--r-sm);
   padding: 0.5rem 0.6rem; display: flex; flex-direction: column; gap: 0.15rem; }
 .dstat-label { font-size: 0.68rem; color: var(--text-dim); }
 .dstat-value { font-size: 0.85rem; font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
@@ -1491,7 +1582,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .view-tab:hover { color: var(--text); }
 .view-tab:active { transform: scale(0.94); }
 .view-tab.active { background: var(--surface-raised); color: #fff; }
-.detail-nonchart { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+.detail-nonchart { background: linear-gradient(160deg, var(--surface-raised), var(--surface)); border: 1px solid var(--border); border-radius: var(--r-lg);
   padding: 0.8rem; box-shadow: var(--shadow-xs); min-height: 160px; }
 
 /* Trade tab — mirrors Revolut X's order form visually; every control is
@@ -1527,7 +1618,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .detail-price-row .chg { font-size: 1rem; }
 /* Detail chart responsive sizing */
 .detail-chart {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 0.8rem;
+  background: linear-gradient(160deg, var(--surface-raised), var(--surface)); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 0.8rem;
   box-shadow: var(--shadow-xs);
 }
 .detail-chart svg { width: 100%; height: 210px; display: block; }
@@ -1660,7 +1751,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .ready-badge.no { background: var(--warn-tint); color: var(--warn); border: 1px solid rgba(245,185,61,0.4); }
 .readiness-note { color: var(--text-dim); font-size: 0.8rem; margin: 0.25rem 0 0.6rem; }
 .readiness-list { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-direction: column;
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+  background: linear-gradient(160deg, var(--surface-raised), var(--surface)); border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
 .readiness-list li { font-size: 0.85rem; padding: 0.6rem 0.75rem; display: flex; align-items: center; gap: 0.6rem;
   border-bottom: 1px solid var(--border); }
 .readiness-list li:last-child { border-bottom: none; }
