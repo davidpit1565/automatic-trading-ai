@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 10233.395033204375,
+    "cash": 8180.575989543577,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 468.1046649374871,
@@ -9,7 +9,27 @@
       "equity": 10233.395033204375
     }
   },
-  "open-positions": [],
+  "open-positions": [
+    {
+      "id": "DOTEUR:1788602254561:0",
+      "symbol": "DOTEUR",
+      "openedAt": 1788602254561,
+      "entryPrice": 0.7881,
+      "quantity": 2596.978818222148,
+      "initialQuantity": 2596.978818222148,
+      "stopLoss": 0.7684853703873774,
+      "takeProfit": 0.8273292592252454,
+      "feesPaid": 6.140037019922626,
+      "realizedPnl": 0,
+      "highestPrice": 0.7881,
+      "lowestPrice": 0.7881,
+      "confidence": 50.87747205117943,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "audit-log": [
     {
       "timestamp": 1784042069348,
@@ -1627,12 +1647,19 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 10930.514162234536 @ 0.182817 (stop-loss)"
+    },
+    {
+      "timestamp": 1788602254561,
+      "intentId": "DOTEUR:1788602254561:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry DOTEUR: 2596.978818222148 @ 0.7881 (stop 0.7684853703873774, target 0.8273292592252454, confidence 51)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1788601914816,
+    "at": 1788602254561,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -1646,10 +1673,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1786737940024,
-      "equity": 9568.52
-    },
     {
       "at": 1786738246584,
       "equity": 9568.52
@@ -21645,6 +21668,10 @@
     {
       "at": 1788601914816,
       "equity": 10233.4
+    },
+    {
+      "at": 1788602254561,
+      "equity": 10225.18
     }
   ],
   "trade-journal": [
@@ -22895,7 +22922,8 @@
     "o:ADAEUR:1788422331224:0",
     "c:ADAEUR:1788422331224:0",
     "o:ADAEUR:1788474790551:0",
-    "c:ADAEUR:1788474790551:0"
+    "c:ADAEUR:1788474790551:0",
+    "o:DOTEUR:1788602254561:0"
   ],
   "real-money-readiness": {
     "ready": true,
@@ -22918,7 +22946,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -19.32% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -19.36% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -22951,7 +22979,7 @@
   },
   "shadow:live-mirror:shadow-started-at": 1785254092443,
   "shadow:live-mirror:portfolio-engine": {
-    "cash": 10613.727005826879,
+    "cash": 8484.613368458007,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 774.7659360570394,
@@ -22962,7 +22990,7 @@
   },
   "shadow:no-confirm:shadow-started-at": 1785254092443,
   "shadow:no-confirm:portfolio-engine": {
-    "cash": 10613.727005826879,
+    "cash": 8484.613368458007,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 774.7659360570394,
@@ -22973,7 +23001,7 @@
   },
   "shadow:fixed-stop:shadow-started-at": 1785254092443,
   "shadow:fixed-stop:portfolio-engine": {
-    "cash": 10613.727005826879,
+    "cash": 8484.613368458007,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 774.7659360570394,
@@ -23016,39 +23044,39 @@
     }
   },
   "shadow-standings": {
-    "at": 1788601914816,
+    "at": 1788602254561,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10613.727005826879,
-        "returnPct": 6.137270058268786,
+        "equity": 10609.247813331514,
+        "returnPct": 6.0924781333151445,
         "trades": 27,
         "winRatePct": 59.25925925925925,
         "profitFactor": 1.9516050182398137,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1785254092443
       },
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10613.727005826879,
-        "returnPct": 6.137270058268786,
+        "equity": 10609.247813331514,
+        "returnPct": 6.0924781333151445,
         "trades": 27,
         "winRatePct": 59.25925925925925,
         "profitFactor": 1.9516050182398137,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1785254092443
       },
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10613.727005826879,
-        "returnPct": 6.137270058268786,
+        "equity": 10609.247813331514,
+        "returnPct": 6.0924781333151445,
         "trades": 27,
         "winRatePct": 59.25925925925925,
         "profitFactor": 1.9516050182398137,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1785254092443
       },
       {
@@ -23076,8 +23104,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9915.188705472565,
-        "returnPct": -0.8481129452743517,
+        "equity": 9927.340437913,
+        "returnPct": -0.7265956208699935,
         "trades": 148,
         "winRatePct": 40.54054054054054,
         "profitFactor": 1.209527367324308,
@@ -23109,12 +23137,12 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10421.622515561494,
-        "returnPct": 4.216225155614939,
+        "equity": 10417.224394775496,
+        "returnPct": 4.17224394775496,
         "trades": 15,
         "winRatePct": 60,
         "profitFactor": 1.897133678736788,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1787242347381
       }
     ]
@@ -23131,7 +23159,7 @@
       "takeProfit": 0.7996020743477774,
       "feesPaid": 5.8770621948019555,
       "realizedPnl": 0,
-      "highestPrice": 0.784,
+      "highestPrice": 0.7866,
       "lowestPrice": 0.7584,
       "confidence": 68.7862741431371,
       "validationVerdict": null,
@@ -28687,6 +28715,20 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused LINKEUR: no exposure headroom: 5965.15 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1788602254561,
+      "intentId": "DOGEEUR:1788602254561",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused DOGEEUR: no exposure headroom: 5976.53 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1788602254561,
+      "intentId": "LINKEUR:1788602254561",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LINKEUR: no exposure headroom: 5976.53 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -33980,7 +34022,27 @@
       "detail": "paper entry FILEUR: 2897.839873379119 @ 0.644 (stop 0.6288213575773497, target 0.6743572848453006, confidence 34)"
     }
   ],
-  "shadow:live-mirror:open-positions": [],
+  "shadow:live-mirror:open-positions": [
+    {
+      "id": "DOTEUR:1788602254561:0",
+      "symbol": "DOTEUR",
+      "openedAt": 1788602254561,
+      "entryPrice": 0.7866,
+      "quantity": 2698.6338687584234,
+      "initialQuantity": 2698.6338687584234,
+      "stopLoss": 0.7669853703873774,
+      "takeProfit": 0.8258292592252453,
+      "feesPaid": 6.368236203496128,
+      "realizedPnl": 0,
+      "highestPrice": 0.7866,
+      "lowestPrice": 0.7866,
+      "confidence": 50.68212848735886,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:live-mirror:audit-log": [
     {
       "timestamp": 1785347897947,
@@ -34499,9 +34561,36 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 11362.189296723178 @ 0.182507 (stop-loss)"
+    },
+    {
+      "timestamp": 1788602254561,
+      "intentId": "DOTEUR:1788602254561:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry DOTEUR: 2698.6338687584234 @ 0.7866 (stop 0.7669853703873774, target 0.8258292592252453, confidence 51)"
     }
   ],
-  "shadow:no-confirm:open-positions": [],
+  "shadow:no-confirm:open-positions": [
+    {
+      "id": "DOTEUR:1788602254561:0",
+      "symbol": "DOTEUR",
+      "openedAt": 1788602254561,
+      "entryPrice": 0.7866,
+      "quantity": 2698.6338687584234,
+      "initialQuantity": 2698.6338687584234,
+      "stopLoss": 0.7669853703873774,
+      "takeProfit": 0.8258292592252453,
+      "feesPaid": 6.368236203496128,
+      "realizedPnl": 0,
+      "highestPrice": 0.7866,
+      "lowestPrice": 0.7866,
+      "confidence": 42.68212848735886,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:no-confirm:audit-log": [
     {
       "timestamp": 1785347897947,
@@ -35020,9 +35109,36 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 11362.189296723178 @ 0.182507 (stop-loss)"
+    },
+    {
+      "timestamp": 1788602254561,
+      "intentId": "DOTEUR:1788602254561:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry DOTEUR: 2698.6338687584234 @ 0.7866 (stop 0.7669853703873774, target 0.8258292592252453, confidence 43)"
     }
   ],
-  "shadow:fixed-stop:open-positions": [],
+  "shadow:fixed-stop:open-positions": [
+    {
+      "id": "DOTEUR:1788602254561:0",
+      "symbol": "DOTEUR",
+      "openedAt": 1788602254561,
+      "entryPrice": 0.7866,
+      "quantity": 2698.6338687584234,
+      "initialQuantity": 2698.6338687584234,
+      "stopLoss": 0.7669853703873774,
+      "takeProfit": 0.8258292592252453,
+      "feesPaid": 6.368236203496128,
+      "realizedPnl": 0,
+      "highestPrice": 0.7866,
+      "lowestPrice": 0.7866,
+      "confidence": 50.68212848735886,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:fixed-stop:audit-log": [
     {
       "timestamp": 1785347897947,
@@ -35541,6 +35657,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 11362.189296723178 @ 0.182507 (stop-loss)"
+    },
+    {
+      "timestamp": 1788602254561,
+      "intentId": "DOTEUR:1788602254561:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry DOTEUR: 2698.6338687584234 @ 0.7866 (stop 0.7669853703873774, target 0.8258292592252453, confidence 51)"
     }
   ],
   "shadow:live-mirror:trade-journal": [
@@ -39518,6 +39641,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 11484.906734735361 @ 0.182507 (stop-loss)"
+    },
+    {
+      "timestamp": 1788602254561,
+      "intentId": "DOTEUR:1788602254561",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused DOTEUR: large trades show heavy net selling"
     }
   ],
   "shadow:top-trader:open-positions": [],
@@ -40284,6 +40414,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused ADAEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1788602254561,
+      "intentId": "DOTEUR:1788602254561",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused DOTEUR: OKX top traders are net-short"
     }
   ],
   "shadow:whale-flow:open-positions": [],
@@ -40753,7 +40890,7 @@
   ],
   "shadow:ai-judgment:shadow-started-at": 1787242347381,
   "shadow:ai-judgment:portfolio-engine": {
-    "cash": 10421.622515561494,
+    "cash": 8331.045038939857,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 509.2052205501675,
@@ -40762,7 +40899,27 @@
       "equity": 10421.622515561494
     }
   },
-  "shadow:ai-judgment:open-positions": [],
+  "shadow:ai-judgment:open-positions": [
+    {
+      "id": "DOTEUR:1788602254561:0",
+      "symbol": "DOTEUR",
+      "openedAt": 1788602254561,
+      "entryPrice": 0.7866,
+      "quantity": 2649.7896047702757,
+      "initialQuantity": 2649.7896047702757,
+      "stopLoss": 0.7669853703873774,
+      "takeProfit": 0.8258292592252453,
+      "feesPaid": 6.252973509336896,
+      "realizedPnl": 0,
+      "highestPrice": 0.7866,
+      "lowestPrice": 0.7866,
+      "confidence": 50.68212848735886,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:ai-judgment:audit-log": [
     {
       "timestamp": 1787242970406,
@@ -41148,6 +41305,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 11156.537918847382 @ 0.182507 (stop-loss)"
+    },
+    {
+      "timestamp": 1788602254561,
+      "intentId": "DOTEUR:1788602254561:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry DOTEUR: 2649.7896047702757 @ 0.7866 (stop 0.7669853703873774, target 0.8258292592252453, confidence 51)"
     }
   ],
   "shadow:ai-judgment:trade-journal": [
@@ -41543,7 +41707,51 @@
     }
   ],
   "live:telegram-unclaimed-callbacks": [],
-  "live:live-entry-pending": {},
+  "live:live-entry-pending": {
+    "DOTEUR": {
+      "opportunity": {
+        "symbol": "DOTEUR",
+        "timeframe": "1h",
+        "direction": "long",
+        "levels": {
+          "entry": 0.7881,
+          "stopLoss": 0.7684853703873774,
+          "takeProfit": 0.8273292592252454,
+          "riskReward": 2
+        },
+        "confidence": 50.87747205117943,
+        "confidenceComponents": [
+          {
+            "label": "Scanner evidence",
+            "detail": "composite score 52 of 100",
+            "effect": 31.117185230835357
+          },
+          {
+            "label": "Trend strength",
+            "detail": "ADX 28.6",
+            "effect": 4.30309007285541
+          },
+          {
+            "label": "Volume participation",
+            "detail": "1.75× average volume",
+            "effect": 7.457196747488668
+          },
+          {
+            "label": "Higher timeframe confirmation (4h)",
+            "detail": "score 41 on the 4h chart",
+            "effect": 8
+          }
+        ],
+        "explanation": "DOTEUR on the 1h timeframe shows bullish technical evidence (score 52/100 over 150 candles), driven mainly by Trend (EMA 20/50 + ADX) (EMA20 0.768 vs EMA50 0.759, ADX 28.6), Stochastic %K 14 (%K 95.4), Volume (vs 20-bar average) (relative volume 1.75×). Suggested plan: enter near 0.7881, stop loss at 0.7685 (2× ATR below entry), take profit at 0.8273 (4× ATR above), risk/reward 2.0. Confidence 43/90 reflects the strength of current evidence only — it is not a guarantee, and any position should be sized so its loss at the stop is acceptable. The larger 4h trend confirms this setup (score 41).",
+        "warnings": [],
+        "basedOn": {
+          "score": 51.861975384725596,
+          "candleCount": 150
+        }
+      },
+      "queuedAt": 1788602254561
+    }
+  },
   "live:manual-buy-pending-symbols": [],
   "live:audit-log": [
     {
@@ -42035,6 +42243,13 @@
       "event": "kill-switch-disengaged",
       "mode": "live",
       "detail": "kill switch disengaged manually by david"
+    },
+    {
+      "timestamp": 1788602277287,
+      "intentId": "live-entry:DOTEUR:1788602254561",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -43074,6 +43289,10 @@
     {
       "at": 1788601914816,
       "equity": 116.59
+    },
+    {
+      "at": 1788602254561,
+      "equity": 116.58
     }
   ],
   "live:revolut-x-order-map": {
@@ -43232,7 +43451,13 @@
   "telegram-shared-update-offset": 447904717,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:confirmation-gate-pending": {
+    "live-entry:DOTEUR:1788602254561": {
+      "sentAt": 1788602277097,
+      "messageId": 493,
+      "token": "mto7m5m1.ht9iyh"
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 8841.540736853956,
@@ -43245,13 +43470,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1788601914816,
+    "at": 1788602254561,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "13 new candidates, production defaults (forward test only — not real trading)",
-        "equity": 10002.940573257674,
-        "returnPct": 0.02940573257674259,
+        "equity": 10000.503239018903,
+        "returnPct": 0.005032390189026046,
         "trades": 0,
         "winRatePct": null,
         "profitFactor": null,
@@ -43289,5 +43514,20 @@
       "mode": "paper",
       "detail": "paper entry DASHEUR: 20.143258171665497 @ 57.339 (stop 52.37455983109699, target 67.26788033780602, confidence 50)"
     }
-  ]
+  ],
+  "move-alert-buckets": {
+    "DOTEUR:1788602254561:0": {
+      "neg": 0,
+      "pos": 0
+    }
+  },
+  "live:live-blackout-queue": {
+    "DOTEUR": {
+      "symbol": "DOTEUR",
+      "entry": 0.7881,
+      "stopLoss": 0.7684853703873774,
+      "takeProfit": 0.8273292592252454,
+      "queuedAt": 1788602254561
+    }
+  }
 }
