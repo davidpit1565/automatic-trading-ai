@@ -1657,7 +1657,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788603324084,
+    "at": 1788603680268,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1673,10 +1673,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1786739167518,
-      "equity": 9568.52
-    },
     {
       "at": 1786739474040,
       "equity": 9568.52
@@ -21672,6 +21668,10 @@
     {
       "at": 1788603324084,
       "equity": 10220.76
+    },
+    {
+      "at": 1788603680268,
+      "equity": 10222.84
     }
   ],
   "trade-journal": [
@@ -22946,7 +22946,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -19.40% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -19.36% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23044,13 +23044,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1788603324084,
+    "at": 1788603680268,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10604.660135754624,
-        "returnPct": 6.046601357546242,
+        "equity": 10606.819042849631,
+        "returnPct": 6.06819042849631,
         "trades": 27,
         "winRatePct": 59.25925925925925,
         "profitFactor": 1.9516050182398137,
@@ -23060,8 +23060,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10604.660135754624,
-        "returnPct": 6.046601357546242,
+        "equity": 10606.819042849631,
+        "returnPct": 6.06819042849631,
         "trades": 27,
         "winRatePct": 59.25925925925925,
         "profitFactor": 1.9516050182398137,
@@ -23071,8 +23071,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10604.660135754624,
-        "returnPct": 6.046601357546242,
+        "equity": 10606.819042849631,
+        "returnPct": 6.06819042849631,
         "trades": 27,
         "winRatePct": 59.25925925925925,
         "profitFactor": 1.9516050182398137,
@@ -23104,8 +23104,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9923.463540298115,
-        "returnPct": -0.7653645970188517,
+        "equity": 9923.908385704872,
+        "returnPct": -0.7609161429512823,
         "trades": 148,
         "winRatePct": 40.54054054054054,
         "profitFactor": 1.209527367324308,
@@ -23137,8 +23137,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10412.719752447385,
-        "returnPct": 4.12719752447385,
+        "equity": 10414.839584131201,
+        "returnPct": 4.148395841312013,
         "trades": 15,
         "winRatePct": 60,
         "profitFactor": 1.897133678736788,
@@ -41707,51 +41707,7 @@
     }
   ],
   "live:telegram-unclaimed-callbacks": [],
-  "live:live-entry-pending": {
-    "DOTEUR": {
-      "opportunity": {
-        "symbol": "DOTEUR",
-        "timeframe": "1h",
-        "direction": "long",
-        "levels": {
-          "entry": 0.7881,
-          "stopLoss": 0.7684853703873774,
-          "takeProfit": 0.8273292592252454,
-          "riskReward": 2
-        },
-        "confidence": 50.87747205117943,
-        "confidenceComponents": [
-          {
-            "label": "Scanner evidence",
-            "detail": "composite score 52 of 100",
-            "effect": 31.117185230835357
-          },
-          {
-            "label": "Trend strength",
-            "detail": "ADX 28.6",
-            "effect": 4.30309007285541
-          },
-          {
-            "label": "Volume participation",
-            "detail": "1.75× average volume",
-            "effect": 7.457196747488668
-          },
-          {
-            "label": "Higher timeframe confirmation (4h)",
-            "detail": "score 41 on the 4h chart",
-            "effect": 8
-          }
-        ],
-        "explanation": "DOTEUR on the 1h timeframe shows bullish technical evidence (score 52/100 over 150 candles), driven mainly by Trend (EMA 20/50 + ADX) (EMA20 0.768 vs EMA50 0.759, ADX 28.6), Stochastic %K 14 (%K 95.4), Volume (vs 20-bar average) (relative volume 1.75×). Suggested plan: enter near 0.7881, stop loss at 0.7685 (2× ATR below entry), take profit at 0.8273 (4× ATR above), risk/reward 2.0. Confidence 43/90 reflects the strength of current evidence only — it is not a guarantee, and any position should be sized so its loss at the stop is acceptable. The larger 4h trend confirms this setup (score 41).",
-        "warnings": [],
-        "basedOn": {
-          "score": 51.861975384725596,
-          "candleCount": 150
-        }
-      },
-      "queuedAt": 1788602254561
-    }
-  },
+  "live:live-entry-pending": {},
   "live:manual-buy-pending-symbols": [],
   "live:audit-log": [
     {
@@ -42250,6 +42206,13 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1788603702489,
+      "intentId": "live-entry:DOTEUR:1788602254561",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -43305,6 +43268,10 @@
     {
       "at": 1788603324084,
       "equity": 116.56
+    },
+    {
+      "at": 1788603680268,
+      "equity": 116.55
     }
   ],
   "live:revolut-x-order-map": {
@@ -43463,13 +43430,7 @@
   "telegram-shared-update-offset": 447904717,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {
-    "live-entry:DOTEUR:1788602254561": {
-      "sentAt": 1788602277097,
-      "messageId": 493,
-      "token": "mto7m5m1.ht9iyh"
-    }
-  },
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 8841.540736853956,
@@ -43482,13 +43443,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1788603324084,
+    "at": 1788603680268,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "13 new candidates, production defaults (forward test only — not real trading)",
-        "equity": 10022.439247167846,
-        "returnPct": 0.2243924716784568,
+        "equity": 10016.758848363437,
+        "returnPct": 0.1675884836343721,
         "trades": 0,
         "winRatePct": null,
         "profitFactor": null,
