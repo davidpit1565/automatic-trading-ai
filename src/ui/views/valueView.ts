@@ -40,7 +40,7 @@ export function renderValueView(container: HTMLElement, _data: ActiveDataSource)
       return;
     }
     loadedOnce = true;
-    panel.setHistory(state.equityHistory);
+    panel.setHistory(state.equityHistory, state.initialCash);
   }
 
   let timer = 0;
