@@ -962,14 +962,33 @@ export async function runLiveMirror(
   // dailyLossLimitPct check inside `assessTrade` never actually applied to
   // real money — a losing streak in one day could never be halted by it.
   const liveLossTracker = new DailyLossTracker(liveStore);
-  const dailyLossSoFar = liveLossTracker.lossToday(now);
   const recordLiveRealizedPnl = (pnl: number, ts: number): void => liveLossTracker.record(pnl, ts);
   // Catches a trade David makes directly in the Revolut X app instead of
   // through this bot (2026-09-04, David asked for this explicitly) — before
   // this cycle's own entry/exit checks below, so a manual fill from between
   // cycles is reconciled first (see liveManualTradeSync.mts's own doc
   // comment for why this ordering is race-free).
-  await syncManualTradesFromBroker(liveStore, brokerAdapter, source, telegram, now, recordLiveRealizedPnl);
+  const reconciledManualTrade = await syncManualTradesFromBroker(
+    liveStore, brokerAdapter, source, telegram, now, recordLiveRealizedPnl,
+  );
+  // A real, already-detected position/loss must never be lost to a killed
+  // job — every OTHER real-money action in this cycle gets an immediate
+  // persist on a genuine outcome (manual sell/buy, mirrored entries,
+  // automatic exits below); this one had none, so a crash between here and
+  // the next such persist would silently revert an already Telegram-announced
+  // stop-loss/take-profit (or realized P&L) back to untracked. Found in
+  // review, 2026-09-05 — same incident class as persistStateToGit's own
+  // doc comment describes for manual /buy.
+  if (reconciledManualTrade) persistStateToGit(store, 'live-mirror: after manual trade reconciliation');
+  // Read AFTER syncManualTradesFromBroker, not before — an external sell it
+  // just detected can itself add to today's realized loss (recordLiveRealizedPnl
+  // above), and every entry sized below (manual /buy, mirrored) must see that
+  // same-cycle loss, not a snapshot taken before it ran. Found in review,
+  // 2026-09-05: the exact stale-snapshot bug class already fixed once for
+  // equity/openPositions in `mirrorApprovedEntries` (PRs #107-#110,
+  // 2026-09-03), reintroduced here for `dailyLossSoFar` specifically by this
+  // call's insertion point.
+  const dailyLossSoFar = liveLossTracker.lossToday(now);
   // Mirrors paper's own confidence-scaled risk (see AUTOPILOT_CONFIDENCE_RISK)
   // so a live entry's position size actually reflects signal strength the
   // same way paper's does, instead of always sizing at the flat ceiling

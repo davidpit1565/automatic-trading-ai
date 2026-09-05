@@ -1,5 +1,94 @@
 # PROJECT_STATE
 
+## Adversarial review of `liveManualTradeSync.mts` (PR #192) — 2 real bugs found and fixed (2026-09-05)
+PR #192 added `syncManualTradesFromBroker` (detects a real trade David makes
+directly in the Revolut X app) and wired it into `runLiveMirror`, written and
+tested by the same session. Per this project's own practice (see the
+"Adversarial review of the live-money wiring" and "Full-system safety audit"
+entries below), that gets a genuinely skeptical second pass hunting for edge
+cases the original tests didn't cover — not a rubber-stamp. Two confirmed:
+
+1. **Stale `dailyLossSoFar` snapshot — a same-cycle external-sell loss could
+   not block a same-cycle new entry** (`autopilotRunner.mts`'s
+   `runLiveMirror`). `dailyLossSoFar` used to be read from
+   `DailyLossTracker.lossToday(now)` BEFORE `syncManualTradesFromBroker` ran,
+   then reused unchanged for every entry sized later in the same cycle
+   (manual `/buy` and the paper-mirrored auto-entries) — the exact
+   stale-snapshot bug class already fixed once for equity/openPositions in
+   `mirrorApprovedEntries` (PRs #107-#110, 2026-09-03), reintroduced here for
+   the daily-loss figure specifically by this call's insertion point. Concrete
+   failing scenario (proven with a debug harness before writing the fix,
+   using a real Ed25519-signed `RevolutXBrokerAdapter` call against a stubbed
+   `fetch`): live equity €100 (3%-of-equity daily-loss allowance ≈ €3), a
+   tracked XBTEUR position (qty 0.002, entry €90,000) that Revolut X now
+   shows as fully sold externally. `syncManualTradesFromBroker` closes it and
+   records a realized loss of (50,000 − 90,000) × 0.002 = **€80** — 26× the
+   daily allowance — but with the stale snapshot, a NEW same-cycle
+   auto-mirrored entry was still sized and sent to the human for confirmation
+   (`assessTrade` never saw the €80 loss). Fixed: `dailyLossSoFar` is now
+   read AFTER `syncManualTradesFromBroker` returns, immediately before
+   building `liveEntryOptions`. Verified both directions by hand: reverting
+   just this ordering reproduces the wrongly-approved confirmation prompt;
+   with the fix, the entry is rejected at `assessTrade` and no confirmation
+   is ever sent.
+2. **Missing immediate persist after `syncManualTradesFromBroker`'s own
+   writes** (`autopilotRunner.mts`). Every OTHER real-money action in this
+   same cycle (manual sell/buy submitted, mirrored entries submitted,
+   automatic exits submitted) gets an immediate `persistStateToGit` call on a
+   genuine outcome — this one had none. A crash between `recordLiveEntryFill`/
+   `forgetLivePosition` (plus the Telegram message already sent claiming the
+   position is "now automatically monitored, stop-loss X / take-profit Y") and
+   the next unrelated persist (which might not fire for many cycles, or not at
+   all if the run is killed first) would silently revert an already
+   Telegram-announced protection back to untracked — the same
+   crash-loses-real-bookkeeping incident class `persistStateToGit`'s own doc
+   comment already describes for manual `/buy`, just never closed for this
+   new call site. Fixed: `syncManualTradesFromBroker` now returns whether it
+   actually reconciled anything (false on a pure no-op, or when a buy's price
+   fetch failed and nothing was recorded), and `runLiveMirror` persists
+   immediately when it did.
+
+**Checked and ruled out** (real hypotheses, not constructible as concrete
+bugs):
+- **Double-processing on a retried/re-run cycle** — with state actually
+  persisted between calls, `tracked`/`brokerQty` converge to `diff ≈ 0` and
+  the loop skips; not idempotent only in the crash-loses-persist gap above,
+  which bug #2 now closes.
+- **Race with this cycle's OWN entry/exit logic using a stale
+  `openPositions`/equity snapshot** — traced through: `mirrorApprovedEntries`
+  already re-reads `openLivePositions`/`liveEquity` FRESH on every loop
+  iteration (the PR #107-#110 fix), and it runs AFTER
+  `syncManualTradesFromBroker` in the same tick, so it always sees this
+  function's own writes. No staleness here — `dailyLossSoFar` (bug #1) was
+  the only stale value in this path.
+- **FIFO ordering wrong when multiple tracked lots exist for one symbol** —
+  `reconcileExternalSell` iterates `openLivePositions`'s `Object.values()`
+  order. Positions are keyed by intent id and only ever added (never
+  reordered on overwrite), and JS/JSON preserve non-numeric string-key
+  insertion order — so array order is genuinely chronological entry order,
+  not merely incidental. FIFO-by-time holds.
+- **Broker balance including something other than this bot's own symbol
+  (dust, a duplicate representation)** — `RevolutXBrokerAdapter.fetchPositions()`
+  maps one row per `currency` from a real balances endpoint; no mechanism for
+  a duplicate-symbol row exists in this code. Real fee-dust exceeding
+  `DUST_QTY` (1e-6) being misread as a manual buy is plausible in principle
+  but not verifiable against Revolut X's actual fee structure from here — a
+  hypothesis, not a confirmed bug, left alone.
+- **Fees/slippage bias from using the current price as both entry and exit**
+  — already an explicitly documented, deliberate approximation in the file's
+  own doc comment (Revolut X reports no cost basis); not a new finding.
+
+Tests: 5 new regression tests — 4 in `liveManualTradeSync.test.ts` covering
+`syncManualTradesFromBroker`'s new return value (false on no-op/failed-price,
+true on an actual buy or sell), 1 in `autopilotRunner.test.ts` reproducing
+the same-cycle stale-`dailyLossSoFar` scenario end-to-end through
+`runLiveMirror` (a real Ed25519 keypair generated in-test so the broker
+adapter's signing succeeds and its `fetch` call is genuinely exercised via
+`vi.stubGlobal`, since every other test in that file relies on an
+intentionally-invalid PEM to short-circuit before any network call).
+
+Gate: tsc clean, 1171 vitest passed (was 1166; 5 new), vite build ok.
+
 ## Creative upgrade pass #4: full passes on the remaining tool screens (2026-09-04, PRs #188/#189/#190)
 Continuation of pass #3 (below) — same mandate, this time the eight screens
 David explicitly listed as "not yet done at all": `stocksMarketPanel.ts`,

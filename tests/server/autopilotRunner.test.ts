@@ -11,6 +11,7 @@
  * when invoked directly (`npx tsx server/autopilotRunner.mts`), so importing
  * it here for its exported helpers is side-effect-free.
  */
+import { generateKeyPairSync } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -665,6 +666,114 @@ describe('runLiveMirror (real-money wiring stays off until deliberately turned o
     expect(store.get('live:live-cash-eur')).toBe(100);
     expect(store.get('live:live-open-positions')).toBeUndefined();
     delete process.env['LIVE_STARTING_CASH_EUR'];
+  });
+
+  // Regression, 2026-09-05 (adversarial re-read of PR #192's
+  // liveManualTradeSync.mts): `dailyLossSoFar` used to be snapshotted BEFORE
+  // `syncManualTradesFromBroker` ran, then reused unchanged for every entry
+  // sized later in the SAME cycle — the exact stale-snapshot bug class
+  // already fixed once for equity/openPositions in `mirrorApprovedEntries`
+  // (2026-09-03), reintroduced here for the daily-loss figure specifically.
+  // A manual sell David makes directly in Revolut X can itself push the
+  // day's realized loss over the limit; that must block a NEW entry the
+  // autopilot approves in that same cycle, not just from the NEXT cycle on.
+  it('blocks a same-cycle new entry after a same-cycle external-sell loss detected by syncManualTradesFromBroker', async () => {
+    process.env['REAL_MONEY_ENABLED'] = 'true';
+    process.env['REVOLUT_X_API_KEY'] = 'key';
+    // A genuine Ed25519 PEM, not the fake 'pem' string other tests in this
+    // block use — those never need a real `RevolutXBrokerAdapter.request()`
+    // call to actually reach `fetch` (an invalid PEM makes `signPayload`
+    // throw first, which every OTHER live-mirror test here is fine with).
+    // This test needs the broker's own `/balances` call to genuinely go
+    // through, so `syncManualTradesFromBroker` sees the stubbed response below.
+    process.env['REVOLUT_X_PRIVATE_KEY_PEM'] = generateKeyPairSync('ed25519', {
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+    }).privateKey;
+    process.env['LIVE_STARTING_CASH_EUR'] = '100';
+
+    // A real tracked position (curated symbol 'XBTEUR', entry 90,000) that
+    // this cycle's (stubbed) broker balance will show as fully sold outside
+    // the bot — Revolut X now reports 0 BTC.
+    const liveStore = new PrefixedStore(store, 'live');
+    liveStore.set('live-open-positions', {
+      'live-entry:XBTEUR:500': {
+        id: 'live-entry:XBTEUR:500', symbol: 'XBTEUR', quantity: 0.002, entryPrice: 90_000,
+        stopLoss: 85_000, takeProfit: 95_000, highestPrice: 90_000, openedAt: 500,
+        entryAssessment: {
+          approved: true, asset: 'XBTEUR', entry: 90_000, stopLoss: 85_000, takeProfit: 95_000,
+          positionSize: 0.002, positionValue: 180, riskAmount: 10, riskPercentage: 10,
+          rewardRiskRatio: 1, portfolioExposure: 180, reasons: [], warnings: [],
+        },
+      },
+    });
+
+    // Only `RevolutXBrokerAdapter` (used by `syncManualTradesFromBroker` and
+    // `syncLiveCashFromBroker`) hits real `fetch` here — Telegram goes
+    // through `telegram.fetchFn` below, never global fetch. No EUR entry in
+    // this balance, so `syncLiveCashFromBroker` no-ops and cash stays 100.
+    // `/configuration/pairs` must list 'BTC/EUR' (the broker-native symbol
+    // `toRevolutXSymbol` derives from `btcInstrument`) — without it the new
+    // entry would be refused as an unrecognized symbol regardless of the
+    // daily-loss fix under test, which would make this test pass for the
+    // wrong reason.
+    vi.stubGlobal('fetch', (async (url: string | URL) => {
+      if (String(url).includes('/balances')) {
+        return new Response(JSON.stringify([{ currency: 'BTC', total: '0' }]), { status: 200 });
+      }
+      if (String(url).includes('/configuration/pairs')) {
+        return new Response(JSON.stringify({ 'BTC/EUR': { base: 'BTC', quote: 'EUR' } }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
+    }) as unknown as typeof fetch);
+
+    const opportunity = {
+      symbol: 'BTC-EUR',
+      timeframe: '1h' as const,
+      direction: 'long' as const,
+      levels: { entry: 100, stopLoss: 95, takeProfit: 115, riskReward: 3 },
+      confidence: 70,
+      confidenceComponents: [],
+      explanation: 'test',
+      warnings: [],
+      basedOn: { score: 70, candleCount: 200 },
+    };
+    const sendMessageCalls: { text: string }[] = [];
+    const trackingFetch = (async (url: string, init?: { body?: string }) => {
+      if (String(url).includes('/sendMessage') && init?.body) sendMessageCalls.push(JSON.parse(init.body));
+      return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    try {
+      await runLiveMirror(
+        store,
+        fakeSource(),
+        [btcInstrument],
+        { token: 'T', chatId: 'C', fetchFn: trackingFetch },
+        [{ symbol: 'BTC-EUR', quantity: 0, entry: 100, opportunity }],
+        { 'BTC-EUR': 100 },
+        1000,
+      );
+    } finally {
+      vi.unstubAllGlobals();
+      delete process.env['LIVE_STARTING_CASH_EUR'];
+    }
+
+    // The external sell WAS reconciled: the old XBTEUR position closed and a
+    // realized loss of (50,000 − 90,000) × 0.002 = €80 recorded — comfortably
+    // over the 3%-of-€100 (~€3) daily allowance.
+    expect(liveStore.get('live-open-positions')).toEqual({});
+    expect(liveStore.get('daily-loss')).toMatchObject({ loss: 80 });
+    // With `dailyLossSoFar` correctly re-read AFTER that same-cycle loss was
+    // recorded, the new BTC-EUR entry the autopilot approved this cycle must
+    // be blocked at `assessTrade` itself, not merely left pending a human's
+    // confirmation tap — no confirmation prompt sent, no cash moved, and no
+    // pending-confirmation record left behind for it. Asserting only "no
+    // position was opened" would pass even for a WRONGLY-approved entry that
+    // is simply still awaiting a human tap, so this checks the confirmation
+    // prompt itself was never sent.
+    expect(sendMessageCalls.some((m) => m.text.includes('מחכה לאישור'))).toBe(false);
+    expect(liveStore.get('confirmation-gate-pending')).toBeUndefined();
+    expect(liveStore.get('live-cash-eur')).toBe(100);
   });
 
   // Feature, 2026-09-03: David can't be on the phone during Shabbat/Yom Tov
