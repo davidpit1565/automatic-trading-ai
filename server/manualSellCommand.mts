@@ -129,16 +129,26 @@ export async function checkManualSellRequests(
       pendingSymbols.add(symbol);
       continue;
     }
-    unclaimedMessages.push(message);
     // Real incident, 2026-09-04: a bare `/sell` (no symbol) used to be
     // silently swallowed here with zero feedback — exactly what happens
     // when a human taps a `/sell` mention inside a longer message (Telegram
     // only ever inserts the bare command token when you tap a bot-command
     // entity, never any text after it, by platform design), so the tap
     // silently did nothing and looked like the bot ignored them.
+    //
+    // Second real incident, 2026-09-05: the rejection reply repeated every
+    // cycle forever, because this message was ALSO pushed to
+    // `unclaimedMessages` below — every cycle's poll saw it again in the
+    // shared unclaimed queue (nothing else claims a bare `/sell` either) and
+    // sent the same reply again (same root cause found and fixed in
+    // `manualBuyCommand.mts`'s matching bare-`/buy` case). A bare `/sell` is
+    // fully handled the moment it's replied to, so it must NOT go back into
+    // the shared queue — `continue` before the generic unclaimed-push below.
     if (/^\/sell\b/i.test(message.text.trim())) {
       await sendTelegramMessage('❌ /sell צריך סימבול, למשל: /sell XBTEUR', telegram);
+      continue;
     }
+    unclaimedMessages.push(message);
   }
   stashUnclaimedTelegramUpdates(telegramStore, { messages: unclaimedMessages, callbacks: polled.callbacks });
   if (pendingSymbols.size === 0) return [];

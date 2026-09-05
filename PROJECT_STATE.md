@@ -5122,3 +5122,38 @@ reduce + proportional P&L, no-price no-op (buy and sell), dust-quantity
 tolerance, broker-fetch-failure no-op, multi-symbol independence.
 
 Gate: tsc clean, 1158 vitest passed (9 new), vite build ok.
+
+## Fixed: a bare /buy or /sell repeated its "usage hint" reply every cycle forever (2026-09-05)
+
+Real bug, caught from David's own Telegram screenshot: tapping a bare `/buy`
+(a bot-command mention with no symbol — Telegram never sends the argument
+when you tap one, only the bare token) got the correct "❌ /buy צריך סימבול"
+reply once, then the SAME reply kept arriving again every cycle (~every 5-6
+minutes) for hours, with nothing new sent from his side.
+
+**Root cause**: `checkManualBuyRequests`/`checkManualSellRequests`
+(`manualBuyCommand.mts`/`manualSellCommand.mts`) push every message that
+isn't a valid `/buy <SYMBOL>`/`/sell <SYMBOL>` into `unclaimedMessages` and
+stash it back via `stashUnclaimedTelegramUpdates` — correct for a message
+some OTHER handler might still claim (`/pause`, a confirmation tap, etc.).
+But the bare-command usage-hint branch replied to the message AND STILL let
+it fall through to that same unconditional push. Since nothing else claims
+a bare `/buy`/`/sell` either, it just sat in the shared unclaimed queue
+forever, and every future cycle's `pollAllTelegramUpdates` call (which
+returns unclaimed + fresh messages) handed it right back to the same
+bare-command branch — reply, re-stash, repeat, indefinitely.
+
+**Fix**: once the usage-hint reply is sent, `continue` before the generic
+unclaimed-push — a bare `/buy`/`/sell` is fully handled the moment it's
+answered, there is nothing left for `/sell`/`/help`/`/status`/`/discover`
+to do with it. `manualKillSwitchCommand.mts` and `manualDiscoverCommand.mts`
+were checked and already use `else` (push only when NOT claimed) — they
+never had this bug.
+
+Tests added: one regression test per file (`manualBuyCommand.test.ts`,
+`manualSellCommand.test.ts`) — calls the handler twice against a fake
+Telegram that only delivers the bare command once (respecting the offset
+parameter, like real Telegram), asserting the usage-hint reply is sent
+exactly once and the unclaimed-messages store key ends up empty.
+
+Gate: tsc clean, 1160 vitest passed (2 new), vite build ok.
