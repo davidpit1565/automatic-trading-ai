@@ -5157,3 +5157,30 @@ parameter, like real Telegram), asserting the usage-hint reply is sent
 exactly once and the unclaimed-messages store key ends up empty.
 
 Gate: tsc clean, 1160 vitest passed (2 new), vite build ok.
+
+## Fixed: the topbar BTC chip (and Home's markets strip) showed a 48h change mislabeled as 24h (2026-09-05)
+
+Real bug, caught from David's own side-by-side screenshot: Revolut X's real
+BTC ticker showed `-0.15%`, ours showed `-2.04%` for the same moment — not
+stale data, a genuinely different number.
+
+**Root cause**: `fetchSnapshot` (`src/ui/markets.ts`) fetches 48 hourly
+candles (`count = 48`, for a smoother sparkline) and computed `changePct`
+from the OLDEST of those 48 — a 48-hour window — while every other "chg"
+pill in the app (and the real exchange convention it's visually identical
+to) means a 24-hour change. `fetchMarketRows`'s ticker-based rows already
+got this right (uses Kraken's own 24h `open`); `fetchSnapshot` — used by the
+topbar BTC chip and Home's markets-strip cards — did not.
+
+**Fix**: anchor `changePct` 24 candles back from the latest close
+(`closes.length - 25`) instead of the oldest of the 48, falling back to the
+oldest available close if fewer than 25 candles come back (a network
+hiccup). The 48-candle fetch itself is untouched — still feeds the
+sparkline its full resolution, only the % anchor moved.
+
+Tests added: `tests/ui/markets.test.ts` (new file, 2 tests) — asserts the
+24h-back anchor against a synthetic 49-candle series (and that it actually
+differs from the old 48h-window number), plus a fallback case with only 3
+candles available.
+
+Gate: tsc clean, 1162 vitest passed (2 new), vite build ok.
