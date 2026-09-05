@@ -70,24 +70,34 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
         <div class="block-head"><h2>Real activity <span class="tag-live">REAL</span></h2></div>
         <div class="stack stack-card" id="hub-real-activity-list"></div>
       </section>
-      <div id="hub-history-chart"></div>
-      <div class="stack stack-card" id="hub-history-list"><div class="empty">Loading…</div></div>
+      <!-- The SIMULATED chart+list below — hidden once a live account exists
+           (David asked, 2026-09-05, to stop showing the not-real wallet at
+           all once real money is live), same as #hub-sim-hero on the
+           Profit tab. Stays visible for Stocks (no live account there). -->
+      <div id="hub-sim-history">
+        <div id="hub-history-chart"></div>
+        <div class="stack stack-card" id="hub-history-list"><div class="empty">Loading…</div></div>
+      </div>
     </div>
     <div class="hub-panel" data-hub-panel="market"></div>
     <div class="hub-panel" data-hub-panel="profit">
-      <!-- Same real/simulated pairing as Overview: a boxed secondary "Real
-           money" card (not hero-bare — the simulated return below stays the
-           dominant figure on this tab), hidden until a live account exists. -->
-      <section class="hero" id="hub-real-money" hidden>
+      <!-- Once a live account exists, "Real money" IS the dominant figure on
+           this tab (same reasoning as Home's #home-live-hero) — hero-bare,
+           not a boxed secondary. Before that (or for Stocks, which has no
+           live account), stays hidden and the simulated hero below is all
+           there is to show. David asked (2026-09-05) to stop showing the
+           simulated ("not real") wallet at all once real money exists — see
+           #hub-sim-hero's own hiding below. -->
+      <section class="hero hero-bare" id="hub-real-money" hidden>
         <div class="hero-label">Real money <span class="tag-live">REAL</span></div>
         <div class="hero-value" id="hub-real-equity"><span class="hero-value-major">—</span></div>
         <div class="hero-change" id="hub-real-change" hidden></div>
         <div class="hero-bench" id="hub-real-breakdown"></div>
         <div id="hub-real-equity-chart"></div>
       </section>
-      <!-- hero-bare matches Home's balance treatment: same dominant-figure
-           pattern for this sub-screen (shared by Crypto's and Stocks' Profit
-           tab), not a secondary boxed widget. -->
+      <!-- Dominant figure ONLY while there's no live account to show instead
+           (Stocks today, or Crypto before real money went live) — hidden
+           entirely once one exists, per David's 2026-09-05 ask. -->
       <section class="hero hero-bare" id="hub-sim-hero">
         <div class="hero-label">Total return <span class="tag-sim">SIMULATED</span></div>
         <div class="hero-value" id="hub-return">—</div>
@@ -99,9 +109,11 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
   attachCoinLogoFallback(container);
 
   const overviewPanel = container.querySelector<HTMLElement>('[data-hub-panel="overview"]')!;
+  const simHistoryWrap = container.querySelector<HTMLElement>('#hub-sim-history')!;
   const historyChartSlot = container.querySelector<HTMLElement>('#hub-history-chart')!;
   const historyListEl = container.querySelector<HTMLElement>('#hub-history-list')!;
   const marketPanel = container.querySelector<HTMLElement>('[data-hub-panel="market"]')!;
+  const simHeroWrap = container.querySelector<HTMLElement>('#hub-sim-hero')!;
   const returnEl = container.querySelector<HTMLElement>('#hub-return')!;
   const benchEl = container.querySelector<HTMLElement>('#hub-bench')!;
   const readinessEl = container.querySelector<HTMLElement>('#hub-readiness')!;
@@ -132,6 +144,13 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
   const overviewHandle = opts.renderOverview(overviewPanel);
 
   function renderHistoryList(state: CloudState): void {
+    // Once a live account exists, "Real activity" above is the only history
+    // worth showing — David asked (2026-09-05) to stop showing the
+    // simulated ("not real") wallet at all at that point, same reasoning as
+    // `#hub-sim-hero` on the Profit tab. Stays visible for Stocks (no live
+    // account there).
+    simHistoryWrap.hidden = Boolean(state.live);
+    if (state.live) return;
     historyChart.setHistory(state.equityHistory);
     if (state.history.length === 0) {
       historyListEl.innerHTML = '<div class="empty">No trades yet.</div>';
@@ -225,6 +244,19 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
   }
 
   function renderProfit(state: CloudState): void {
+    // Once a live account exists, "Real money" above (now hero-bare) is the
+    // dominant figure on this tab — David asked (2026-09-05) to stop showing
+    // the simulated ("not real") wallet at all at that point. Stays visible
+    // for Stocks (no live account there) and for Crypto before real money
+    // went live.
+    simHeroWrap.hidden = Boolean(state.live);
+    if (state.live) {
+      // Readiness only ever answers "is it time to turn real money on?" —
+      // already moot once it's on, same as the check further down for the
+      // not-yet-live path.
+      readinessEl.hidden = true;
+      return;
+    }
     const equity = state.equityHistory.at(-1)?.equity ?? state.cash;
     const totalReturn = state.initialCash > 0 ? ((equity - state.initialCash) / state.initialCash) * 100 : 0;
     returnEl.textContent = formatPct(totalReturn);
@@ -232,9 +264,8 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     // Drives the card's own ambient glow (::before), the same signal Home's
     // hero uses — previously only the number itself changed colour and the
     // card stayed permanently colourless behind it.
-    const simHero = container.querySelector<HTMLElement>('#hub-sim-hero');
-    simHero?.classList.toggle('up', totalReturn >= 0);
-    simHero?.classList.toggle('down', totalReturn < 0);
+    simHeroWrap.classList.toggle('up', totalReturn >= 0);
+    simHeroWrap.classList.toggle('down', totalReturn < 0);
 
     const btcPriceNow = state.marketSnapshot.find((m) => m.symbol === 'XBTEUR')?.price ?? 0;
     if (
