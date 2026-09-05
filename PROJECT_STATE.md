@@ -5270,3 +5270,88 @@ before assuming the fix itself is wrong — this long-running-job
 architecture means a merged, verified-green fix can take up to ~2 hours to
 actually reach production if the in-flight run isn't cancelled and
 redispatched.
+
+## Fixed: the History tab's own "All time" equity return silently disagreed with the Overview/Profit tab's — a truncated `history[0]` baseline (2026-09-05)
+
+Follow-up pass after the 48h/24h and repeat-reply bugs, per David's "make
+sure it's genuinely good, keep improving" — hunted for more bugs in the
+exact same class (a %/window computed inconsistently between two screens
+showing "the same" number), this time by hand-checking the real committed
+state files' numbers, not just screenshots.
+
+**Found**: `state/autopilot-state.json`'s `equity-history` array has 5,000
+entries — exactly `EQUITY_HISTORY_CAP` (`autopilotRunner.mts`,
+mirrored in `stocksRunner.mts`/`liveLedger.mts`), meaning the crypto paper
+account is AT its cap right now and the array is being truncated from the
+front every cycle. Hand-computing both numbers from the real file:
+`(last - initialCash) / initialCash` (what the Overview/Profit hero shows)
+= **2.22%**, but `(last - history[0].equity) / history[0].equity`
+(what `mountEquityChartPanel`'s "All" range used) = **6.83%** — nearly 3x
+off, because `history[0]` is no longer the account's actual starting
+sample once the array has been truncated, just whichever sample happens to
+still be oldest. Same real discrepancy reproduced on the Stocks account too
+(smaller here since its history hasn't drifted as far past its own
+starting point yet): Profit tab "+1.04% all time" vs History tab "+1.06% ·
+All" — confirmed live with a real screenshot (`vite preview`, real
+committed state mocked) before and after the fix.
+
+**Root cause**: `mountEquityChartPanel`'s "All" range (shared by Crypto's
+History tab, Crypto's standalone Portfolio-value page, and Stocks' History
+tab) used `pts[0].equity` as its return%'s baseline for every range,
+including "All" — correct for 1D/1W/1M/1Y (a window's own start IS
+`pts[0]` after filtering), wrong for "All", which is supposed to mean
+"since tracking began" but silently degrades to "since whatever the
+front-truncation cap left oldest" once an account outlives the 5,000-
+sample cap. This will keep getting worse over an account's lifetime as
+more old samples age out — not a one-time error like the 48h/24h bug, but
+one that drifts further from the truth the longer an account runs.
+
+**Fix**: `EquityChartPanelHandle.setHistory` takes an optional second
+argument, the account's true starting equity. When supplied and the "All"
+range is selected, it anchors the return% there instead of `history[0]`;
+every other range is untouched. Threaded through from the one place that
+actually has this number — `state.initialCash` (`assetHubView.ts`'s
+SIMULATED history chart, `valueView.ts`'s standalone Portfolio-value page).
+The REAL-money chart (`assetHubView.ts`'s `realEquityChart`) has no
+`initialCash` equivalent and is left exactly as it was — it already uses
+the honest "since tracking began" wording rather than claiming "all time",
+so there's no label/number mismatch there today (though the same
+truncation will eventually reach it too, once the real account's own
+history array hits its cap — flagged for awareness, not fixed here, since
+real money only started tracking 2026-09-03 and is nowhere near 5,000
+samples yet). The "since {date}" caption under the chart's own hero also
+switches to "since tracking began" when the override is used, since the
+truncated sample's own date would otherwise no longer match what the %
+is actually measured from — matching the wording already used by the
+real-money hero for the identical situation.
+
+Verified with real screenshots: built `dist/`, `vite preview` on port 4178,
+mocked `autopilot-state.json`/`stocks-state.json` with the real committed
+content. Stocks History tab before: "+1.06% · All / since 29/07/2026",
+Overview/Profit: "+1.04% all time" — mismatched. After: History tab reads
+"+1.04% · All / since tracking began", matching Profit exactly.
+
+Tests added: `tests/ui/equityChartPanel.test.ts` (2 new) — one with a
+synthetic truncated history (shaped like the real committed crypto state:
+`initialCash` 10,000, `history[0].equity` 9,568.52, last 10,222.32) asserts
+the "All" return uses the true 2.22% and never the truncated-baseline
+6.83%, plus the "since tracking began" caption; one confirms the existing
+`history[0]`-baseline behavior is unchanged when no true start is supplied
+(the REAL-money chart's own case).
+
+**Also checked, found correct, not touched**: Kraken's ticker `o` field
+(used by `fetchMarketRows` for the full Markets list and Home's Top
+Movers) is genuinely "today's opening price since UTC midnight" per
+Kraken's real API (confirmed with a live request), not a rolling 24h open
+— a real, measurable difference from `fetchSnapshot`'s true rolling-24h
+(used by the topbar chip and Home's Markets-strip cards), most visible
+right after UTC midnight. This is flagged for awareness rather than fixed:
+Kraken's batch ticker has no rolling-24h-ago price field at all, so
+matching the two exactly would mean abandoning the single-batch-request
+design that makes a 500+-market list possible at all (an explicitly
+measured, rejected tradeoff already documented in `markets.ts` for the
+per-symbol fallback) — a genuinely ambiguous tradeoff, not a clear-cut
+formula error like the two bugs above, so left alone per "not a
+fix-first-ask-later pass on anything ambiguous."
+
+Gate: tsc clean, 1166 vitest passed (2 new), vite build ok.

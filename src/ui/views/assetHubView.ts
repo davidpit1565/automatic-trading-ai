@@ -151,7 +151,7 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     // account there).
     simHistoryWrap.hidden = Boolean(state.live);
     if (state.live) return;
-    historyChart.setHistory(state.equityHistory);
+    historyChart.setHistory(state.equityHistory, state.initialCash);
     if (state.history.length === 0) {
       historyListEl.innerHTML = '<div class="empty">No trades yet.</div>';
       return;

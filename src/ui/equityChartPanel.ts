@@ -95,8 +95,27 @@ export interface EquityPoint {
 }
 
 export interface EquityChartPanelHandle {
-  /** Repaint with fresh data. Safe to call repeatedly (e.g. on each poll). */
-  setHistory(history: readonly EquityPoint[]): void;
+  /**
+   * Repaint with fresh data. Safe to call repeatedly (e.g. on each poll).
+   *
+   * `trueStartEquity`, when known (the SIMULATED accounts' `initialCash` —
+   * there is no equivalent for the REAL account, which has no such field),
+   * anchors the "All" range's own return% to the account's actual starting
+   * capital instead of `history[0]`. Real bug, found 2026-09-05 by hand-
+   * checking the committed state: `history` is capped at 5,000 samples
+   * server-side (`EQUITY_HISTORY_CAP` in autopilotRunner.mts/stocksRunner.mts)
+   * and silently truncated from the front once a long-running account
+   * exceeds it — the crypto paper account is AT that cap right now, so
+   * `history[0]` is no longer the first sample ever recorded, just whatever
+   * happens to be oldest survivor in the array. Using it as "All"'s baseline
+   * made this panel's own "All" return disagree with the Overview/Profit
+   * tab's `initialCash`-anchored "all time" return for the exact same
+   * account on the exact same screen (2.22% vs 6.83% on the real committed
+   * crypto state) — the "since tracking began" class of bug, just with the
+   * anchor point silently drifting forward over an account's lifetime
+   * instead of being wrong from a single formula error.
+   */
+  setHistory(history: readonly EquityPoint[], trueStartEquity?: number): void;
 }
 
 /**
@@ -118,6 +137,10 @@ export function mountEquityChartPanel(
   // genuinely needs this as its only headline number).
   const showHero = options.showHero ?? true;
   let history: readonly EquityPoint[] = [];
+  /** The account's true starting equity, when known — see `setHistory`'s doc
+   * comment. Anchors the "All" range's return% instead of a possibly-
+   * truncated `history[0]`. */
+  let trueStartEquity: number | undefined;
   let rangeKey = 'All';
   let chartMode: 'candle' | 'line' = 'line';
 
@@ -156,7 +179,13 @@ export function mountEquityChartPanel(
     }
     const range = RANGES.find((r) => r.key === rangeKey)!;
     const pts = windowedPoints();
-    const first = pts[0]!.equity;
+    // Only "All" ever needs the true-start override: every other range's
+    // baseline is legitimately "equity at the start of THIS window", which
+    // `pts[0]` already is (windowedPoints() filters to the window). "All"
+    // means "since tracking began", which `pts[0]` can only answer honestly
+    // while `history` hasn't been truncated — see `setHistory`'s doc comment.
+    const usingTrueStart = range.key === 'All' && trueStartEquity !== undefined && trueStartEquity > 0;
+    const first = usingTrueStart ? trueStartEquity! : pts[0]!.equity;
     const last = pts[pts.length - 1]!.equity;
     const ret = first > 0 ? ((last - first) / first) * 100 : 0;
     const up = ret >= 0;
@@ -192,7 +221,12 @@ export function mountEquityChartPanel(
         <div class="hero-label">Now ${tag}</div>
         <div class="hero-value">${currency}${formatPrice(last)}</div>
         <div class="hero-change ${up ? 'up' : 'down'}">${formatPct(ret)} · ${rangeKey}</div>
-        <div class="hero-split"><span>since ${new Date(pts[0]!.at).toLocaleDateString('en-GB')}</span></div>
+        <!-- Same wording the REAL-money hero already uses (homeView.ts/
+             assetHubView.ts) for the identical situation: once the true
+             starting equity is used instead of the oldest surviving sample,
+             that sample's own date is no longer what the % is measured
+             from, so showing it here would be its own new mismatch. -->
+        <div class="hero-split"><span>${usingTrueStart ? 'since tracking began' : `since ${new Date(pts[0]!.at).toLocaleDateString('en-GB')}`}</span></div>
       </div>`
           : `<div class="hero-change compact ${up ? 'up' : 'down'}">${formatPct(ret)} · ${rangeKey}</div>`
       }
@@ -260,8 +294,9 @@ export function mountEquityChartPanel(
   }
 
   return {
-    setHistory(h: readonly EquityPoint[]): void {
+    setHistory(h: readonly EquityPoint[], start?: number): void {
       history = h;
+      trueStartEquity = start;
       paint();
     },
   };
