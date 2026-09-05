@@ -1657,7 +1657,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788640863182,
+    "at": 1788641205858,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1673,10 +1673,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1786772301273,
-      "equity": 9568.52
-    },
     {
       "at": 1786773557164,
       "equity": 9568.52
@@ -21672,6 +21668,10 @@
     {
       "at": 1788640863182,
       "equity": 10221.8
+    },
+    {
+      "at": 1788641205858,
+      "equity": 10223.88
     }
   ],
   "trade-journal": [
@@ -22946,7 +22946,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -19.63% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -19.62% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23044,13 +23044,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1788640863182,
+    "at": 1788641205858,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10605.739589302128,
-        "returnPct": 6.057395893021276,
+        "equity": 10607.898496397134,
+        "returnPct": 6.078984963971343,
         "trades": 27,
         "winRatePct": 59.25925925925925,
         "profitFactor": 1.9516050182398137,
@@ -23060,8 +23060,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10605.739589302128,
-        "returnPct": 6.057395893021276,
+        "equity": 10607.898496397134,
+        "returnPct": 6.078984963971343,
         "trades": 27,
         "winRatePct": 59.25925925925925,
         "profitFactor": 1.9516050182398137,
@@ -23071,8 +23071,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10605.739589302128,
-        "returnPct": 6.057395893021276,
+        "equity": 10607.898496397134,
+        "returnPct": 6.078984963971343,
         "trades": 27,
         "winRatePct": 59.25925925925925,
         "profitFactor": 1.9516050182398137,
@@ -23104,8 +23104,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9957.861600558772,
-        "returnPct": -0.42138399441228097,
+        "equity": 9962.172679304314,
+        "returnPct": -0.37827320695685557,
         "trades": 148,
         "winRatePct": 40.54054054054054,
         "profitFactor": 1.209527367324308,
@@ -23115,8 +23115,8 @@
       {
         "key": "whale-flow",
         "label": "Refuses entries during heavy net selling by large traders",
-        "equity": 10702.44705274536,
-        "returnPct": 7.0244705274535955,
+        "equity": 10704.611119446206,
+        "returnPct": 7.046111194462064,
         "trades": 18,
         "winRatePct": 66.66666666666666,
         "profitFactor": 2.5224504678990076,
@@ -23137,8 +23137,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10413.779668289295,
-        "returnPct": 4.13779668289295,
+        "equity": 10415.899499973111,
+        "returnPct": 4.158994999731112,
         "trades": 15,
         "winRatePct": 60,
         "profitFactor": 1.897133678736788,
@@ -29863,6 +29863,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused AEROEUR: no exposure headroom: 6020.16 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1788641205858,
+      "intentId": "ENAEUR:1788641205858",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ENAEUR: no exposure headroom: 6012.13 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -44890,6 +44897,10 @@
     {
       "at": 1788640863182,
       "equity": 117.09
+    },
+    {
+      "at": 1788641205858,
+      "equity": 117.15
     }
   ],
   "live:revolut-x-order-map": {
@@ -44897,49 +44908,35 @@
     "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788534303316": "d41aa328-3331-4f59-99c0-809317e2da9f"
   },
   "live:live-open-positions": {
-    "live-entry:ADAEUR:manual-reconcile-20260904": {
-      "id": "live-entry:ADAEUR:manual-reconcile-20260904",
-      "symbol": "ADA/EUR",
-      "quantity": 76.0429,
-      "entryPrice": 0.1901821847404557,
-      "stopLoss": 0.18732945196934886,
-      "takeProfit": 0.19588765028266938,
-      "highestPrice": 0.193509,
-      "openedAt": 1788478320000,
+    "external-reconcile:XBTEUR:1788641205858": {
+      "id": "external-reconcile:XBTEUR:1788641205858",
+      "symbol": "BTC/EUR",
+      "quantity": 0.00106372,
+      "entryPrice": 68740.1,
+      "stopLoss": 67708.9985,
+      "takeProfit": 70802.30300000001,
+      "highestPrice": 68740.1,
+      "openedAt": 1788641205858,
       "entryAssessment": {
         "approved": true,
-        "asset": "ADAEUR",
-        "entry": 0.1901821847404557,
-        "stopLoss": 0.18732945196934886,
-        "takeProfit": 0.19588765028266938,
-        "positionSize": 76.0429,
-        "positionValue": 14.462004856,
-        "riskAmount": 0.21693007284000046,
-        "riskPercentage": 0.3,
+        "asset": "XBTEUR",
+        "entry": 68740.1,
+        "stopLoss": 67708.9985,
+        "takeProfit": 70802.30300000001,
+        "positionSize": 0.00106372,
+        "positionValue": 73.120219172,
+        "riskAmount": 1.0968032875800047,
+        "riskPercentage": 0,
         "rewardRiskRatio": 2,
-        "portfolioExposure": 40.3,
+        "portfolioExposure": 0,
         "reasons": [],
         "warnings": [
-          "MANUAL RECONCILIATION (2026-09-04): combines two real /buy ADAEUR fills (42.2331 @ 0.19028 and 33.8098 @ 0.19006, per Revolut X Activity) that a workflow-cancellation gap left completely untracked — see PROJECT_STATE.md. Entry/stop/target are recomputed off the weighted-average fill price using the same fixed 1.5%/3% manual-override levels the original /buy commands used, not independently re-derived."
+          "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
         ]
-      },
-      "outstandingExitSubmittedAt": 1788535353372
+      }
     }
   },
-  "telegram-unclaimed-messages": [
-    {
-      "updateId": 447904717,
-      "text": "/buy"
-    },
-    {
-      "updateId": 447904719,
-      "text": "/buy"
-    },
-    {
-      "updateId": 447904720,
-      "text": "/buy"
-    }
-  ],
+  "telegram-unclaimed-messages": [],
   "telegram-unclaimed-callbacks": [
     {
       "id": "7383943995548587904",
@@ -45074,13 +45071,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1788640863182,
+    "at": 1788641205858,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "13 new candidates, production defaults (forward test only — not real trading)",
-        "equity": 10024.789395372747,
-        "returnPct": 0.24789395372747094,
+        "equity": 10032.138256835906,
+        "returnPct": 0.3213825683590585,
         "trades": 0,
         "winRatePct": null,
         "profitFactor": null,
@@ -45151,5 +45148,9 @@
       "pos": 0
     }
   },
-  "live:live-blackout-queue": {}
+  "live:live-blackout-queue": {},
+  "live:daily-loss": {
+    "day": "2026-09-05",
+    "loss": 0.05020236219999912
+  }
 }
