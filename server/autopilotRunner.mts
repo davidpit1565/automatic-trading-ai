@@ -80,6 +80,7 @@ import {
   syncLiveExternalBtc,
 } from './liveLedger.mts';
 import { openLivePositions } from './liveExitFlow.mts';
+import { syncManualTradesFromBroker } from './liveManualTradeSync.mts';
 import { ensureBlackoutWindows, isBlackout } from './blackoutCalendar.mts';
 import { buildBlackoutSummaryMessage, drainBlackoutQueue, queueBlackoutEntries } from './liveBlackoutQueue.mts';
 import { RevolutXBrokerAdapter, type RevolutXCredentials } from './revolutXBrokerAdapter.mts';
@@ -963,6 +964,12 @@ export async function runLiveMirror(
   const liveLossTracker = new DailyLossTracker(liveStore);
   const dailyLossSoFar = liveLossTracker.lossToday(now);
   const recordLiveRealizedPnl = (pnl: number, ts: number): void => liveLossTracker.record(pnl, ts);
+  // Catches a trade David makes directly in the Revolut X app instead of
+  // through this bot (2026-09-04, David asked for this explicitly) — before
+  // this cycle's own entry/exit checks below, so a manual fill from between
+  // cycles is reconciled first (see liveManualTradeSync.mts's own doc
+  // comment for why this ordering is race-free).
+  await syncManualTradesFromBroker(liveStore, brokerAdapter, source, telegram, now, recordLiveRealizedPnl);
   // Mirrors paper's own confidence-scaled risk (see AUTOPILOT_CONFIDENCE_RISK)
   // so a live entry's position size actually reflects signal strength the
   // same way paper's does, instead of always sizing at the flat ceiling
