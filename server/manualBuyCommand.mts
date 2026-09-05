@@ -106,7 +106,6 @@ export async function checkManualBuyRequests(
       pendingSymbols.add(symbol);
       continue;
     }
-    unclaimedMessages.push(message);
     // Real incident, 2026-09-04: a bare `/buy` (no symbol) used to be
     // silently swallowed here with zero feedback. Confirmed live — David
     // tapped the "לקנייה: /buy <SYMBOL>" line in a momentum-spike alert
@@ -114,9 +113,21 @@ export async function checkManualBuyRequests(
     // only ever inserts the bare command token when you tap a bot-command
     // entity, never any text after it (platform behavior, not something a
     // message format can work around) — so the tap silently did nothing.
+    //
+    // Second real incident, 2026-09-05: the rejection reply repeated every
+    // cycle forever (David saw the same "❌ /buy צריך סימבול" every ~5-6
+    // minutes for hours) because this message was ALSO pushed to
+    // `unclaimedMessages` below — every cycle's poll saw it again in the
+    // shared unclaimed queue (nothing else claims a bare `/buy` either) and
+    // sent the same reply again. A bare `/buy` is fully handled the moment
+    // it's replied to — there is nothing left for `/sell`, `/help`, `/status`
+    // or `/discover` to do with it — so it must NOT go back into the shared
+    // queue. `continue` before the generic unclaimed-push below.
     if (/^\/buy\b/i.test(message.text.trim())) {
       await sendTelegramMessage('❌ /buy צריך סימבול, למשל: /buy USELESSEUR', telegram);
+      continue;
     }
+    unclaimedMessages.push(message);
   }
   stashUnclaimedTelegramUpdates(telegramStore, { messages: unclaimedMessages, callbacks: polled.callbacks });
   if (pendingSymbols.size === 0) return [];

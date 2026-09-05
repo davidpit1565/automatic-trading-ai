@@ -257,6 +257,43 @@ describe('checkManualBuyRequests', () => {
     expect(sentTexts).toEqual(['❌ /buy צריך סימבול, למשל: /buy USELESSEUR']);
   });
 
+  it("does not re-send the bare-/buy usage hint on the next cycle — real incident, 2026-09-05: the reply repeated every cycle for hours because the already-answered message was ALSO stashed back into the shared unclaimed queue, so the next cycle's poll saw it again and replied again", async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const sentTexts: string[] = [];
+    const fetchFn = (async (url: string, init?: { body?: string }) => {
+      if (String(url).includes('/sendMessage')) {
+        sentTexts.push((JSON.parse(init!.body!) as { text: string }).text);
+        return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 });
+      }
+      // Real Telegram only returns updates at or after the requested offset —
+      // this update (id 1) is delivered once, on the first poll, then never
+      // again on a later poll with a higher offset.
+      const offset = Number(new URL(String(url)).searchParams.get('offset') ?? '0');
+      const result = offset <= 1 ? [{ update_id: 1, message: { text: '/buy', chat: { id: 'C' } } }] : [];
+      return new Response(JSON.stringify({ ok: true, result }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const telegram = { token: 'T', chatId: 'C', fetchFn };
+    const args = [
+      store,
+      telegram,
+      fakeSource(),
+      '1h' as const,
+      [XBT],
+      {},
+      flowParams({ intentId: 'x', state: 'filled', filledQuantity: 0, avgFillPrice: null, detail: '' }, killSwitch, audit),
+      1000,
+    ] as const;
+
+    await checkManualBuyRequests(...args);
+    await checkManualBuyRequests(...args);
+
+    expect(sentTexts).toEqual(['❌ /buy צריך סימבול, למשל: /buy USELESSEUR']);
+    expect(store.get<unknown[]>('telegram-unclaimed-messages')).toEqual([]);
+  });
+
   it('respects the kill switch — no manual buy can bypass it', async () => {
     const store = new MemoryStore();
     initLiveCash(store, 100);

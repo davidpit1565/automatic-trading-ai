@@ -169,6 +169,45 @@ describe('checkManualSellRequests', () => {
     expect(sentTexts).toEqual(['❌ /sell צריך סימבול, למשל: /sell XBTEUR']);
   });
 
+  it("does not re-send the bare-/sell usage hint on the next cycle — real incident, 2026-09-05: the reply repeated every cycle for hours because the already-answered message was ALSO stashed back into the shared unclaimed queue, so the next cycle's poll saw it again and replied again (same root cause fixed on the /buy side)", async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const killSwitch = new PersistedKillSwitch(store);
+    const sentTexts: string[] = [];
+    const fetchFn = (async (url: string, init?: { body?: string }) => {
+      if (String(url).includes('/sendMessage')) {
+        sentTexts.push((JSON.parse(init!.body!) as { text: string }).text);
+        return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 });
+      }
+      // Real Telegram only returns updates at or after the requested offset —
+      // this update (id 1) is delivered once, on the first poll, then never
+      // again on a later poll with a higher offset.
+      const offset = Number(new URL(String(url)).searchParams.get('offset') ?? '0');
+      const result = offset <= 1 ? [{ update_id: 1, message: { text: '/sell', chat: { id: 'C' } } }] : [];
+      return new Response(JSON.stringify({ ok: true, result }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const args = [
+      store,
+      { token: 'T', chatId: 'C', fetchFn },
+      fakeSource(),
+      '1h' as const,
+      {
+        confirmationGate: fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' }),
+        brokerAdapter: fakeBrokerAdapter(filledReport()),
+        killSwitch,
+        audit,
+        verifySymbolExists: async () => true,
+      },
+      9000,
+    ] as const;
+
+    await checkManualSellRequests(...args);
+    await checkManualSellRequests(...args);
+
+    expect(sentTexts).toEqual(['❌ /sell צריך סימבול, למשל: /sell XBTEUR']);
+    expect(store.get<unknown[]>('telegram-unclaimed-messages')).toEqual([]);
+  });
+
   it('reports no-open-position for a /sell command with no matching tracked live position', async () => {
     const store = new MemoryStore();
     const audit = new PersistedAuditLog(store);
