@@ -199,8 +199,58 @@ describe('syncManualTradesFromBroker (2026-09-04: a real Revolut X trade made ou
         NO_TELEGRAM,
         1_000,
       ),
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(false);
     expect(openLivePositions(store)).toHaveLength(0);
+  });
+
+  describe('return value (2026-09-05: the caller must know whether to persist immediately)', () => {
+    it('returns false when nothing differs from tracked state (a pure no-op cycle)', async () => {
+      const store = new MemoryStore();
+      await expect(
+        syncManualTradesFromBroker(store, fakeBroker([]), fakeSource({}), NO_TELEGRAM, 1_000),
+      ).resolves.toBe(false);
+    });
+
+    it('returns false when a buy is detected but no current price is available — nothing was actually reconciled', async () => {
+      const store = new MemoryStore();
+      await expect(
+        syncManualTradesFromBroker(
+          store,
+          fakeBroker([{ symbol: 'BTC', quantity: 0.5, avgCost: 0 }]),
+          fakeSource({ XBTEUR: null }),
+          NO_TELEGRAM,
+          1_000,
+        ),
+      ).resolves.toBe(false);
+    });
+
+    it('returns true when a manual buy is actually reconciled', async () => {
+      const store = new MemoryStore();
+      await expect(
+        syncManualTradesFromBroker(
+          store,
+          fakeBroker([{ symbol: 'BTC', quantity: 0.5, avgCost: 0 }]),
+          fakeSource({ XBTEUR: 50_000 }),
+          NO_TELEGRAM,
+          1_000,
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it('returns true when a manual sell is actually reconciled, even if price is unavailable for P&L', async () => {
+      const store = new MemoryStore();
+      recordLiveEntryFill(store, buyIntent('XBTEUR', 0.5, 40_000), filledReport('XBTEUR', 0.5, 40_000), 500);
+      await expect(
+        syncManualTradesFromBroker(
+          store,
+          fakeBroker([{ symbol: 'BTC', quantity: 0, avgCost: 0 }]),
+          fakeSource({ XBTEUR: null }),
+          NO_TELEGRAM,
+          2_000,
+        ),
+      ).resolves.toBe(true);
+      expect(openLivePositions(store)).toHaveLength(0);
+    });
   });
 
   it('reconciles multiple curated symbols independently in the same cycle', async () => {
