@@ -1065,9 +1065,11 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    conditionally-shown element in this file needs the same guard whenever it
    sets its own unconditional `display`, but this is the one actually hit. */
 .kill-switch-banner[hidden] { display: none; }
-/* Base size fits a boxed card (the "Real money" secondary hero, which stays
-   boxed — see homeView.ts). `.hero-bare` below overrides to the giant
-   dominant-element scale; this base is what a secondary `.hero` still gets. */
+/* Base size fits a boxed secondary card. `.hero-bare` below overrides to the
+   giant dominant-element scale; this base is what a boxed `.hero` still gets
+   (today: none of the built-in heroes stay boxed — every "Real money"/
+   "Portfolio value" hero is hero-bare once it's the one dominant figure on
+   its screen — but the class stays generic for whatever's added next). */
 .hero-value { display: flex; align-items: baseline; gap: 0.06em; font-weight: var(--fw-bold); letter-spacing: -0.02em;
   margin: 0.3rem 0 0.1rem; font-variant-numeric: tabular-nums; }
 .hero-value-currency { font-size: 1.7rem; }
@@ -1088,8 +1090,8 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    50px on a 390px phone and caps near 66px, matching the reference's
    balance. Sized on the flex parent so the currency symbol and the cents
    can scale off it in `em`. Scoped to `.hero-bare` only — a boxed secondary
-   hero (the real-money card) keeps the moderate size above; only the ONE
-   dominant hero gets this treatment. */
+   hero (should one exist) keeps the moderate size above; only the ONE
+   dominant hero on a given screen gets this treatment. */
 .hero-bare .hero-value { gap: 0.04em; font-weight: 800; letter-spacing: -0.035em;
   margin: 0.7rem 0 0.35rem; line-height: 1.02; font-size: var(--fs-hero); }
 .hero-bare .hero-value-currency { font-size: 0.5em; font-weight: 700; color: var(--text-dim); }

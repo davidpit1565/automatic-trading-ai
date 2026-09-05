@@ -5184,3 +5184,89 @@ differs from the old 48h-window number), plus a fallback case with only 3
 candles available.
 
 Gate: tsc clean, 1162 vitest passed (2 new), vite build ok.
+
+## The simulated ("not real money") wallet is now hidden everywhere once real money is live (2026-09-05)
+
+David: "אני רוצה שכל מה שקשור לארנק הישן של המסחר בכסף הלא אמיתי שימחק
+לגמרי מכל האתר בכל דף" (I want everything related to the old not-real-money
+wallet removed from the whole site, every page). Clarified via a follow-up
+question: he means the DISPLAY of the simulated money, not the underlying
+paper-trading engine — correctly so, since real-money entries are literally
+mirrored from the paper autopilot's own approved signals
+(`runLiveMirror`/`mirrorApprovedEntries`); deleting that engine would have
+disabled real trading entirely, not just hidden a legacy UI element. Nothing
+under `server/**`/`src/core/**` touched — this is a pure `src/ui/` display
+change, the paper engine keeps running underneath exactly as before.
+
+Home's Overview tab already had this exact pattern (`hero.hidden =
+Boolean(live)`, added 2026-09-04) — the sim hero, readiness card and sim
+"Open positions" table all already hide once real money exists. Two places
+were deliberately left showing both sides at the time ("Left untouched on
+the Profit tab... which deliberately shows real and simulated side by
+side") — David's ask reverses that decision:
+
+- **Profit tab** (`assetHubView.ts`): `#hub-real-money` was a boxed
+  secondary card with the SIMULATED "Total return" hero-bare and dominant
+  above it. Now `#hub-real-money` is hero-bare itself (matching Home's
+  `#home-live-hero`) and `#hub-sim-hero` + the readiness card hide entirely
+  once `state.live` exists.
+- **History tab**: the simulated equity chart + trade list (now wrapped in
+  `#hub-sim-history`) hide entirely once `state.live` exists, leaving only
+  the "Real activity" section that already existed there.
+
+Both stay fully visible exactly as before for Stocks (no live account
+there — `state.live` is always null) and for Crypto before real money ever
+goes live. Two stale comments in `styles.css` claiming "the real-money card
+... stays boxed" were also corrected — no hero stays boxed anymore, real or
+simulated, once it's the one dominant figure on its screen.
+
+Verified with real screenshots: built `dist/`, `vite preview` on port 4177,
+mocked `autopilot-state.json` with the real committed live-account content.
+Overview (already correct, unchanged) → Profit → History, in order:
+confirmed only "Real money"/"Real activity" show, no simulated hero or
+simulated trade list anywhere on either tab.
+
+Tests added: `tests/ui/assetHubView.test.ts` (2 new) — hides
+`#hub-sim-hero`/`#hub-sim-history`/`#hub-readiness` and promotes
+`#hub-real-money` to `hero-bare` once live; keeps both simulated sections
+visible when there's no live account (Stocks today).
+
+Gate: tsc clean, 1164 vitest passed (2 new), vite build ok.
+
+## Diagnosed: the bare-/buy repeat-reply fix (PR #193) appeared not to work — it was a stale long-running job, not a fix failure (2026-09-05)
+
+David reported the exact same "❌ /buy צריך סימבול" repeat-reply bug
+STILL happening well after PR #193 (the actual code fix) was merged and
+confirmed green. Investigated by reading the real committed
+`state/autopilot-state.json`: `telegram-unclaimed-messages` had 3 bare
+`/buy` updates stuck UNCHANGED across multiple committed cycles, all timestamped
+after the fix's merge — meaning the fix's own code was correct (nothing
+kept re-adding to the queue) but was never actually running.
+
+**Root cause**: `autopilot.yml`'s "Cloud Paper Autopilot" job is a
+long-running process — one GitHub Actions run loops internally through up
+to 70 cycles (~5-6 min apart) over roughly 2+ hours, checking out the repo
+ONCE at job start. The run active at the time (`run_id` 33986617820)
+started at 19:16 UTC — 54 minutes BEFORE PR #193 merged (20:10 UTC) — so it
+kept executing the old, pre-fix code for its entire remaining multi-hour
+duration, regardless of what had since merged to `main`. The scheduler
+(`cron: '*/30 * * * *'`) also can't be relied on to start a fresh run
+promptly — its own comment already documents GitHub's scheduler firing
+"only every 5-7h" under load.
+
+**Fix applied, not a code change**: cancelled the stale run
+(`cancel_workflow_run`) and immediately redispatched a fresh one
+(`run_workflow` on `main`) rather than waiting for the next uncertain cron
+tick — confirmed the new run (`run_number` 811) checked out the latest
+commit (includes both PR #193 and #194). The three stuck unclaimed
+messages will each get exactly one final reply on the new run's first
+cycle, then stop — no further action needed from David, and this needs no
+code fix since the underlying bug was already correctly fixed.
+
+**Lesson for next time a fix "doesn't seem to work" here**: check whether
+the currently-running `autopilot.yml`/`stocks-autopilot.yml` job's
+`head_sha` (via `list_workflow_runs`) predates the fix's merge commit
+before assuming the fix itself is wrong — this long-running-job
+architecture means a merged, verified-green fix can take up to ~2 hours to
+actually reach production if the in-flight run isn't cancelled and
+redispatched.

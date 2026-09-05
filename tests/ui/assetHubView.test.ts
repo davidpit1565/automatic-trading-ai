@@ -196,6 +196,49 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
   });
 });
 
+describe('renderAssetHub — the SIMULATED wallet is hidden entirely once a live account exists (David asked, 2026-09-05)', () => {
+  const liveState = (): CloudState =>
+    cloudState({
+      equityHistory: [{ at: 1, equity: 100 }],
+      live: {
+        cash: 50,
+        positions: [],
+        killSwitchEngaged: false,
+        killSwitchReason: null,
+        recentEvents: [],
+        externalBtcQuantity: 0,
+        equityHistory: [],
+      },
+    });
+
+  it('hides the simulated hero (Profit tab) and the simulated chart+list (History tab) once real money is live', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, { ...baseOpts, fetchState: async () => liveState() });
+    await flush();
+
+    expect(container.querySelector<HTMLElement>('#hub-sim-hero')!.hidden).toBe(true);
+    expect(container.querySelector<HTMLElement>('#hub-sim-history')!.hidden).toBe(true);
+    expect(container.querySelector<HTMLElement>('#hub-readiness')!.hidden).toBe(true);
+    // The real-money hero takes over as the dominant figure on this tab.
+    expect(container.querySelector<HTMLElement>('#hub-real-money')!.classList.contains('hero-bare')).toBe(true);
+    expect(container.querySelector<HTMLElement>('#hub-real-money')!.hidden).toBe(false);
+  });
+
+  it('keeps showing the simulated hero and history when there is no live account (Stocks today)', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      fetchState: async () => cloudState({ history: [], equityHistory: [{ at: 1, equity: 100 }] }),
+    });
+    await flush();
+
+    expect(container.querySelector<HTMLElement>('#hub-sim-hero')!.hidden).toBe(false);
+    expect(container.querySelector<HTMLElement>('#hub-sim-history')!.hidden).toBe(false);
+  });
+});
+
 describe("renderAssetHub — Profit tab 'leading vs Bitcoin' (found in review, 2026-09-03: used to mean merely profitable, not actually beating BTC's own return)", () => {
   function bitcoinScenario(overrides: { agentEquity: number; btcAnchor: number; btcNow: number }): CloudState {
     return cloudState({
