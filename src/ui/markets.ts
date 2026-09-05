@@ -195,7 +195,19 @@ export async function fetchSnapshot(
   if (!candles.ok || candles.value.length < 2) return null;
   const closes = candles.value.map((c) => c.close);
   const price = closes[closes.length - 1]!;
-  const first = closes[0]!;
+  // The change % here is displayed everywhere (topbar BTC chip, Home's
+  // markets strip) as an unlabeled "chg" pill, the same convention as a
+  // real exchange's 24h change (and `fetchMarketRows`'s ticker-based rows,
+  // which correctly use the exchange's own 24h open). `count` defaults to
+  // 48 hourly candles for a smoother sparkline, so using closes[0] (48h
+  // ago) here silently doubled the window — real bug, caught 2026-09-05:
+  // David's screenshot showed our BTC chip at -2.04% next to Revolut X's
+  // real -0.15% for the same moment. Anchor 24 candles back from the
+  // latest instead, falling back to the oldest available if fewer candles
+  // came back (a network hiccup shouldn't crash this, just widen the
+  // window slightly).
+  const dayAgoIndex = Math.max(0, closes.length - 25);
+  const first = closes[dayAgoIndex]!;
   return { symbol, label, price, changePct: first > 0 ? ((price - first) / first) * 100 : 0, closes };
 }
 
