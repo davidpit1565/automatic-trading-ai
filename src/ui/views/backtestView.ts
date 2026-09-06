@@ -119,7 +119,7 @@ function renderComparisonTable(container: HTMLElement, results: BacktestResult[]
   const summary = document.createElement('div');
   summary.className = 'stat-row';
   summary.innerHTML = `
-    <div class="stat-tile"><div class="stat-tile-value up">${escapeHtml(best.strategyName)}</div><div class="stat-tile-label">Best strategy</div></div>
+    <div class="stat-tile"><div class="stat-tile-value ${bestReturn >= 0 ? 'up' : 'down'}">${escapeHtml(best.strategyName)}</div><div class="stat-tile-label">Best strategy</div></div>
     <div class="stat-tile"><div class="stat-tile-value ${bestReturn >= 0 ? 'up' : 'down'}">${formatPct(bestReturn)}</div><div class="stat-tile-label">Best return</div></div>
     <div class="stat-tile"><div class="stat-tile-value ${avgReturn >= 0 ? 'up' : 'down'}">${formatPct(avgReturn)}</div><div class="stat-tile-label">Average return</div></div>
     <div class="stat-tile"><div class="stat-tile-value">${results.length}</div><div class="stat-tile-label">Strategies compared</div></div>
@@ -159,7 +159,30 @@ function renderComparisonTable(container: HTMLElement, results: BacktestResult[]
   const tableWrap = document.createElement('div');
   tableWrap.className = 'table-scroll';
   tableWrap.appendChild(table);
+  const fadeWrap = document.createElement('div');
+  fadeWrap.className = 'table-scroll-fade';
+  fadeWrap.appendChild(tableWrap);
   container.innerHTML = '';
   container.appendChild(summary);
-  container.appendChild(tableWrap);
+  container.appendChild(fadeWrap);
+  initTableScrollFade(fadeWrap);
+}
+
+/** Hints that a wide data-table scrolls further right than the visible
+ * edge shows — a small affordance layered on top of the shared
+ * `.table-scroll` wrapper (small enough that duplicating it in
+ * validationView.ts isn't worth coupling two independent tool screens
+ * together, same reasoning gridView.ts's own equityCurveSvg comment gives). */
+function initTableScrollFade(wrap: HTMLElement): void {
+  const scroller = wrap.querySelector<HTMLElement>('.table-scroll');
+  if (!scroller) return;
+  const update = (): void => {
+    wrap.classList.toggle('is-scrollable', scroller.scrollWidth > scroller.clientWidth + 1);
+    wrap.classList.toggle(
+      'is-scrolled-end',
+      scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 1,
+    );
+  };
+  update();
+  scroller.addEventListener('scroll', update, { passive: true });
 }

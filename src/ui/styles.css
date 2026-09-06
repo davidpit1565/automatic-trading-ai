@@ -694,6 +694,62 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
   stroke: var(--cold);
 }
 
+/* ---------- Grid / Backtest / Validation: creative pass #5 additions ----------
+   Scoped strictly to these three screens' own selectors (ids and a
+   backtest-only class) so nothing here touches `.control`/`.table-scroll`
+   themselves — both shared with Market Scan/Monitoring/Portfolio, owned by
+   a parallel pass, out of this one's scope. */
+
+/* The browser's native number-input spin button renders as a stark white
+   square that breaks the pill shape — invisible at rest, only appearing
+   once the pointer is actually over the field (confirmed via a real
+   hover screenshot, not just reading the CSS), so it's easy to miss without
+   checking. Revolut X's own numeric inputs never show it. */
+#grid-levels::-webkit-inner-spin-button, #grid-levels::-webkit-outer-spin-button,
+#grid-amount::-webkit-inner-spin-button, #grid-amount::-webkit-outer-spin-button,
+#grid-cash::-webkit-inner-spin-button, #grid-cash::-webkit-outer-spin-button,
+#bt-cash::-webkit-inner-spin-button, #bt-cash::-webkit-outer-spin-button,
+#bt-fee::-webkit-inner-spin-button, #bt-fee::-webkit-outer-spin-button,
+#val-fee::-webkit-inner-spin-button, #val-fee::-webkit-outer-spin-button,
+#val-spread::-webkit-inner-spin-button, #val-spread::-webkit-outer-spin-button,
+#val-slippage::-webkit-inner-spin-button, #val-slippage::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+#grid-levels, #grid-amount, #grid-cash,
+#bt-cash, #bt-fee,
+#val-fee, #val-spread, #val-slippage {
+  -moz-appearance: textfield;
+}
+
+/* Backtest's own Buy & Hold/DCA/Trend toggles — the browser default
+   checkbox renders bright OS blue, the one surface on this screen that
+   broke the app's restrained black/white/green/red palette. */
+.control-checkboxes input[type="checkbox"] {
+  accent-color: var(--text);
+}
+
+/* A right-edge fade hinting that a wide data-table (Backtest's strategy
+   comparison, Validation's per-fold results) scrolls further right — the
+   `.table-scroll` wrapper itself already contains the scroll (shared with
+   Market Scan/Monitoring, out of this pass's scope); this is an additive
+   affordance these two screens opt into via a new wrapper class, toggled
+   by their own scroll-position JS. */
+.table-scroll-fade { position: relative; }
+.table-scroll-fade::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 28px;
+  background: linear-gradient(to right, transparent, var(--surface));
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+  pointer-events: none;
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+}
+.table-scroll-fade.is-scrollable::after { opacity: 1; }
+.table-scroll-fade.is-scrolled-end::after { opacity: 0; }
+
 /* ---------- Cards ---------- */
 
 .learn-card {
