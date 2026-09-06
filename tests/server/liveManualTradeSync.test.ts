@@ -5,6 +5,7 @@ import type { BrokerAdapter, BrokerPosition, OrderIntent, OrderStatusReport } fr
 import type { MarketDataSource } from '../../src/core/data/revolutClient';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
 import { openLivePositions, recordLiveEntryFill } from '../../server/liveExitFlow.mts';
+import { readRestingEntryIntent, rememberRestingEntryIntent } from '../../server/liveEntryMirror.mts';
 import { syncManualTradesFromBroker } from '../../server/liveManualTradeSync.mts';
 
 const NO_TELEGRAM = { token: '', chatId: '' };
@@ -268,5 +269,103 @@ describe('syncManualTradesFromBroker (2026-09-04: a real Revolut X trade made ou
     const positions = openLivePositions(store);
     expect(positions.find((p) => p.entryAssessment.asset === 'XBTEUR')?.quantity).toBe(0.1);
     expect(positions.find((p) => p.entryAssessment.asset === 'ETHEUR')?.quantity).toBe(2);
+  });
+});
+
+describe("resting entry order reconciliation (2026-09-06: attribute the bot's own slow fill correctly, not as an external trade)", () => {
+  function restingIntent(
+    symbol: string,
+    quantity: number,
+    entry: number,
+    stopLoss: number,
+    takeProfit: number,
+  ): OrderIntent {
+    return {
+      id: `live-entry:${symbol}:500`,
+      createdAt: 500,
+      mode: 'live',
+      symbol,
+      side: 'buy',
+      quantity,
+      limitPrice: entry,
+      stopLoss,
+      takeProfit,
+      assessment: { ...approvedAssessment(symbol, entry), stopLoss, takeProfit },
+    };
+  }
+
+  it('uses the original risk-engine stop/target/limit price when the reconciled quantity matches a resting entry intent', async () => {
+    const store = new MemoryStore();
+    // A real signal-derived stop/target, deliberately far from the fixed
+    // manual-override levels (-1.5%/+3%) so the test can tell which one won.
+    rememberRestingEntryIntent(store, 'XBTEUR', restingIntent('XBTEUR', 0.5, 40_000, 38_000, 46_000));
+
+    await syncManualTradesFromBroker(
+      store,
+      fakeBroker([{ symbol: 'BTC', quantity: 0.5, avgCost: 0 }]),
+      fakeSource({ XBTEUR: 41_000 }), // price moved since the order was placed — must NOT be used as entry
+      NO_TELEGRAM,
+      1_000,
+    );
+
+    const positions = openLivePositions(store).filter((p) => p.entryAssessment.asset === 'XBTEUR');
+    expect(positions).toHaveLength(1);
+    expect(positions[0]!.quantity).toBe(0.5);
+    expect(positions[0]!.entryPrice).toBe(40_000); // the ORIGINAL limit price, not the current market price
+    expect(positions[0]!.stopLoss).toBe(38_000);
+    expect(positions[0]!.takeProfit).toBe(46_000);
+    expect(readRestingEntryIntent(store, 'XBTEUR')).toBeNull(); // resolved, cleared
+  });
+
+  it('tolerates small fee/rounding drift between the requested and filled quantity', async () => {
+    const store = new MemoryStore();
+    rememberRestingEntryIntent(store, 'XBTEUR', restingIntent('XBTEUR', 0.5, 40_000, 38_000, 46_000));
+
+    await syncManualTradesFromBroker(
+      store,
+      fakeBroker([{ symbol: 'BTC', quantity: 0.499, avgCost: 0 }]), // 0.2% less than requested
+      fakeSource({ XBTEUR: 41_000 }),
+      NO_TELEGRAM,
+      1_000,
+    );
+
+    const positions = openLivePositions(store).filter((p) => p.entryAssessment.asset === 'XBTEUR');
+    expect(positions[0]!.stopLoss).toBe(38_000); // still the real one, not the manual-override guess
+    expect(readRestingEntryIntent(store, 'XBTEUR')).toBeNull();
+  });
+
+  it('falls back to a genuinely external buy (fixed manual-override levels) when the reconciled quantity does not match the resting intent', async () => {
+    const store = new MemoryStore();
+    rememberRestingEntryIntent(store, 'XBTEUR', restingIntent('XBTEUR', 0.1, 40_000, 38_000, 46_000));
+
+    await syncManualTradesFromBroker(
+      store,
+      fakeBroker([{ symbol: 'BTC', quantity: 0.5, avgCost: 0 }]), // far more than the 0.1 the resting order requested
+      fakeSource({ XBTEUR: 50_000 }),
+      NO_TELEGRAM,
+      1_000,
+    );
+
+    const positions = openLivePositions(store).filter((p) => p.entryAssessment.asset === 'XBTEUR');
+    expect(positions).toHaveLength(1);
+    expect(positions[0]!.quantity).toBe(0.5);
+    expect(positions[0]!.entryPrice).toBe(50_000); // current price — genuinely external, no better estimate available
+    expect(positions[0]!.entryAssessment.stopLoss).toBeCloseTo(50_000 * (1 - 1.5 / 100)); // fixed manual-override level
+    // The mismatched resting intent is left in place — unresolved, not
+    // silently discarded — for a future cycle to reconcile correctly.
+    expect(readRestingEntryIntent(store, 'XBTEUR')).not.toBeNull();
+  });
+
+  it('behaves exactly as before when there is no resting entry intent at all (the ordinary external-buy path)', async () => {
+    const store = new MemoryStore();
+    await syncManualTradesFromBroker(
+      store,
+      fakeBroker([{ symbol: 'BTC', quantity: 0.5, avgCost: 0 }]),
+      fakeSource({ XBTEUR: 50_000 }),
+      NO_TELEGRAM,
+      1_000,
+    );
+    const positions = openLivePositions(store).filter((p) => p.entryAssessment.asset === 'XBTEUR');
+    expect(positions[0]!.entryAssessment.stopLoss).toBeCloseTo(50_000 * (1 - 1.5 / 100));
   });
 });

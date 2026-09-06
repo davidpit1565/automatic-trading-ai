@@ -30,6 +30,7 @@
 
 import type { KeyValueStore } from '../src/core/data/storage';
 import type { Instrument } from '../src/core/types';
+import type { OrderIntent } from '../src/core/execution/types';
 import type { TradeOpportunity } from '../src/core/signal/signalEngine';
 import { assessTrade, confidenceScaledRiskPct, DEFAULT_RISK_LIMITS, type RiskLimits } from '../src/core/risk/riskEngine';
 import { openLivePositions, recordLiveEntryFill } from './liveExitFlow.mts';
@@ -39,6 +40,51 @@ import { toRevolutXSymbol } from './revolutXBrokerAdapter.mts';
 
 const PENDING_KEY = 'live-entry-pending';
 const OUTSTANDING_KEY = 'live-entry-outstanding-symbols';
+const RESTING_ENTRY_KEY = 'live-resting-entry-intents';
+
+function readRestingEntryIntents(store: KeyValueStore): Record<string, OrderIntent> {
+  return store.get<Record<string, OrderIntent>>(RESTING_ENTRY_KEY) ?? {};
+}
+
+/**
+ * Remembers a just-submitted BUY intent that reached the broker but has not
+ * genuinely filled AT ALL yet (a resting limit order — `hasRealExposure` is
+ * true but `recordLiveEntryFill` returned false) — keyed by this project's
+ * INTERNAL symbol (`intent.assessment.asset`).
+ *
+ * Found in review, 2026-09-06: there is no fill-status poller for a resting
+ * order (see `revolutXBrokerAdapter.mts`'s doc comment) — the ONLY thing
+ * that ever notices it later fill is `liveManualTradeSync.mts`'s broker-
+ * balance reconciliation, which otherwise cannot tell "this bot's own slow
+ * order just filled" apart from "David bought this directly in the app,"
+ * and previously always guessed the latter — discarding the real
+ * risk-engine-derived stop/target/entry a human already approved via
+ * Telegram in favor of a generic manual-override guess, and misreporting an
+ * order THIS bot placed as an external trade. See
+ * `liveManualTradeSync.mts`'s `reconcileExternalBuy` for the other half of
+ * this fix.
+ */
+export function rememberRestingEntryIntent(store: KeyValueStore, symbol: string, intent: OrderIntent): void {
+  const map = readRestingEntryIntents(store);
+  map[symbol] = intent;
+  store.set(RESTING_ENTRY_KEY, map);
+}
+
+/** The still-resting (not yet filled at all) BUY intent this bot itself
+ * submitted for `symbol`, if any — see `rememberRestingEntryIntent`. */
+export function readRestingEntryIntent(store: KeyValueStore, symbol: string): OrderIntent | null {
+  return readRestingEntryIntents(store)[symbol] ?? null;
+}
+
+/** Call once a resting entry is resolved — genuinely filled (matched and
+ * recorded by `liveManualTradeSync.mts`) or the position is otherwise
+ * cleared. No-ops if none was recorded for `symbol`. */
+export function clearRestingEntryIntent(store: KeyValueStore, symbol: string): void {
+  const map = readRestingEntryIntents(store);
+  if (!(symbol in map)) return;
+  delete map[symbol];
+  store.set(RESTING_ENTRY_KEY, map);
+}
 
 interface PendingEntry {
   readonly opportunity: TradeOpportunity;
@@ -298,6 +344,16 @@ export async function mirrorApprovedEntries(
         if (recordLiveEntryFill(store, intent, result.report, now)) {
           const fillPrice = result.report.avgFillPrice ?? intent.limitPrice;
           debitLiveCash(store, result.report.filledQuantity * fillPrice);
+          clearRestingEntryIntent(store, symbol);
+        } else {
+          // Genuinely submitted but zero filled so far (a resting limit
+          // order) — remember the ORIGINAL intent so that if this exact
+          // order fills later (only ever noticed via
+          // liveManualTradeSync.mts's broker-balance reconciliation, since
+          // there is no fill-status poller), it's attributed back to this
+          // bot's own approved risk assessment instead of a generic guess.
+          // See `rememberRestingEntryIntent`'s doc comment.
+          rememberRestingEntryIntent(store, symbol, intent);
         }
       }
       store.set(PENDING_KEY, pending);
