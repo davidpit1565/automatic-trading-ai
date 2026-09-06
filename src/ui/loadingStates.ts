@@ -97,6 +97,24 @@ export function skeletonRowsHtml(count = 2): string {
 }
 
 /**
+ * Shimmering placeholders shaped like Home's own `.market-card` (icon +
+ * name, a big price bar, a sparkline-shaped bar) — for the first paint of
+ * the "Markets" strip before its data has loaded. Every sibling section on
+ * Home (Top movers, Open positions, Recent activity) already gets a real
+ * skeleton via `skeletonRowsHtml`; this strip was the one left rendering
+ * nothing at all for that same moment.
+ */
+export function skeletonMarketCardsHtml(count = 3): string {
+  const card = `
+    <div class="skeleton-market-card">
+      <div class="skeleton-top"><span class="skeleton-dot"></span><span class="skeleton-bar" style="width:64px"></span></div>
+      <span class="skeleton-bar mc-price"></span>
+      <span class="skeleton-bar mc-spark"></span>
+    </div>`;
+  return card.repeat(count);
+}
+
+/**
  * Show empty state with icon, title, and optional action button.
  */
 export function showEmptyState(

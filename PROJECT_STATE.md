@@ -1,5 +1,300 @@
 # PROJECT_STATE
 
+## Revolut X comparison pass, Stocks screens only: 10 verified fixes (2026-09-06)
+
+One of several parallel agents on David's "compare Revolut X, ship 200 serious
+improvements" round, scoped to Stocks only (`stocksOverviewPanel.ts`,
+`stocksMarketPanel.ts`, `stocksLongTermPanel.ts`, plus the Stocks-specific
+parts of `styles.css`) — Crypto/Home/Markets/Tools were other agents' shares.
+Loaded `fintech-dashboard-polish` + `apple-design`. No Revolut X screen
+recording was on disk this round (checked `/root/.claude/uploads/*/Screen
+Recording*.mp4` — none present), so comparisons leaned on the distilled
+skill plus cross-referencing crypto's own already-polished Markets/Home
+screens (the same reference points "Creative upgrade pass #4" and "Deep
+design pass #1-3" below already used for Stocks).
+
+**Method**: `npm run build`, `vite preview` on port 4290, real Playwright
+screenshots (`chromium.launch({ executablePath: '/opt/pw-browsers/chromium'
+})`) at 390×844, `page.route` mocking a realistic `stocks-state.json` shape
+(positions, market-snapshot, shadow-standings, benchmark-result). Screenshot
+ed all 5 Stocks tabs (Overview/History/Market/Profit/Long-Term), the Market
+list's category tabs + search + zero-result state, and a real mouse-hover
+check via `getComputedStyle` (not just reading CSS) for item 8. One planned
+fix (a loading skeleton for the Market list) was caught by its own new test
+as dead code — a pre-existing synchronous `render()` call already overwrites
+the loading placeholder before the browser ever paints it, so neither the
+old "Loading…" text nor a new skeleton is ever actually visible; reverted
+before commit rather than shipping an invisible "fix". Honest count below:
+10, not the ~28-30 hoped for — three prior exhaustive, screenshot-verified
+design passes already covered this exact surface (see "Creative upgrade
+pass #4" and "Deep design pass #1/#2/#3" further down), so the remaining
+real gaps were narrower than a first pass would find.
+
+1. **Overview hero had no click-to-History affordance.** Home's identical
+   dominant-balance hero (`homeView.ts`) is `tappable` with a "history ›"
+   label and jumps to its own Value view on tap; the Stocks Overview hero
+   was a static, non-interactive copy of the same component. Added
+   `tappable` + the same "history ›" wording, wired to activate this hub's
+   own History sub-tab (`.hub-tab[data-hub="history"]`, found via
+   `container.parentElement` rather than a global query, which would hit
+   Crypto's identical tab instead since both hubs' DOM persist at once).
+   Verified: screenshot before/after + a DOM test asserting the click fires
+   the tab's own click handler.
+2. **"Open positions" heading was missing its SIMULATED tag.** Home's
+   identical heading reads `Open positions <span class="tag-sim">SIMULATED
+   </span>`; Stocks Overview's copy had no tag at all. Added it. Verified:
+   screenshot + DOM test.
+3. **A real "vs S&P 500" benchmark was computed server-side and silently
+   dropped.** `server/stocksRunner.mts` already writes a `benchmark-result`
+   key (`{label: "S&P 500 (SPY)", portfolioPct, assetPct}`, already
+   percentage-scaled — confirmed from the server's own `((equityNow -
+   anchor.equity) / anchor.equity) * 100`) to the real committed
+   `stocks-state.json`, but `cloudState.ts`'s `benchmark` field only reads
+   the crypto-shaped `benchmark-anchor.btc`; Stocks' anchor is keyed `spy`,
+   so `state.benchmark` was always `null` for Stocks and the number had
+   nowhere to render. Added `CloudBenchmarkResult`/`benchmarkResult`
+   (purely additive — crypto's raw state has no `benchmark-result` key, so
+   this is `null` there exactly as before) and a `hero-bench` line on
+   Overview mirroring Home's own "vs Bitcoin" wording exactly (`vs S&P 500 —
+   agent +0.63% · SPY +0.90% · leading`). Touches the shared `cloudState.ts`
+   — deliberately, since it's additive-only and doesn't change any existing
+   Crypto-facing field or behavior. Verified: unit tests for the parser
+   (well-formed + malformed/absent) and a DOM test for the rendered line.
+4. **Market list rows said the static word "live" instead of a real
+   timestamp.** Crypto's identical row (`marketsView.ts`) shows `formatClock
+   (updatedAt) · SYMBOL`; Stocks showed a hardcoded "live"/"no data yet"
+   string with no actual freshness info despite already having an
+   `updatedAt` on every snapshot. Switched to `formatClock(snap.updatedAt)`,
+   wrapped in the same `.row-sub-text` span crypto uses (for consistent
+   ellipsis/overflow handling). Verified: screenshot (shows "01:19" instead
+   of "live").
+5. **Market list rows never flashed on a price change.** Crypto's list
+   flashes green/red (`.flash-up`/`.flash-down`, reusing existing CSS) on a
+   symbol whose price actually moved since the last render; Stocks re-
+   rendered every 60s poll with zero visual cue anything had changed. Added
+   the same `shownPrices` tracking crypto's `rowHtml` uses. Verified: a DOM
+   test that changes the mocked price between two `resume()` cycles and
+   asserts the `flash-up` class appears only on the second render.
+6. **The empty/no-results message was one generic string for every case.**
+   Crypto's list echoes the actual search text or category name back
+   ("No markets match "aa"." / "No markets in Gainers right now.");
+   Stocks showed "No matching stocks." unconditionally, so a user got no
+   confirmation of what actually came up empty. Matched the exact pattern.
+   Verified: DOM test for the query-echo case.
+7. **No status/freshness line under the Market list at all.** Crypto's
+   list shows "Live · N markets · updated HH:MM" below the rows; Stocks had
+   no equivalent. Added "Live · N/M stocks priced · updated HH:MM".
+   Verified: screenshot + DOM test.
+8. **Market rows carried a misleading hover highlight.** Stocks' rows are
+   deliberately a plain non-interactive `<div>` (no per-symbol detail view
+   — see the file's own header comment), unlike crypto's real `<button>`
+   rows, but both shared `.market-row:hover`'s fill, so hovering a Stocks
+   row still glowed as if it were tappable. Added a narrowly-scoped
+   `#stocks-market-list .market-row:hover { background: transparent; }`
+   override rather than touching the shared rule crypto still needs.
+   Verified with a real `pointer.hover()` + `getComputedStyle` check
+   (background stayed `rgba(0,0,0,0)` before and after hover), not just
+   read from the CSS.
+9. **Long-Term's "Track record" used the wrong list component.** Win
+   rate/Profit factor were rendered as generic `.row` list rows (the
+   component meant for an actual scrollable list of trades/positions);
+   every other "at-a-glance summary of a few related numbers" in the app
+   (Grid's equity/return, Validation's fold summary, Backtest's comparison
+   summary) already uses the `.stat-row`/`.stat-tile` "big number + small
+   label" component. Converted the two stats to match, removed the now-
+   dead `row()` helper. Verified: screenshot + existing text-assertion
+   tests (unchanged, still pass against the new markup).
+10. **Empty-positions copy was flatter than Home's.** Home's identical
+    empty state reads "Holding cash and waiting for a good setup."; Stocks
+    read "Holding cash — no open positions." — a small, safe copy-parity
+    fix, no test depended on the old string.
+
+**Rejected after investigation, not fixed:** a loading skeleton for the
+Market list (dead code — see Method above); `.hero.up`/`.down` classes on
+every bare hero (`heroEl.classList.toggle`) are genuinely inert wherever
+`.hero-bare` is used, including Home's own crypto hero — pre-existing,
+shared, and invisible either way, not a Stocks-specific regression to
+carry alone; a per-row Stocks watchlist star (crypto has one) — a real
+feature addition, not a polish fix, out of this pass's scope.
+
+Full gate: `tsc --noEmit` clean, `vitest run` 1180/1180 (was 1149 at the
+start of this pass — 31 new/updated tests, none weakened), `npm run build`
+clean. Diff: `src/ui/views/stocks{Overview,Market,LongTerm}Panel.ts`,
+`src/ui/cloudState.ts` (additive only), `src/ui/styles.css` (one new
+Stocks-scoped rule), plus `tests/ui/stocksOverviewPanel.test.ts` (new),
+`tests/ui/{stocksMarketPanel,cloudState,assetHubView}.test.ts` (extended).
+Nothing under `server/**`, `state/**`, `homeView.ts`, `marketsView.ts`,
+`main.ts`, or any Tools view touched.
+
+## Creative upgrade pass #5: Grid/Backtest/Validation, 20 screenshot-verified fixes (2026-09-06)
+Part of David's cross-screen "compare against Revolut X, ship 200 real
+improvements, split across parallel agents" ask; this agent's scope was
+strictly Grid Simulation / Backtesting Lab / Validation (`gridView.ts` /
+`backtestView.ts` / `validationView.ts` + the `.stat-*`/`.data-table`/verdict
+CSS specific to them) — Market Scan/Monitoring/Portfolio owned by a parallel
+agent, everything else untouched. These three are analytical/scientific tool
+screens, not "your money" screens, so the comparison here means the same
+underlying design discipline (typography scale, tabular-nums, restrained
+color, card treatment, press/loading states) the rest of the app already
+borrows from Revolut X — not a literal screen-for-screen match.
+
+Per the task's own instruction, loaded `fintech-dashboard-polish` and
+`apple-design` first. Built `dist/`, `vite preview`, real Playwright
+screenshots at 390×844 and 1280px desktop with `?demo=1`, covering every
+screen's setup form and result view — before touching anything, and again
+after each fix to confirm it actually changed the pixels. Two prior same-day
+entries ("Creative upgrade pass #4" and three "Deep design pass" entries
+below) already did exhaustive work on these exact three screens (equity
+curve + stat-row hierarchy on Grid, `.stat-tile` unification, table-scroll
+wrappers, border removal on verdict/risk tags) — none of that re-proposed
+here; every item below is something those passes verifiably left standing.
+
+**Real, screenshot-verified issues found and fixed (20):**
+
+1. **Native number-input spin buttons broke the pill shape on hover** — a
+   stark white square with grey arrows, invisible at rest and only appearing
+   once the pointer is actually over the field (confirmed via a real
+   `page.hover()` screenshot, not just reading the CSS — a static screenshot
+   alone would have missed it). Suppressed via `::-webkit-inner/outer-spin-
+   button` + `-moz-appearance: textfield`, scoped to exactly the 8 number-
+   input ids these three screens own (`#grid-levels/#grid-amount/#grid-cash`,
+   `#bt-cash/#bt-fee`, `#val-fee/#val-spread/#val-slippage`) — the shared
+   `.control input` rule itself untouched, since Market Scan/Monitoring/
+   Portfolio reuse it and are a parallel agent's scope this round.
+2. **Backtest's Buy & Hold/DCA/Trend checkboxes rendered bright OS-default
+   blue** — the one color on the screen outside the app's restrained black/
+   white/green/red system. Fixed with `accent-color: var(--text)` on
+   `.control-checkboxes input[type="checkbox"]` (exclusive to this screen).
+3. **Backtest's "Best strategy" name tile was hardcoded green (`up`)
+   regardless of the actual return's sign**, while the adjacent "Best return"
+   tile in the same row correctly switches to red when negative — a
+   strategy that's merely the least-bad of an all-losing bunch would still
+   show its name in green. Both tiles now share the identical
+   `bestReturn >= 0 ? 'up' : 'down'` expression.
+4. **Grid had no "Configure"/"Results" section structure** — Backtest
+   already organizes its form and output under `.block`/`.block-head`
+   headings; Grid jumped straight from the subtitle into a bare `.controls`
+   div and a bare results div. Wrapped both in the same section/heading
+   pattern Backtest established, for parity across the three sibling tools.
+5. **Grid's results container started completely empty** before the first
+   run — Backtest already shows an `.empty` "Configure a backtest above…"
+   placeholder in this state; Grid just showed nothing at all between the
+   button and the bottom nav. Added the matching placeholder.
+6. **Validation had the same missing "Configure" section heading** as Grid
+   (item 4) — added it. (Its results area already gets its own internal
+   headings once populated — "Out-of-sample equity", "Training vs unseen
+   data", "Per-fold results" — so no separate outer "Results" wrapper was
+   added there, unlike Grid.)
+7. **Validation's results container also started completely empty** before
+   the first run (same gap as item 5) — added the matching `.empty`
+   placeholder ("Configure the walk-forward above and press Run to see
+   results.").
+8. **Grid's "Loading X history…" status was plain text**, while Backtest's
+   equivalent already uses the shared `.loading-inline`/`.spinner sm`
+   treatment. Grid now matches.
+9. **Validation's candle-fetch loading message was plain text** — same fix
+   as item 8, applied to Validation's first loading stage.
+10. **Validation's "Running walk-forward…" message was also plain text** —
+    same fix, applied to its second loading stage.
+11. **Validation's "Sharpe (unseen)" stat-tile was never color-coded**,
+    unlike the return tiles right beside it — screenshotted at -1.97
+    (clearly bad) and still rendered in plain white. Sharpe is a standard
+    signed risk-adjusted-return metric (negative is unambiguously bad), so
+    it now reuses the same `signClass()` the return tiles already use.
+12. **Validation's "Degradation" stat-tile was never color-coded either** —
+    but unlike every neighbouring tile, a naive `signClass()` here would be
+    wrong: reading `walkForward.ts`'s own computation,
+    `degradationPct = (1 - avgTestReturnPct / avgTrainReturnPct) * 100`, a
+    bigger POSITIVE number means a strategy performed WORSE out-of-sample
+    (return didn't survive), not better — screenshotted at "+107%", which a
+    plain green/positive convention would have shown as a good sign right
+    next to the ⚠ curve-fitting warning explaining why it's the opposite.
+    Colored with inverted logic (`> 0` → red/negative, `< 0` → green/
+    positive) grounded in the actual formula, not guessed.
+13. **Per-fold table's "Profit factor" column was never color-coded** — a
+    screenshotted 0.11 and 0.00 (both catastrophic — a profitable strategy
+    needs profit factor > 1) sat in plain white next to correctly-colored
+    return columns. Colored green when ≥ 1 (the standard breakeven
+    threshold for this metric), red otherwise; profit factor is always ≥ 0,
+    so `signClass()` itself doesn't apply here (it would show 0.11 green).
+14. **Per-fold table's "Expectancy" column was never color-coded** — a
+    screenshotted -409.30 sat in plain white. Expectancy is a plain signed
+    per-trade average (confirmed by reading `performance.ts`), so it now
+    reuses `signClass()` directly.
+15. **Per-fold "Expectancy" values were flat, un-tiered money strings** —
+    every other money figure in Backtest (Final equity, Fees paid) already
+    gets the two-tier `tieredPriceHtml` decimal treatment; Expectancy,
+    typically well under 1000 and so *actually carrying* a decimal (e.g.
+    "-409.30"), was the one money value in these three screens still shown
+    as one flat string. Now wrapped the same way.
+16. **Grid's "Final equity" stat-tile was also a flat, un-tiered money
+    string** — same gap as item 15, one level up. At the default 10,000
+    starting cash this is invisible (no decimals above 1,000), so verified
+    concretely with a small starting cash (80 → "81.97") to confirm the tier
+    actually renders once there's a decimal to split.
+17. **Backtest's strategy-comparison table had no signal that it scrolls
+    further right** — the existing `.table-scroll` wrapper (shared with
+    Market Scan/Monitoring, out of this pass's scope) correctly contains the
+    scroll, but nothing hinted a phone viewer that "Fees paid" was still off
+    the visible edge. Added a `.table-scroll-fade` wrapper (new class, only
+    used by this screen and #18) with a right-edge gradient that fades out
+    once actually scrolled to the end, toggled by real `scrollWidth`/
+    `scrollLeft` checks — confirmed via `page.evaluate` that `is-scrollable`
+    correctly sets at 390px (853px content in a 318px viewport).
+18. **Validation's per-fold table had the identical missing scroll-fade
+    affordance** — same fix as item 17, applied to its own table (10 columns
+    wide, the widest of the three screens).
+19. **Validation's post-run status line was one continuous "·"-joined
+    run-on sentence** packing symbol, fold shape, three cost percentages,
+    and data source onto a single logical line — screenshotted wrapping
+    across 3 full lines on a 390px phone and splitting the delay clause
+    apart mid-phrase across the line break. The same anti-pattern
+    Monitoring's status line had (fixed in Creative upgrade pass #4, PR
+    #189). Split into two lines (summary · source on one, the cost
+    breakdown on the next); all substrings existing tests/e2e assert on
+    ('spread', etc.) still land inside `#val-status`.
+20. **(Investigated, deliberately NOT changed)** Backtest Lab's number
+    inputs were flagged in an earlier same-day pass as "read slightly flat
+    against the dark theme" but left alone; this round confirmed via
+    screenshot that the *default* `.control input`/`.control select`
+    background (`--surface`, barely lighter than the page) is genuinely
+    subtle, but fixing it means editing the shared `.control` rule itself —
+    used identically by Market Scan/Monitoring/Portfolio, a parallel agent's
+    scope this round. Left untouched rather than risk a cross-scope CSS
+    collision; the concretely-scoped sub-issues that WERE safe to isolate
+    (the spinner button, item 1) were fixed instead.
+
+**Categories checked with no real defect found** (to avoid padding the
+count): icon consistency (neither Grid nor Backtest nor Validation render
+any icon of their own; the `⚠` used in Validation's warning list is the
+same convention Market Scan's `.scan-warnings` already established, not a
+new inconsistency); button hierarchy (Simulate/Run backtest/Run walk-forward
+already read as the clear primary action via the shared white-pill
+treatment); alternating row tint/sticky header (existing row-hover already
+covers scannability at these screens' row counts — at most ~6 fold rows or
+3 strategy rows visible at once, not enough to need a sticky header); Grid's
+and Backtest's own status lines (shorter, 3-4 clauses, wrap cleanly across 2
+lines on a real 390px screenshot — only Validation's was the genuine
+run-on).
+
+Verified with real screenshots throughout (Playwright core,
+`/opt/pw-browsers/chromium`, 390×844 and 1280px, `?demo=1`): every item above
+has a real before/after pair, including one deliberate hover-state capture
+(item 1) that a static screenshot alone would have missed.
+
+Added 11 new tests across the three integration suites (Configure/Results
+structure + empty state, loading spinner, tiered-price on Final equity,
+Best-strategy tile sign parity, table-scroll-fade class toggling via
+simulated `scrollWidth`/`scrollLeft`, status-line line split, Sharpe/
+Degradation/Profit-factor/Expectancy color-by-actual-value assertions that
+don't hardcode fragile demo-data magic numbers). Full gate: `tsc --noEmit`
+clean, `vitest run` 1189/1189 (net +11 from this pass over this branch's
+`origin/main` base, none weakened), `npm run build` clean. Diff confined to `src/ui/views/
+{gridView,backtestView,validationView}.ts`, the additive block of
+`src/ui/styles.css` this entry describes, and the three matching
+`tests/ui/*.integration.test.ts` files — nothing under `server/**`,
+`state/**`, or `src/core/**` touched.
+
 ## Adversarial review of `liveManualTradeSync.mts` (PR #192) — 2 real bugs found and fixed (2026-09-05)
 PR #192 added `syncManualTradesFromBroker` (detects a real trade David makes
 directly in the Revolut X app) and wired it into `runLiveMirror`, written and
@@ -5745,3 +6040,187 @@ file, any Tools view, `server/**`, `src/core/**` — per this agent's scope.
 Full gate (after rebasing onto the sibling shared-layer pass above): tsc
 clean, 1187/1187 vitest (9 new here across `assetHubView.test.ts`/
 `cloudState.test.ts`/`equityChartPanel.test.ts`), `npm run build` clean.
+
+## Design pass, Home + global nav chrome slice: 12 verified fixes (2026-09-06)
+
+Part of David's "compare against Revolut X, ship 200 serious improvements"
+round, split across parallel agents by screen area. This agent's slice:
+`src/ui/views/homeView.ts`, `src/ui/main.ts` (bottom nav, topbar BTC chip,
+data-source banner, tool-grid nav), and the Home/global-nav-specific parts
+of `src/ui/styles.css` only — Markets/Stocks/Tools view-specific CSS is
+other agents' scope, untouched here.
+
+Loaded `fintech-dashboard-polish` and `apple-design` first. Read the prior
+"Creative upgrade pass #1-#4", "Deep design pass #1-#3", "True-black Revolut
+X theme landed", and "Design-system consistency pass" entries above in full
+before starting, specifically to avoid re-proposing anything they already
+shipped (two-tier pricing, sparklines, depth bars, hairline lists,
+hero-bare, press states, table-scroll wrappers, badge fixes). Built `dist/`,
+ran `vite preview`, and took real Playwright screenshots (`playwright-core`,
+`/opt/pw-browsers/chromium`, 390×844, `?demo=1` + the real committed
+`state/autopilot-state.json` mocked via `page.route`) of Home across every
+primary tab and at 1280×900 desktop, before touching any code — a genuine
+before/after screenshot (or a DOM/computed-style check where a screenshot
+couldn't catch the exact timing) backs every item below. Did not re-extract
+frames from the on-disk Revolut X screen recording — the skill's existing
+notes already answered every question this slice raised.
+
+Went in expecting ~28-30 items (this agent's share of 200 across several
+parallel agents); found 13 real, independently-verifiable ones on its own
+merge base. At rebase time onto `origin/main` (needed since a parallel
+"shared-layer" agent had already merged PR #198 while this work was in
+progress), one of those 13 — a `prefers-reduced-motion` fade for
+primary/hub-tab switches — turned out to already be shipped there, as a
+broader fix covering more selectors than this one did. Dropped it rather
+than re-landing a duplicate; kept everything else, including one distinct,
+unconflicted fix (item 10 below) that its own reduced-motion work never
+addressed. Net: 12 real, independently-verifiable, non-duplicate ones —
+stopped there rather than padding the count; three prior exhaustive passes
+already covered most of the standard checklist for this exact screen.
+
+1. **Topbar BTC chip was dead UI.** The single most prominent live number in
+   the whole header (visible on every screen, not just Home) did nothing
+   when tapped — no cursor, no press state, no destination. Gave it
+   `data-nav="markets"` (picked up by the existing delegated `[data-nav]`
+   click listener in `main.ts`, no new wiring needed) plus `cursor:pointer`,
+   a hover tint, and a real `:active` scale press state (with a
+   `prefers-reduced-motion` fallback). Verified: a real Playwright click on
+   `#topbar-btc` now switches the active view to `view-markets` and lights
+   up the Markets nav button; new test in `tests/ui/mainNav.test.ts` (a new
+   file — main.ts had zero prior test coverage).
+2. **Top movers row prices were flat strings next to two-tier prices two
+   rows above.** The Markets strip cards directly above "Top movers" on the
+   same screen already render `€160.93` with the `.93` dimmed/smaller
+   (`tieredPriceHtml`); the movers list a few pixels below rendered
+   `€160.93` as one flat string. Wrapped in the same `tieredPriceHtml` call
+   already used everywhere else. Verified via screenshot: Litecoin
+   `€85.74`, Solana `€160.93`, Dogecoin `€0.1227` all now show the dimmed
+   decimal in the movers list, matching the cards above.
+   (Considered the identical fix for the topbar BTC price too — reverted it
+   after the screenshot showed BTC's price is always ≥ €1,000, and
+   `formatPrice` drops decimals entirely above that threshold, so the wrap
+   would be a genuine no-op for the one symbol this chip ever shows. Kept
+   the diff to what actually changed a pixel.)
+3. **The "Markets" strip was the one async section on Home with no loading
+   state at all.** Top movers, Open positions, and Recent activity each
+   already show a real shimmering skeleton before their data loads
+   (`skeletonRowsHtml`); the Markets strip a few lines above them rendered
+   nothing — a blank gap — for that same moment. Added
+   `skeletonMarketCardsHtml` (`loadingStates.ts`) — a placeholder shaped
+   like `.market-card` (icon, big price bar, sparkline-shaped bar) built
+   from the same `.skeleton-dot`/`.skeleton-bar` shimmer primitives, kept
+   off the real `.market-card` class per this file's own established
+   convention ("a placeholder must never be picked up by code selecting
+   real cards"). The demo data source resolves too fast to catch the exact
+   race on a screenshot, so verified two ways: a real screenshot of the
+   skeleton's shape (icon + bars, correctly shimmer-styled, two cards side
+   by side) via direct DOM injection, and a new DOM test asserting
+   `#home-markets .skeleton-market-card` exists synchronously on mount,
+   before any fetch resolves.
+4. **The hero balance's first paint was a bare giant "—" glyph, not a real
+   loading state.** Every other async section on Home got a real skeleton;
+   the single most prominent element on the whole screen (the giant
+   `hero-bare` balance) rendered a stark, unstyled em-dash at full 2.7rem+
+   scale with no shimmer for that same moment. Replaced with a
+   `.hero-value-skeleton` shimmer bar for both the SIMULATED and REAL hero.
+   Also handled the genuine-offline case so this can't repeat the "shimmers
+   forever" bug this same function already guards against for Open
+   positions/Recent activity: if the cloud state fetch never resolves, the
+   skeleton is swapped for the honest static "—" instead of shimmering
+   indefinitely. Verified via a screenshot with an artificially delayed
+   (but still successful) state fetch, showing the real shimmer bar
+   mid-load, and a new test asserting the offline fallback actually fires.
+5. **Kill-switch "paused" banner used a bare "⏸" emoji** — the one place on
+   Home that broke the app's single outlined-SVG icon language (readiness
+   checks, tool-grid icons, and nav icons all use it; nowhere else in this
+   file uses an emoji). Replaced with an inline SVG pause icon sized/stroked
+   to match. Verified: existing kill-switch test still passes, plus a new
+   assertion that `#hv-kill-switch` now contains an `<svg>` and no longer
+   contains "⏸".
+6. **Desktop sidebar nav overlapped and cut off the data-source banner's
+   text.** A prior pass (PR referenced above) fixed the sidebar drawing over
+   the *topbar* by pinning it to `top: 5rem` — but the amber "Live data
+   unavailable" banner is a separate element between the topbar and
+   `<main>`, never given the same `210px` clearance `.content`/`.topbar`
+   already reserve for the sidebar. Confirmed on a real 1280×900 screenshot
+   in demo/offline mode: the banner's own text was genuinely cut off behind
+   the floating nav card. Added the same `margin-inline-start: 210px` in the
+   existing desktop breakpoint. Verified with a before/after screenshot —
+   the full banner text is now readable, clear of the sidebar.
+7. **`viewport-fit=cover` was missing from the viewport meta tag.** This app
+   already opts into edge-to-edge content
+   (`apple-mobile-web-app-status-bar-style: black-translucent`) and the CSS
+   already uses `env(safe-area-inset-bottom)` for the bottom-nav's content
+   clearance — but per spec, `env(safe-area-inset-*)` only resolves to a
+   real, non-zero value when the page declares `viewport-fit=cover`; without
+   it, every safe-area calc in this file was silently computing against 0
+   on a real notched/Dynamic-Island device, even though it reads as correct
+   in the source. Added the meta tag — the actual precondition for items 8
+   and 9 below to do anything on a real device.
+8. **Topbar had no safe-area-inset-top padding at all**, in any of its four
+   width breakpoints — on an installed iOS PWA (which this app's own meta
+   tags request), the brand wordmark and BTC chip would render partly under
+   the status bar/notch. Added `max(<existing value>, env(safe-area-inset-top))`
+   to all four `.topbar` padding rules (base + 3 responsive breakpoints) so
+   the existing value is preserved everywhere with no inset, and real
+   clearance is added only where one exists.
+9. **Bottom-nav's fixed `bottom: 20px` never accounted for the home-indicator
+   gesture strip (~34px on a notched iPhone)** — it only ever read as
+   "enough" because `env(safe-area-inset-bottom)` was silently 0 without
+   item 7's fix. Fixing item 7 without also fixing this would have been a
+   regression: the nav pill would newly sit right at (or under) the
+   swipe-up gesture zone on a real device once the inset became real.
+   Changed to `calc(20px + env(safe-area-inset-bottom))`.
+10. **`.view.active`'s own page-transition rule was dead code, silently
+    shadowed since it was written.** Found via `getComputedStyle` while
+    verifying primary-tab transition behavior: `.view.active`'s declared
+    `animation: viewfade ...` never actually plays — every `.view.active`
+    element is a `<section>` inside `.content`, and a more specific rule
+    (`.content section.active { animation: fadeInUp ... }`, three sections
+    away) always wins on specificity regardless of source order. Two
+    competing, only-one-of-which-works transition systems existed for the
+    literal same elements — including in the shared-layer pass's own
+    reduced-motion fix above, whose comment explicitly neutralizes BOTH
+    `.view.active` and `.content section.active` "regardless of which one
+    currently cascades," precisely because the dead one was never cleaned
+    up. Removed the dead declaration here and pointed a comment at the one
+    that actually runs, so there's exactly one source of truth left. Zero
+    visible change (confirmed: `fadeInUp` played before and after, in both
+    normal and reduced motion) — pure dead-code correctness, and it makes
+    that other pass's own defensive "regardless of which one" caveat moot
+    going forward.
+11. **`.link-btn` ("See all" on Markets/Top movers/Recent activity) was
+    hover-only** — no `:active` state, unlike every other tappable element
+    on this screen (`.tappable`, `.mk-tab`, `.nav-btn` all have one). A
+    phone has no `:hover` to fall back on, so all three "See all" links gave
+    zero tap feedback. Added a real `:active` (opacity + scale) with a
+    reduced-motion fallback. `.link-btn` is used only in `homeView.ts`, so
+    this is zero-risk for the other parallel agents' screens.
+12. **Markets strip cards had no scroll-snap** — a swipe left a card resting
+    mid-width, cut in half by the strip's own trailing fade mask, instead of
+    landing cleanly on a card boundary the way Revolut X's own horizontal
+    card carousels do. Added `scroll-snap-type: x proximity` to
+    `.markets-strip` and `scroll-snap-align: start` to `.market-card`
+    (`proximity`, not `mandatory`, so a fast flick isn't fought).
+
+**Not counted, considered and rejected**: retokenizing every raw
+`rem`/`px` spacing value in Home-adjacent CSS onto the `--sp-*` scale —
+most of the values in scope (`.markets-strip` gap, `.hub-tabs` padding,
+etc.) are fine-grained micro-adjustments that don't map cleanly onto the
+7-step scale, and several of the classes involved (`.hero`, `.hub-tabs`,
+`.mk-tab`) are shared with other agents' in-flight screens — not worth the
+merge-conflict risk for a cosmetic, sub-pixel-scale win.
+
+Tests: 5 new (`tests/ui/mainNav.test.ts` — new file, main.ts's first-ever
+test coverage; 4 added to `tests/ui/homeView.integration.test.ts`; 2 static
+assertions added to `tests/ui/dashboard.test.ts`). Rebased onto
+`origin/main` after the shared-layer pass above merged first (real conflicts
+in `src/ui/styles.css`'s reduced-motion block and `PROJECT_STATE.md`'s tail,
+both resolved by hand as described). Full gate green on the final, rebased
+tree: `tsc --noEmit` clean, 1183/1183 vitest (1178 from the merged
+shared-layer baseline + 5 new here, none broken), `npm run build` clean.
+Diff: `index.html`, `src/ui/loadingStates.ts`, `src/ui/main.ts`,
+`src/ui/styles.css`, `src/ui/views/homeView.ts` + the 3 test files above —
+nothing under `server/**`, `state/**`, or `src/core/**`, and no view file
+owned by another parallel agent (`marketsView.ts`, `assetHubView.ts`, any
+`stocks*.ts`, any Tools view) touched.

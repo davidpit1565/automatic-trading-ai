@@ -112,6 +112,30 @@ describe('market-snapshot parsing', () => {
   });
 });
 
+describe('benchmark-result parsing', () => {
+  it('parses the precomputed agent-vs-buy-and-hold comparison the stocks runner writes', async () => {
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'benchmark-result': { label: 'S&P 500 (SPY)', portfolioPct: 0.6277077892764502, assetPct: 0.9005468775583718 },
+    });
+    const state = await fetchCloudState(okFetch(body));
+    expect(state!.benchmarkResult).toEqual({
+      label: 'S&P 500 (SPY)',
+      portfolioPct: 0.6277077892764502,
+      assetPct: 0.9005468775583718,
+    });
+  });
+
+  it('defaults to null when the field is absent (crypto) or malformed', async () => {
+    expect((await fetchCloudState(okFetch(stateFile([]))))!.benchmarkResult).toBeNull();
+    const malformed = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'benchmark-result': { label: 'S&P 500 (SPY)', portfolioPct: 'not a number' },
+    });
+    expect((await fetchCloudState(okFetch(malformed)))!.benchmarkResult).toBeNull();
+  });
+});
+
 describe('shadow-standings parsing', () => {
   it('parses a well-formed standing, defaulting missing winRatePct/profitFactor to null', async () => {
     const body = JSON.stringify({

@@ -2,7 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover is what makes env(safe-area-inset-*) resolve to a
+         real, non-zero value at all on a notched/Dynamic-Island device —
+         without it every safe-area-inset-* the CSS below relies on
+         (topbar top inset, bottom-nav's own clearance, .content's padding)
+         is silently 0, defeating those rules even though they read as
+         correct in the source. Required precisely because this app already
+         opts into edge-to-edge content via apple-mobile-web-app-status-bar-style
+         "black-translucent" below. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>AI Trading Assistant</title>
     <meta name="theme-color" content="#07090d" />
     <meta name="apple-mobile-web-app-capable" content="yes" />

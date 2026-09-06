@@ -18,6 +18,7 @@ function cloudState(overrides: Partial<CloudState> = {}): CloudState {
     history: [],
     lastRunAt: null,
     benchmark: null,
+    benchmarkResult: null,
     equityHistory: [],
     readiness: null,
     marketSnapshot: [],

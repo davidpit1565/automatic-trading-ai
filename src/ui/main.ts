@@ -214,6 +214,11 @@ async function mountTopbarBtc(data: ActiveDataSource): Promise<void> {
   if (!chip) return;
   const symbol = findBtcSymbol(data);
   if (!symbol) return;
+  // The single most prominent live price in the whole header did nothing
+  // when tapped. `data-nav="markets"` is all this needs — the delegated
+  // [data-nav] click listener in bootstrap() picks up any element anywhere
+  // in the document, not just bottom-nav buttons.
+  chip.dataset['nav'] = 'markets';
   async function tick(): Promise<void> {
     const snap = await fetchSnapshot(data, symbol!, 'Bitcoin');
     if (!snap || !chip) return;
