@@ -4,9 +4,15 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { answerCallbackQuery, buildAllClearMessage, buildCycleMessage, buildDailySummary, buildKillSwitchKeyboardIntro, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, EDUCATION_TIPS, editTelegramMessage, killSwitchKeyboard, maybeSendEducationTip, pollAllTelegramUpdates, readinessLineHe, sendTelegramMessage, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
+import { answerCallbackQuery, buildAllClearMessage, buildCycleMessage, buildDailySummary, buildKillSwitchKeyboardIntro, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, EDUCATION_TIPS, editTelegramMessage, killSwitchKeyboard, maybeSendEducationTip, pollAllTelegramUpdates, readinessLineHe, sendTelegramMessage, SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
 import { assessRealMoneyReadiness, READINESS_THRESHOLDS } from '../../src/core/feedback/realMoneyReadiness';
 import { MemoryStore } from '../../src/core/data/storage';
+
+describe('SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED (David, 2026-09-06: silence all simulated-trade notifications)', () => {
+  it('is off — every call site gating a simulated-only send on this flag must stay silent', () => {
+    expect(SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED).toBe(false);
+  });
+});
 
 describe('buildStockCycleMessage', () => {
   it('returns null when the cycle opened and closed nothing', () => {
@@ -261,6 +267,43 @@ describe('buildDailySummary', () => {
     expect(msg).toContain('קיל סוויץ\' כבוי');
     // The crypto section's own € figures must still be present too.
     expect(msg).toContain('€10,250');
+  });
+
+  // David asked (2026-09-06) to silence every simulated-money Telegram
+  // notification, site-wide. The daily digest is the one message that
+  // combines simulated (crypto/stocks) content with the REAL Revolut X
+  // section in a single string — `hideSimulated` lets callers keep sending
+  // only the real section, or nothing at all if there's no live account yet.
+  it('hideSimulated: renders ONLY the live section when a live account exists', () => {
+    const msg = buildDailySummary({
+      ...base,
+      positions: [{ symbol: 'ADAEUR', marketValue: 4_250, pctOfEquity: 41.5 }],
+      hideSimulated: true,
+      heading: '📊 test heading',
+      live: {
+        cash: 40.04,
+        equity: 100.71,
+        externalBtcValue: 60.67,
+        positions: [],
+        killSwitchEngaged: false,
+        killSwitchReason: null,
+      },
+    });
+    expect(msg).toContain('📊 test heading');
+    expect(msg).toContain('חשבון אמיתי');
+    expect(msg).toContain('€100.71');
+    // No simulated content at all — not the equity/positions/etc. lines.
+    expect(msg).not.toContain('€10,250');
+    expect(msg).not.toContain('ADAEUR');
+  });
+
+  it('hideSimulated: returns null (nothing to send) when there is no live account either', () => {
+    const msg = buildDailySummary({
+      ...base,
+      positions: [{ symbol: 'ADAEUR', marketValue: 4_250, pctOfEquity: 41.5 }],
+      hideSimulated: true,
+    });
+    expect(msg).toBeNull();
   });
 
   it("shows a bot-tracked open live position and the kill-switch reason when engaged", () => {

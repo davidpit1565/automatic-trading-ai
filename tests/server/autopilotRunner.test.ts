@@ -288,8 +288,8 @@ describe('readLiveSummary (the real Revolut X account folded into the daily dige
   });
 });
 
-describe('maybeSendMoveAlerts (a real spam bug: wobbling near a threshold re-alerted every time)', () => {
-  it('alerts once on a new extreme, and never again for the same or a shallower move', async () => {
+describe('maybeSendMoveAlerts — silenced entirely, simulated positions only, no live equivalent (David, 2026-09-06)', () => {
+  it('never alerts, no matter how far a simulated position moves', async () => {
     const sent: string[] = [];
     const fetchFn = (async (url: string | URL) => {
       sent.push(String(url));
@@ -304,51 +304,10 @@ describe('maybeSendMoveAlerts (a real spam bug: wobbling near a threshold re-ale
     });
     if (!opened.ok) throw new Error('open failed');
 
-    let price = 100;
-    // -5.5% -> a genuinely new extreme (crosses the -5% step for the first time).
-    price = 94.5;
-    await maybeSendMoveAlerts(store, priceSource(() => price), portfolio, telegram);
-    expect(sent).toHaveLength(1);
-
-    // Recovers to -4.8% -> back inside the band, no alert.
-    price = 95.2;
-    await maybeSendMoveAlerts(store, priceSource(() => price), portfolio, telegram);
-    expect(sent).toHaveLength(1);
-
-    // Wobbles back to -5.4% -> the SAME step already alerted, not a new extreme.
-    // The pre-fix version compared only against the immediately-previous bucket
-    // (which had reset to 0 on the recovery above) and would have re-sent here.
-    price = 94.6;
-    await maybeSendMoveAlerts(store, priceSource(() => price), portfolio, telegram);
-    expect(sent).toHaveLength(1);
-
-    // A genuinely deeper move (-11%) is a new extreme and does alert again.
-    price = 89;
-    await maybeSendMoveAlerts(store, priceSource(() => price), portfolio, telegram);
-    expect(sent).toHaveLength(2);
-  });
-
-  it('migrates the old single-number bucket shape instead of going silent forever', async () => {
-    const sent: string[] = [];
-    const fetchFn = (async (url: string | URL) => {
-      sent.push(String(url));
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
-    }) as unknown as typeof fetch;
-    const telegram = { token: 'T', chatId: 'C', fetchFn };
-    const journal = new TradeJournal(store);
-    const positions = new PositionEngine(store, journal);
-    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'EUR' });
-    const opened = positions.open({
-      symbol: 'XRP-EUR', quantity: 100, entryPrice: 100, stopLoss: 80, takeProfit: 130, timestamp: 0,
-    });
-    if (!opened.ok) throw new Error('open failed');
-    // Legacy shape: a plain number (the old "last bucket"), already at -1.
-    store.set('move-alert-buckets', { [opened.value.id]: -1 });
-
-    // A deeper move than the legacy value should still alert.
-    const price = 89; // -11% -> bucket -2, deeper than the migrated neg extreme of -1.
-    await maybeSendMoveAlerts(store, priceSource(() => price), portfolio, telegram);
-    expect(sent).toHaveLength(1);
+    // A genuinely large new extreme (-11%) — would have alerted before
+    // silencing (see PROJECT_STATE.md for the pre-2026-09-06 behavior).
+    await maybeSendMoveAlerts(store, priceSource(() => 89), portfolio, telegram);
+    expect(sent).toHaveLength(0);
   });
 
   it('does nothing without Telegram credentials configured', async () => {
@@ -358,39 +317,10 @@ describe('maybeSendMoveAlerts (a real spam bug: wobbling near a threshold re-ale
     await maybeSendMoveAlerts(store, priceSource(() => 90), portfolio, telegram);
     expect(fetchFn).not.toHaveBeenCalled();
   });
-
-  it('retries a new-extreme alert next cycle after a transient send failure, instead of losing it forever (found in review, 2026-09-03: every OTHER alert in this file only persists its sent flag after checking result.sent — this one recorded the new extreme unconditionally)', async () => {
-    let shouldFail = true;
-    const sent: string[] = [];
-    const fetchFn = (async (url: string | URL) => {
-      if (shouldFail) return new Response(JSON.stringify({ ok: false }), { status: 500 });
-      sent.push(String(url));
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
-    }) as unknown as typeof fetch;
-    const telegram = { token: 'T', chatId: 'C', fetchFn };
-    const journal = new TradeJournal(store);
-    const positions = new PositionEngine(store, journal);
-    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'EUR' });
-    const opened = positions.open({
-      symbol: 'XRP-EUR', quantity: 100, entryPrice: 100, stopLoss: 80, takeProfit: 130, timestamp: 0,
-    });
-    if (!opened.ok) throw new Error('open failed');
-
-    // -5.5% -> a new extreme, but Telegram is down — must not be recorded as
-    // already-alerted.
-    await maybeSendMoveAlerts(store, priceSource(() => 94.5), portfolio, telegram);
-    expect(sent).toHaveLength(0);
-
-    // Telegram recovers; the SAME extreme (price unchanged) must still be
-    // retried, not silently treated as already-handled.
-    shouldFail = false;
-    await maybeSendMoveAlerts(store, priceSource(() => 94.5), portfolio, telegram);
-    expect(sent).toHaveLength(1);
-  });
 });
 
 describe('maybeSendSummaries (the exact bug class already found once)', () => {
-  it('sends the digest once due, and never a second time the same day', async () => {
+  it('sends the digest once due, and never a second time the same day (live account present)', async () => {
     const sent: string[] = [];
     const fetchFn = (async (url: string | URL) => {
       sent.push(String(url));
@@ -398,6 +328,11 @@ describe('maybeSendSummaries (the exact bug class already found once)', () => {
     }) as unknown as typeof fetch;
     const telegram = { token: 'T', chatId: 'C', fetchFn };
     const { portfolio, journal } = buildPortfolio();
+    // A live account must exist for anything to send at all — see the
+    // "silenced entirely" test below for the no-live-account case (David,
+    // 2026-09-06: simulated sections are silenced; only the real Revolut X
+    // section can still trigger a digest send).
+    store.set('live:live-cash-eur', 100);
 
     // 15:30 local time in Asia/Jerusalem -> the daily slot (hour 15) is due.
     const afternoon = Date.parse('2026-07-28T12:30:00Z');
@@ -407,6 +342,21 @@ describe('maybeSendSummaries (the exact bug class already found once)', () => {
     // A second cycle the same afternoon must NOT resend.
     await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, afternoon + 60_000);
     expect(sent).toHaveLength(1);
+  });
+
+  it('sends nothing at all when there is no live account — simulated sections are silenced (David, 2026-09-06)', async () => {
+    const fetchFn = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const telegram = { token: 'T', chatId: 'C', fetchFn: fetchFn as unknown as typeof fetch };
+    const { portfolio, journal } = buildPortfolio();
+
+    const afternoon = Date.parse('2026-07-28T12:30:00Z');
+    await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, afternoon);
+    expect(fetchFn).not.toHaveBeenCalled();
+
+    // The slot is still marked done for today, so a later cycle the same
+    // afternoon doesn't keep recomputing this for nothing.
+    await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, afternoon + 60_000);
+    expect(fetchFn).not.toHaveBeenCalled();
   });
 
   it('does nothing without Telegram credentials configured', async () => {
@@ -426,7 +376,7 @@ describe('maybeSendSummaries (the exact bug class already found once)', () => {
     expect(fetchFn).not.toHaveBeenCalled();
   });
 
-  it('folds crypto\'s own long-term shadow wallet standing into the digest text', async () => {
+  it('no longer folds crypto\'s own (simulated) long-term shadow wallet standing into the digest text (David, 2026-09-06)', async () => {
     let capturedText = '';
     const fetchFn = (async (_url: string | URL, init?: RequestInit) => {
       capturedText = JSON.parse(String(init?.body)).text;
@@ -434,6 +384,7 @@ describe('maybeSendSummaries (the exact bug class already found once)', () => {
     }) as unknown as typeof fetch;
     const telegram = { token: 'T', chatId: 'C', fetchFn };
     const { portfolio, journal } = buildPortfolio();
+    store.set('live:live-cash-eur', 100); // a live account, so the digest still sends
     store.set('shadow-longterm-standings', {
       at: 0,
       standings: [
@@ -442,11 +393,12 @@ describe('maybeSendSummaries (the exact bug class already found once)', () => {
     });
 
     await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, Date.parse('2026-07-28T12:30:00Z'));
-    expect(capturedText).toContain('🌱 ארנק השקעות לטווח ארוך:');
-    expect(capturedText).toContain('+8.00%');
+    expect(capturedText).toContain('חשבון אמיתי'); // the real section still renders
+    expect(capturedText).not.toContain('🌱 ארנק השקעות לטווח ארוך:');
+    expect(capturedText).not.toContain('+8.00%');
   });
 
-  it('folds the new-candidate forward-test standing into the digest text, clearly marked not real', async () => {
+  it('no longer folds the (simulated) new-candidate forward-test standing into the digest text (David, 2026-09-06)', async () => {
     let capturedText = '';
     const fetchFn = (async (_url: string | URL, init?: RequestInit) => {
       capturedText = JSON.parse(String(init?.body)).text;
@@ -454,6 +406,7 @@ describe('maybeSendSummaries (the exact bug class already found once)', () => {
     }) as unknown as typeof fetch;
     const telegram = { token: 'T', chatId: 'C', fetchFn };
     const { portfolio, journal } = buildPortfolio();
+    store.set('live:live-cash-eur', 100); // a live account, so the digest still sends
     store.set('candidate-watch-standings', {
       at: 0,
       standings: [
@@ -462,57 +415,35 @@ describe('maybeSendSummaries (the exact bug class already found once)', () => {
     });
 
     await maybeSendSummaries(store, fakeSource(), portfolio, journal, telegram, Date.parse('2026-07-28T12:30:00Z'));
-    expect(capturedText).toContain('מעקב 13 מטבעות מועמדים');
-    expect(capturedText).toContain('לא במסחר האמיתי');
-    expect(capturedText).toContain('+3.00%');
+    expect(capturedText).toContain('חשבון אמיתי'); // the real section still renders
+    expect(capturedText).not.toContain('מעקב 13 מטבעות מועמדים');
+    expect(capturedText).not.toContain('+3.00%');
   });
 });
 
-describe('maybeSendPeriodicReports — elapsed-time gating survives a coverage gap', () => {
-  it('a gap spanning the exact weekly moment only delays the report, never loses it', async () => {
-    const sent: string[] = [];
-    const fetchFn = (async (url: string | URL) => {
-      sent.push(String(url));
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
-    }) as unknown as typeof fetch;
-    const telegram = { token: 'T', chatId: 'C', fetchFn };
-    const { portfolio, journal } = buildPortfolio();
-
-    // Anchor the weekly window far enough in the past that it's already due,
-    // simulating "the runner was offline through the exact Sunday-evening
-    // window" — the old exact-calendar-match code would have skipped this
-    // report for the entire week; elapsed-time gating must still send it.
-    const anchoredAt = Date.parse('2026-07-01T18:00:00Z');
-    store.set('weekly-anchor', { at: anchoredAt, equity: 10_000 });
-    // Evening, well past 7 days after the anchor, and NOT the exact anchor day.
-    const now = Date.parse('2026-07-20T19:00:00Z'); // 22:00 Asia/Jerusalem
-    await maybeSendPeriodicReports(store, fakeSource(), portfolio, journal, telegram, now);
-    expect(sent.length).toBeGreaterThan(0);
-  });
-
-  it('does not resend the same report twice on the same local day', async () => {
-    const sent: string[] = [];
-    const fetchFn = (async (url: string | URL) => {
-      sent.push(String(url));
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
-    }) as unknown as typeof fetch;
-    const telegram = { token: 'T', chatId: 'C', fetchFn };
-    const { portfolio, journal } = buildPortfolio();
-
-    const now = Date.parse('2026-07-20T19:00:00Z');
-    await maybeSendPeriodicReports(store, fakeSource(), portfolio, journal, telegram, now);
-    const firstCount = sent.length;
-    expect(firstCount).toBeGreaterThan(0);
-
-    await maybeSendPeriodicReports(store, fakeSource(), portfolio, journal, telegram, now + 60_000);
-    expect(sent.length).toBe(firstCount);
-  });
-
-  it('before hour 22 local, nothing is sent even if otherwise due', async () => {
+describe('maybeSendPeriodicReports — silenced entirely, no live equivalent (David, 2026-09-06)', () => {
+  // These weekly/monthly reports only ever describe the SIMULATED `portfolio`
+  // (there is no real-money equivalent) — so, unlike the daily digest, this
+  // notification never sends anything anymore, regardless of the elapsed-
+  // time gating below still being due. The gating logic itself is untouched
+  // and would resume working if SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED is
+  // ever flipped back — this only proves the current fully-silenced behavior.
+  it('never sends, even when the weekly/monthly window is clearly due', async () => {
     const fetchFn = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const telegram = { token: 'T', chatId: 'C', fetchFn: fetchFn as unknown as typeof fetch };
     const { portfolio, journal } = buildPortfolio();
-    // 10:00 Asia/Jerusalem — before the evening-only gate.
+
+    const anchoredAt = Date.parse('2026-07-01T18:00:00Z');
+    store.set('weekly-anchor', { at: anchoredAt, equity: 10_000 });
+    const now = Date.parse('2026-07-20T19:00:00Z'); // 22:00 Asia/Jerusalem, evening + past-due
+    await maybeSendPeriodicReports(store, fakeSource(), portfolio, journal, telegram, now);
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it('before hour 22 local, nothing is sent either (still silenced, not just gated)', async () => {
+    const fetchFn = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const telegram = { token: 'T', chatId: 'C', fetchFn: fetchFn as unknown as typeof fetch };
+    const { portfolio, journal } = buildPortfolio();
     await maybeSendPeriodicReports(store, fakeSource(), portfolio, journal, telegram, Date.parse('2026-07-20T07:00:00Z'));
     expect(fetchFn).not.toHaveBeenCalled();
   });
@@ -1043,7 +974,41 @@ describe('checkHelpRequests (David asked 2026-09-03 for a pinnable command list)
 });
 
 describe('checkStatusRequests (David asked 2026-09-03: "what\'s the situation now")', () => {
-  it('answers /status with the same digest shape as the scheduled daily summary', async () => {
+  it('answers /status with only the REAL account now that simulated content is silenced (David, 2026-09-06)', async () => {
+    const { portfolio, journal } = buildPortfolio();
+    const opened = portfolio.open({
+      symbol: 'BTC-EUR', quantity: 1, entryPrice: 100, stopLoss: 90, takeProfit: 130, timestamp: 0,
+    });
+    if (!opened.ok) throw new Error('open failed');
+    store.set('live:live-cash-eur', 100); // a live account exists
+
+    const sent: string[] = [];
+    const telegram = {
+      token: 'T',
+      chatId: 'C',
+      fetchFn: (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url.includes('getUpdates')) {
+          return new Response(
+            JSON.stringify({ ok: true, result: [{ update_id: 1, message: { text: '/status', chat: { id: 'C' } } }] }),
+            { status: 200 },
+          );
+        }
+        if (url.includes('sendMessage') && init?.body) sent.push(JSON.parse(init.body as string).text);
+        return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
+      }) as unknown as typeof fetch,
+    };
+
+    const answered = await checkStatusRequests(store, fakeSource(), portfolio, journal, telegram, Date.now());
+
+    expect(answered).toBe(true);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toContain('לפי בקשה');
+    expect(sent[0]).toContain('חשבון אמיתי');
+    expect(sent[0]).not.toContain('BTC-EUR'); // the simulated position is silenced
+  });
+
+  it('sends nothing at all for /status when there is no live account (fully simulated, silenced)', async () => {
     const { portfolio, journal } = buildPortfolio();
     const opened = portfolio.open({
       symbol: 'BTC-EUR', quantity: 1, entryPrice: 100, stopLoss: 90, takeProfit: 130, timestamp: 0,
@@ -1069,10 +1034,8 @@ describe('checkStatusRequests (David asked 2026-09-03: "what\'s the situation no
 
     const answered = await checkStatusRequests(store, fakeSource(), portfolio, journal, telegram, Date.now());
 
-    expect(answered).toBe(true);
-    expect(sent).toHaveLength(1);
-    expect(sent[0]).toContain('BTC-EUR');
-    expect(sent[0]).toContain('לפי בקשה');
+    expect(answered).toBe(true); // the command was still claimed, just answered with silence
+    expect(sent).toHaveLength(0);
   });
 
   it('does nothing, and stashes the message back, when there is no /status command', async () => {
