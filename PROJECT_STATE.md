@@ -1,5 +1,174 @@
 # PROJECT_STATE
 
+## Creative upgrade pass #5: Grid/Backtest/Validation, 20 screenshot-verified fixes (2026-09-06)
+Part of David's cross-screen "compare against Revolut X, ship 200 real
+improvements, split across parallel agents" ask; this agent's scope was
+strictly Grid Simulation / Backtesting Lab / Validation (`gridView.ts` /
+`backtestView.ts` / `validationView.ts` + the `.stat-*`/`.data-table`/verdict
+CSS specific to them) — Market Scan/Monitoring/Portfolio owned by a parallel
+agent, everything else untouched. These three are analytical/scientific tool
+screens, not "your money" screens, so the comparison here means the same
+underlying design discipline (typography scale, tabular-nums, restrained
+color, card treatment, press/loading states) the rest of the app already
+borrows from Revolut X — not a literal screen-for-screen match.
+
+Per the task's own instruction, loaded `fintech-dashboard-polish` and
+`apple-design` first. Built `dist/`, `vite preview`, real Playwright
+screenshots at 390×844 and 1280px desktop with `?demo=1`, covering every
+screen's setup form and result view — before touching anything, and again
+after each fix to confirm it actually changed the pixels. Two prior same-day
+entries ("Creative upgrade pass #4" and three "Deep design pass" entries
+below) already did exhaustive work on these exact three screens (equity
+curve + stat-row hierarchy on Grid, `.stat-tile` unification, table-scroll
+wrappers, border removal on verdict/risk tags) — none of that re-proposed
+here; every item below is something those passes verifiably left standing.
+
+**Real, screenshot-verified issues found and fixed (20):**
+
+1. **Native number-input spin buttons broke the pill shape on hover** — a
+   stark white square with grey arrows, invisible at rest and only appearing
+   once the pointer is actually over the field (confirmed via a real
+   `page.hover()` screenshot, not just reading the CSS — a static screenshot
+   alone would have missed it). Suppressed via `::-webkit-inner/outer-spin-
+   button` + `-moz-appearance: textfield`, scoped to exactly the 8 number-
+   input ids these three screens own (`#grid-levels/#grid-amount/#grid-cash`,
+   `#bt-cash/#bt-fee`, `#val-fee/#val-spread/#val-slippage`) — the shared
+   `.control input` rule itself untouched, since Market Scan/Monitoring/
+   Portfolio reuse it and are a parallel agent's scope this round.
+2. **Backtest's Buy & Hold/DCA/Trend checkboxes rendered bright OS-default
+   blue** — the one color on the screen outside the app's restrained black/
+   white/green/red system. Fixed with `accent-color: var(--text)` on
+   `.control-checkboxes input[type="checkbox"]` (exclusive to this screen).
+3. **Backtest's "Best strategy" name tile was hardcoded green (`up`)
+   regardless of the actual return's sign**, while the adjacent "Best return"
+   tile in the same row correctly switches to red when negative — a
+   strategy that's merely the least-bad of an all-losing bunch would still
+   show its name in green. Both tiles now share the identical
+   `bestReturn >= 0 ? 'up' : 'down'` expression.
+4. **Grid had no "Configure"/"Results" section structure** — Backtest
+   already organizes its form and output under `.block`/`.block-head`
+   headings; Grid jumped straight from the subtitle into a bare `.controls`
+   div and a bare results div. Wrapped both in the same section/heading
+   pattern Backtest established, for parity across the three sibling tools.
+5. **Grid's results container started completely empty** before the first
+   run — Backtest already shows an `.empty` "Configure a backtest above…"
+   placeholder in this state; Grid just showed nothing at all between the
+   button and the bottom nav. Added the matching placeholder.
+6. **Validation had the same missing "Configure" section heading** as Grid
+   (item 4) — added it. (Its results area already gets its own internal
+   headings once populated — "Out-of-sample equity", "Training vs unseen
+   data", "Per-fold results" — so no separate outer "Results" wrapper was
+   added there, unlike Grid.)
+7. **Validation's results container also started completely empty** before
+   the first run (same gap as item 5) — added the matching `.empty`
+   placeholder ("Configure the walk-forward above and press Run to see
+   results.").
+8. **Grid's "Loading X history…" status was plain text**, while Backtest's
+   equivalent already uses the shared `.loading-inline`/`.spinner sm`
+   treatment. Grid now matches.
+9. **Validation's candle-fetch loading message was plain text** — same fix
+   as item 8, applied to Validation's first loading stage.
+10. **Validation's "Running walk-forward…" message was also plain text** —
+    same fix, applied to its second loading stage.
+11. **Validation's "Sharpe (unseen)" stat-tile was never color-coded**,
+    unlike the return tiles right beside it — screenshotted at -1.97
+    (clearly bad) and still rendered in plain white. Sharpe is a standard
+    signed risk-adjusted-return metric (negative is unambiguously bad), so
+    it now reuses the same `signClass()` the return tiles already use.
+12. **Validation's "Degradation" stat-tile was never color-coded either** —
+    but unlike every neighbouring tile, a naive `signClass()` here would be
+    wrong: reading `walkForward.ts`'s own computation,
+    `degradationPct = (1 - avgTestReturnPct / avgTrainReturnPct) * 100`, a
+    bigger POSITIVE number means a strategy performed WORSE out-of-sample
+    (return didn't survive), not better — screenshotted at "+107%", which a
+    plain green/positive convention would have shown as a good sign right
+    next to the ⚠ curve-fitting warning explaining why it's the opposite.
+    Colored with inverted logic (`> 0` → red/negative, `< 0` → green/
+    positive) grounded in the actual formula, not guessed.
+13. **Per-fold table's "Profit factor" column was never color-coded** — a
+    screenshotted 0.11 and 0.00 (both catastrophic — a profitable strategy
+    needs profit factor > 1) sat in plain white next to correctly-colored
+    return columns. Colored green when ≥ 1 (the standard breakeven
+    threshold for this metric), red otherwise; profit factor is always ≥ 0,
+    so `signClass()` itself doesn't apply here (it would show 0.11 green).
+14. **Per-fold table's "Expectancy" column was never color-coded** — a
+    screenshotted -409.30 sat in plain white. Expectancy is a plain signed
+    per-trade average (confirmed by reading `performance.ts`), so it now
+    reuses `signClass()` directly.
+15. **Per-fold "Expectancy" values were flat, un-tiered money strings** —
+    every other money figure in Backtest (Final equity, Fees paid) already
+    gets the two-tier `tieredPriceHtml` decimal treatment; Expectancy,
+    typically well under 1000 and so *actually carrying* a decimal (e.g.
+    "-409.30"), was the one money value in these three screens still shown
+    as one flat string. Now wrapped the same way.
+16. **Grid's "Final equity" stat-tile was also a flat, un-tiered money
+    string** — same gap as item 15, one level up. At the default 10,000
+    starting cash this is invisible (no decimals above 1,000), so verified
+    concretely with a small starting cash (80 → "81.97") to confirm the tier
+    actually renders once there's a decimal to split.
+17. **Backtest's strategy-comparison table had no signal that it scrolls
+    further right** — the existing `.table-scroll` wrapper (shared with
+    Market Scan/Monitoring, out of this pass's scope) correctly contains the
+    scroll, but nothing hinted a phone viewer that "Fees paid" was still off
+    the visible edge. Added a `.table-scroll-fade` wrapper (new class, only
+    used by this screen and #18) with a right-edge gradient that fades out
+    once actually scrolled to the end, toggled by real `scrollWidth`/
+    `scrollLeft` checks — confirmed via `page.evaluate` that `is-scrollable`
+    correctly sets at 390px (853px content in a 318px viewport).
+18. **Validation's per-fold table had the identical missing scroll-fade
+    affordance** — same fix as item 17, applied to its own table (10 columns
+    wide, the widest of the three screens).
+19. **Validation's post-run status line was one continuous "·"-joined
+    run-on sentence** packing symbol, fold shape, three cost percentages,
+    and data source onto a single logical line — screenshotted wrapping
+    across 3 full lines on a 390px phone and splitting the delay clause
+    apart mid-phrase across the line break. The same anti-pattern
+    Monitoring's status line had (fixed in Creative upgrade pass #4, PR
+    #189). Split into two lines (summary · source on one, the cost
+    breakdown on the next); all substrings existing tests/e2e assert on
+    ('spread', etc.) still land inside `#val-status`.
+20. **(Investigated, deliberately NOT changed)** Backtest Lab's number
+    inputs were flagged in an earlier same-day pass as "read slightly flat
+    against the dark theme" but left alone; this round confirmed via
+    screenshot that the *default* `.control input`/`.control select`
+    background (`--surface`, barely lighter than the page) is genuinely
+    subtle, but fixing it means editing the shared `.control` rule itself —
+    used identically by Market Scan/Monitoring/Portfolio, a parallel agent's
+    scope this round. Left untouched rather than risk a cross-scope CSS
+    collision; the concretely-scoped sub-issues that WERE safe to isolate
+    (the spinner button, item 1) were fixed instead.
+
+**Categories checked with no real defect found** (to avoid padding the
+count): icon consistency (neither Grid nor Backtest nor Validation render
+any icon of their own; the `⚠` used in Validation's warning list is the
+same convention Market Scan's `.scan-warnings` already established, not a
+new inconsistency); button hierarchy (Simulate/Run backtest/Run walk-forward
+already read as the clear primary action via the shared white-pill
+treatment); alternating row tint/sticky header (existing row-hover already
+covers scannability at these screens' row counts — at most ~6 fold rows or
+3 strategy rows visible at once, not enough to need a sticky header); Grid's
+and Backtest's own status lines (shorter, 3-4 clauses, wrap cleanly across 2
+lines on a real 390px screenshot — only Validation's was the genuine
+run-on).
+
+Verified with real screenshots throughout (Playwright core,
+`/opt/pw-browsers/chromium`, 390×844 and 1280px, `?demo=1`): every item above
+has a real before/after pair, including one deliberate hover-state capture
+(item 1) that a static screenshot alone would have missed.
+
+Added 11 new tests across the three integration suites (Configure/Results
+structure + empty state, loading spinner, tiered-price on Final equity,
+Best-strategy tile sign parity, table-scroll-fade class toggling via
+simulated `scrollWidth`/`scrollLeft`, status-line line split, Sharpe/
+Degradation/Profit-factor/Expectancy color-by-actual-value assertions that
+don't hardcode fragile demo-data magic numbers). Full gate: `tsc --noEmit`
+clean, `vitest run` 1189/1189 (net +11 from this pass over this branch's
+`origin/main` base, none weakened), `npm run build` clean. Diff confined to `src/ui/views/
+{gridView,backtestView,validationView}.ts`, the additive block of
+`src/ui/styles.css` this entry describes, and the three matching
+`tests/ui/*.integration.test.ts` files — nothing under `server/**`,
+`state/**`, or `src/core/**` touched.
+
 ## Adversarial review of `liveManualTradeSync.mts` (PR #192) — 2 real bugs found and fixed (2026-09-05)
 PR #192 added `syncManualTradesFromBroker` (detects a real trade David makes
 directly in the Revolut X app) and wired it into `runLiveMirror`, written and

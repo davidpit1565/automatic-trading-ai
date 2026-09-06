@@ -8,7 +8,7 @@ import { gridStrategy } from '../../core/strategies';
 import type { Timeframe } from '../../core/types';
 import type { ActiveDataSource } from '../dataSource';
 import { lineChartSvg } from '../charts';
-import { escapeHtml, formatPct, formatPrice, signClass } from '../format';
+import { escapeHtml, formatPct, formatPrice, signClass, tieredPriceHtml } from '../format';
 
 const CANDLE_LIMIT = 300;
 
@@ -39,32 +39,38 @@ export function renderGridView(container: HTMLElement, data: ActiveDataSource): 
       recovers. Works in ranges; loses in sustained downtrends — the simulation
       shows both honestly.
     </p>
-    <div class="controls">
-      <label class="control">Market
-        <select id="grid-symbol">
-          ${data.instruments.map((i) => `<option value="${escapeHtml(i.symbol)}">${escapeHtml(i.symbol)}</option>`).join('')}
-        </select>
-      </label>
-      <label class="control">Timeframe
-        <select id="grid-timeframe">
-          <option value="1h" selected>1h</option>
-          <option value="4h">4h</option>
-          <option value="1d">1d</option>
-        </select>
-      </label>
-      <label class="control">Levels
-        <input id="grid-levels" type="number" value="8" min="2" max="50" step="1" />
-      </label>
-      <label class="control">Amount per level
-        <input id="grid-amount" type="number" value="1000" min="10" step="10" />
-      </label>
-      <label class="control">Initial cash
-        <input id="grid-cash" type="number" value="10000" min="100" step="100" />
-      </label>
-      <button class="primary" id="grid-run">Simulate</button>
-    </div>
-    <div class="status-line" id="grid-status"></div>
-    <div id="grid-results"></div>
+    <section class="block">
+      <div class="block-head"><h2>Configure</h2></div>
+      <div class="controls">
+        <label class="control">Market
+          <select id="grid-symbol">
+            ${data.instruments.map((i) => `<option value="${escapeHtml(i.symbol)}">${escapeHtml(i.symbol)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="control">Timeframe
+          <select id="grid-timeframe">
+            <option value="1h" selected>1h</option>
+            <option value="4h">4h</option>
+            <option value="1d">1d</option>
+          </select>
+        </label>
+        <label class="control">Levels
+          <input id="grid-levels" type="number" value="8" min="2" max="50" step="1" />
+        </label>
+        <label class="control">Amount per level
+          <input id="grid-amount" type="number" value="1000" min="10" step="10" />
+        </label>
+        <label class="control">Initial cash
+          <input id="grid-cash" type="number" value="10000" min="100" step="100" />
+        </label>
+        <button class="primary" id="grid-run">Simulate</button>
+      </div>
+      <div class="status-line" id="grid-status"></div>
+    </section>
+    <section class="block">
+      <div class="block-head"><h2>Results</h2></div>
+      <div id="grid-results"><div class="empty">Configure a grid above and press Simulate to see results.</div></div>
+    </section>
   `;
 
   const runButton = container.querySelector<HTMLButtonElement>('#grid-run')!;
@@ -81,7 +87,7 @@ export function renderGridView(container: HTMLElement, data: ActiveDataSource): 
     const amountPerLevel = Number(container.querySelector<HTMLInputElement>('#grid-amount')!.value);
     const initialCash = Number(container.querySelector<HTMLInputElement>('#grid-cash')!.value);
 
-    status.textContent = `Loading ${symbol} history…`;
+    status.innerHTML = `<span class="loading-inline"><span class="spinner sm"></span>Loading ${escapeHtml(symbol)} history…</span>`;
     try {
       const candles = await data.source.getCandles(symbol, timeframe, CANDLE_LIMIT);
       if (!candles.ok) {
@@ -110,7 +116,7 @@ export function renderGridView(container: HTMLElement, data: ActiveDataSource): 
       // boxes with no visual result behind any of them.
       results.innerHTML = `
         <div class="stat-row">
-          <div class="stat-tile"><div class="stat-tile-value ${signClass(result.totalReturnPct)}">${formatPrice(result.finalEquity)}</div>
+          <div class="stat-tile"><div class="stat-tile-value ${signClass(result.totalReturnPct)}">${tieredPriceHtml(formatPrice(result.finalEquity))}</div>
             <div class="stat-tile-label">Final equity</div></div>
           <div class="stat-tile"><div class="stat-tile-value ${signClass(result.totalReturnPct)}">${formatPct(result.totalReturnPct)}</div>
             <div class="stat-tile-label">Return</div></div>
