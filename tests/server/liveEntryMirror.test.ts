@@ -14,7 +14,12 @@ import type { TradeOpportunity } from '../../src/core/signal/signalEngine';
 import type { Instrument } from '../../src/core/types';
 import { initLiveCash, liveCash } from '../../server/liveLedger.mts';
 import { recordLiveEntryFill, forgetLivePosition, openLivePositions } from '../../server/liveExitFlow.mts';
-import { clearOutstandingEntry, mirrorApprovedEntries } from '../../server/liveEntryMirror.mts';
+import {
+  clearOutstandingEntry,
+  clearRestingEntryIntent,
+  mirrorApprovedEntries,
+  readRestingEntryIntent,
+} from '../../server/liveEntryMirror.mts';
 import { ConfirmationPendingError } from '../../server/telegramConfirmationGate.mts';
 
 const XBT: Instrument = { symbol: 'XBTEUR', base: 'XBT', quote: 'EUR' };
@@ -424,6 +429,38 @@ describe('mirrorApprovedEntries', () => {
       2000,
     );
     expect(third[0]!.outcome).toBe('submitted');
+  });
+
+  it('remembers the original intent for a resting (zero-filled) order, so a later broker-balance reconciliation can attribute the eventual fill back to it instead of guessing (found in review, 2026-09-06)', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const restingReport: OrderStatusReport = {
+      intentId: 'live-entry:XBTEUR:1000',
+      state: 'submitted',
+      filledQuantity: 0,
+      avgFillPrice: null,
+      detail: 'resting',
+    };
+    await mirrorApprovedEntries(
+      store,
+      [opportunity()],
+      [XBT],
+      { XBTEUR: 100 },
+      flowParams(restingReport, killSwitch, audit),
+      1000,
+    );
+
+    const remembered = readRestingEntryIntent(store, 'XBTEUR');
+    expect(remembered).not.toBeNull();
+    expect(remembered!.id).toBe('live-entry:XBTEUR:1000');
+    expect(remembered!.quantity).toBeGreaterThan(0);
+    expect(remembered!.stopLoss).toBe(95); // from opportunity()'s levels, not a manual-override guess
+    expect(remembered!.takeProfit).toBe(115);
+
+    clearRestingEntryIntent(store, 'XBTEUR');
+    expect(readRestingEntryIntent(store, 'XBTEUR')).toBeNull();
   });
 
   it('does NOT block a later attempt when the broker REJECTED the order (found 2026-09-03: a rejected order got stuck "outstanding" forever, silently swallowing every future /buy for the same symbol since no position was ever opened to later clear it)', async () => {

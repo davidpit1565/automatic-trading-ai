@@ -15,13 +15,18 @@
  * Compares the broker's real balance for every `CURATED_INSTRUMENTS` base
  * (`BrokerAdapter.fetchPositions()` — the only source of truth for real
  * holdings) against what this bot itself currently tracks:
- * - broker qty > tracked qty: a manual BUY (or a brand-new position) —
- *   opens/increases a tracked position for the excess, at the CURRENT
- *   market price (Revolut X's balances endpoint reports no cost basis, so
- *   the true fill price is unknowable here — a deliberate, documented
- *   approximation, not a bug) with the same fixed manual-override
- *   stop/target every manual `/buy` uses, so it gets the same automatic
- *   exit protection going forward.
+ * - broker qty > tracked qty: a manual BUY, a brand-new position, OR this
+ *   bot's OWN resting entry order quietly filling between cycles before its
+ *   own bookkeeping noticed (found in review, 2026-09-06 — see
+ *   `reconcileExternalBuy`'s doc comment) — the latter is checked FIRST via
+ *   `readRestingEntryIntent` and, on a match, uses that order's own
+ *   risk-engine-approved stop/target/limit price rather than guessing.
+ *   Only a genuine mismatch (or no resting order at all) opens/increases a
+ *   tracked position for the excess at the CURRENT market price (Revolut
+ *   X's balances endpoint reports no cost basis, so the true fill price is
+ *   unknowable here — a deliberate, documented approximation, not a bug)
+ *   with the same fixed manual-override stop/target every manual `/buy`
+ *   uses, so it gets the same automatic exit protection going forward.
  * - broker qty < tracked qty: a manual SELL (or this bot's OWN resting
  *   exit order quietly filling between cycles, before its own bookkeeping
  *   noticed — same fix, same code path) — reduces/closes the tracked
@@ -62,7 +67,7 @@ import {
   reduceLivePositionQuantity,
   type LiveOpenPosition,
 } from './liveExitFlow.mts';
-import { clearOutstandingEntry } from './liveEntryMirror.mts';
+import { clearOutstandingEntry, clearRestingEntryIntent, readRestingEntryIntent } from './liveEntryMirror.mts';
 import { toRevolutXSymbol } from './revolutXBrokerAdapter.mts';
 import { sendTelegramMessage, type TelegramConfig } from './telegram.mts';
 
@@ -74,6 +79,16 @@ const STOP_PCT = 1.5;
 const TARGET_PCT = 3;
 /** Ignore float noise from repeated EUR-value rounding — not a real trade. */
 const DUST_QTY = 1e-6;
+/**
+ * How close the broker-balance increase must be to a still-resting entry
+ * intent's own requested quantity to treat it as THAT order finally
+ * filling, rather than a genuinely external buy — allows for ordinary
+ * fee/rounding drift between what was requested and what actually filled,
+ * without accidentally attributing an unrelated, larger external purchase
+ * to this bot's own pending order. Found in review, 2026-09-06 — see
+ * `reconcileExternalBuy`.
+ */
+const RESTING_MATCH_TOLERANCE = 0.02;
 
 async function currentPrice(source: MarketDataSource, symbol: string): Promise<number | null> {
   const candles = await source.getCandles(symbol, '1h', 2);
@@ -81,9 +96,25 @@ async function currentPrice(source: MarketDataSource, symbol: string): Promise<n
   return candles.value[candles.value.length - 1]!.close;
 }
 
-/** Returns true iff a position was actually opened — false (a no-op) when
+/**
+ * Returns true iff a position was actually opened — false (a no-op) when
  * no current price was available, so the caller knows not to treat this as
- * a real, must-persist outcome. */
+ * a real, must-persist outcome.
+ *
+ * Found in review, 2026-09-06: a resting limit order THIS bot itself
+ * submitted (`mirrorApprovedEntries`/`checkManualBuyRequests`) that hasn't
+ * filled AT ALL yet is not tracked as a position (see
+ * `recordLiveEntryFill`'s `genuinelyFilled` check) — if it later fills
+ * between cycles, the broker-balance diff this function reacts to is
+ * indistinguishable, on the numbers alone, from a genuinely external manual
+ * buy. Before this fix, EVERY such diff was treated as external — silently
+ * discarding the real risk-engine-approved stop/target/entry price a human
+ * already confirmed via Telegram in favor of a generic manual-override
+ * guess, and telling David a trade was "manual" when the bot placed it.
+ * Checked first against `readRestingEntryIntent`: a match (same symbol,
+ * quantity within `RESTING_MATCH_TOLERANCE`) uses the ORIGINAL intent's own
+ * assessment/stop/target/limit price instead.
+ */
 async function reconcileExternalBuy(
   store: KeyValueStore,
   instrument: Instrument,
@@ -92,6 +123,30 @@ async function reconcileExternalBuy(
   telegram: TelegramConfig,
   now: number,
 ): Promise<boolean> {
+  const restingIntent = readRestingEntryIntent(store, instrument.symbol);
+  if (restingIntent && Math.abs(quantity - restingIntent.quantity) <= restingIntent.quantity * RESTING_MATCH_TOLERANCE) {
+    const report: OrderStatusReport = {
+      intentId: restingIntent.id,
+      state: 'filled',
+      filledQuantity: quantity,
+      // Unknown — Revolut X's balances endpoint carries no cost basis, same
+      // limitation as a genuinely external buy. `recordLiveEntryFill` falls
+      // back to `restingIntent.limitPrice` (the ORIGINAL order's own limit
+      // price), a far better estimate than "whatever the market price is
+      // now, possibly many cycles after this order was placed."
+      avgFillPrice: null,
+      detail: 'resting order finally filled — detected via broker balance reconciliation',
+    };
+    if (!recordLiveEntryFill(store, restingIntent, report, now)) return false;
+    clearRestingEntryIntent(store, instrument.symbol);
+    await sendTelegramMessage(
+      `✅ ההזמנה הממתינה ל-${instrument.base} התמלאה (זוהה בבדיקת יתרת Revolut X) — כמות: ${quantity}. ` +
+        `הפוזיציה מנוטרת עם הסטופ/יעד שכבר אישרת בטלגרם, לא עם ערכי ברירת מחדל.`,
+      telegram,
+    );
+    return true;
+  }
+
   const price = await currentPrice(source, instrument.symbol);
   if (price === null || !(price > 0)) return false; // retry next cycle rather than guessing a price
   const revolutSymbol = toRevolutXSymbol(instrument.symbol, [instrument]) ?? `${instrument.base}-${instrument.quote}`;
