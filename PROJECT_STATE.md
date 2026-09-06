@@ -7781,3 +7781,66 @@ Gate: `tsc --noEmit` clean, `npm run build` clean, `vitest run` 1303/1303
 — independently re-verified in an isolated worktree before merging, same
 as every prior round. No changes to `src/ui/**`, `server/**`, or any
 real-money-adjacent file.
+
+## Real-money code review — 1 verified fix, explicit sign-off before merge (2026-09-06)
+
+David asked to review the real-money-adjacent files never touched by any
+prior round (`liveOrchestrator.mts`, `revolutXBrokerAdapter.mts`,
+`liveEntryMirror.mts`, `liveExitFlow.mts`, `liveExitMirror.mts`,
+`liveLedger.mts`, `liveManualTradeSync.mts`, `manualBuyCommand.mts`,
+`manualSellCommand.mts`, `manualKillSwitchCommand.mts`,
+`liveBlackoutQueue.mts`, `telegramConfirmationGate.mts` — ~2,850 lines) —
+read in full personally (not delegated to a background agent, given the
+sensitivity), read-only first, findings reported before any code change.
+
+**Overall assessment:** exceptionally well-engineered — every file already
+documents multiple real incidents (2026-09-02 through 09-05) found and
+fixed, each with a concrete before/after example. The safety chain
+(kill-switch → mandatory broker-native symbol check → human Telegram
+confirmation → `BrokerAdapter.submit`) is consistent everywhere with no
+bypass path, and every genuinely ambiguous broker response (a network
+failure before a response, a duplicate-client-order-id rejection, an
+unconfirmable fill status) already halts via the kill switch and asks for
+manual verification rather than guessing in either direction.
+
+**1 real gap found and fixed, PR #223 (David explicitly approved the merge
+after reviewing the finding and the diff):** a live BUY order that reaches
+the broker but hasn't filled AT ALL yet (a resting limit order) isn't
+tracked as a position (`recordLiveEntryFill` requires a genuine nonzero
+fill) — and there is no fill-status poller for a resting order (a
+documented, accepted limitation). The ONLY mechanism that ever notices
+such an order later fill is `liveManualTradeSync.mts`'s broker-balance
+reconciliation (added 2026-09-04 to catch manual Revolut X app trades) —
+which previously could not distinguish "this bot's own slow order just
+filled" from "David bought this directly in the app," and always assumed
+the latter. That silently discarded the real risk-engine-approved
+stop/target/entry price a human had already confirmed via Telegram in
+favor of a generic manual-override guess (-1.5%/+3% off whatever price is
+current when first noticed), and misreported the bot's own order to David
+as an external trade. Not a capital-protection failure (a stop-loss was
+still applied either way, just the wrong one) — a data-accuracy and
+mislabeling bug.
+
+**Fix:** `mirrorApprovedEntries` (`liveEntryMirror.mts`) now remembers the
+original `OrderIntent` for a resting (zero-filled) order, keyed by internal
+symbol (`rememberRestingEntryIntent`/`readRestingEntryIntent`/
+`clearRestingEntryIntent`). `reconcileExternalBuy`
+(`liveManualTradeSync.mts`) checks for a match FIRST — within a small
+quantity tolerance (2%, ordinary fee/rounding drift) — and if found, uses
+that order's own real stop/target/limit price instead of guessing, clears
+the record, and sends a different ("your pending order filled") Telegram
+message. No match (or a quantity that doesn't line up) falls back to the
+existing external-buy behavior completely unchanged.
+
+4 new tests in `tests/server/liveManualTradeSync.test.ts` (exact match uses
+the real levels; small drift tolerated; a mismatched quantity falls back
+to the external-buy path unchanged, leaving the resting record for a
+future cycle; the no-resting-intent case is byte-for-byte the same as
+before) + 1 new test in `tests/server/liveEntryMirror.test.ts` (a resting
+order's original intent is remembered correctly).
+
+Gate: `tsc --noEmit` clean (both `tsconfig.json` and `tsconfig.app.json`),
+`vitest run` 1308/1308 (up from 1303 — 5 new), `vite build` clean. Diff:
+`server/liveEntryMirror.mts`, `server/liveManualTradeSync.mts`, and their
+two test files — nothing under `src/ui/**` or any other `server/**` file
+touched.
