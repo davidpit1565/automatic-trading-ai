@@ -7458,3 +7458,65 @@ Gate: `tsc --noEmit` clean, 1214/1214 vitest passed (up from 1210 baseline),
 `src/ui/views/cryptoView.ts`, `src/ui/views/gridView.ts`,
 `src/ui/views/homeView.ts`, `src/ui/views/validationView.ts` + 6 test files
 — nothing under `server/**`, `state/**`, or `src/core/**`.
+
+## Smart Money copy-trade Replay Engine — new module, research tool only (2026-09-06)
+
+David's first step in a deliberately slow, multi-step "smart money"
+exploration (on-chain wallet trades as an additional signal alongside the
+technical Signal Engine): a **Replay Engine** answering "if I had
+copy-traded wallet X, with realistic detection latency and slippage, what
+would my P&L have been?" — purely from historical data. New directory
+`src/core/copyTrade/`, isolated from every other module:
+
+- `walletTradeSource.ts` — `WalletTrade` type + `WalletTradeSource`
+  interface (`getTrades(wallet, sinceMs, untilMs): Promise<Result<WalletTrade[]>>`),
+  mirroring `data/revolutClient.ts`'s `MarketDataSource` pattern exactly. No
+  real implementation exists — no Bitquery/Nansen/Helius API key, zero
+  network calls anywhere in this module.
+- `syntheticWalletTradeSource.ts` — `SyntheticWalletTradeSource`, mirroring
+  `data/synthetic.ts`'s `SyntheticDataSource`: seeded PRNG keyed off the
+  wallet/token, fixed anchor timestamp, fully reproducible. Generates 2-3
+  deterministic token "campaigns" per wallet (buy, optional add, partial
+  take-profit sell, full exit) so both round-trip and partial-reduction
+  paths are always exercised.
+- `replayEngine.ts` — `replayCopyTrade(trades, params): ReplayResult`, a
+  PURE function (no I/O). Tracks a running position PER (wallet, token): a
+  buy adds `positionSizeUsd` to the copied position; a sell reduces our
+  copied position by the SAME FRACTION the wallet's own tracked position was
+  reduced by (a partial sell only shrinks it, a full exit closes it — not
+  reacting to each event in isolation). Reuses `backtest/metrics.ts`'s
+  `tradeStats`/`maxDrawdownPct` rather than reimplementing P&L/win-rate/
+  drawdown math.
+  - **Slippage/latency modeling (the one real assumption here, not a fact —
+    documented in the module's top doc comment and inspectable/tunable via
+    `latencyDriftPctPerMinute`):**
+    `adversePct = (detectionLatencyMs/60_000)*latencyDriftPctPerMinute + slippagePct`;
+    fill = `walletPrice * (1 ± adversePct/100)` (worse on both buy and sell,
+    never favorable). Default drift 0.02%/minute
+    (`DEFAULT_LATENCY_DRIFT_PCT_PER_MINUTE`) is a placeholder, not measured —
+    swap it once real order-book data exists.
+- `scripts/replayCopyTrade.mts` — CLI report, runs 4 latency/slippage
+  scenarios (optimistic → pessimistic) against the synthetic source and
+  prints a comparison table. No network call, no API key, works today
+  (`npx tsx scripts/replayCopyTrade.mts --wallet X --days 45`).
+
+11 new tests (`tests/copyTrade/`): full round-trip, partial sell (position
+reduced not closed), partial+full-exit two-closed-trades reconciliation,
+independent multi-wallet/multi-token processing, the exact slippage/latency
+formula verified by hand-computed expected fill prices, fee deduction, zero-
+trades edge case, plus synthetic-source determinism/window-filtering/
+validation tests.
+
+Deliberately deferred (explicit scope boundary, do not add without David's
+separate approval): real Bitquery/Nansen/Helius integration, a "Smart Money
+Score", Telegram alerts, consensus logic with the Signal Engine, any live
+execution path. Nothing here touches `server/liveOrchestrator.mts`,
+`revolutXBrokerAdapter.mts`, `liveEntryMirror.mts`, `liveExitFlow.mts`, or
+any real-money code path — same simulated-money-only rule as the rest of
+core.
+
+Gate: `tsc --noEmit` clean, 1284/1284 vitest passed (up from 1273 baseline —
+11 new), `npm run build` clean. Diff: `src/core/copyTrade/` (3 new files),
+`scripts/replayCopyTrade.mts`, `tests/copyTrade/` (2 new test files) —
+nothing under `server/**`, `src/ui/**`, or any existing `src/core/**` file
+touched.
