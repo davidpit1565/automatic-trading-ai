@@ -13,7 +13,7 @@
  */
 
 import { FileStore } from './fileStore.mts';
-import { sendTelegramMessage } from './telegram.mts';
+import { sendTelegramMessage, SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED } from './telegram.mts';
 
 const STALE_ACTIVITY_THRESHOLD_MS = 6 * 60 * 60 * 1000; // 6 hours
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -233,6 +233,14 @@ export async function monitorSystemChanges(
 ): Promise<void> {
   if (!telegram.token || !telegram.chatId) {
     console.log('Telegram not configured; skipping system monitor.');
+    return;
+  }
+  // This monitor only ever reads the SIMULATED paper stores (crypto/stocks
+  // state files — see systemMonitorRunner.mts's two call sites, neither of
+  // which is the live-money store) — silenced (David, 2026-09-06). See
+  // SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED's doc comment in telegram.mts.
+  if (!SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED) {
+    console.log(`${label} system monitor silenced (simulated-only, no live equivalent).`);
     return;
   }
 

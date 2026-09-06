@@ -266,6 +266,28 @@ describe('runStocksCycle', () => {
     }
   });
 
+  it('sends no Telegram message even when a real buy fills — stocks has no live account, every fill is simulated and silenced (David, 2026-09-06)', async () => {
+    const source = fakeSource();
+    const { killSwitch, portfolio, journal } = buildPortfolio();
+    const fetchFn = vi.fn(async (url: string) =>
+      url.includes('/getUpdates')
+        ? new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 })
+        : new Response('{"ok":true}', { status: 200 }),
+    );
+    const telegram = { token: 'T', chatId: 'C' };
+    const originalFetch = globalThis.fetch;
+    (globalThis as { fetch?: typeof fetch }).fetch = fetchFn as unknown as typeof fetch;
+    try {
+      await runStocksCycle(store, source, killSwitch, portfolio, journal, telegram, ['AAPL'], 5_000_000);
+      // A fresh portfolio with nothing held buys AAPL this cycle (see the
+      // "runs a cycle" test above using the same fixtures — opened 1).
+      expect(portfolio.openPositions().length).toBeGreaterThan(0);
+      expect(fetchFn.mock.calls.some(([url]) => String(url).includes('/sendMessage'))).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("a Telegram /pause engages the stocks kill switch and halts buying that SAME cycle — found in review, 2026-09-03: nothing ever called .engage() for the stocks side, so runPassiveHoldCycle's own kill-switch check was permanently unreachable", async () => {
     const source = fakeSource();
     const { killSwitch, portfolio, journal } = buildPortfolio();
