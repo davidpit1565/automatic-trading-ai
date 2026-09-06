@@ -211,7 +211,11 @@ function renderPositions(
 ): void {
   const positions = portfolio.positions();
   if (positions.length === 0) {
-    element.innerHTML = '<div class="empty">No open positions.</div>';
+    // Matches Home's/Stocks Overview's identical empty-positions copy
+    // exactly (`homeView.ts`/`stocksOverviewPanel.ts`) — this screen's own
+    // flatter "No open positions." was the one place left with different
+    // wording for the same concept.
+    element.innerHTML = '<div class="empty">Holding cash and waiting for a good setup.</div>';
     return;
   }
   element.innerHTML = positions

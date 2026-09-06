@@ -187,8 +187,33 @@ function renderScanTable(container: HTMLElement, scan: MarketScan, risk: RiskCon
   const tableWrap = document.createElement('div');
   tableWrap.className = 'table-scroll';
   tableWrap.appendChild(table);
-  container.appendChild(tableWrap);
+  const fadeWrap = document.createElement('div');
+  fadeWrap.className = 'table-scroll-fade';
+  fadeWrap.appendChild(tableWrap);
+  container.appendChild(fadeWrap);
   renderFailures(container, scan);
+  initTableScrollFade(fadeWrap);
+}
+
+/** Hints that the scan table (8 columns) scrolls further right than the
+ * visible edge shows on a phone — the same affordance Backtest/Validation's
+ * own wide tables already established (`.table-scroll-fade`), missing here
+ * even though this table is at least as wide as theirs. Kept as a small,
+ * self-contained per-screen helper rather than a shared import, matching
+ * those two files' own documented reasoning for not coupling independent
+ * tool screens together. */
+function initTableScrollFade(wrap: HTMLElement): void {
+  const scroller = wrap.querySelector<HTMLElement>('.table-scroll');
+  if (!scroller) return;
+  const update = (): void => {
+    wrap.classList.toggle('is-scrollable', scroller.scrollWidth > scroller.clientWidth + 1);
+    wrap.classList.toggle(
+      'is-scrolled-end',
+      scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 1,
+    );
+  };
+  update();
+  scroller.addEventListener('scroll', update, { passive: true });
 }
 
 function temperatureBadge(result: ScanResult): string {

@@ -234,6 +234,27 @@ export function renderMonitoringView(container: HTMLElement, data: ActiveDataSou
   refreshAll();
 }
 
+/** Hints that a wide data-table scrolls further right than the visible edge
+ * shows — the same affordance Backtest/Validation's own wide tables already
+ * established (`.table-scroll-fade`), missing from all four of this
+ * screen's tables even though they're at least as wide (up to 9 columns).
+ * Kept as a small, self-contained per-screen helper rather than a shared
+ * import, matching those two files' own documented reasoning for not
+ * coupling independent tool screens together. */
+function initTableScrollFade(wrap: HTMLElement): void {
+  const scroller = wrap.querySelector<HTMLElement>('.table-scroll');
+  if (!scroller) return;
+  const update = (): void => {
+    wrap.classList.toggle('is-scrollable', scroller.scrollWidth > scroller.clientWidth + 1);
+    wrap.classList.toggle(
+      'is-scrolled-end',
+      scroller.scrollLeft + scroller.clientWidth >= scroller.scrollWidth - 1,
+    );
+  };
+  update();
+  scroller.addEventListener('scroll', update, { passive: true });
+}
+
 function renderOpportunities(element: Element, engine: MonitoringEngine): void {
   const result = engine.status().lastResult;
   if (!result) {
@@ -253,6 +274,7 @@ function renderOpportunities(element: Element, engine: MonitoringEngine): void {
       : '<div class="empty">No qualified opportunities in the last scan — refusing weak setups is the system protecting capital.</div>';
   } else {
     element.innerHTML = `
+    <div class="table-scroll-fade">
     <div class="table-scroll">
     <table class="data-table">
       <thead><tr>
@@ -276,7 +298,9 @@ function renderOpportunities(element: Element, engine: MonitoringEngine): void {
       </tbody>
     </table>
     </div>
+    </div>
   `;
+    initTableScrollFade(element.querySelector<HTMLElement>('.table-scroll-fade')!);
   }
   if (result.failures.length > 0 && !allFailed) {
     element.insertAdjacentHTML(
@@ -300,6 +324,7 @@ function renderWatchlist(
     return;
   }
   element.innerHTML = `
+    <div class="table-scroll-fade">
     <div class="table-scroll">
     <table class="data-table">
       <thead><tr>
@@ -328,7 +353,9 @@ function renderWatchlist(
       </tbody>
     </table>
     </div>
+    </div>
   `;
+  initTableScrollFade(element.querySelector<HTMLElement>('.table-scroll-fade')!);
   element.querySelectorAll<HTMLButtonElement>('[data-fav]').forEach((button) =>
     button.addEventListener('click', () => {
       watchlist.toggleFavorite(button.dataset['fav']!);
@@ -350,6 +377,7 @@ function renderHistory(element: Element, engine: MonitoringEngine): void {
     return;
   }
   element.innerHTML = `
+    <div class="table-scroll-fade">
     <div class="table-scroll">
     <table class="data-table">
       <thead><tr>
@@ -378,7 +406,9 @@ function renderHistory(element: Element, engine: MonitoringEngine): void {
       </tbody>
     </table>
     </div>
+    </div>
   `;
+  initTableScrollFade(element.querySelector<HTMLElement>('.table-scroll-fade')!);
 }
 
 function renderAlerts(element: Element, engine: MonitoringEngine): void {
@@ -388,6 +418,7 @@ function renderAlerts(element: Element, engine: MonitoringEngine): void {
     return;
   }
   element.innerHTML = `
+    <div class="table-scroll-fade">
     <div class="table-scroll">
     <table class="data-table">
       <thead><tr><th>Time</th><th>Market</th><th>Confidence</th><th>Message</th></tr></thead>
@@ -405,5 +436,7 @@ function renderAlerts(element: Element, engine: MonitoringEngine): void {
       </tbody>
     </table>
     </div>
+    </div>
   `;
+  initTableScrollFade(element.querySelector<HTMLElement>('.table-scroll-fade')!);
 }

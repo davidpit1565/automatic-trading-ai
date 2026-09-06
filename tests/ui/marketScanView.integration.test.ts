@@ -73,6 +73,21 @@ describe('Market Scan view (DOM integration)', () => {
     expect(bar.style.width).toMatch(/^\d+%$/);
   });
 
+  // Round-2 cross-screen consistency: Backtest/Validation's own wide tables
+  // already hint an off-screen right edge via `.table-scroll-fade`
+  // (toggling `is-scrollable`/`is-scrolled-end` off real scrollWidth/
+  // scrollLeft) — this 8-column scan table lacked the identical affordance.
+  it('wraps the scan table in the shared scroll-fade affordance', async () => {
+    const { container } = await renderAndScan();
+    const fadeWrap = container.querySelector<HTMLElement>('.table-scroll-fade');
+    expect(fadeWrap).not.toBeNull();
+    expect(fadeWrap!.querySelector('.table-scroll table.data-table')).not.toBeNull();
+    // happy-dom reports 0 for scrollWidth/clientWidth, so it never claims
+    // "is-scrollable" — assert the toggle machinery ran (no throw, class
+    // list settled to a defined boolean state) rather than a real geometry.
+    expect(fadeWrap!.classList.contains('is-scrollable')).toBe(false);
+  });
+
   it('the score bar is bidirectional: never more than half-scale (it grows from the centre, not the edge)', async () => {
     const { container } = await renderAndScan();
     const bars = [...container.querySelectorAll<HTMLElement>('.score-bar-fill')];

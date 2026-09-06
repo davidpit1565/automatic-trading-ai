@@ -6589,6 +6589,106 @@ nothing under `server/**`, `state/**`, or `src/core/**`, and no view file
 owned by another parallel agent (`marketsView.ts`, `assetHubView.ts`, any
 `stocks*.ts`, any Tools view) touched.
 
+## Cross-screen component consistency audit, round 2: 3 verified fixes (2026-09-06)
+
+Round 2 of David's "compare against Revolut X, ship 200 improvements" push.
+Round 1 split the app by SCREEN across 7 parallel agents; this pass's
+mandate was the opposite — hunt for DRIFT **between** screens that a
+single-screen review can't see (the same bug fixed narrowly on one screen
+while an identical sibling instance goes unchecked; a pattern established on
+one screen never applied to a near-identical component on another).
+
+**Reality check before starting**: only 4 of the 7 round-1 PRs were actually
+merged to `main` at audit time — shared-tokens (#198), Stocks (#199),
+Grid/Backtest/Validation (#200), Home (#201). Crypto asset-hub (#202),
+Markets/coin-detail (#203), and Market Scan/Monitoring/Portfolio (#204) were
+still open drafts, each already carrying a diagnosed list of the bugs it's
+fixing. Scoped this audit to real drift on `main` as it stands, and
+deliberately did **not** re-propose anything already itemized in those 3
+open PR bodies (verified by reading all three in full first) — duplicating
+their planned fixes would create needless merge conflicts, not new value.
+
+**Method**: `npx tsc --noEmit`, targeted `grep`/`Read` sweeps across
+`src/ui/views/*.ts` and `styles.css` for cross-cutting patterns (established
+class names, wording, CSS scoping comments that name a sibling screen), then
+`npm run build` + `vite preview` + real Playwright (`playwright-core`,
+`/opt/pw-browsers/chromium`, 390×844, `?demo=1`) to confirm each candidate
+with a real before/after screenshot or geometry check — never fixed from
+reading the CSS alone.
+
+**3 verified fixes:**
+
+1. **Portfolio's `#pp-quantity` number input still showed the native
+   spin-button square that breaks the pill shape on hover** — the exact bug
+   Grid/Backtest/Validation's own pass (PR #200) already found and fixed,
+   but that pass's own `styles.css` comment explicitly scoped the fix to
+   its own 8 input ids and named Market Scan/Monitoring/**Portfolio** as "a
+   parallel agent's scope this round" it deliberately didn't touch. That
+   parallel scope (PR #204) shipped 28 real Portfolio fixes but never
+   touched this input. Confirmed the bug live: reverted the fix, rebuilt,
+   hovered `#pp-quantity` with real Playwright at 3x device scale — a stark
+   white spin-button square appears (`/tmp/pp-qty-crop-before.png`
+   equivalent). Restored the fix, added `#pp-quantity` to the same
+   `::-webkit-inner/outer-spin-button` + `-moz-appearance: textfield`
+   selector list, rebuilt — square gone, clean pill. Same narrowly-scoped
+   selector-list pattern as the original fix, no shared rule touched.
+2. **Monitoring's 4 wide data-tables (up to 9 columns: Current
+   opportunities, Watchlist, Opportunity history, Alert history) and Market
+   Scan's own 8-column scan table had no scroll-edge affordance** —
+   Backtest/Validation's pass (PR #200) established `.table-scroll-fade`
+   (a right-edge gradient toggled by real `scrollWidth`/`scrollLeft`,
+   fading out once scrolled to the end) for exactly this "wide table cut
+   off on a 390px phone" problem, but explicitly scoped it to their own two
+   screens, again naming Market Scan/Monitoring/Portfolio's shared
+   `.table-scroll` as "out of this pass's scope." Both files still used
+   the bare `.table-scroll` wrapper with zero affordance. Wrapped all 5
+   tables (4 in `monitoringView.ts`, 1 in `marketScanView.ts`) in
+   `.table-scroll-fade` and added each file its own small
+   `initTableScrollFade` helper — kept as a duplicated, self-contained
+   per-file function rather than extracted into a shared module, matching
+   the explicit, documented reasoning already in both source pass's own
+   code comments ("isn't worth coupling two independent tool screens
+   together"). Verified live: real Playwright scan run on Market Scan
+   showed `is-scrollable: true` with real `scrollWidth: 665` vs
+   `clientWidth: 318` (near-identical proportions to Backtest's own
+   verified 853px-in-318px case); Monitoring showed all 4
+   `.table-scroll-fade` wrappers present after a manual scan + watchlist
+   add.
+3. **Portfolio's empty-positions copy read "No open positions." — flatter
+   and differently-worded than Home's and Stocks Overview's identical
+   concept**, both of which read "Holding cash and waiting for a good
+   setup." (Stocks' own copy-parity fix to match Home was itself PR #199's
+   item 10; Portfolio was never brought into that same parity). Matched
+   the established wording exactly. No test depended on the old string.
+
+**Investigated and correctly left alone** (already claimed by an open
+round-1 PR, confirmed by reading its body in full — not duplicated):
+Portfolio's 0.00%/0.00 P&L figures rendering bright green instead of
+neutral (PR #204 items 1-4, its own new `pnlClass()` helper); Market Scan's
+magnitude-only score bar (PR #204 item 7); Monitoring's uncoloured
+Confidence columns (PR #204 item 22). Also checked and found **not** a
+real inconsistency: Monitoring/Market Scan's flat (non-tiered) money values
+inside dense table cells — confirmed this matches the app's own established
+convention (Markets' own order-book and trades-tape rows, and its chart
+tooltip, all use flat `formatPrice` too; `tieredPriceHtml` is reserved for
+prominent hero/list-row prices, never dense table cells). Left
+`:focus-visible` coverage gaps (`.hub-tab`, `.mk-tab`, `.market-row`,
+`.pager`, `.range-btn`, `.ctoggle-btn`, etc.) untouched — a parallel round-2
+agent's explicit accessibility-audit lane, not this pass's cross-cutting
+component-reuse mandate.
+
+**Tests**: 3 new (`marketScanView.integration.test.ts` — scroll-fade wrapper
++ geometry-toggle assertion; `monitoringView.integration.test.ts` — all 4
+tables wrapped after a real scan + watchlist add; `portfolioView.integration
+.test.ts` — empty-positions copy match). Full gate: `tsc --noEmit` clean,
+`vitest run` 1206/1206 (1203 on this branch's `origin/main` base + 3 new,
+none weakened), `npm run build` clean. Diff: `src/ui/styles.css`,
+`src/ui/views/{marketScanView,monitoringView,portfolioView}.ts`, the 3
+matching `tests/ui/*.integration.test.ts` files — nothing under `server/**`,
+`state/**`, `src/core/**`, `homeView.ts`, `assetHubView.ts`, `marketsView.ts`,
+any `stocks*.ts`, `gridView.ts`, `backtestView.ts`, or `validationView.ts`
+touched.
+
 ## Silenced all simulated-money trading: no Telegram notifications, no site display (2026-09-06)
 
 David, after a Telegram screenshot showing a simulated FILEUR buy fill:
