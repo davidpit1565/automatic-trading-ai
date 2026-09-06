@@ -11,8 +11,8 @@ import { topGainers, topLosers } from '../marketFilters';
 import { openMarketsAt } from './marketsView';
 import { sparklineSvg } from '../charts';
 import { attachCoinLogoFallback, coinLogoHtml, completedLogoHtml } from '../coinLogo';
-import { formatPrice, formatPct, formatPriceSplit, tieredPriceHtml } from '../format';
-import { skeletonRowsHtml } from '../loadingStates';
+import { formatPrice, formatPct, formatPriceSplit, tieredPriceHtml, escapeHtml } from '../format';
+import { skeletonRowsHtml, skeletonMarketCardsHtml } from '../loadingStates';
 import type { ViewHandle } from '../viewLifecycle';
 
 const MOVERS_PREVIEW_COUNT = 5;
@@ -164,7 +164,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   liveHero.hidden = true;
   liveHero.innerHTML = `
     <div class="hero-label">Real money <span class="tag-live">REAL</span><span class="hero-more">profit ›</span></div>
-    <div class="hero-value" id="hv-live-equity"><span class="hero-value-major">—</span></div>
+    <div class="hero-value" id="hv-live-equity"><span class="skeleton-bar hero-value-skeleton"></span></div>
     <div class="hero-change" id="hv-live-change" hidden></div>
     <div class="hero-split"><span id="hv-live-cash"></span></div>
     <div class="kill-switch-banner" id="hv-kill-switch" hidden></div>
@@ -187,7 +187,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   hero.dataset['nav'] = 'value';
   hero.innerHTML = `
     <div class="hero-label">Portfolio value <span class="tag-sim">SIMULATED</span><span class="hero-more">history ›</span></div>
-    <div class="hero-value" id="hv-equity"><span class="hero-value-major">—</span></div>
+    <div class="hero-value" id="hv-equity"><span class="skeleton-bar hero-value-skeleton"></span></div>
     <div class="hero-change" id="hv-change"></div>
     <div class="hero-split"><span id="hv-cash"></span><span id="hv-invested"></span></div>
     <div class="hero-bench" id="hv-bench" hidden></div>
@@ -201,6 +201,10 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   marketsWrap.innerHTML = `<div class="block-head"><h2>Markets</h2><button class="link-btn" data-nav="markets">See all</button></div>`;
   const marketsStrip = el('div', 'markets-strip');
   marketsStrip.id = 'home-markets';
+  // Every sibling section below (Top movers, Open positions, Recent
+  // activity) shows a real shimmering placeholder before its data loads;
+  // this strip previously rendered nothing at all for that same moment.
+  marketsStrip.innerHTML = skeletonMarketCardsHtml(3);
   marketsWrap.appendChild(marketsStrip);
 
   const moversWrap = el('section', 'block');
@@ -270,7 +274,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       row.dataset['nav'] = 'markets';
       row.innerHTML = `
         <div class="row-main">${coinLogoHtml(m.base)}<div><div class="row-title">${m.label}</div><div class="row-sub">${m.base}</div></div></div>
-        <div class="row-side"><span class="row-title">${euro(m.price)}</span><span class="chg ${up ? 'up' : 'down'}">${formatPct(m.changePct)}</span></div>`;
+        <div class="row-side"><span class="row-title">${tieredPriceHtml(euro(m.price))}</span><span class="chg ${up ? 'up' : 'down'}">${formatPct(m.changePct)}</span></div>`;
       moversList.appendChild(row);
     }
   }
@@ -389,7 +393,11 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     const banner = liveHero.querySelector<HTMLElement>('#hv-kill-switch')!;
     if (live.killSwitchEngaged) {
       banner.hidden = false;
-      banner.textContent = `⏸ Real-money trading paused${live.killSwitchReason ? ` — ${live.killSwitchReason}` : ''}`;
+      // Was a bare "⏸" emoji — the one place on Home that broke the app's
+      // single outlined-SVG icon language (readiness checks, tool icons, nav
+      // icons all use it, never an emoji).
+      const reason = live.killSwitchReason ? ` — ${escapeHtml(live.killSwitchReason)}` : '';
+      banner.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12"/><path d="M15 6v12"/></svg><span>Real-money trading paused${reason}</span>`;
     } else {
       banner.hidden = true;
     }
@@ -522,8 +530,15 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     } else if (!state) {
       // Swap the shimmering skeleton for an honest "still trying" message —
       // left alone, it would shimmer forever on a real outage, which reads
-      // as a stuck/broken screen rather than a momentary loading state.
+      // as a stuck/broken screen rather than a momentary loading state. The
+      // hero balance's own first-paint skeleton (see the markup above) needs
+      // exactly the same treatment: refreshPrices() never runs while state
+      // stays null, so nothing else would ever replace it.
       setText('home-status', "Couldn't reach the cloud agent — retrying automatically.");
+      const equityEl = container.querySelector<HTMLElement>('#hv-equity');
+      if (equityEl?.querySelector('.hero-value-skeleton')) {
+        equityEl.innerHTML = '<span class="hero-value-major">—</span>';
+      }
       posList.innerHTML = '';
       posList.appendChild(el('div', 'empty', 'Waiting for the cloud agent…'));
       actList.innerHTML = '';

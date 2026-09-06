@@ -694,6 +694,62 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
   stroke: var(--cold);
 }
 
+/* ---------- Grid / Backtest / Validation: creative pass #5 additions ----------
+   Scoped strictly to these three screens' own selectors (ids and a
+   backtest-only class) so nothing here touches `.control`/`.table-scroll`
+   themselves — both shared with Market Scan/Monitoring/Portfolio, owned by
+   a parallel pass, out of this one's scope. */
+
+/* The browser's native number-input spin button renders as a stark white
+   square that breaks the pill shape — invisible at rest, only appearing
+   once the pointer is actually over the field (confirmed via a real
+   hover screenshot, not just reading the CSS), so it's easy to miss without
+   checking. Revolut X's own numeric inputs never show it. */
+#grid-levels::-webkit-inner-spin-button, #grid-levels::-webkit-outer-spin-button,
+#grid-amount::-webkit-inner-spin-button, #grid-amount::-webkit-outer-spin-button,
+#grid-cash::-webkit-inner-spin-button, #grid-cash::-webkit-outer-spin-button,
+#bt-cash::-webkit-inner-spin-button, #bt-cash::-webkit-outer-spin-button,
+#bt-fee::-webkit-inner-spin-button, #bt-fee::-webkit-outer-spin-button,
+#val-fee::-webkit-inner-spin-button, #val-fee::-webkit-outer-spin-button,
+#val-spread::-webkit-inner-spin-button, #val-spread::-webkit-outer-spin-button,
+#val-slippage::-webkit-inner-spin-button, #val-slippage::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+#grid-levels, #grid-amount, #grid-cash,
+#bt-cash, #bt-fee,
+#val-fee, #val-spread, #val-slippage {
+  -moz-appearance: textfield;
+}
+
+/* Backtest's own Buy & Hold/DCA/Trend toggles — the browser default
+   checkbox renders bright OS blue, the one surface on this screen that
+   broke the app's restrained black/white/green/red palette. */
+.control-checkboxes input[type="checkbox"] {
+  accent-color: var(--text);
+}
+
+/* A right-edge fade hinting that a wide data-table (Backtest's strategy
+   comparison, Validation's per-fold results) scrolls further right — the
+   `.table-scroll` wrapper itself already contains the scroll (shared with
+   Market Scan/Monitoring, out of this pass's scope); this is an additive
+   affordance these two screens opt into via a new wrapper class, toggled
+   by their own scroll-position JS. */
+.table-scroll-fade { position: relative; }
+.table-scroll-fade::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 28px;
+  background: linear-gradient(to right, transparent, var(--surface));
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+  pointer-events: none;
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+}
+.table-scroll-fade.is-scrollable::after { opacity: 1; }
+.table-scroll-fade.is-scrolled-end::after { opacity: 0; }
+
 /* ---------- Cards ---------- */
 
 .learn-card {
@@ -902,7 +958,13 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .topbar {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0.75rem 1rem;
+  /* This app opts into edge-to-edge content (apple-mobile-web-app-status-bar-style
+     "black-translucent" in index.html) but never reserved the notch/Dynamic
+     Island's own safe area — on an installed iOS PWA the brand + BTC chip
+     would render partly under the status bar. `max()` keeps the existing
+     0.75rem on any device with no inset (env() resolves to 0 there) and
+     only adds real clearance where one exists. */
+  padding: max(0.75rem, env(safe-area-inset-top)) 1rem 0.75rem;
   /* Genuinely translucent rather than a near-opaque panel with a blur
      filter tacked on — the wash above (and whatever scrolls under it)
      should read clearly through the glass. */
@@ -913,17 +975,19 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
   box-shadow: 0 4px 20px rgba(0,0,0,0.25);
 }
 
-/* Topbar responsive padding */
+/* Topbar responsive padding. Each still routes its top value through max()
+   with the safe-area inset (see the base rule above) — a plain `1rem` here
+   would silently re-flatten that protection at every width past 480px. */
 @media (min-width: 481px) {
-  .topbar { padding: 1rem 1.25rem; }
+  .topbar { padding: max(1rem, env(safe-area-inset-top)) 1.25rem 1rem; }
 }
 
 @media (min-width: 860px) {
-  .topbar { padding: 1rem 1.5rem; }
+  .topbar { padding: max(1rem, env(safe-area-inset-top)) 1.5rem 1rem; }
 }
 
 @media (min-width: 1200px) {
-  .topbar { padding: 1rem 2rem; }
+  .topbar { padding: max(1rem, env(safe-area-inset-top)) 2rem 1rem; }
 }
 .brand { font-weight: var(--fw-bold); letter-spacing: var(--tracking-tight); display: flex; align-items: center; gap: 0.65rem; font-size: 1.1rem; }
 .brand-dot {
@@ -931,11 +995,19 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
   background: var(--accent-text);
   box-shadow: 0 0 0 3px var(--accent-tint), 0 0 18px var(--accent-glow);
 }
+/* Now a real nav target (data-nav="markets", set in main.ts) — cursor +
+   transition + an actual :active press state, not just a static chip. A
+   phone has no :hover to fall back on, so without this the single most
+   prominent live number in the whole header gave zero feedback on tap. */
 .topbar-btc { display: flex; align-items: center; gap: 0.45rem; font-size: 0.82rem;
   background: color-mix(in srgb, var(--surface) 55%, transparent);
   backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
   border: 1px solid rgba(255,255,255,0.08); border-radius: var(--r-pill); padding: 0.3rem 0.7rem;
-  box-shadow: var(--shadow-xs); }
+  box-shadow: var(--shadow-xs); cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
+.topbar-btc:hover { background: color-mix(in srgb, var(--surface-raised) 65%, transparent); }
+.topbar-btc:active { transform: scale(0.95); }
+@media (prefers-reduced-motion: reduce) { .topbar-btc:active { transform: none; } }
 .tb-label { color: var(--text-dim); font-weight: var(--fw-bold); }
 .tb-price { font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
 
@@ -946,7 +1018,17 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    screen. 128px clears the pill plus a real breathing gap. */
 .content { max-width: 760px; margin: 0 auto; padding: var(--sp-5) var(--sp-5) calc(128px + env(safe-area-inset-bottom)); }
 .view { display: none; }
-.view.active { display: block; animation: viewfade var(--dur-slow) var(--ease-out); }
+/* This rule's own `animation: viewfade ...` never actually ran: every
+   `.view.active` element is a `<section>` inside `.content` (see
+   index.html), and `.content section.active` below (Smooth Page
+   Transitions) has one more class in its selector — (0,2,1) beats this
+   rule's (0,2,0) regardless of source order — so `fadeInUp` played on every
+   tab switch instead, confirmed via getComputedStyle. Dropped the dead
+   declaration here rather than leaving two competing transition systems for
+   the exact same elements; `.content section.active` is the one true source
+   now. `.hub-panel.active` below is a real, separate consumer of `viewfade`
+   (a plain `<div>`, not a `<section>`, so it never collided). */
+.view.active { display: block; }
 @keyframes viewfade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 .bottom-nav {
@@ -959,7 +1041,12 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
      class of WebKit fixed-position bug) makes the browser track it as a
      stable composited layer instead of relaying it out on every toolbar
      animation frame. */
-  position: fixed; left: 50%; bottom: 20px; z-index: 30;
+  /* A flat 20px never reserved the home-indicator gesture strip
+     (~34px on a notched iPhone) — it only read as "enough" because
+     env(safe-area-inset-bottom) was silently 0 without viewport-fit=cover
+     (see index.html). Now that the inset is real, add it here too, or the
+     pill would sit right at the edge of — or under — the swipe-up zone. */
+  position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 30;
   transform: translate(-50%, 0) translateZ(0);
   -webkit-backface-visibility: hidden; backface-visibility: hidden;
   -webkit-perspective: 1000px; perspective: 1000px;
@@ -1057,6 +1144,11 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .kill-switch-banner { display: flex; align-items: center; gap: 0.5rem; background: var(--warn-tint);
   color: var(--warn); border: 1px solid rgba(245, 185, 61, 0.4); border-radius: var(--r-md);
   padding: 0.6rem 0.75rem; font-size: 0.85rem; font-weight: var(--fw-semibold); margin-top: 0.6rem; }
+/* Was a bare "⏸" emoji — the one place on Home that broke the app's single
+   outlined-SVG icon language (readiness checks, tool icons, nav icons all
+   use it). Sized/stroked to match those. */
+.kill-switch-banner svg { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 /* Real bug, found 2026-09-03 from a screenshot: this rule's own unconditional
    `display: flex` overrides the browser's default `[hidden] { display: none }`
    UA rule, so the element stayed visible (an empty amber pill — no text, since
@@ -1126,14 +1218,23 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .view-title { margin: 0 0 0.2rem; font-size: var(--fs-display); font-weight: 800; letter-spacing: -0.032em; line-height: 1.12; }
 .view-sub { color: var(--text-dim); font-size: var(--fs-sub); margin: 0.35rem 0 1.6rem; max-width: 46ch; }
 .link-btn { background: none; border: none; color: var(--accent-text); font-size: 0.82rem; font-weight: 600; cursor: pointer;
-  transition: opacity var(--dur-fast) var(--ease); }
+  transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .link-btn:hover { opacity: 0.75; }
+/* Every "See all" on Home was :hover-only — a phone has no hover, so the
+   three of these (Markets/Top movers/Recent activity) gave zero feedback
+   on tap, unlike every other tappable element on the screen. */
+.link-btn:active { opacity: 0.55; transform: scale(0.94); }
+@media (prefers-reduced-motion: reduce) { .link-btn:active { transform: none; } }
 
 .markets-strip { display: flex; gap: 0.65rem; overflow-x: auto; padding-bottom: 0.35rem; scrollbar-width: none;
   /* Fades the trailing edge so a card cut off mid-width reads as "more to
      scroll", not a layout bug. */
   mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%); }
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+  /* A swipe used to leave a card resting mid-width, cut in half by the
+     fade mask above — `proximity` (not `mandatory`, which fights a fast
+     flick) snaps to a card's edge only when the scroll settles near one. */
+  scroll-snap-type: x proximity; }
 
 /* A borderless row of equal-width labels (tried first) read as a handful of
    floating, disconnected buttons rather than one control — nothing tied the
@@ -1162,7 +1263,8 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .hub-panel.active { display: block; animation: viewfade var(--dur-base) var(--ease); }
 .markets-strip::-webkit-scrollbar { display: none; }
 .market-card { min-width: 178px; background: var(--surface); border: none; border-radius: var(--r-xl);
-  padding: 1rem 1.05rem 0.85rem; box-shadow: var(--shadow-md); transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+  padding: 1rem 1.05rem 0.85rem; box-shadow: var(--shadow-md); transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+  scroll-snap-align: start; }
 /* Hairline lift on hover, matching .tool-card's own treatment — no border to
    swap on true black (cards have none), so the lift itself carries the
    hover affordance. */
@@ -1367,6 +1469,16 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 @media (prefers-reduced-motion: reduce) { .row-clock.fresh { animation: none; } }
 .market-more { padding: 0.9rem; text-align: center; font-size: 0.82rem; color: var(--text-dim); }
 
+/* Stocks Market's own rows are deliberately a plain, non-tappable `<div>`
+   (see stocksMarketPanel.ts's file header — no per-symbol chart to open),
+   unlike crypto's identical-looking `<button class="market-row">` rows. The
+   shared `.market-row:hover` fill above still fired on them regardless,
+   telegraphing "tap me" on a row that does nothing when tapped — found by
+   actually hovering a real row, not just reading the shared rule. Scoped to
+   this list's own id rather than touching the shared rule crypto still
+   needs. */
+#stocks-market-list .market-row:hover { background: transparent; }
+
 @media (min-width: 860px) {
   /* Keeps the right padding that clears the overlaid star — a plain
      `padding: 0.8rem 1.1rem` here would put the price back under it. */
@@ -1499,14 +1611,18 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 @media (max-width: 480px) {
   .content { max-width: 100%; margin: 0; padding: 0.75rem;
     padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
-  .topbar { padding: 0.75rem; }
+  /* Same max() guard as the base .topbar rule — this is the exact
+     breakpoint a real notched iPhone in portrait actually hits, so
+     re-flattening it here would undo the fix for the device it matters
+     most on. */
+  .topbar { padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem 0.75rem; }
 }
 
 /* ===== PHONE/TABLET: 481px - 859px ===== */
 @media (min-width: 481px) and (max-width: 859px) {
   .content { max-width: 100%; margin: 0; padding: 1rem 1.25rem;
     padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
-  .topbar { padding: 1rem 1.25rem 0.75rem; }
+  .topbar { padding: max(1rem, env(safe-area-inset-top)) 1.25rem 0.75rem; }
 }
 
 /* ===== DESKTOP: ≥860px (sidebar nav) ===== */
@@ -1537,6 +1653,14 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
     max-width: calc(100% - 210px);
   }
   .topbar { padding-inline-start: calc(210px + 1.5rem); }
+  /* The topbar overlap above was fixed (see the comment on .bottom-nav in
+     this block) but this banner — a separate element between the topbar
+     and <main>, not inside .content — was never given the same clearance:
+     the sidebar's own translucent panel sits on top of and visually cuts
+     off its text (confirmed on a real 1280px screenshot in demo/offline
+     mode, where the banner is actually visible). Same 210px reservation as
+     .content/.topbar above. */
+  .data-source-banner { margin-inline-start: 210px; }
 
   /* Tools grid */
   .tools-grid { grid-template-columns: repeat(2, 1fr); gap: 0.9rem; }
@@ -2161,6 +2285,30 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .skeleton-list-row .row-main { display: flex; align-items: center; gap: 0.6rem; }
 .skeleton-list-row .skeleton-lines { display: flex; flex-direction: column; gap: 0.35rem; }
 .skeleton-list-row .skeleton-side { display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem; }
+
+/* Home's "Top movers"/"Open positions"/"Recent activity" all got a real
+   shimmering placeholder on first paint (skeleton-list-row above) — the
+   "Markets" strip a few lines above them on the same screen was the one
+   section left rendering nothing at all until its fetch resolved. Reuses
+   the same .skeleton-dot/.skeleton-bar primitives (so it picks up the
+   shimmer for free) inside a box mirroring .market-card's own geometry —
+   deliberately does NOT carry the .market-card class, same rule as
+   .skeleton-row above: a placeholder must never be picked up by code
+   selecting real cards. */
+.skeleton-market-card { min-width: 178px; flex: 0 0 auto; background: var(--surface);
+  border-radius: var(--r-xl); padding: 1rem 1.05rem 0.85rem; }
+.skeleton-market-card .skeleton-top { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.7rem; }
+.skeleton-market-card .skeleton-dot { width: 26px; height: 26px; }
+.skeleton-market-card .skeleton-bar.mc-price { height: 1.3rem; width: 75%; margin: 0.55rem 0 0.65rem; }
+.skeleton-market-card .skeleton-bar.mc-spark { height: 44px; width: 100%; border-radius: var(--r-sm); }
+
+/* The hero balance's very first paint (before any cloud-state fetch has
+   resolved) rendered a bare "—" glyph at the hero's full giant scale — no
+   shimmer, no context, just a stark dash the size of the number itself.
+   Every other async section on Home got a real loading treatment; this
+   gives the single most prominent element on the screen the same one. */
+.skeleton-bar.hero-value-skeleton { width: 190px; height: 2.6rem; border-radius: var(--r-sm); }
+
 .skeleton-dot, .skeleton-bar {
   background: linear-gradient(90deg, var(--border) 25%, var(--surface-raised) 50%, var(--border) 75%);
   background-size: 200% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite;

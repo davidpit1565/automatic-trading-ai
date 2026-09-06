@@ -74,4 +74,59 @@ describe('Stocks Market panel — category/sort interaction (DOM integration)', 
       expect(badge !== null).toBe(curatedSymbols.has(symbol));
     }
   });
+
+  it('echoes the search query back in the empty state, not a generic message', async () => {
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('offline')));
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderStocksMarketPanel(container);
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    container.querySelector<HTMLInputElement>('#sm-search')!.value = 'zzz-no-such-stock';
+    container.querySelector<HTMLInputElement>('#sm-search')!.dispatchEvent(new Event('input'));
+    expect(container.textContent).toContain('No stocks match "zzz-no-such-stock"');
+  });
+
+  it('shows a live status line with a priced count and timestamp, like the crypto Markets list', async () => {
+    const now = Date.now();
+    const [first] = BROWSABLE_STOCK_INSTRUMENTS;
+    const raw = {
+      'portfolio-engine': { cash: 10_000, initialCash: 10_000, baseCurrency: 'USD' },
+      'open-positions': [],
+      'audit-log': [],
+      'market-snapshot': { symbols: [{ symbol: first!.symbol, price: 100, changePct: 1, updatedAt: now }] },
+    };
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: true, json: () => Promise.resolve(raw) }));
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderStocksMarketPanel(container);
+    await waitFor(() => (container.querySelector('#sm-status')?.textContent ?? '').includes('priced'));
+
+    const status = container.querySelector('#sm-status')!.textContent!;
+    expect(status).toContain(`1/${BROWSABLE_STOCK_INSTRUMENTS.length} stocks priced`);
+  });
+
+  it('flashes a row whose price actually changed since the previous render, like the crypto Markets list', async () => {
+    const [first] = BROWSABLE_STOCK_INSTRUMENTS;
+    let price = 100;
+    const raw = () => ({
+      'portfolio-engine': { cash: 10_000, initialCash: 10_000, baseCurrency: 'USD' },
+      'open-positions': [],
+      'audit-log': [],
+      'market-snapshot': { symbols: [{ symbol: first!.symbol, price, changePct: 1, updatedAt: Date.now() }] },
+    });
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: true, json: () => Promise.resolve(raw()) }));
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderStocksMarketPanel(container);
+    await waitFor(() => container.querySelector('.row-price') !== null);
+    expect(container.querySelector('.row-price')!.className).not.toMatch(/flash-(up|down)/);
+
+    price = 105;
+    // Same closure's shownPrices Map, not a fresh mount — resume() is what
+    // the real pause/resume view lifecycle (and the refresh interval) call.
+    await handle.resume?.();
+    await waitFor(() => (container.querySelector('.row-price')?.className ?? '').includes('flash-up'));
+    expect(container.querySelector('.row-price')!.className).toContain('flash-up');
+  });
 });
