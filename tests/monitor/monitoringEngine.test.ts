@@ -139,6 +139,72 @@ describe('MonitoringEngine.runScanOnce', () => {
     expect(delivered).toHaveLength(2);
   });
 
+  it('coalesces an overlapping call onto the scan already in flight', async () => {
+    // A scan that outlasts the scheduler's interval (e.g. a slow exchange)
+    // must not let a second, concurrent call race the first: both callers
+    // should observe the exact same result, and side effects (log/alerts)
+    // must happen exactly once, not twice.
+    const store = new MemoryStore();
+    const delivered: Alert[] = [];
+    let resolveCandles!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      resolveCandles = resolve;
+    });
+    let calls = 0;
+    const source: MarketDataSource = {
+      name: 'slow-stub',
+      getInstruments: async () => ok([{ symbol: 'QUAL/USD', base: 'QUAL', quote: 'USD' }]),
+      getCandles: async (symbol, timeframe, limit) => {
+        calls++;
+        if (calls === 1) await gate; // stall the first scan mid-flight
+        return ok(
+          generateSyntheticCandles({
+            seed: 1,
+            startPrice: 100,
+            count: 150,
+            timeframe: '1h',
+            startTimestamp: T - 150 * 3_600_000,
+            drift: 0.001,
+            volatility: 0.004,
+          }),
+        );
+      },
+    };
+    const engine = new MonitoringEngine({
+      source,
+      symbols: ['QUAL/USD'],
+      timeframe: '1h',
+      scheduler: new ManualScheduler(),
+      watchlist: new WatchlistStore(store),
+      log: new OpportunityLog(store),
+      alerts: new AlertEngine(
+        store,
+        [
+          {
+            name: 'test',
+            deliver: (a) => {
+              delivered.push(a);
+            },
+          },
+        ],
+        { cooldownMs: 3_600_000 },
+      ),
+      getPortfolio: () => ({ equity: 10_000, openPositions: [] }),
+      getDailyLoss: () => 0,
+      validator: () => 'caution',
+    });
+
+    const first = engine.runScanOnce(T); // stalls inside getCandles
+    const second = engine.runScanOnce(T + 60_000); // "overlapping" scheduler firing
+    resolveCandles();
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+
+    expect(secondResult).toBe(firstResult); // same in-flight scan, not a second one
+    expect(firstResult.timestamp).toBe(T); // the first call's timestamp won, not the second's
+    expect(engine.opportunityHistory()).toHaveLength(1); // logged once, not twice
+    expect(delivered).toHaveLength(1); // alerted once, not twice
+  });
+
   it('captures per-symbol failures without aborting the scan', async () => {
     const source = makeSource({ 'QUAL/USD': 0.001 });
     const failing: MarketDataSource = {
