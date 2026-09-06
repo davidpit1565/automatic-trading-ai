@@ -14,7 +14,7 @@
 import { fetchStocksState, type MarketSnapshotEntry } from '../cloudState';
 import { BROWSABLE_STOCK_INSTRUMENTS, CURATED_STOCK_INSTRUMENTS } from '../../core/data/alpacaStocks';
 import { attachCoinLogoFallback, coinLogoHtml } from '../coinLogo';
-import { escapeHtml, formatMarketPrice, formatPct, tieredPriceHtml } from '../format';
+import { escapeHtml, formatClock, formatMarketPrice, formatPct, tieredPriceHtml } from '../format';
 import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 60_000;
@@ -81,10 +81,17 @@ function sortRows(rows: readonly Row[], key: SortKey): Row[] {
   }
 }
 
-function rowHtml(r: Row): string {
+function rowHtml(r: Row, shownPrices: Map<string, number>): string {
   const snap = r.snapshot;
   const up = (snap?.changePct ?? 0) >= 0;
   const stale = !snap || Date.now() - snap.updatedAt > STALE_AFTER_MS;
+  // Flashes the price on the row that actually just moved since the last
+  // render — same cue the crypto Markets list gives on every refresh; this
+  // list re-rendered on every 60s poll with no visual sign anything had
+  // changed at all.
+  const previous = snap ? shownPrices.get(r.symbol) : undefined;
+  const flash = !snap || previous === undefined || previous === snap.price ? '' : snap.price > previous ? ' flash-up' : ' flash-down';
+  if (snap) shownPrices.set(r.symbol, snap.price);
   return (
     `<div class="market-row-wrap">` +
     `<div class="market-row">` +
@@ -92,11 +99,14 @@ function rowHtml(r: Row): string {
     `<span class="market-row-id">` +
     `<span class="row-title">${escapeHtml(r.symbol)}</span>` +
     `<span class="row-sub"><span class="row-clock ${stale ? 'stale' : 'fresh'}" aria-hidden="true"></span>` +
-    `${snap ? 'live' : 'no data yet'}` +
+    // Same clock-time freshness label the crypto Markets list gives every
+    // row (formatClock) — this used to just say the static word "live",
+    // giving no actual sense of how fresh the last agent cycle's price is.
+    `<span class="row-sub-text">${snap ? formatClock(snap.updatedAt) : 'no data yet'}</span>` +
     `${CURATED_STOCK_SYMBOLS.has(r.symbol) ? '<span class="tag-traded">TRADED</span>' : ''}</span>` +
     `</span>` +
     `<span class="market-row-num">` +
-    `<span class="row-price">${snap ? tieredPriceHtml(`$${formatMarketPrice(snap.price)}`) : '—'}</span>` +
+    `<span class="row-price${flash}">${snap ? tieredPriceHtml(`$${formatMarketPrice(snap.price)}`) : '—'}</span>` +
     `${snap ? `<span class="chg ${up ? 'up' : 'down'}">${formatPct(snap.changePct)}</span>` : ''}` +
     `</span>` +
     `</div></div>`
@@ -120,15 +130,21 @@ export function renderStocksMarketPanel(container: HTMLElement): ViewHandle {
         <option value="price">Price</option>
       </select>
     </div>
-    <div class="stack" id="stocks-market-list"><div class="empty">Loading…</div></div>`;
+    <div class="stack" id="stocks-market-list"><div class="empty">Loading…</div></div>
+    <p class="muted-line" id="sm-status"></p>`;
   attachCoinLogoFallback(container);
 
   const tabsEl = container.querySelector<HTMLElement>('#sm-tabs')!;
   const searchEl = container.querySelector<HTMLInputElement>('#sm-search')!;
   const sortEl = container.querySelector<HTMLSelectElement>('#sm-sort')!;
   const list = container.querySelector<HTMLElement>('#stocks-market-list')!;
+  const statusEl = container.querySelector<HTMLElement>('#sm-status')!;
 
   const allRows: Row[] = BROWSABLE_STOCK_INSTRUMENTS.map((i) => ({ symbol: i.symbol, snapshot: null }));
+  // Keyed by symbol, across renders — lets rowHtml flash only the rows whose
+  // price actually changed since the previous render (same convention the
+  // crypto Markets list's own `shownPrices` uses).
+  const shownPrices = new Map<string, number>();
   let query = '';
   let sortKey: SortKey = 'default';
   let category: CategoryKey = 'popular';
@@ -138,10 +154,19 @@ export function renderStocksMarketPanel(container: HTMLElement): ViewHandle {
     const categorized = applyCategory(filtered, category);
     const rows = sortRows(categorized, sortKey);
     if (rows.length === 0) {
-      list.innerHTML = '<div class="empty">No matching stocks.</div>';
+      // Echoes the actual search/category back, same specificity the
+      // crypto Markets list's own empty state gives — the generic "No
+      // matching stocks." here left the user with no clue whether it was
+      // the search text or the tab that came up empty.
+      const q = query.trim();
+      const reason =
+        q !== ''
+          ? `No stocks match "${escapeHtml(q)}".`
+          : `No stocks in ${CATEGORIES.find((c) => c.key === category)?.label ?? category} right now.`;
+      list.innerHTML = `<div class="empty">${reason}</div>`;
       return;
     }
-    list.innerHTML = rows.map(rowHtml).join('');
+    list.innerHTML = rows.map((r) => rowHtml(r, shownPrices)).join('');
   }
 
   async function load(): Promise<void> {
@@ -152,6 +177,11 @@ export function renderStocksMarketPanel(container: HTMLElement): ViewHandle {
       allRows[i] = { symbol, snapshot: bySymbol.get(symbol) ?? null };
     }
     render();
+    const withData = allRows.filter((r) => r.snapshot !== null).length;
+    const stamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    // Same freshness summary line the crypto Markets list shows below its
+    // own list (`#mk-status`) — this list had no equivalent at all.
+    statusEl.textContent = `Live · ${withData}/${allRows.length} stocks priced · updated ${stamp}`;
   }
 
   tabsEl.addEventListener('click', (event) => {

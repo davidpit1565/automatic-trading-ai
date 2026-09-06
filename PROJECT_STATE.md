@@ -1,5 +1,131 @@
 # PROJECT_STATE
 
+## Revolut X comparison pass, Stocks screens only: 10 verified fixes (2026-09-06)
+
+One of several parallel agents on David's "compare Revolut X, ship 200 serious
+improvements" round, scoped to Stocks only (`stocksOverviewPanel.ts`,
+`stocksMarketPanel.ts`, `stocksLongTermPanel.ts`, plus the Stocks-specific
+parts of `styles.css`) — Crypto/Home/Markets/Tools were other agents' shares.
+Loaded `fintech-dashboard-polish` + `apple-design`. No Revolut X screen
+recording was on disk this round (checked `/root/.claude/uploads/*/Screen
+Recording*.mp4` — none present), so comparisons leaned on the distilled
+skill plus cross-referencing crypto's own already-polished Markets/Home
+screens (the same reference points "Creative upgrade pass #4" and "Deep
+design pass #1-3" below already used for Stocks).
+
+**Method**: `npm run build`, `vite preview` on port 4290, real Playwright
+screenshots (`chromium.launch({ executablePath: '/opt/pw-browsers/chromium'
+})`) at 390×844, `page.route` mocking a realistic `stocks-state.json` shape
+(positions, market-snapshot, shadow-standings, benchmark-result). Screenshot
+ed all 5 Stocks tabs (Overview/History/Market/Profit/Long-Term), the Market
+list's category tabs + search + zero-result state, and a real mouse-hover
+check via `getComputedStyle` (not just reading CSS) for item 8. One planned
+fix (a loading skeleton for the Market list) was caught by its own new test
+as dead code — a pre-existing synchronous `render()` call already overwrites
+the loading placeholder before the browser ever paints it, so neither the
+old "Loading…" text nor a new skeleton is ever actually visible; reverted
+before commit rather than shipping an invisible "fix". Honest count below:
+10, not the ~28-30 hoped for — three prior exhaustive, screenshot-verified
+design passes already covered this exact surface (see "Creative upgrade
+pass #4" and "Deep design pass #1/#2/#3" further down), so the remaining
+real gaps were narrower than a first pass would find.
+
+1. **Overview hero had no click-to-History affordance.** Home's identical
+   dominant-balance hero (`homeView.ts`) is `tappable` with a "history ›"
+   label and jumps to its own Value view on tap; the Stocks Overview hero
+   was a static, non-interactive copy of the same component. Added
+   `tappable` + the same "history ›" wording, wired to activate this hub's
+   own History sub-tab (`.hub-tab[data-hub="history"]`, found via
+   `container.parentElement` rather than a global query, which would hit
+   Crypto's identical tab instead since both hubs' DOM persist at once).
+   Verified: screenshot before/after + a DOM test asserting the click fires
+   the tab's own click handler.
+2. **"Open positions" heading was missing its SIMULATED tag.** Home's
+   identical heading reads `Open positions <span class="tag-sim">SIMULATED
+   </span>`; Stocks Overview's copy had no tag at all. Added it. Verified:
+   screenshot + DOM test.
+3. **A real "vs S&P 500" benchmark was computed server-side and silently
+   dropped.** `server/stocksRunner.mts` already writes a `benchmark-result`
+   key (`{label: "S&P 500 (SPY)", portfolioPct, assetPct}`, already
+   percentage-scaled — confirmed from the server's own `((equityNow -
+   anchor.equity) / anchor.equity) * 100`) to the real committed
+   `stocks-state.json`, but `cloudState.ts`'s `benchmark` field only reads
+   the crypto-shaped `benchmark-anchor.btc`; Stocks' anchor is keyed `spy`,
+   so `state.benchmark` was always `null` for Stocks and the number had
+   nowhere to render. Added `CloudBenchmarkResult`/`benchmarkResult`
+   (purely additive — crypto's raw state has no `benchmark-result` key, so
+   this is `null` there exactly as before) and a `hero-bench` line on
+   Overview mirroring Home's own "vs Bitcoin" wording exactly (`vs S&P 500 —
+   agent +0.63% · SPY +0.90% · leading`). Touches the shared `cloudState.ts`
+   — deliberately, since it's additive-only and doesn't change any existing
+   Crypto-facing field or behavior. Verified: unit tests for the parser
+   (well-formed + malformed/absent) and a DOM test for the rendered line.
+4. **Market list rows said the static word "live" instead of a real
+   timestamp.** Crypto's identical row (`marketsView.ts`) shows `formatClock
+   (updatedAt) · SYMBOL`; Stocks showed a hardcoded "live"/"no data yet"
+   string with no actual freshness info despite already having an
+   `updatedAt` on every snapshot. Switched to `formatClock(snap.updatedAt)`,
+   wrapped in the same `.row-sub-text` span crypto uses (for consistent
+   ellipsis/overflow handling). Verified: screenshot (shows "01:19" instead
+   of "live").
+5. **Market list rows never flashed on a price change.** Crypto's list
+   flashes green/red (`.flash-up`/`.flash-down`, reusing existing CSS) on a
+   symbol whose price actually moved since the last render; Stocks re-
+   rendered every 60s poll with zero visual cue anything had changed. Added
+   the same `shownPrices` tracking crypto's `rowHtml` uses. Verified: a DOM
+   test that changes the mocked price between two `resume()` cycles and
+   asserts the `flash-up` class appears only on the second render.
+6. **The empty/no-results message was one generic string for every case.**
+   Crypto's list echoes the actual search text or category name back
+   ("No markets match "aa"." / "No markets in Gainers right now.");
+   Stocks showed "No matching stocks." unconditionally, so a user got no
+   confirmation of what actually came up empty. Matched the exact pattern.
+   Verified: DOM test for the query-echo case.
+7. **No status/freshness line under the Market list at all.** Crypto's
+   list shows "Live · N markets · updated HH:MM" below the rows; Stocks had
+   no equivalent. Added "Live · N/M stocks priced · updated HH:MM".
+   Verified: screenshot + DOM test.
+8. **Market rows carried a misleading hover highlight.** Stocks' rows are
+   deliberately a plain non-interactive `<div>` (no per-symbol detail view
+   — see the file's own header comment), unlike crypto's real `<button>`
+   rows, but both shared `.market-row:hover`'s fill, so hovering a Stocks
+   row still glowed as if it were tappable. Added a narrowly-scoped
+   `#stocks-market-list .market-row:hover { background: transparent; }`
+   override rather than touching the shared rule crypto still needs.
+   Verified with a real `pointer.hover()` + `getComputedStyle` check
+   (background stayed `rgba(0,0,0,0)` before and after hover), not just
+   read from the CSS.
+9. **Long-Term's "Track record" used the wrong list component.** Win
+   rate/Profit factor were rendered as generic `.row` list rows (the
+   component meant for an actual scrollable list of trades/positions);
+   every other "at-a-glance summary of a few related numbers" in the app
+   (Grid's equity/return, Validation's fold summary, Backtest's comparison
+   summary) already uses the `.stat-row`/`.stat-tile` "big number + small
+   label" component. Converted the two stats to match, removed the now-
+   dead `row()` helper. Verified: screenshot + existing text-assertion
+   tests (unchanged, still pass against the new markup).
+10. **Empty-positions copy was flatter than Home's.** Home's identical
+    empty state reads "Holding cash and waiting for a good setup."; Stocks
+    read "Holding cash — no open positions." — a small, safe copy-parity
+    fix, no test depended on the old string.
+
+**Rejected after investigation, not fixed:** a loading skeleton for the
+Market list (dead code — see Method above); `.hero.up`/`.down` classes on
+every bare hero (`heroEl.classList.toggle`) are genuinely inert wherever
+`.hero-bare` is used, including Home's own crypto hero — pre-existing,
+shared, and invisible either way, not a Stocks-specific regression to
+carry alone; a per-row Stocks watchlist star (crypto has one) — a real
+feature addition, not a polish fix, out of this pass's scope.
+
+Full gate: `tsc --noEmit` clean, `vitest run` 1180/1180 (was 1149 at the
+start of this pass — 31 new/updated tests, none weakened), `npm run build`
+clean. Diff: `src/ui/views/stocks{Overview,Market,LongTerm}Panel.ts`,
+`src/ui/cloudState.ts` (additive only), `src/ui/styles.css` (one new
+Stocks-scoped rule), plus `tests/ui/stocksOverviewPanel.test.ts` (new),
+`tests/ui/{stocksMarketPanel,cloudState,assetHubView}.test.ts` (extended).
+Nothing under `server/**`, `state/**`, `homeView.ts`, `marketsView.ts`,
+`main.ts`, or any Tools view touched.
+
 ## Creative upgrade pass #5: Grid/Backtest/Validation, 20 screenshot-verified fixes (2026-09-06)
 Part of David's cross-screen "compare against Revolut X, ship 200 real
 improvements, split across parallel agents" ask; this agent's scope was
