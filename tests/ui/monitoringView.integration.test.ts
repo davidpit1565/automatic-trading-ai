@@ -164,6 +164,87 @@ describe('Monitoring view (DOM integration)', () => {
     }
   });
 
+  it('shows an honest error, not "protecting capital", when every monitored market fails to fetch', async () => {
+    const data = await makeData();
+    // A genuine network outage: every candle fetch fails, so the scan
+    // returns zero outcomes and only failures — same Result-shaped failure
+    // the sibling Market Scan view already handles distinctly.
+    const failingSource = {
+      ...data.source,
+      getCandles: async () => ({ ok: false as const, error: 'network unreachable' }),
+    };
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderMonitoringView(container, { ...data, source: failingSource });
+
+    container.querySelector<HTMLButtonElement>('#mon-scan-now')!.click();
+    await new Promise((resolve) => {
+      const check = (): void => {
+        const t = container.querySelector('#mon-opportunities')!.textContent!;
+        if (!t.includes('No scan has run yet') && !t.includes('Scanning…')) resolve(undefined);
+        else setTimeout(check, 10);
+      };
+      check();
+    });
+
+    const text = container.querySelector('#mon-opportunities')!.textContent!;
+    expect(text).toContain('Scan failed for all');
+    expect(text).not.toContain('protecting capital');
+  });
+
+  it('clears the previous scan\'s stale results instead of leaving them on screen while a new scan is in flight', async () => {
+    const data = await makeData();
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+
+    // First scan populates #mon-opportunities with real (demo) content —
+    // must wait for it to fully settle (not just start, i.e. past the
+    // in-flight "Scanning…" placeholder itself) before moving on.
+    renderMonitoringView(container, data);
+    container.querySelector<HTMLButtonElement>('#mon-scan-now')!.click();
+    for (
+      let i = 0;
+      i < 600 &&
+      (container.querySelector('#mon-opportunities')!.textContent!.includes('No scan has run yet') ||
+        container.querySelector('#mon-opportunities')!.textContent!.includes('Scanning…'));
+      i++
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    const firstResultText = container.querySelector('#mon-opportunities')!.textContent!;
+    expect(firstResultText).not.toContain('No scan has run yet');
+    expect(firstResultText).not.toContain('Scanning…');
+
+    // Second scan: hold getCandles open so we can observe the mid-flight DOM
+    // before it resolves — the exact window the old code left untouched.
+    let releaseSecondScan: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      releaseSecondScan = resolve;
+    });
+    const stallingSource = {
+      ...data.source,
+      getCandles: async (...args: Parameters<typeof data.source.getCandles>) => {
+        await held;
+        return data.source.getCandles(...args);
+      },
+    };
+    // Re-render against the stalling source, reusing the same container.
+    renderMonitoringView(container, { ...data, source: stallingSource });
+    container.querySelector<HTMLButtonElement>('#mon-scan-now')!.click();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(container.querySelector('#mon-opportunities')!.textContent).toContain('Scanning…');
+    expect(container.querySelector('#mon-opportunities')!.textContent).not.toBe(firstResultText);
+
+    // Let the held scan actually finish before the test ends — an
+    // unresolved background write would otherwise leak into localStorage
+    // (shared across this file's tests) after this test returns.
+    releaseSecondScan();
+    for (let i = 0; i < 600 && container.querySelector('#mon-opportunities')!.textContent!.includes('Scanning…'); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  });
+
   it('disables Scan now while a manual scan is in flight, and re-enables after', async () => {
     const source = new SyntheticDataSource(ANCHOR);
     const instrumentsResult = await source.getInstruments();

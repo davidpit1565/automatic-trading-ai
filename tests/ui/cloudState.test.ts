@@ -136,6 +136,55 @@ describe('benchmark-result parsing', () => {
   });
 });
 
+describe('real-money-readiness parsing (2026-09-06 readiness/kill-switch audit)', () => {
+  it('parses `unmet` — needed to tell a genuinely-blocking criterion apart from an informational one that also reads !ok', async () => {
+    // Shaped exactly like the real committed state/stocks-state.json: two
+    // criteria are !ok but informational-only (trades/consistency, for a
+    // hold-only strategy), only "benchmark" actually blocks readiness.
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'real-money-readiness': {
+        ready: false,
+        summary: 'NOT READY — vs buy-and-hold S&P 500 (SPY) -0.27%.',
+        criteria: [
+          { key: 'trades', ok: false, detail: '11 / 20 closed trades (informational)' },
+          { key: 'benchmark', ok: false, detail: 'vs buy-and-hold S&P 500 (SPY) -0.27%' },
+          { key: 'consistency', ok: false, detail: 'profit factor 1.17 (informational)' },
+        ],
+        unmet: ['benchmark'],
+      },
+    });
+    const state = await fetchCloudState(okFetch(body));
+    expect(state!.readiness!.unmet).toEqual(['benchmark']);
+  });
+
+  it('defaults `unmet` to an empty array when there are no criteria and the field is absent, rather than crashing', async () => {
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'real-money-readiness': { ready: true, summary: 'READY', criteria: [] },
+    });
+    const state = await fetchCloudState(okFetch(body));
+    expect(state!.readiness!.unmet).toEqual([]);
+  });
+
+  it('falls back to treating every !ok criterion as blocking when `unmet` itself is absent (old/malformed state) — never silently demotes a real blocker to "just informational"', async () => {
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'real-money-readiness': {
+        ready: false,
+        summary: 'NOT READY',
+        criteria: [
+          { key: 'trades', ok: false, detail: '1 / 20 closed trades' },
+          { key: 'days', ok: true, detail: '20 / 14 days of history' },
+        ],
+        // no `unmet` field at all
+      },
+    });
+    const state = await fetchCloudState(okFetch(body));
+    expect(state!.readiness!.unmet).toEqual(['trades']);
+  });
+});
+
 describe('shadow-standings parsing', () => {
   it('parses a well-formed standing, defaulting missing winRatePct/profitFactor to null', async () => {
     const body = JSON.stringify({

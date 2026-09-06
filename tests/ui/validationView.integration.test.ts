@@ -67,6 +67,10 @@ describe('Validation view (DOM integration)', () => {
     expect(foldRows[0]!.textContent).toContain('SMA');
     // Cost settings surfaced in the status line — costs are never hidden.
     expect(container.querySelector('#val-status')!.textContent).toContain('spread');
+    // 2026-09-06 readiness/kill-switch audit: this is a pure historical
+    // backtest with no live money behind it — must say so, matching every
+    // account screen in the app (Home, Crypto, Stocks, Portfolio).
+    expect(container.querySelector('.block-head h2 .tag-sim')?.textContent).toBe('SIMULATED');
   });
 
   it('splits the post-run status into two lines instead of one run-on sentence', async () => {
