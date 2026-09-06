@@ -131,7 +131,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  transition: background-color var(--dur-base) ease, color var(--dur-base) ease;
+  transition: background-color var(--dur-base) var(--ease), color var(--dur-base) var(--ease);
 }
 
 .app-header {
@@ -1221,9 +1221,17 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 /* Coin logo, or a generated tile for the long tail with no bundled mark.
    Both share a size so rows never reflow when one falls back to the other. */
 .coin-logo { width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto; display: block; box-shadow: 0 0 0 1px rgba(255,255,255,0.06); }
+/* Lightness measured against WCAG contrast, not eyeballed: at the previous
+   42% every hue in the yellow/green/cyan band (~45-195deg) fell to a 2.6-3.2:1
+   contrast ratio against the white initials text — below the 4.5:1 AA floor
+   for text this small (~10px) — while red/blue/violet hues stayed well
+   above it. Since this tile stands in for hundreds of long-tail assets'
+   actual logos (see the module doc comment in coinLogo.ts), roughly a third
+   of them rendered genuinely hard to read, not just a shade off. 30% keeps
+   the worst-case hue (pure yellow, hue 60) at 4.75:1. */
 .coin-logo-tile { display: inline-flex; align-items: center; justify-content: center;
   font-size: 0.62rem; font-weight: 800; letter-spacing: -0.02em; color: #fff;
-  background: hsl(var(--coin-hue, 210) 55% 42%); text-transform: uppercase; }
+  background: hsl(var(--coin-hue, 210) 55% 30%); text-transform: uppercase; }
 
 /* Completed-trade checkmark badge, overlaid on a coin logo's corner. */
 .logo-wrap { position: relative; display: inline-flex; flex: 0 0 auto; }
@@ -1776,7 +1784,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .pchart .pchart-cross-dot { stroke: #fff; stroke-width: 1.5; }
 
 /* Support/Resistance levels with smooth animation */
-.pchart .psr { transition: stroke 300ms ease, opacity 300ms ease; stroke-width: 1; opacity: 0.4; }
+.pchart .psr { transition: stroke var(--dur-base) var(--ease), opacity var(--dur-base) var(--ease); stroke-width: 1; opacity: 0.4; }
 .pchart .psr-resistance { stroke: rgba(76, 215, 135, 0.32); }
 .pchart .psr-support { stroke: rgba(242, 109, 125, 0.32); }
 .pchart .psr-label { font-family: inherit; font-weight: 700; letter-spacing: 0.02em; }
@@ -2087,8 +2095,76 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .mk-pull { min-height: 0; text-align: center; font-size: 0.8rem; color: var(--text-dim); }
 .mk-pull:not(:empty) { padding: 0.4rem 0; }
 
-/* Respect a reduced-motion preference: keep the colour cue, drop the movement. */
+/* Respect a reduced-motion preference: keep the colour cue, drop the movement.
+   The four other reduced-motion rules already in this file each cover one
+   narrow, already-noticed animation (row-clock pulse, tappable press,
+   pchart-now pulse) — none of them covered the view-enter transition that
+   actually fires on EVERY single tab/nav switch across the whole app
+   (`.view.active`'s `viewfade` and `.content section.active`'s `fadeInUp` —
+   both target the same `<section>`, `.content section.active` wins on
+   selector specificity, so `fadeInUp`'s translateY is what actually plays;
+   disabling both here is correct regardless of which one currently cascades
+   and stays correct if that ever changes) plus the Tools sub-tab fade
+   (`.hub-panel.active`) and the chart swap fade (`.detail-chart.fade-in`,
+   `.fade-in-up`). */
 @media (prefers-reduced-motion: reduce) {
   .skeleton-dot, .skeleton-bar { animation: none; }
   .row-price.flash-up, .row-price.flash-down { animation-duration: 1ms; }
+  .view.active, .content section.active, .hub-panel.active,
+  .detail-chart.fade-in, .fade-in-up { animation: none; }
+}
+
+/* ---------- Focus-visible (keyboard accessibility) ----------
+   Before this, only `.control input/select` and `.mk-search` (two form
+   fields) styled their own focus ring — every OTHER interactive base class
+   shared across the whole app (the bottom nav, a Tools card, any tappable
+   row/card, a tab, a clickable scan row, the Markets star toggle, the
+   primary/secondary/buy/sell action buttons) relied entirely on the
+   browser's unstyled default outline, which on a rounded pill/card reads as
+   a mismatched square blue box rather than a deliberate part of this
+   design system. Keyed off :focus-visible (not :focus) so a mouse/touch tap
+   never shows it — the same "ring only for keyboard/assistive input"
+   behaviour `.control`/`.mk-search` already established. */
+.nav-btn:focus-visible,
+.tool-card:focus-visible,
+.tappable:focus-visible,
+.tab-button:focus-visible,
+.scan-row:focus-visible,
+.mk-star:focus-visible,
+button.primary:focus-visible,
+button.secondary:focus-visible,
+button.btn-buy:focus-visible,
+button.btn-sell:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+
+/* ---------- Reduced transparency ----------
+   The three chrome elements present on every single screen (topbar, its BTC
+   price chip, the bottom nav) are all genuinely translucent
+   `backdrop-filter` glass — deliberately, per the comment on `.topbar`
+   above — with nothing checking `prefers-reduced-transparency`. Apple's own
+   guidance for this setting (used by people who find blurred/translucent
+   backgrounds hard to read text over) is to make the affected surfaces
+   frostier/solid rather than turn the feature off, so this keeps every
+   layout, colour and radius identical and only removes the blur + opacity. */
+@media (prefers-reduced-transparency: reduce) {
+  .topbar { background: #0a0a0a; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .topbar-btc { background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .bottom-nav { background: #1c1c1e; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+/* ---------- Higher contrast ----------
+   `--border`/`--border-strong` are the two tokens nearly every hairline
+   divider and card edge in the app draws from (dozens of call sites) — at
+   their normal 7%/15% white alpha they're deliberately near-invisible (see
+   the `:root` comment: "separation comes from the surface being lighter...
+   never from a 1px navy stroke"). `prefers-contrast: more` asks for exactly
+   the opposite trade-off, so this single token override raises both without
+   touching a single one of their call sites. */
+@media (prefers-contrast: more) {
+  :root {
+    --border: rgba(255, 255, 255, 0.28);
+    --border-strong: rgba(255, 255, 255, 0.45);
+  }
 }

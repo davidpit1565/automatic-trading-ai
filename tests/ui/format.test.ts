@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { formatMarketPrice, formatSignedPrice, tieredPriceHtml, truncate } from '../../src/ui/format';
+import {
+  formatMarketPrice,
+  formatNumber,
+  formatPct,
+  formatPriceSplit,
+  formatSignedPrice,
+  tieredPriceHtml,
+  truncate,
+} from '../../src/ui/format';
 
 describe('tieredPriceHtml', () => {
   it('splits at the last decimal point, keeping the exact digits the caller already formatted', () => {
@@ -85,5 +93,52 @@ describe('change decimals follow the price', () => {
 
   it('defaults the reference to the value itself when none is given', () => {
     expect(formatSignedPrice(-1192.4)).toBe('-1,192.40');
+  });
+});
+
+describe('formatPct / formatNumber: no spurious "-0.00" for a negative value that rounds to zero', () => {
+  it('formatPct drops the minus sign once the value rounds to exactly zero', () => {
+    // Below 2dp's rounding floor — a real case (a near-flat asset, or a
+    // 48h/24h anchor landing a hair under zero) that must read as flat, not
+    // as a fake small decline.
+    expect(formatPct(-0.001)).toBe('0.00%');
+    expect(formatPct(-0.004)).toBe('0.00%');
+  });
+
+  it('formatPct is unaffected for values that genuinely round to a non-zero display', () => {
+    expect(formatPct(5.2)).toBe('+5.20%');
+    expect(formatPct(-5.2)).toBe('-5.20%');
+    expect(formatPct(0)).toBe('0.00%');
+    expect(formatPct(null)).toBe('—');
+  });
+
+  it('formatNumber drops the minus sign once the value rounds to exactly zero', () => {
+    expect(formatNumber(-0.001, 2)).toBe('0.00');
+    expect(formatNumber(-0.03, 1)).toBe('0.0');
+  });
+
+  it('formatNumber is unaffected for values that genuinely round to a non-zero display', () => {
+    expect(formatNumber(-5.2, 1)).toBe('-5.2');
+    expect(formatNumber(5.2, 1)).toBe('5.2');
+    expect(formatNumber(null)).toBe('—');
+  });
+});
+
+describe('formatPriceSplit: no negative-zero hero balance', () => {
+  it('renders float dust near zero as a clean "0"/"00", never "-0"/"00"', () => {
+    // The exact class of dust formatPrice's own comment describes: cash
+    // computed as equity minus the sum of positions, landing at e.g.
+    // -1.137e-12 instead of exactly zero.
+    expect(formatPriceSplit(-1.137e-12)).toEqual({ major: '0', minor: '00' });
+    expect(formatPriceSplit(-0.004)).toEqual({ major: '0', minor: '00' });
+  });
+
+  it('is unaffected for a genuine negative balance', () => {
+    expect(formatPriceSplit(-12.5)).toEqual({ major: '-12', minor: '50' });
+  });
+
+  it('still splits a normal positive balance correctly', () => {
+    expect(formatPriceSplit(26.85)).toEqual({ major: '26', minor: '85' });
+    expect(formatPriceSplit(3391.09)).toEqual({ major: '3,391', minor: '09' });
   });
 });
