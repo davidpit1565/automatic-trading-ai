@@ -67,6 +67,14 @@ describe('Validation view (DOM integration)', () => {
     expect(foldRows[0]!.textContent).toContain('SMA');
     // Cost settings surfaced in the status line — costs are never hidden.
     expect(container.querySelector('#val-status')!.textContent).toContain('spread');
+
+    // Design-system polish round 3: any robustness flag renders with the
+    // app's outlined SVG icon, not a bare "⚠" text glyph.
+    const flagItems = verdict!.querySelectorAll('.scan-warnings li');
+    if (flagItems.length > 0) {
+      expect(verdict!.querySelectorAll('.scan-warnings .warn-icon').length).toBe(flagItems.length);
+      expect(verdict!.textContent).not.toContain('⚠');
+    }
     // 2026-09-06 readiness/kill-switch audit: this is a pure historical
     // backtest with no live money behind it — must say so, matching every
     // account screen in the app (Home, Crypto, Stocks, Portfolio).

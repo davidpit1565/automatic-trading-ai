@@ -28,6 +28,13 @@ import { skeletonRowsHtml } from '../loadingStates';
 const CHEVRON_SVG =
   '<svg class="scan-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
+/** Same outlined exclamation-circle path Home/Crypto's readiness list uses
+ * for its "no" (blocking) state (`renderReadiness` in homeView.ts) — this
+ * warnings list previously prefixed each line with a bare "⚠" text glyph,
+ * an emoji mixed into an otherwise consistent outlined-SVG icon set. */
+const WARN_ICON =
+  '<svg class="warn-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v6"/><path d="M12 16.5h.01"/></svg>';
+
 const TIMEFRAMES: Timeframe[] = ['15m', '1h', '4h', '1d'];
 const SCAN_SYMBOL_LIMIT = 12;
 const SCAN_CANDLES = 150;
@@ -244,7 +251,7 @@ function buildDetailRow(result: ScanResult, risk: RiskContext): HTMLTableRowElem
     .join('');
   const warningsHtml =
     result.warnings.length > 0
-      ? `<ul class="scan-warnings">${result.warnings.map((w) => `<li>⚠ ${escapeHtml(w)}</li>`).join('')}</ul>`
+      ? `<ul class="scan-warnings">${result.warnings.map((w) => `<li>${WARN_ICON}${escapeHtml(w)}</li>`).join('')}</ul>`
       : '';
   const s = result.snapshot;
   detail.innerHTML = `
@@ -322,7 +329,7 @@ function riskPanelHtml(
 
   const warningsHtml =
     assessment.warnings.length > 0
-      ? `<ul class="scan-warnings">${assessment.warnings.map((w) => `<li>⚠ ${escapeHtml(w)}</li>`).join('')}</ul>`
+      ? `<ul class="scan-warnings">${assessment.warnings.map((w) => `<li>${WARN_ICON}${escapeHtml(w)}</li>`).join('')}</ul>`
       : '';
   return `
     <div class="risk-panel risk-approved">

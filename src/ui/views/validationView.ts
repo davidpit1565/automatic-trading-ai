@@ -19,6 +19,13 @@ import { lineChartSvg } from '../charts';
 import type { ActiveDataSource } from '../dataSource';
 import { escapeHtml, formatPct, formatPrice, signClass, tieredPriceHtml } from '../format';
 
+/** Same outlined exclamation-circle path Market Scan's warnings list and
+ * Home/Crypto's readiness list use for a warning/blocking state — this list
+ * previously prefixed each flag with a bare "⚠" text glyph, an emoji mixed
+ * into an otherwise consistent outlined-SVG icon set. */
+const WARN_ICON =
+  '<svg class="warn-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v6"/><path d="M12 16.5h.01"/></svg>';
+
 const CANDLE_LIMIT = 600;
 const TRAIN_SIZE = 150;
 const TEST_SIZE = 75;
@@ -183,7 +190,7 @@ function renderReport(
       ${
         robustness.flags.length > 0
           ? `<ul class="scan-warnings">${robustness.flags
-              .map((f) => `<li>⚠ <strong>${f.kind}</strong>: ${escapeHtml(f.detail)}</li>`)
+              .map((f) => `<li>${WARN_ICON}<strong>${f.kind}</strong>: ${escapeHtml(f.detail)}</li>`)
               .join('')}</ul>`
           : ''
       }

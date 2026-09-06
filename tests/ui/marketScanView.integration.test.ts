@@ -160,6 +160,13 @@ describe('Market Scan view (DOM integration)', () => {
       for (const warning of scan.warnings) {
         expect(detailText).toContain(warning);
       }
+      if (scan.warnings.length > 0) {
+        // Design-system polish round 3: each warning line carries the app's
+        // outlined SVG icon, not a bare "⚠" text glyph.
+        const warnIcons = details[i]!.querySelectorAll('.scan-warnings .warn-icon');
+        expect(warnIcons.length).toBe(scan.warnings.length);
+        expect(detailText).not.toContain('⚠');
+      }
       const componentCards = details[i]!.querySelectorAll('.scan-component');
       expect(componentCards.length).toBe(scan.components.length);
     });
