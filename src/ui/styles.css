@@ -1200,8 +1200,12 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .hero-change.compact.up { color: var(--hot); }
 .hero-change.compact.down { color: var(--cold); }
 .hero-split { display: flex; gap: 1.5rem; color: var(--text-dim); font-size: var(--fs-sub); margin-top: 1.1rem; }
+/* tabular-nums: this line's own money figures (Cash/vs-Bitcoin) refresh on
+   every poll — without it, a digit-count change (e.g. €99.62 -> €100.15)
+   jitters this pill's width from one refresh to the next. */
 .hero-bench { margin-top: 0.8rem; font-size: 0.82rem; background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border); border-radius: var(--r-sm); padding: 0.48rem 0.75rem; }
+  border: 1px solid var(--border); border-radius: var(--r-sm); padding: 0.48rem 0.75rem;
+  font-variant-numeric: tabular-nums; }
 /* Bleeds to the hero card's own edges (negative margins matching its
    padding) and taller — the reference's sparkline runs edge-to-edge under
    the balance rather than sitting in its own inset box. The hero's
@@ -1945,11 +1949,13 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .ctoggle-btn:hover:not(:disabled) { color: var(--text); }
 .ctoggle-btn:active:not(:disabled) { transform: scale(0.94); }
 .ctoggle-btn.active { background: var(--surface-raised); color: #fff; }
-/* A long range (1Y/5Y/10Y/All) forces line mode and disables "Candles" (see
-   marketsView.ts) — but this rule was missing entirely, so a disabled button
-   looked identical to any other unselected-but-tappable one, with no signal
-   that tapping it does nothing. Matches the `.pager:disabled` treatment
-   already established elsewhere in this same file. */
+/* Two independent screens force this button into a disabled state and both
+   needed this same rule (it was missing entirely before): Markets forces
+   line mode and disables "Candles" on a long range (1Y/5Y/10Y/All, see
+   marketsView.ts); a brand-new crypto account (its first ~10-15 minutes)
+   hasn't recorded enough samples to bucket into 2+ candles yet either. Both
+   match the `.pager:disabled` treatment already established elsewhere in
+   this file. */
 .ctoggle-btn:disabled { opacity: 0.4; cursor: default; }
 
 /* Candlestick chart: green up / red down bodies + wicks. Full-opacity,
@@ -2037,8 +2043,11 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .readiness-note { color: var(--text-dim); font-size: 0.8rem; margin: 0.25rem 0 0.6rem; }
 .readiness-list { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-direction: column;
   background: linear-gradient(160deg, var(--surface-raised), var(--surface)); border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+/* tabular-nums: each criterion's own counts ("50 / 20 closed trades",
+   "after-fee return +4.68%") refresh every poll — without it, a digit-count
+   change jitters the row's text width from one refresh to the next. */
 .readiness-list li { font-size: 0.85rem; padding: 0.6rem 0.75rem; display: flex; align-items: center; gap: 0.6rem;
-  border-bottom: 1px solid var(--border); }
+  border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
 .readiness-list li:last-child { border-bottom: none; }
 .readiness-list .crit-icon { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .readiness-list li.ok { color: var(--text); }
