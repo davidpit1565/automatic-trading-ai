@@ -1695,16 +1695,29 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    X's Trade page) — the name itself is the trigger, matching the reference;
    .detail-name keeps its exact prior look/text so nothing else changes. */
 .detail-name-btn { display: flex; align-items: center; gap: 0.3rem; background: none; border: none;
-  color: inherit; padding: 0; cursor: pointer; }
+  color: inherit; padding: 0; cursor: pointer; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+/* This trigger had a click handler (opens the pair-switcher menu) and an
+   aria-expanded state, but zero visual feedback of any kind on press —
+   confirmed live via Playwright: matches(':active') true, computed
+   transform/opacity unchanged. Matches the `.link-btn:active` treatment
+   already used for this app's other text/icon-plus-label triggers. */
+.detail-name-btn:hover { opacity: 0.8; }
+.detail-name-btn:active { opacity: 0.6; transform: scale(0.96); }
 .pair-chevron { width: 15px; height: 15px; fill: none; stroke: var(--text-dim); stroke-width: 2.2;
   stroke-linecap: round; stroke-linejoin: round; }
 .pair-menu { position: relative; z-index: 5; margin: -0.4rem 0 0.9rem; max-height: 320px; overflow-y: auto;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); }
 .pair-menu-item { width: 100%; display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.9rem;
   background: transparent; border: none; border-bottom: 1px solid var(--border); color: var(--text); cursor: pointer;
-  text-align: left; }
+  text-align: left; transition: background var(--dur-fast) var(--ease); }
 .pair-menu-item:last-child { border-bottom: none; }
 .pair-menu-item:hover { background: var(--surface-hover); }
+/* Same gap as .detail-name-btn above, on the menu this button opens — a
+   real, live, enabled <button> (confirmed via Playwright: no `:active` rule
+   existed anywhere in the stylesheet for this selector) with hover feedback
+   but none on an actual tap. Same background-only treatment as `.scan-row`
+   right above it in this file, so no reduced-motion carve-out is needed. */
+.pair-menu-item:active { background: var(--surface-hover); }
 .pair-menu-item.active { background: var(--surface-raised); }
 .pair-menu-item .row-title { flex: 1; font-size: 0.9rem; font-weight: var(--fw-semibold); }
 .pair-menu-item .row-sub { font-size: 0.78rem; }
@@ -2260,6 +2273,45 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
   .row-price.flash-up, .row-price.flash-down { animation-duration: 1ms; }
   .view.active, .content section.active, .hub-panel.active,
   .detail-chart.fade-in, .fade-in-up { animation: none; }
+}
+
+/* Only .topbar-btc/.link-btn/.tappable ever got a reduced-motion carve-out
+   for their `:active` scale-press — every OTHER tappable base class shares
+   the identical `transform: scale(...)` pattern but was never covered, so a
+   real device with Reduce Motion on still played the full press-squish on
+   literally every button, tab, nav row, star and pager in the app. Verified
+   with Playwright (`page.emulateMedia({reducedMotion:'reduce'})` + a held
+   mousedown + `getComputedStyle`): `.nav-btn:active` computed
+   `matrix(0.92,0,0,0.92,0,0)` identically with reduced-motion on or off
+   before this fix. `.scan-row:active` is deliberately excluded — it only
+   changes `background`, a colour cue Apple's own reduced-motion guidance
+   says to keep. */
+@media (prefers-reduced-motion: reduce) {
+  button.primary:active,
+  button.secondary:active,
+  button.btn-buy:active,
+  button.btn-sell:active,
+  .nav-btn:active,
+  .hub-tab:active,
+  .mk-tab:active,
+  .tool-card:active,
+  .tool-back:active,
+  .icon-btn:active,
+  .star-btn:active,
+  .view-tab:active,
+  .of-btn:active,
+  .pager:active:not(:disabled),
+  .range-btn:active,
+  .ctoggle-btn:active,
+  .detail-name-btn:active { transform: none; }
+  .mk-star:active { transform: translateY(-50%); }
+  /* `.spinner` (live in Backtest/Grid/Validation's candle-loading status
+     line) spun at 0.8s/infinite regardless of this setting — verified via
+     direct DOM injection of the real markup, animation-name read back as
+     "spin" with reduced-motion on. A loading spinner is still a genuine
+     "in progress" status signal, not decorative motion, so this freezes the
+     ring rather than hiding it entirely. */
+  .spinner { animation: none; }
 }
 
 /* ---------- Focus-visible (keyboard accessibility) ----------
