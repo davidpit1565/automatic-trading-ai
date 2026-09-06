@@ -380,6 +380,14 @@ button.btn-sell:active { transform: scale(0.98); }
 button.btn-buy:disabled,
 button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: none; }
 
+/* Buy/Sell as one paired control, split evenly across the row — without
+   this the two pills' own roomy padding (built for a single full-width
+   CTA) doesn't fit side by side at phone width, so plain `.controls`
+   flex-wrap stacked all three (Buy/Sell/Reset) one below the other instead
+   of the paired-buttons-plus-a-separate-Reset layout already intended. */
+.trade-actions .btn-buy,
+.trade-actions .btn-sell { flex: 1; text-align: center; }
+
 /* A repeatable "big number + small label" tile — the single most-reused
    component in the reference's own UI (price/change/high/low on every
    screen) that this app had never built as its own generic class; every
@@ -493,6 +501,37 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
   background: var(--surface-raised);
 }
 
+/* Note: .scan-row:focus-visible's own ring is already covered by the
+   shared focus-visible rule below (Focus-visible section) — this row is
+   newly keyboard-reachable (tabindex/role added in the view) but needed no
+   extra CSS of its own once that shared rule already lists it. */
+
+/* Market cell now carries the row's own expand/collapse chevron — the only
+   affordance for "this row is expandable" used to be the cursor style. */
+.scan-market-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Same down-chevron used by the pair-switcher on Markets — rotated to point
+   up once the row is expanded, so its own state doubles as feedback. */
+.scan-chevron {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--text-dim);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 auto;
+  transition: transform var(--dur-fast) var(--ease);
+}
+.scan-row.expanded .scan-chevron {
+  transform: rotate(180deg);
+}
+
 .badge {
   display: inline-block;
   padding: 0.15rem 0.6rem;
@@ -568,10 +607,20 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
    small filled bar answers it at a glance, the same idea as the order
    book's depth bars. */
 .scan-score { display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
-.score-bar { width: 48px; height: 4px; border-radius: 2px; background: var(--surface-raised); overflow: hidden; }
-.score-bar-fill { display: block; height: 100%; }
-.score-bar-fill.up { background: var(--hot); }
-.score-bar-fill.down { background: var(--cold); }
+/* Anchored at the bar's own centre (not its left edge): a -100..+100 value
+   is a DIRECTION as well as a magnitude, and a fill that only ever grows
+   from the left threw the direction away — a -80 and a +80 score used to
+   render as the identical shape, colour aside. The centre tick makes the
+   zero point visible so a bullish/bearish read doesn't depend on colour
+   alone. `overflow: visible` so nothing clips at the exact centre line. */
+.score-bar { position: relative; width: 48px; height: 4px; border-radius: 2px; background: var(--surface-raised); overflow: visible; }
+.score-bar::after {
+  content: ''; position: absolute; left: 50%; top: -1px; bottom: -1px; width: 1px;
+  background: rgba(255, 255, 255, 0.16); transform: translateX(-50%);
+}
+.score-bar-fill { display: block; position: absolute; top: 0; bottom: 0; border-radius: 2px; }
+.score-bar-fill.up { left: 50%; background: var(--hot); }
+.score-bar-fill.down { right: 50%; background: var(--cold); }
 
 .scan-failures {
   margin-top: 1rem;
@@ -618,6 +667,15 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
   gap: 1rem;
   margin: 0.5rem 0;
   font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The per-row technical-stats line (ATR/Bollinger/+DI-DI/Stoch) packs six
+   numbers into one dense line — `.status-line` elsewhere in the app never
+   needed tabular-nums since it's usually one or two facts, but this one is
+   digit-dense enough that proportional numerals let it jitter/misalign. */
+.scan-detail-stats {
+  font-variant-numeric: tabular-nums;
 }
 
 .signal-explanation {
@@ -676,6 +734,39 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
 .verdict-insufficient-data {
   background: var(--neutral-tint);
 }
+
+/* ---------- Monitoring ---------- */
+
+/* Same robust/caution/overfitted/insufficient-data vocabulary as the
+   .verdict-panel tints above, applied as TEXT colour instead of a full
+   panel background — a dense data-table cell needs a coloured word, not
+   the roomy tint the Backtest/Validation tabs use for a whole panel.
+   Monitoring's own Validation columns rendered every verdict as flat grey
+   text despite this taxonomy already existing in the app. */
+.verdict-text-robust { color: var(--hot); font-weight: var(--fw-semibold); }
+.verdict-text-caution { color: var(--warn); font-weight: var(--fw-semibold); }
+.verdict-text-overfitted { color: var(--cold); font-weight: var(--fw-semibold); }
+.verdict-text-insufficient-data,
+.verdict-text-not-run { color: var(--text-dim); }
+
+/* A watchlist entry's Status column was plain text even though its three
+   possible values (qualified/watch/none) map directly onto the same
+   hot/neutral/dim language `signClass` already gives every other status in
+   this app — "qualified" reused .positive (shared with Market Scan);
+   "watch" stays the unstyled default (a live, still-relevant state, same
+   as .signClass's own "no colour" for a neutral fact); "none" gets this. */
+.watch-status-none { color: var(--text-dim); }
+
+/* Same star glyph as Markets' own watchlist toggle (.star-btn), filled
+   with the identical --warn "favourited" colour, so a favourited row here
+   reads with the app's one star icon instead of a bare "★" character. */
+.watch-fav-icon { width: 12px; height: 12px; fill: var(--warn); vertical-align: -1px; margin-inline-end: 2px; }
+
+/* A compact secondary-button variant for actions embedded in a dense
+   data-table row — the page-level .secondary pill's roomy padding (built
+   for a single full-width CTA) doubled up two-per-cell made each watchlist
+   row noticeably taller than every other row in the same table. */
+button.secondary.table-action { padding: 0.4rem 0.85rem; font-size: 0.8rem; }
 
 .equity-curve {
   width: 100%;

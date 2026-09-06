@@ -19,6 +19,26 @@ function baseFor(data: ActiveDataSource, symbol: string): string {
   return (inst?.base ?? symbol.replace(/EUR$|USD$/, '')).toUpperCase();
 }
 
+/** Every other screen prefixes a EUR amount with "€" (Home's own `euro()`
+ * helper) — this view formatted every price/cash/P&L figure through
+ * `formatPrice` alone and never added the symbol, so the whole tab (hero
+ * equity, cash/realized/unrealized, positions, trade journal) showed bare
+ * numbers with no currency at all. Mirrors Home's convention, with the
+ * minus sign placed before the symbol ("-€12.34") for a real loss rather
+ * than after it ("€-12.34"), since `formatPrice` alone never had to.  */
+function euro(value: number): string {
+  return value < 0 ? `-€${formatPrice(-value)}` : `€${formatPrice(value)}`;
+}
+
+/** Neutral (no color) at exactly zero or effectively zero (float dust) —
+ * matches the app's own `signClass` convention (already used by Market Scan
+ * / Monitoring) that this view's manual `>= 0 ? up : down` ternaries never
+ * adopted, coloring an unmoved 0.00% figure or a flat position bright green. */
+function pnlClass(value: number): string {
+  if (Math.abs(value) < 0.005) return '';
+  return value > 0 ? 'up' : 'down';
+}
+
 export function renderPortfolioView(container: HTMLElement, data: ActiveDataSource): void {
   const portfolio = new PaperPortfolio(new LocalStorageStore(), STARTING_CASH);
 
@@ -60,10 +80,20 @@ export function renderPortfolioView(container: HTMLElement, data: ActiveDataSour
       <!-- Buy/Sell get the reference's own semantic tint pair (green/red),
            not two identical black-on-white pills — Reset is deliberately a
            quieter, lower-emphasis action set apart from the two real trade
-           actions. -->
-      <div class="controls">
+           actions. That intent was already the comment here, but all three
+           sat in one plain flex row: at phone width "Buy at market"/"Sell at
+           market" (~165px each) don't fit side by side, so .controls' own
+           flex-wrap stacked all three full pills one below the other —
+           confirmed via a real layout measurement, not just reading the
+           CSS. .trade-actions makes Buy/Sell split the row evenly (an
+           actual paired control, matching the reference), with Reset
+           dropped to its own row beneath so it reads as the separate,
+           quieter action the comment always intended. -->
+      <div class="controls trade-actions">
         <button class="btn-buy" id="pp-buy">Buy at market</button>
         <button class="btn-sell" id="pp-sell">Sell at market</button>
+      </div>
+      <div class="controls">
         <button class="secondary" id="pp-reset">Reset portfolio</button>
       </div>
       <div class="status-line" id="pp-status"></div>
@@ -124,7 +154,7 @@ export function renderPortfolioView(container: HTMLElement, data: ActiveDataSour
           ? portfolio.buy(symbol, quantity, price, Date.now())
           : portfolio.sell(symbol, quantity, price, Date.now());
       status.innerHTML = result.ok
-        ? `${side === 'buy' ? 'Bought' : 'Sold'} ${quantity} ${escapeHtml(symbol)} @ ${formatPrice(price)} (${data.source.name})`
+        ? `${side === 'buy' ? 'Bought' : 'Sold'} ${quantity} ${escapeHtml(symbol)} @ ${euro(price)} · source: ${escapeHtml(data.source.name)}`
         : `<span class="error-line">${escapeHtml(result.error)}</span>`;
       await refresh();
     } finally {
@@ -136,7 +166,7 @@ export function renderPortfolioView(container: HTMLElement, data: ActiveDataSour
   buyButton.addEventListener('click', () => void trade('buy'));
   sellButton.addEventListener('click', () => void trade('sell'));
   container.querySelector('#pp-reset')!.addEventListener('click', () => {
-    if (window.confirm('Reset the paper portfolio to 10,000 and clear the journal?')) {
+    if (window.confirm(`Reset the paper portfolio to ${euro(STARTING_CASH)} and clear the journal?`)) {
       portfolio.reset(STARTING_CASH);
       status.textContent = 'Portfolio reset.';
       void refresh();
@@ -152,19 +182,25 @@ function renderHero(heroEl: HTMLElement, portfolio: PaperPortfolio, prices: Reco
   const totalReturnPct = STARTING_CASH > 0 ? ((equity - STARTING_CASH) / STARTING_CASH) * 100 : 0;
   const { major, minor } = formatPriceSplit(equity);
 
+  // Home's own hero always leads with a `.hero-value-currency` € span
+  // (see homeView.ts) — this hero never did, rendering "10,000.00" with no
+  // currency at all despite being the exact same big-number component.
   heroEl.querySelector('#pp-equity')!.innerHTML =
-    `<span class="hero-value-major">${major}</span><span class="hero-value-minor">.${minor}</span>`;
+    `<span class="hero-value-currency">€</span><span class="hero-value-major">${major}</span><span class="hero-value-minor">.${minor}</span>`;
   const changeEl = heroEl.querySelector<HTMLElement>('#pp-change')!;
   changeEl.textContent = `${formatPct(totalReturnPct)} all time`;
-  changeEl.className = `hero-change ${totalReturnPct >= 0 ? 'up' : 'down'}`;
-  heroEl.classList.toggle('up', totalReturnPct >= 0);
-  heroEl.classList.toggle('down', totalReturnPct < 0);
+  // A flat (or float-dust-flat) portfolio isn't "up" — `pnlClass` is neutral
+  // at zero, matching Market Scan/Monitoring's own `signClass` convention.
+  const returnClass = pnlClass(totalReturnPct);
+  changeEl.className = `hero-change ${returnClass}`;
+  heroEl.classList.toggle('up', returnClass === 'up');
+  heroEl.classList.toggle('down', returnClass === 'down');
 
-  heroEl.querySelector('#pp-cash')!.innerHTML = `Cash ${tieredPriceHtml(formatPrice(portfolio.cash))}`;
+  heroEl.querySelector('#pp-cash')!.innerHTML = `Cash ${tieredPriceHtml(euro(portfolio.cash))}`;
   heroEl.querySelector('#pp-realized')!.innerHTML =
-    `Realized <span class="chg ${portfolio.realizedPnl < 0 ? 'down' : 'up'}">${tieredPriceHtml(formatPrice(portfolio.realizedPnl))}</span>`;
+    `Realized <span class="chg ${pnlClass(portfolio.realizedPnl)}">${tieredPriceHtml(euro(portfolio.realizedPnl))}</span>`;
   heroEl.querySelector('#pp-unrealized')!.innerHTML =
-    `Unrealized <span class="chg ${unrealized < 0 ? 'down' : 'up'}">${tieredPriceHtml(formatPrice(unrealized))}</span>`;
+    `Unrealized <span class="chg ${pnlClass(unrealized)}">${tieredPriceHtml(euro(unrealized))}</span>`;
 }
 
 function renderPositions(
@@ -186,9 +222,9 @@ function renderPositions(
         <div class="row">
           <div class="row-main">${coinLogoHtml(baseFor(data, p.symbol))}
             <div><div class="row-title">${escapeHtml(p.symbol)}</div>
-              <div class="row-sub">${p.quantity.toLocaleString('en-US', { maximumFractionDigits: 8 })} @ ${formatPrice(p.avgCost)}</div></div></div>
-          <div class="row-side"><span class="row-title">${price === undefined ? '—' : tieredPriceHtml(formatPrice(price))}</span>
-            <span class="chg ${pnlPct !== null && pnlPct < 0 ? 'down' : 'up'}">${formatPct(pnlPct)}</span></div>
+              <div class="row-sub">${p.quantity.toLocaleString('en-US', { maximumFractionDigits: 8 })} @ ${euro(p.avgCost)}</div></div></div>
+          <div class="row-side"><span class="row-title">${price === undefined ? '—' : tieredPriceHtml(euro(price))}</span>
+            <span class="chg ${pnlClass(pnlPct ?? 0)}">${formatPct(pnlPct)}</span></div>
         </div>`;
     })
     .join('');
@@ -204,14 +240,14 @@ function renderTrades(element: Element, portfolio: PaperPortfolio, data: ActiveD
     .map((t) => {
       const sell = t.side === 'sell';
       const pnlHtml = sell
-        ? `<span class="chg ${t.realizedPnl >= 0 ? 'up' : 'down'}">${formatPrice(t.realizedPnl)}</span>`
+        ? `<span class="chg ${pnlClass(t.realizedPnl)}">${euro(t.realizedPnl)}</span>`
         : '';
       return `
         <div class="row trade ${t.side}">
           <div class="row-main">${coinLogoHtml(baseFor(data, t.symbol))}
             <div><div class="row-title"><span class="pill ${t.side}">${t.side.toUpperCase()}</span> ${escapeHtml(t.symbol)}</div>
               <div class="row-sub">${new Date(t.timestamp).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</div></div></div>
-          <div class="row-side"><span class="row-title">${tieredPriceHtml(formatPrice(t.price))}</span>
+          <div class="row-side"><span class="row-title">${tieredPriceHtml(euro(t.price))}</span>
             <span class="row-sub">${t.quantity.toLocaleString('en-US', { maximumFractionDigits: 8 })}</span>
             ${pnlHtml}</div>
         </div>`;
