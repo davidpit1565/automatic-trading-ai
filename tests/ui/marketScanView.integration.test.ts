@@ -73,6 +73,31 @@ describe('Market Scan view (DOM integration)', () => {
     expect(bar.style.width).toMatch(/^\d+%$/);
   });
 
+  it('the score bar is bidirectional: never more than half-scale (it grows from the centre, not the edge)', async () => {
+    const { container } = await renderAndScan();
+    const bars = [...container.querySelectorAll<HTMLElement>('.score-bar-fill')];
+    expect(bars.length).toBeGreaterThan(0);
+    for (const bar of bars) {
+      const width = Number(bar.style.width.replace('%', ''));
+      expect(width).toBeLessThanOrEqual(50);
+    }
+  });
+
+  it('rows are keyboard-reachable and expand on Enter, matching the click behaviour', async () => {
+    const { container } = await renderAndScan();
+    const firstRow = container.querySelector<HTMLTableRowElement>('.scan-row')!;
+    const detail = container.querySelector<HTMLTableRowElement>('.scan-detail')!;
+    expect(firstRow.getAttribute('role')).toBe('button');
+    expect(firstRow.tabIndex).toBe(0);
+    expect(firstRow.querySelector('.scan-chevron')).not.toBeNull();
+
+    expect(detail.hidden).toBe(true);
+    firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(detail.hidden).toBe(false);
+    firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    expect(detail.hidden).toBe(true);
+  });
+
   it('expands on click, collapses on second click', async () => {
     const { container } = await renderAndScan();
     const firstRow = container.querySelector<HTMLTableRowElement>('.scan-row')!;

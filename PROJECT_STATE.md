@@ -1,5 +1,191 @@
 # PROJECT_STATE
 
+## Revolut X comparison pass — Market Scan, Monitoring, Portfolio (2026-09-06)
+Part of a 200-improvement push (split across parallel agents by screen area,
+David's request); this agent's share was Market Scan/Monitoring/Portfolio
+only. Did NOT re-propose anything already shipped by "Design-system
+consistency pass" (2026-09-03) or "Creative upgrade pass #4" (2026-09-04,
+PR #189) — table-scroll wrappers, the score fill bar, Monitoring's
+stat-tiles, Portfolio's hero/stack-card rows were all left as-is except
+where noted below. Verified with real Playwright screenshots at 390×844,
+`?demo=1`, `vite preview`, including mid-scan/mid-monitoring states, plus
+precise `getBoundingClientRect()`/computed-style checks where a screenshot
+alone couldn't confirm exact pixel geometry (score-bar centering, Buy/Sell
+row width). 28 confirmed, individually-verified items (one of which, #25,
+turned out to already be fixed upstream by a parallel agent by the time
+this branch rebased onto `main` — left in the list since it was
+independently found and verified here too, with a note on where it landed):
+
+1. **Portfolio: zero return shown as bright green, not neutral.** A fresh
+   (unmoved) 10,000 portfolio's "0.00% all time" rendered `up`/green — the
+   hero's manual `totalReturnPct >= 0 ? 'up' : 'down'` ternary (and its
+   twin for `heroEl`'s own ambient ".hero.up" ambient glow) had no neutral
+   branch, unlike this app's own `signClass` helper (already used by
+   Market Scan/Monitoring) which returns no colour at exactly zero.
+2. **Portfolio: zero realized/unrealized P&L, also shown green.** Same
+   root cause, same `renderHero` function, two more spans.
+3. **Portfolio: a position with 0.00% unrealized P&L, also shown green.**
+   Same root cause, `renderPositions`.
+4. **Portfolio: a round-trip trade's 0.00 realized P&L, also shown
+   green.** Same root cause, `renderTrades`. All four fixed with one new
+   local `pnlClass()` helper (neutral below 0.005 — real zero or float
+   dust — else up/down), replacing every ad hoc `>= 0 ? up : down`.
+5. **Market Scan: no empty state before the first scan.** `#scan-results`
+   was simply blank until "Run scan" was clicked — every sibling screen
+   (Monitoring, Portfolio) already shows an `.empty` card for its own
+   "nothing yet" state; Market Scan's own "not yet run" moment never got
+   one. Added the same `.empty` convention.
+6. **Market Scan: no loading state while a scan is in flight.** The gap
+   between clicking Run and results appearing was also blank. Now shows
+   `skeletonRowsHtml(4)` (the same row-shaped skeleton Portfolio's own
+   first paint already uses).
+7. **Score bar was a magnitude-only fill, never a direction.** The -100..
+   +100 score's fill bar (shipped in PR #189) always grew from the bar's
+   left edge regardless of sign — a -80 and a +80 rendered as the
+   identical shape, colour aside. Redid it as a centre-anchored diverging
+   bar (bullish grows right from centre, bearish grows left), the same
+   idea as the order book's own bid/ask depth bars. Verified the exact
+   fill geometry via `getBoundingClientRect()` (fill's left/right edge
+   lands exactly on the bar's centre pixel in both directions), not just a
+   screenshot.
+8. **Score bar: a score of exactly 0 was shown with a green fill.** The
+   fill's up/down class used a raw `score >= 0` check while the adjacent
+   number already used `signClass` (neutral at 0) — same row, same value,
+   contradicting colours. Fixed as part of the bar redesign above (no
+   up/down class, zero width, at score === 0).
+9. **Monitoring: Watchlist's Status column was flat text.** `qualified`/
+   `watch`/`none` map directly onto this app's own hot/neutral/dim
+   language (used everywhere else) but were never coloured here.
+10. **Monitoring: the "Last scan outcome" tile's 3 numbers were flat
+    white text.** Kept as one tile (three related counts from a single
+    scan reads fine together) but coloured each number (qualified=green,
+    failed=red only if >0, watch=neutral) — preserved the exact substrings
+    `scripts/e2e.mjs`/the integration test assert on ('qualified', etc.).
+11. **Market Scan: signal/risk level values had no tabular-nums**
+    (Entry/Stop/Take-profit/R-R/Size/Value/Risk%/exposure) — added to
+    `.signal-levels`.
+12. **Market Scan: the per-row technical-stats line had no tabular-nums**
+    either (ATR/Bollinger/±DI/Stoch — six numbers in one dense line).
+    Added a new scoped `.scan-detail-stats` class (not the shared
+    `.status-line`, which four other screens also use).
+13. **Market Scan: expandable rows had zero visual "click to expand"
+    affordance** beyond a cursor-style change. Added the same down-chevron
+    icon Markets' own pair-switcher already uses, rotating 180° when
+    expanded.
+14. **Market Scan: expandable rows were mouse-only** — a `<tr>` with a
+    click handler, no `tabindex`, no `role`, no keydown handler, so a
+    keyboard-only user could never open one. Added `tabindex="0"`,
+    `role="button"`, and an Enter/Space handler; the parallel "Shared
+    design-token pass" (below) had already listed `.scan-row:focus-visible`
+    in its own shared focus-ring rule, so the ring was dead CSS until this
+    row could actually receive keyboard focus at all — the two changes
+    together are what makes it work end to end.
+15. **Monitoring: Start/Stop buttons stayed enabled regardless of the
+    engine's actual state** — clicking Start while already RUNNING (or
+    Stop while already stopped) silently did nothing. Now `startButton.
+    disabled = running` / `stopButton.disabled = !running`, refreshed
+    every status update.
+16. **Monitoring: "Scan now" never disabled itself during an in-flight
+    scan** — Market Scan's own "Run scan" already does this; Monitoring's
+    near-identical manual-scan button never did, so a second click could
+    fire a second overlapping scan.
+17. **Monitoring: watchlist row action buttons (Favourite/Remove) used
+    full page-level button padding**, doubled up two-per-cell, visibly
+    inflating those rows' height versus every sibling row in the same
+    table. Added a compact `.table-action` modifier.
+18. **Monitoring: Validation verdict text was flat grey in the Current
+    Opportunities table**, despite this app already having a robust/
+    caution/overfitted/insufficient-data colour taxonomy (`.verdict-panel`,
+    used by Backtest/Validation) that Monitoring simply never applied.
+19. **Same gap in the Opportunity History table's own Validation column.**
+    Both fixed with new `.verdict-text-*` classes (text-colour variants of
+    the existing tint language, since a dense table cell needs a coloured
+    word, not a whole panel's background tint).
+20. **Monitoring: Opportunity History's RSI/ADX used a different
+    precision (0dp, raw `.toFixed(0)`) than Market Scan's own RSI/ADX
+    columns (1dp, via the shared `formatNumber` helper)** for the
+    identical metric. Aligned to `formatNumber`.
+21. **Portfolio: Buy/Sell/Reset never actually laid out as documented.**
+    The code comment already said Buy/Sell should read as a paired
+    control with Reset "set apart", but all three sat in one plain flex
+    row — at phone width the two ~166px pills don't fit side by side, so
+    flex-wrap stacked all three vertically (confirmed via
+    `getBoundingClientRect()`, not just a screenshot). Split into
+    `.trade-actions` (Buy/Sell, `flex: 1` each — an actual paired
+    control) plus a separate row for Reset, matching the comment's intent.
+22. **Monitoring: Confidence columns were uncoloured in 3 of 4 tables.**
+    Alerts already applies `signClass` to its own Confidence column;
+    Current Opportunities, Opportunity History, and Watchlist's "Best
+    confidence" never did, for the identical metric. Made all four
+    consistent.
+23. **Monitoring: the watchlist's favourite marker was a bare "★" Unicode
+    glyph** — the one place in the app spelling "favourited" without its
+    one existing star icon (Markets' `.star-btn`, an SVG polygon path).
+    Replaced with the same icon, filled with the same `--warn` colour
+    `.star-btn.active` already uses.
+24. **Market Scan: a component contribution near zero could render as
+    "-0.0 pts" — a signed negative zero.** `toFixed` keeps the ORIGINAL
+    value's sign even once its magnitude rounds away (e.g. -0.03 → "-0.0"),
+    so a genuinely tiny negative contribution displayed as a red,
+    nonsensical negative zero. Snapped anything under 0.05 to a real zero
+    before formatting.
+25. **Shared `formatPct()`/`formatNumber()` had the identical negative-zero
+    bug** (e.g. `formatPct(-0.001)` → "-0.00%") as the Market Scan bug in
+    item 24 — independently found here too, but already fixed upstream by
+    a parallel agent's own "Shared design-token pass" (merged to `main`
+    before this branch rebased onto it: `fixedNoNegativeZero()` in
+    `format.ts`), so no duplicate fix needed here. Also closes the same
+    failure mode for Portfolio's own return% (item 1) for free.
+26. **Monitoring: "Enable browser notifications" gave zero feedback.**
+    The click handler called `requestNotificationPermission()` and
+    discarded the result, even though it resolves with exactly what
+    happened (granted/denied/unsupported). Wired to the app's own
+    (previously unused anywhere) toast system.
+27. **Market Scan + Portfolio: a double-parenthesized source name.**
+    `data.source.name` is itself `"Demo data (synthetic)"`; two status
+    messages additionally wrapped it in parens — Market Scan's own
+    "Scanning…" line and Portfolio's post-trade confirmation — producing
+    "(Demo data (synthetic))". Aligned both to the "· source: X" phrasing
+    Market Scan's own post-scan message already used correctly.
+28. **Portfolio: the € currency symbol was missing everywhere.** Home's
+    hero always leads with a `.hero-value-currency` € span (CSS already
+    had the exact styling rule for it, just unused here); Portfolio's own
+    hero equity, Cash/Realized/Unrealized, Positions, Trade journal, the
+    Buy/Sell confirmation message, and the Reset confirm dialog all showed
+    bare numbers with no currency at all. Added a local `euro()` helper
+    (mirroring Home's own, but sign-aware: "-€12.34" not "€-12.34" for a
+    loss) and applied it at every EUR-denominated call site in the file.
+
+**Flagged but NOT fixed here (out of this pass's file scope)**:
+`riskEngine.ts`'s own warning string doubles the word "capped" (`size
+capped: size capped by the N% ... limit`) — a genuine, minor wording bug,
+but in core risk logic, not a UI file this pass touches.
+
+Tests: updated `monitoringView.integration.test.ts`'s favourite-icon
+assertion (checks for `.watch-fav-icon`, not a literal "★", matching item
+23) plus 9 new tests across `monitoringView.integration.test.ts` (2:
+Start/Stop disabled state, Scan-now disabled during an in-flight scan, plus
+2 new assertions inside the existing manual-scan test for items 18/19/22),
+`portfolioView.integration.test.ts` (3: € on the hero, neutral 0.00%
+colour, € on positions/trades), and `marketScanView.integration.test.ts`
+(2: bar never exceeds 50% width, keyboard Enter/Space expand +
+chevron/role/tabindex). No `format.test.ts` changes needed here — item 25
+was already covered by the parallel agent's own upstream tests.
+
+Rebased onto `main` after the parallel "Shared design-token pass" merged
+(PR #198) — its `format.ts`/`styles.css` changes overlapped with items 8,
+14 and 25 above (both independently found the same negative-zero bug in
+`formatPct`, and it separately added a shared `:focus-visible` rule that
+already covers `.scan-row`): kept its versions, dropped this pass's
+now-redundant duplicates, re-ran the full gate on the merged result.
+
+Gate: `tsc --noEmit` clean, `npx vitest run` 1185 passed (net +14 over the
+`main` this branched from, none weakened), `npm run build` clean. Diff
+confined to `src/ui/views/{marketScanView,monitoringView,portfolioView}.ts`,
+`src/ui/styles.css`, and three test files (`monitoringView`/`portfolioView`/
+`marketScanView` `.integration.test.ts`) — nothing under `server/**`,
+`state/**`, `src/ui/format.ts`, or trading/signal/risk logic touched.
+
 ## Markets/coin-detail design pass: 17 real, screenshot-verified improvements (2026-09-06)
 
 David's ask: compare the app against Revolut X and ship 200 serious
