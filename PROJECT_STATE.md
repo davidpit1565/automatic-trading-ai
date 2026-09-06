@@ -6589,6 +6589,102 @@ nothing under `server/**`, `state/**`, or `src/core/**`, and no view file
 owned by another parallel agent (`marketsView.ts`, `assetHubView.ts`, any
 `stocks*.ts`, any Tools view) touched.
 
+## Motion & microinteraction consistency audit, round 2: 4 verified fixes (2026-09-06)
+
+Round 2 of David's "compare against Revolut X, 200 improvements" mandate —
+this time split by DIMENSION (motion/microinteractions/perf, accessibility,
+loading/empty/error states, real-money/readiness UX, cross-screen component
+consistency, mobile touch-targets) instead of by screen, specifically to
+catch cross-cutting inconsistencies no single-screen agent would see. Loaded
+`fintech-dashboard-polish` and `apple-design` first, then read only this
+file's two 2026-09-06 entries above in full (per this file's own "check
+PROJECT_STATE before reading more code" rule) to avoid re-proposing anything
+either had just shipped — both the shared-layer pass's reduced-motion work
+and the Home-slice's own `:active`/press-state note were directly relevant
+groundwork for this pass.
+
+Built `dist/`, ran `vite preview`, and used real Playwright
+(`playwright-core`, `/opt/pw-browsers/chromium`, 390x844, `?demo=1`) with
+`page.emulateMedia({ reducedMotion: 'reduce' })` — the task's own explicit
+ask — plus direct `document.styleSheets` inspection where a mouse-simulated
+`:active` proved timing-flaky. **4 real, individually-verified fixes**:
+
+1. **Every shared tappable base class EXCEPT the three the shared-layer pass
+   had already covered (`.topbar-btc`, `.link-btn`, `.tappable`) still played
+   its full `:active` scale-press transform under `prefers-reduced-motion:
+   reduce`** — `button.primary/.secondary/.btn-buy/.btn-sell` (the actual
+   Buy/Sell/Reset/form action buttons), `.nav-btn` (bottom nav, every
+   screen), `.hub-tab`, `.mk-tab`, `.tool-card`, `.tool-back`, `.icon-btn`,
+   `.star-btn`, `.view-tab`, `.of-btn`, `.pager`, `.range-btn`,
+   `.ctoggle-btn`, `.mk-star`. Verified concretely on `.nav-btn` (the same
+   `transform: scale(...)` mechanism every other selector in this list
+   shares): a held `mousedown` + `getComputedStyle` read `matrix(0.92,0,0,
+   0.92,0,0)` identically whether `reducedMotion` was `'reduce'` or not,
+   before this fix. Added one new consolidated media-query block
+   neutralizing all of them (`.mk-star` keeps its `translateY(-50%)`
+   centering, only the scale is dropped). Deliberately left `.scan-row:active`
+   untouched — it only changes `background`, a colour cue Apple's own
+   reduced-motion guidance says to keep, not a transform.
+2. **The live `.spinner` (Backtest/Grid/Validation's own candle-loading
+   status line — confirmed genuinely rendered by name in all three view
+   files, not routed through the already-known-dead `loadingStates.ts`
+   helper exports) spins at 0.8s/infinite with no reduced-motion handling at
+   all.** Verified via direct DOM injection of the real markup:
+   `animationName` read back `"spin"` regardless of the setting. Frozen to
+   `animation: none` under reduced motion rather than hidden — it's a
+   genuine "in progress" status signal, not decorative motion.
+3. **`.detail-name-btn` (the "BTC-EUR ▾" pair-switcher trigger in the
+   coin-detail header) had a real click handler and `aria-expanded` state
+   but zero visual press feedback of any kind** — confirmed live:
+   `matches(':active')` true, computed `transform`/`opacity` both unchanged
+   during a held press. Added the same opacity-dim + scale treatment this
+   app's other text/icon-plus-label triggers (`.link-btn`) already use, plus
+   the matching reduced-motion carve-out.
+4. **`.pair-menu-item` (each row in that same pair-switcher dropdown) had
+   `:hover` but no `:active` rule anywhere in the stylesheet at all** —
+   confirmed by enumerating `document.styleSheets` for the live page: no
+   rule matched before the fix. Added the same background-only treatment as
+   `.scan-row` right above it in the file (so it inherently needs no
+   reduced-motion carve-out — background/colour changes are meant to
+   survive that setting).
+
+**Investigated, correctly left alone (no fix, no filler):** the empty-state
+`float` bounce and the toast `slideIn`/`slideOut` keyframes are both real
+gaps in reduced-motion coverage on paper, but both `showEmptyState` and
+`showToast`/`showSuccess`/`showError`/`showInfo`/`showWarning` are — per this
+file's own prior "Deep design pass #3" and "Shared-layer" findings, re-
+confirmed here — still never called from any view file, only exposed on
+`window.loading`/`window.toast` for manual use; fixing dead code's reduced-
+motion handling would be inventing a use for it, which this file's own
+precedent explicitly avoids. `transition: all` on a handful of tab/toggle
+selectors (`.hub-tab`, `.mk-tab`, `.star-btn`, `.view-tab`, `.range-btn`,
+`.ctoggle-btn`) looked like a possible layout-thrashing risk at a glance, but
+none of those rules' `:hover`/`:active` states actually change a layout
+property (only `background`/`color`/`border-color`/`transform`) — not a real
+jank bug, left alone. `:active` scale magnitudes vary a lot across the app
+(0.85-0.985) — deliberate (small icon-sized targets get a bigger relative
+squish to stay perceptible; large cards get a subtler one so they don't look
+broken), not an ad-hoc inconsistency, confirmed by checking each one's
+element size rather than assuming. The Buy/Sell double-submit path
+(`portfolioView.ts`'s `trade()`) already disables both buttons for the
+full async duration — genuinely solid, no fix needed. Tab/nav switches don't
+risk overlapping animations on a rapid double-tap: `.flash-up`/`.flash-down`
+price highlights are born on fresh, freshly-rendered elements each update
+(not toggled on a persisted node), and the star/watchlist toggle is a
+synchronous local boolean flip with no async race.
+
+Tests: 5 new (`tests/ui/reducedMotion.test.ts` — new file; happy-dom has no
+real CSS engine, so — matching this file's own established
+`dashboard.test.ts` pattern — these are static regex assertions against the
+raw stylesheet text, checking each selector fixed here now appears inside
+the `prefers-reduced-motion: reduce` block, and that `.scan-row:active`
+deliberately does not).
+
+Gate: `tsc --noEmit` clean, 1208/1208 vitest (1203 baseline + 5 new, none
+broken), `npm run build` clean. Diff: `src/ui/styles.css` +
+`tests/ui/reducedMotion.test.ts` only — no view file touched, minimizing
+overlap with the other five parallel round-2 dimension agents.
+
 ## Round 2, loading/empty/error state audit across every screen: 3 verified fixes (2026-09-06)
 
 David's round 2 ask: not another screen-scoped pass (round 1, above, already
