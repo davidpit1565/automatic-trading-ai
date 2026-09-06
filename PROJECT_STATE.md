@@ -6772,6 +6772,237 @@ roving-tabindex markup layered on top of the view-tabs (main's own version
 had base ARIA but not the roving-tabindex arrow-key-nav convention this
 pass added everywhere else).
 
+## Mobile ergonomics & touch-target audit: 13 verified fixes (round 2, 2026-09-06)
+
+Round 2 of David's "compare against Revolut X, ship 200 serious improvements"
+mandate — a cross-cutting DIMENSION audit (not screen-scoped like round 1):
+mobile ergonomics across the ENTIRE app — touch-target sizing, thumb-reach,
+safe-area/viewport edge cases, real device-size variation. This app is an
+installed iOS PWA; treated as a native-feeling app, not a responsive website.
+
+Loaded `fintech-dashboard-polish` and `apple-design` first (the latter's HIG
+44x44pt minimum is the concrete standard applied throughout). Read round 1's
+"Design pass, Home + global nav chrome slice" entry above in full to see
+exactly what it covered on safe-area (topbar top inset via
+`viewport-fit=cover`, bottom-nav's own bottom inset + `.content`'s bottom
+padding) before assuming any other screen or element still needed it.
+
+Built `dist/`, ran `vite preview`, and drove real Playwright (chromium,
+`/opt/pw-browsers/chromium-1194`) at four real viewports — 390x844 (iPhone
+14/15), 375x667 (iPhone SE, smallest common size), 428x926 (iPhone Pro Max,
+largest), and one landscape pass at 844x390 — across every primary tab
+(Crypto/Stocks/Markets/Tools + all 6 tool tabs) and the Markets coin-detail
+view. A script queried every `button, a[href], [role=button], input, select,
+summary, [data-nav], [data-tab], [data-star]` on each screen and measured its
+REAL rendered box via `getBoundingClientRect()` (not CSS padding values, and
+not just icon size) — flagging anything under 44x44px and any two adjacent
+small tap targets closer than 8px. Went from 45 sub-44px/adjacency flags on
+the unpatched build to 2 (both reviewed and deliberately left, see below)
+after the fixes, re-verified on a rebuilt `dist/` with a second Playwright
+pass plus 3 screenshots (Home/Markets-list/coin-detail) confirming no visual
+regression.
+
+1. **Markets list watchlist star (`.mk-star`) was a 30x30px hit box** —
+   measured well under the 44px floor at every viewport, despite its 17px
+   star glyph looking "big enough" in a screenshot. Grown to a real 44x44,
+   anchored at the same `right` offset (so the icon itself only shifts a few
+   px left into the gutter); `.market-row`'s own reserved right padding
+   bumped from 2.4rem/2.6rem (mobile/desktop) to 3.3rem/3.5rem so the grown
+   invisible hit area still clears the price text, confirmed via screenshot.
+2. **Coin-detail header's Back (`.icon-btn`) and Watch (`.star-btn`) buttons
+   were 38x38px** — under the floor on every tested size. Both now 44x44.
+3. **The pair-switcher trigger itself (`.detail-name-btn`, the "Bitcoin ▾"
+   button David specifically asked for) measured only 22px tall** — the
+   primary way to switch trading pairs, with no `min-height` at all. Given a
+   real 44px min-height (content stays centered via its existing
+   `align-items:center`).
+4. **Every segmented control in the app measured well under 44px tall with
+   ~3-7px gaps between segments** — `.hub-tab` (Home/Stocks
+   Overview/History/Market/Profit[/Long-Term], 28-35px), `.view-tab`
+   (Chart/Order book/Depth/Trades/Trade, 35px), `.mk-tab` (Markets category
+   pills, 32px), `.range-btn` (1D/1W/.../All, 28px tall AND as narrow as
+   41px), `.ctoggle-btn` (Candles/Line, 28px), `.pager` (Prev/Next, 33px). A
+   real thumb-mis-tap risk switching between adjacent segments on every one
+   of these, on every screen they appear on. All given `min-height: 44px`
+   (`.range-btn` also `min-width: 44px`); `.range-bar`'s own
+   `overflow-x:auto` already tolerates the resulting wider row without any
+   layout overflow (verified: no `scrollWidth > innerWidth` at any tested
+   viewport).
+5. **The Tools "back" button (`.tool-back`, the only way back from all 6
+   tool tabs) measured 32px tall** — given 44px.
+6. **The topbar BTC chip (`.topbar-btc`) — made tappable by round 1's PR to
+   navigate to Markets — measured only 32px tall**, despite being called out
+   there as "the single most prominent live number in the whole header."
+   Given 44px.
+7. **Markets search input and sort select (`.mk-search`/`.mk-sort`) measured
+   37px tall**; given 44px.
+8. **Every input/select across all 6 Tools forms (`.control input`,
+   `.control select` — one shared rule) measured 40px tall** across
+   Scan/Backtest/Validation/Grid/Portfolio/Monitoring; given 44px in the one
+   shared rule (fixes all of them at once).
+9. **Home's three "See all" links (`.link-btn`, Markets/Top movers/Recent
+   activity) were zero-padding text buttons measuring 17px tall.** Grown via
+   padding + a matching negative margin (so the visible position in the
+   baseline-aligned `.block-head` row doesn't shift) to a real 44px-tall hit
+   box.
+10. **Genuine landscape bug, not just an undersized target: opening a coin's
+    detail view never reset scroll to the top.** Every other view transition
+    in the app (`activateView`/`openTool` in `main.ts`) already does
+    `window.scrollTo({top:0})`; `openDetail()` in `marketsView.ts` didn't.
+    Confirmed via Playwright: after scrolling into the Markets list (a
+    realistic user action — the whole point of a 60+-row list) and tapping a
+    coin, `window.scrollY` stayed at its prior value (186px in the 844x390
+    landscape repro); the newly-shown detail header rendered at
+    `rect.top: -23.6px`, with the pair-switcher trigger's `rect.bottom:
+    -1.6px` — entirely off-screen, no visible way to go back, switch pairs,
+    or watch the coin. Reproduces in landscape on any device height, and
+    would also reproduce in portrait once scrolled far enough into a long
+    list. Fixed with the same `window.scrollTo({top:0})` the rest of the app
+    already uses. Re-verified: `scrollY: 0`, back/pair-toggle/star all
+    `height: 44` post-fix.
+11. **Toast notifications (`.toast-container`) had no safe-area handling at
+    all** — a flat `top: 1rem; right: 1rem`, unlike every fixed element round
+    1 touched. Fine in portrait, but on a notched device rotated to
+    landscape the notch/Dynamic Island moves to a SIDE edge and
+    `env(safe-area-inset-right)` becomes non-zero — this fixed corner would
+    sit under it. Given the same `max(1rem, env(safe-area-inset-*))` pattern
+    already used on `.topbar`/`.bottom-nav`.
+
+**Considered, deliberately not fixed:** the three Backtest checkboxes
+(`#bt-hold`/`#bt-dca`/`#bt-trend`, native 13x13px) are each wrapped in a
+`<label>` (a real, already-accessible larger hit area via the label's own
+text) — not a genuine defect, just a native-checkbox rendering size. The
+data-source banner's "Why?" `<summary>` disclosure (47x19px) only appears
+when live data is degraded (a rare, non-primary-path control) — flagged but
+left as a known minor residual rather than diluting the list with a
+low-severity fix.
+
+Added `tests/ui/touchTargets.test.ts` (new file, 11 tests): since happy-dom
+runs no layout (`getBoundingClientRect()` is always zero there, same reason
+no other test in this suite asserts on real pixel geometry), these assert on
+the stylesheet source itself — the same pattern `dashboard.test.ts`'s
+existing safe-area check uses — locking in the `min-height`/`min-width`
+values above. Added one behavioral test to
+`tests/ui/marketsDetail.integration.test.ts` asserting `window.scrollTo`
+fires with `{top:0}` on `openDetail()`.
+
+Full gate green: `tsc --noEmit` clean, 1215/1215 vitest (1210 baseline + 5
+new here, none broken), `npm run build` clean. Diff: `src/ui/styles.css`,
+`src/ui/views/marketsView.ts` + the 2 test files above — no other view file
+touched, nothing under `server/**`, `state/**`, or `src/core/**`.
+
+**Merge note (2026-09-06):** item 10 above (the `openDetail()` scroll-reset
+fix in `marketsView.ts`) turned out, once merged against the latest `main`,
+to be a duplicate of a fix `PR #203` (Markets/coin-detail, round 1) had
+already shipped for the SAME initial-open path (`if (!opts.preserveRange)
+window.scrollTo({ top: 0 })`) — this agent's own audit ran before that PR
+merged and never re-checked against the landed code. Dropped the duplicate
+line during merge, keeping main's original (which already handles
+`preserveRange` correctly, unlike this pass's unconditional version). Its
+new regression test in `marketsDetail.integration.test.ts` was kept — it
+covers the initial-open path specifically, which PR #203's own test (coin
+*switch* only) didn't — and passes unchanged against main's existing fix.
+
+## Cross-screen component consistency audit, round 2: 3 verified fixes (2026-09-06)
+
+Round 2 of David's "compare against Revolut X, ship 200 improvements" push.
+Round 1 split the app by SCREEN across 7 parallel agents; this pass's
+mandate was the opposite — hunt for DRIFT **between** screens that a
+single-screen review can't see (the same bug fixed narrowly on one screen
+while an identical sibling instance goes unchecked; a pattern established on
+one screen never applied to a near-identical component on another).
+
+**Reality check before starting**: only 4 of the 7 round-1 PRs were actually
+merged to `main` at audit time — shared-tokens (#198), Stocks (#199),
+Grid/Backtest/Validation (#200), Home (#201). Crypto asset-hub (#202),
+Markets/coin-detail (#203), and Market Scan/Monitoring/Portfolio (#204) were
+still open drafts, each already carrying a diagnosed list of the bugs it's
+fixing. Scoped this audit to real drift on `main` as it stands, and
+deliberately did **not** re-propose anything already itemized in those 3
+open PR bodies (verified by reading all three in full first) — duplicating
+their planned fixes would create needless merge conflicts, not new value.
+
+**Method**: `npx tsc --noEmit`, targeted `grep`/`Read` sweeps across
+`src/ui/views/*.ts` and `styles.css` for cross-cutting patterns (established
+class names, wording, CSS scoping comments that name a sibling screen), then
+`npm run build` + `vite preview` + real Playwright (`playwright-core`,
+`/opt/pw-browsers/chromium`, 390×844, `?demo=1`) to confirm each candidate
+with a real before/after screenshot or geometry check — never fixed from
+reading the CSS alone.
+
+**3 verified fixes:**
+
+1. **Portfolio's `#pp-quantity` number input still showed the native
+   spin-button square that breaks the pill shape on hover** — the exact bug
+   Grid/Backtest/Validation's own pass (PR #200) already found and fixed,
+   but that pass's own `styles.css` comment explicitly scoped the fix to
+   its own 8 input ids and named Market Scan/Monitoring/**Portfolio** as "a
+   parallel agent's scope this round" it deliberately didn't touch. That
+   parallel scope (PR #204) shipped 28 real Portfolio fixes but never
+   touched this input. Confirmed the bug live: reverted the fix, rebuilt,
+   hovered `#pp-quantity` with real Playwright at 3x device scale — a stark
+   white spin-button square appears (`/tmp/pp-qty-crop-before.png`
+   equivalent). Restored the fix, added `#pp-quantity` to the same
+   `::-webkit-inner/outer-spin-button` + `-moz-appearance: textfield`
+   selector list, rebuilt — square gone, clean pill. Same narrowly-scoped
+   selector-list pattern as the original fix, no shared rule touched.
+2. **Monitoring's 4 wide data-tables (up to 9 columns: Current
+   opportunities, Watchlist, Opportunity history, Alert history) and Market
+   Scan's own 8-column scan table had no scroll-edge affordance** —
+   Backtest/Validation's pass (PR #200) established `.table-scroll-fade`
+   (a right-edge gradient toggled by real `scrollWidth`/`scrollLeft`,
+   fading out once scrolled to the end) for exactly this "wide table cut
+   off on a 390px phone" problem, but explicitly scoped it to their own two
+   screens, again naming Market Scan/Monitoring/Portfolio's shared
+   `.table-scroll` as "out of this pass's scope." Both files still used
+   the bare `.table-scroll` wrapper with zero affordance. Wrapped all 5
+   tables (4 in `monitoringView.ts`, 1 in `marketScanView.ts`) in
+   `.table-scroll-fade` and added each file its own small
+   `initTableScrollFade` helper — kept as a duplicated, self-contained
+   per-file function rather than extracted into a shared module, matching
+   the explicit, documented reasoning already in both source pass's own
+   code comments ("isn't worth coupling two independent tool screens
+   together"). Verified live: real Playwright scan run on Market Scan
+   showed `is-scrollable: true` with real `scrollWidth: 665` vs
+   `clientWidth: 318` (near-identical proportions to Backtest's own
+   verified 853px-in-318px case); Monitoring showed all 4
+   `.table-scroll-fade` wrappers present after a manual scan + watchlist
+   add.
+3. **Portfolio's empty-positions copy read "No open positions." — flatter
+   and differently-worded than Home's and Stocks Overview's identical
+   concept**, both of which read "Holding cash and waiting for a good
+   setup." (Stocks' own copy-parity fix to match Home was itself PR #199's
+   item 10; Portfolio was never brought into that same parity). Matched
+   the established wording exactly. No test depended on the old string.
+
+**Investigated and correctly left alone** (already claimed by an open
+round-1 PR, confirmed by reading its body in full — not duplicated):
+Portfolio's 0.00%/0.00 P&L figures rendering bright green instead of
+neutral (PR #204 items 1-4, its own new `pnlClass()` helper); Market Scan's
+magnitude-only score bar (PR #204 item 7); Monitoring's uncoloured
+Confidence columns (PR #204 item 22). Also checked and found **not** a
+real inconsistency: Monitoring/Market Scan's flat (non-tiered) money values
+inside dense table cells — confirmed this matches the app's own established
+convention (Markets' own order-book and trades-tape rows, and its chart
+tooltip, all use flat `formatPrice` too; `tieredPriceHtml` is reserved for
+prominent hero/list-row prices, never dense table cells). Left
+`:focus-visible` coverage gaps (`.hub-tab`, `.mk-tab`, `.market-row`,
+`.pager`, `.range-btn`, `.ctoggle-btn`, etc.) untouched — a parallel round-2
+agent's explicit accessibility-audit lane, not this pass's cross-cutting
+component-reuse mandate.
+
+**Tests**: 3 new (`marketScanView.integration.test.ts` — scroll-fade wrapper
++ geometry-toggle assertion; `monitoringView.integration.test.ts` — all 4
+tables wrapped after a real scan + watchlist add; `portfolioView.integration
+.test.ts` — empty-positions copy match). Full gate: `tsc --noEmit` clean,
+`vitest run` 1206/1206 (1203 on this branch's `origin/main` base + 3 new,
+none weakened), `npm run build` clean. Diff: `src/ui/styles.css`,
+`src/ui/views/{marketScanView,monitoringView,portfolioView}.ts`, the 3
+matching `tests/ui/*.integration.test.ts` files — nothing under `server/**`,
+`state/**`, `src/core/**`, `homeView.ts`, `assetHubView.ts`, `marketsView.ts`,
+any `stocks*.ts`, `gridView.ts`, `backtestView.ts`, or `validationView.ts`
+touched.
+
 ## Silenced all simulated-money trading: no Telegram notifications, no site display (2026-09-06)
 
 David, after a Telegram screenshot showing a simulated FILEUR buy fill:
