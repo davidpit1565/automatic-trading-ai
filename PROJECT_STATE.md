@@ -7588,3 +7588,72 @@ Gate: `tsc --noEmit` clean, 1290/1290 vitest passed (up from 1284 baseline —
 (new), `scripts/replayCopyTrade.mts` (additive), `tests/copyTrade/` (1 new
 test file) — nothing under `server/**`, `src/ui/**`, or any existing
 `src/core/**` file touched.
+
+## Wallet consensus detector — Replay Engine extension, research tool only (2026-09-06)
+
+Step 3 of David's own explicitly-approved, deliberately cautious "smart
+money" exploration ("is there another step you can already do yourself?
+do it — repeat until only something only I can provide is left"). Stage 1
+(Replay Engine) and Stage 2 (Wallet Quality Score) each look at ONE wallet
+in isolation. This answers a different question: across SEVERAL tracked
+wallets' merged trade history, when did multiple of them move into (or out
+of) the same token close together in time? New file
+`src/core/copyTrade/consensusSignal.ts`. Pure function, no I/O, no network,
+no live data, no connection to `server/liveOrchestrator.mts` or any
+real-money path. Detects and reports convergence only — does NOT score it,
+alert on it, or feed it into any trading decision (that remains a later,
+separately-approved step, same as ChatGPT's proposed "consensus logic"
+piece).
+
+**Clustering model — a modeled tradeoff, NOT a fact** (full derivation in
+`consensusSignal.ts`'s top doc comment): trades are grouped by
+`(symbol, side)`, sorted chronologically, then clustered by single-linkage
+time gap — two consecutive trades in that sorted order join the same
+cluster if no more than `windowMs` apart; a larger gap starts a new
+cluster. This means a cluster's total span CAN exceed `windowMs` if trades
+trickle in with gaps just under the threshold (chain effect) — a
+deliberate simplicity tradeoff over a fixed anchored window, not a bug. A
+cluster is reported as a `ConsensusEvent` only if it has at least
+`minWallets` DISTINCT wallets (the same wallet trading twice in one cluster
+still counts once). Buys and sells of the same token are never merged into
+one cluster.
+
+- `detectConsensus(trades: WalletTrade[], { windowMs, minWallets }): ConsensusEvent[]` —
+  events sorted by `windowStart` ascending; each carries `symbol`, `side`,
+  `chain`, the distinct `wallets` involved, `tradeCount`, `windowStart`,
+  `windowEnd`.
+- `scripts/replayCopyTrade.mts` — additive change: when more than one
+  wallet is being reported on, also merges all wallets' trades and prints
+  any detected consensus clusters (demo params: 6h window, 2+ wallets —
+  placeholder constants, not measured) after the per-wallet tables.
+
+7 new tests (`tests/copyTrade/consensusSignal.test.ts`), each hand-verified
+against a concrete timestamped scenario: 3-wallet same-token cluster within
+the window, a gap larger than the window splitting into separate (too-small)
+clusters, the documented chain-effect case (cluster span exceeding
+`windowMs` because each individual gap stays under it), one wallet trading
+twice counting as one distinct wallet (correctly falling short of
+`minWallets`), buy/sell not merging, multiple independent symbols each
+clustering separately and sorting by `windowStart`, and the empty-input
+edge case.
+
+Deliberately deferred, same scope boundary as every prior stage: no real
+on-chain data provider, no scoring of consensus strength, no Telegram
+alerts, no connection to the Signal Engine or any live/paper execution
+path. Verified the CLI script actually runs end-to-end
+(`npx tsx scripts/replayCopyTrade.mts`) against real synthetic data with no
+crash — this run happened to find zero consensus clusters among the 3 demo
+wallets in the 6h window (independently-seeded synthetic wallets rarely
+overlap that tightly), which is a legitimate result, not a bug; the unit
+tests are what verify the detection logic itself fires correctly.
+
+Gate: `tsc --noEmit` clean, 1297/1297 vitest passed (up from 1290 baseline —
+7 new), `npm run build` clean. Diff: `src/core/copyTrade/consensusSignal.ts`
+(new), `scripts/replayCopyTrade.mts` (additive), `tests/copyTrade/` (1 new
+test file) — nothing under `server/**`, `src/ui/**`, or any existing
+`src/core/**` file touched.
+
+Next step after this remains blocked on something only David can provide: a
+real on-chain data provider (API key + vendor choice — Bitquery leading
+candidate discussed). No further self-directed step exists in this area
+until that decision is made.
