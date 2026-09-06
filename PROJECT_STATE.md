@@ -6067,3 +6067,122 @@ Diff: `index.html`, `src/ui/loadingStates.ts`, `src/ui/main.ts`,
 nothing under `server/**`, `state/**`, or `src/core/**`, and no view file
 owned by another parallel agent (`marketsView.ts`, `assetHubView.ts`, any
 `stocks*.ts`, any Tools view) touched.
+
+## Mobile ergonomics & touch-target audit: 13 verified fixes (round 2, 2026-09-06)
+
+Round 2 of David's "compare against Revolut X, ship 200 serious improvements"
+mandate — a cross-cutting DIMENSION audit (not screen-scoped like round 1):
+mobile ergonomics across the ENTIRE app — touch-target sizing, thumb-reach,
+safe-area/viewport edge cases, real device-size variation. This app is an
+installed iOS PWA; treated as a native-feeling app, not a responsive website.
+
+Loaded `fintech-dashboard-polish` and `apple-design` first (the latter's HIG
+44x44pt minimum is the concrete standard applied throughout). Read round 1's
+"Design pass, Home + global nav chrome slice" entry above in full to see
+exactly what it covered on safe-area (topbar top inset via
+`viewport-fit=cover`, bottom-nav's own bottom inset + `.content`'s bottom
+padding) before assuming any other screen or element still needed it.
+
+Built `dist/`, ran `vite preview`, and drove real Playwright (chromium,
+`/opt/pw-browsers/chromium-1194`) at four real viewports — 390x844 (iPhone
+14/15), 375x667 (iPhone SE, smallest common size), 428x926 (iPhone Pro Max,
+largest), and one landscape pass at 844x390 — across every primary tab
+(Crypto/Stocks/Markets/Tools + all 6 tool tabs) and the Markets coin-detail
+view. A script queried every `button, a[href], [role=button], input, select,
+summary, [data-nav], [data-tab], [data-star]` on each screen and measured its
+REAL rendered box via `getBoundingClientRect()` (not CSS padding values, and
+not just icon size) — flagging anything under 44x44px and any two adjacent
+small tap targets closer than 8px. Went from 45 sub-44px/adjacency flags on
+the unpatched build to 2 (both reviewed and deliberately left, see below)
+after the fixes, re-verified on a rebuilt `dist/` with a second Playwright
+pass plus 3 screenshots (Home/Markets-list/coin-detail) confirming no visual
+regression.
+
+1. **Markets list watchlist star (`.mk-star`) was a 30x30px hit box** —
+   measured well under the 44px floor at every viewport, despite its 17px
+   star glyph looking "big enough" in a screenshot. Grown to a real 44x44,
+   anchored at the same `right` offset (so the icon itself only shifts a few
+   px left into the gutter); `.market-row`'s own reserved right padding
+   bumped from 2.4rem/2.6rem (mobile/desktop) to 3.3rem/3.5rem so the grown
+   invisible hit area still clears the price text, confirmed via screenshot.
+2. **Coin-detail header's Back (`.icon-btn`) and Watch (`.star-btn`) buttons
+   were 38x38px** — under the floor on every tested size. Both now 44x44.
+3. **The pair-switcher trigger itself (`.detail-name-btn`, the "Bitcoin ▾"
+   button David specifically asked for) measured only 22px tall** — the
+   primary way to switch trading pairs, with no `min-height` at all. Given a
+   real 44px min-height (content stays centered via its existing
+   `align-items:center`).
+4. **Every segmented control in the app measured well under 44px tall with
+   ~3-7px gaps between segments** — `.hub-tab` (Home/Stocks
+   Overview/History/Market/Profit[/Long-Term], 28-35px), `.view-tab`
+   (Chart/Order book/Depth/Trades/Trade, 35px), `.mk-tab` (Markets category
+   pills, 32px), `.range-btn` (1D/1W/.../All, 28px tall AND as narrow as
+   41px), `.ctoggle-btn` (Candles/Line, 28px), `.pager` (Prev/Next, 33px). A
+   real thumb-mis-tap risk switching between adjacent segments on every one
+   of these, on every screen they appear on. All given `min-height: 44px`
+   (`.range-btn` also `min-width: 44px`); `.range-bar`'s own
+   `overflow-x:auto` already tolerates the resulting wider row without any
+   layout overflow (verified: no `scrollWidth > innerWidth` at any tested
+   viewport).
+5. **The Tools "back" button (`.tool-back`, the only way back from all 6
+   tool tabs) measured 32px tall** — given 44px.
+6. **The topbar BTC chip (`.topbar-btc`) — made tappable by round 1's PR to
+   navigate to Markets — measured only 32px tall**, despite being called out
+   there as "the single most prominent live number in the whole header."
+   Given 44px.
+7. **Markets search input and sort select (`.mk-search`/`.mk-sort`) measured
+   37px tall**; given 44px.
+8. **Every input/select across all 6 Tools forms (`.control input`,
+   `.control select` — one shared rule) measured 40px tall** across
+   Scan/Backtest/Validation/Grid/Portfolio/Monitoring; given 44px in the one
+   shared rule (fixes all of them at once).
+9. **Home's three "See all" links (`.link-btn`, Markets/Top movers/Recent
+   activity) were zero-padding text buttons measuring 17px tall.** Grown via
+   padding + a matching negative margin (so the visible position in the
+   baseline-aligned `.block-head` row doesn't shift) to a real 44px-tall hit
+   box.
+10. **Genuine landscape bug, not just an undersized target: opening a coin's
+    detail view never reset scroll to the top.** Every other view transition
+    in the app (`activateView`/`openTool` in `main.ts`) already does
+    `window.scrollTo({top:0})`; `openDetail()` in `marketsView.ts` didn't.
+    Confirmed via Playwright: after scrolling into the Markets list (a
+    realistic user action — the whole point of a 60+-row list) and tapping a
+    coin, `window.scrollY` stayed at its prior value (186px in the 844x390
+    landscape repro); the newly-shown detail header rendered at
+    `rect.top: -23.6px`, with the pair-switcher trigger's `rect.bottom:
+    -1.6px` — entirely off-screen, no visible way to go back, switch pairs,
+    or watch the coin. Reproduces in landscape on any device height, and
+    would also reproduce in portrait once scrolled far enough into a long
+    list. Fixed with the same `window.scrollTo({top:0})` the rest of the app
+    already uses. Re-verified: `scrollY: 0`, back/pair-toggle/star all
+    `height: 44` post-fix.
+11. **Toast notifications (`.toast-container`) had no safe-area handling at
+    all** — a flat `top: 1rem; right: 1rem`, unlike every fixed element round
+    1 touched. Fine in portrait, but on a notched device rotated to
+    landscape the notch/Dynamic Island moves to a SIDE edge and
+    `env(safe-area-inset-right)` becomes non-zero — this fixed corner would
+    sit under it. Given the same `max(1rem, env(safe-area-inset-*))` pattern
+    already used on `.topbar`/`.bottom-nav`.
+
+**Considered, deliberately not fixed:** the three Backtest checkboxes
+(`#bt-hold`/`#bt-dca`/`#bt-trend`, native 13x13px) are each wrapped in a
+`<label>` (a real, already-accessible larger hit area via the label's own
+text) — not a genuine defect, just a native-checkbox rendering size. The
+data-source banner's "Why?" `<summary>` disclosure (47x19px) only appears
+when live data is degraded (a rare, non-primary-path control) — flagged but
+left as a known minor residual rather than diluting the list with a
+low-severity fix.
+
+Added `tests/ui/touchTargets.test.ts` (new file, 11 tests): since happy-dom
+runs no layout (`getBoundingClientRect()` is always zero there, same reason
+no other test in this suite asserts on real pixel geometry), these assert on
+the stylesheet source itself — the same pattern `dashboard.test.ts`'s
+existing safe-area check uses — locking in the `min-height`/`min-width`
+values above. Added one behavioral test to
+`tests/ui/marketsDetail.integration.test.ts` asserting `window.scrollTo`
+fires with `{top:0}` on `openDetail()`.
+
+Full gate green: `tsc --noEmit` clean, 1215/1215 vitest (1210 baseline + 5
+new here, none broken), `npm run build` clean. Diff: `src/ui/styles.css`,
+`src/ui/views/marketsView.ts` + the 2 test files above — no other view file
+touched, nothing under `server/**`, `state/**`, or `src/core/**`.

@@ -264,6 +264,7 @@ body {
   font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
   min-width: 7rem;
+  min-height: 44px; /* every input/select across the Tools forms measured 40px */
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
 
@@ -1003,6 +1004,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
   background: color-mix(in srgb, var(--surface) 55%, transparent);
   backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
   border: 1px solid rgba(255,255,255,0.08); border-radius: var(--r-pill); padding: 0.3rem 0.7rem;
+  min-height: 44px; /* was 32px measured — the most prominent tap target in the topbar */
   box-shadow: var(--shadow-xs); cursor: pointer;
   transition: transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
 .topbar-btc:hover { background: color-mix(in srgb, var(--surface-raised) 65%, transparent); }
@@ -1217,7 +1219,11 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    contrast far more than by any colour value. */
 .view-title { margin: 0 0 0.2rem; font-size: var(--fs-display); font-weight: 800; letter-spacing: -0.032em; line-height: 1.12; }
 .view-sub { color: var(--text-dim); font-size: var(--fs-sub); margin: 0.35rem 0 1.6rem; max-width: 46ch; }
+/* Padding + a matching negative margin: grows the real hit box to 44px tall
+   (measured at 17px — a text-only button with zero padding) without shifting
+   its visual position in the baseline-aligned .block-head row it sits in. */
 .link-btn { background: none; border: none; color: var(--accent-text); font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  padding: 1rem 0.5rem; margin: -1rem -0.5rem;
   transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .link-btn:hover { opacity: 0.75; }
 /* Every "See all" on Home was :hover-only — a phone has no hover, so the
@@ -1246,9 +1252,12 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    unclear" and confirmed by screenshot, not just theorized. */
 .hub-tabs { display: flex; gap: 0.2rem; background: var(--surface);
   border-radius: var(--r-pill); padding: 0.3rem; margin-bottom: 1.5rem; }
+/* display:flex + min-height:44px — measured at 28-35px tall (below the HIG
+   floor) with only ~3px gaps between segments, a real thumb-mis-tap risk
+   switching Overview/History/Market/Profit[/Long-Term]. */
 .hub-tab { flex: 1; background: none; border: none; color: var(--text-dim); font-size: 0.94rem;
   font-weight: 650; padding: 0.55rem 0.4rem; border-radius: var(--r-pill); cursor: pointer;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.01em; display: flex; align-items: center; justify-content: center; min-height: 44px;
   transition: all var(--dur-fast) var(--ease); }
 .hub-tab:hover { color: var(--text); }
 .hub-tab:active { transform: scale(0.96); }
@@ -1309,8 +1318,9 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .mk-tabs { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none;
   padding-bottom: 0.5rem; margin-bottom: 0.25rem; -webkit-overflow-scrolling: touch; }
 .mk-tabs::-webkit-scrollbar { display: none; }
-.mk-tab { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.48rem 0.95rem; border-radius: var(--r-pill);
+.mk-tab { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.48rem 0.95rem; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--surface); color: var(--text-dim);
+  min-height: 44px; /* was 32px measured */
   font-size: 0.86rem; font-weight: var(--fw-semibold); cursor: pointer; transition: all var(--dur-fast) var(--ease); }
 .mk-tab svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; flex-shrink: 0; }
 .mk-tab:hover { color: var(--text); border-color: var(--border-strong); }
@@ -1348,17 +1358,23 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .mk-controls { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
 .mk-search { flex: 1 1 auto; min-width: 0; padding: 0.58rem 1rem; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.9rem;
+  min-height: 44px; /* was 37px measured */
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .mk-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
-.mk-sort { flex: 0 0 auto; padding: 0.58rem 1.85rem 0.58rem 0.9rem; border-radius: var(--r-pill);
+.mk-sort { flex: 0 0 auto; min-height: 44px; /* was 37px measured */ padding: 0.58rem 1.85rem 0.58rem 0.9rem; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.86rem;
   appearance: none; -webkit-appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239a9aa4' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 0.8rem center; }
 
 .market-row-wrap { position: relative; display: block; }
+/* 44x44 real hit box (HIG minimum) — was a 30x30 box that measured well
+   under the minimum via getBoundingClientRect on real devices, even though
+   its 17px star glyph looked "big enough" in a screenshot. Grown in place
+   (right offset unchanged) rather than re-centered, so the icon itself only
+   shifts a few px left into the extra gutter .market-row now reserves. */
 .mk-star { position: absolute; top: 50%; right: 0.35rem; transform: translateY(-50%);
-  width: 30px; height: 30px; border: 0; border-radius: 50%; background: transparent;
+  width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent;
   color: var(--border-strong); display: flex; align-items: center; justify-content: center;
   cursor: pointer; padding: 0;
   transition: color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
@@ -1384,8 +1400,9 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .market-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0.85rem;
   width: 100%; text-align: left;
   background: transparent; border: none; border-radius: 0;
-  /* Extra room on the right keeps the price clear of the overlaid star. */
-  padding: 0.95rem 2.4rem 0.95rem 1.1rem;
+  /* Extra room on the right keeps the price clear of the overlaid star
+     (sized to a real 44px HIG hit target below, not just its 17px icon). */
+  padding: 0.95rem 3.3rem 0.95rem 1.1rem;
   transition: background var(--dur-fast) var(--ease); }
 .market-row:hover { background: var(--surface-hover); }
 .market-row-id { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
@@ -1445,7 +1462,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 @media (min-width: 860px) {
   /* Keeps the right padding that clears the overlaid star — a plain
      `padding: 0.8rem 1.1rem` here would put the price back under it. */
-  .market-row { padding: 1.05rem 2.6rem 1.05rem 1.4rem; grid-template-columns: auto 1fr auto auto; }
+  .market-row { padding: 1.05rem 3.5rem 1.05rem 1.4rem; grid-template-columns: auto 1fr auto auto; }
   .row-price { font-size: 1.14rem; }
   .market-row-vol {
     display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem;
@@ -1557,6 +1574,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .tool-card:active { transform: scale(0.97); box-shadow: var(--shadow-xs); }
 .tool-back { background: var(--surface); border: 1px solid var(--border); color: var(--text);
   border-radius: var(--r-sm); padding: 0.48rem 0.9rem; margin-bottom: 1rem; cursor: pointer;
+  display: inline-flex; align-items: center; min-height: 44px; /* was 32px measured, the only way back from every tool tab */
   transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .tool-back:hover { border-color: var(--border-strong); }
 .tool-back:active { transform: scale(0.96); }
@@ -1683,7 +1701,9 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .icon-btn { background: color-mix(in srgb, var(--surface-raised) 55%, transparent);
   backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
   border: 1px solid rgba(255,255,255,0.08); color: var(--text);
-  width: 38px; height: 38px; border-radius: 50%; cursor: pointer; flex: 0 0 auto;
+  /* 44x44 HIG minimum — was 38x38, measured below the floor on every tested
+     device size. */
+  width: 44px; height: 44px; border-radius: 50%; cursor: pointer; flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center;
   transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .icon-btn:hover { background: var(--surface-hover); }
@@ -1694,8 +1714,12 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 /* Pair switcher (David asked for a "BTC-EUR ▾"-style selector like Revolut
    X's Trade page) — the name itself is the trigger, matching the reference;
    .detail-name keeps its exact prior look/text so nothing else changes. */
+/* min-height 44px — this trigger (the pair switcher itself) measured only
+   22px tall via getBoundingClientRect despite sitting in a visually roomy
+   header; align-items:center keeps the name/chevron centered in the taller
+   box. */
 .detail-name-btn { display: flex; align-items: center; gap: 0.3rem; background: none; border: none;
-  color: inherit; padding: 0; cursor: pointer; }
+  color: inherit; padding: 0; cursor: pointer; min-height: 44px; }
 .pair-chevron { width: 15px; height: 15px; fill: none; stroke: var(--text-dim); stroke-width: 2.2;
   stroke-linecap: round; stroke-linejoin: round; }
 .pair-menu { position: relative; z-index: 5; margin: -0.4rem 0 0.9rem; max-height: 320px; overflow-y: auto;
@@ -1713,7 +1737,8 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .star-btn { background: color-mix(in srgb, var(--surface-raised) 55%, transparent);
   backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
   border: 1px solid rgba(255,255,255,0.08); color: var(--text-dim);
-  width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+  /* 44x44 HIG minimum — was 38x38. */
+  width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: all var(--dur-fast) var(--ease); }
 .star-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
@@ -1733,6 +1758,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
   border: 1px solid var(--border); border-radius: var(--r-pill); }
 .view-tab { flex: 1; background: transparent; border: none; color: var(--text-dim); padding: 0.5rem 0;
   border-radius: var(--r-pill); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  min-height: 44px; /* was 35px measured — below the HIG floor */
   transition: all var(--dur-fast) var(--ease); }
 .view-tab svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .view-tab:hover { color: var(--text); }
@@ -1826,6 +1852,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    language the rest of the coin-detail header already uses. */
 .pager { display: flex; align-items: center; gap: 0.35rem; background: var(--surface); border: 1px solid var(--border); color: var(--text);
   border-radius: var(--r-pill); padding: 0.5rem 0.9rem; cursor: pointer; font-weight: var(--fw-semibold); font-size: 0.85rem;
+  min-height: 44px; /* was 33px measured */
   transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .pager svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .pager:hover:not(:disabled) { border-color: var(--border-strong); }
@@ -1839,6 +1866,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .range-bar::-webkit-scrollbar { display: none; }
 .range-btn { background: transparent; border: none; color: var(--text-dim);
   border-radius: var(--r-pill); padding: 0.42rem 0.78rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; /* was 28px tall, some as narrow as 41px */
   transition: all var(--dur-fast) var(--ease); }
 .range-btn:hover { color: var(--text); }
 .range-btn:active { transform: scale(0.94); }
@@ -1874,6 +1902,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
   border: 1px solid var(--border); border-radius: var(--r-pill); }
 .ctoggle-btn { background: transparent; border: none; color: var(--text-dim);
   border-radius: var(--r-pill); padding: 0.42rem 0.72rem; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; min-height: 44px; /* was 28px measured */
   transition: all var(--dur-fast) var(--ease); }
 .ctoggle-btn:hover { color: var(--text); }
 .ctoggle-btn:active { transform: scale(0.94); }
@@ -2018,8 +2047,13 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 
 .toast-container {
   position: fixed;
-  top: 1rem;
-  right: 1rem;
+  /* max() with the safe-area inset, matching .topbar/.bottom-nav's own
+     pattern above — without it this fixed corner sits flush under the
+     status bar in portrait and, on a notched device rotated to landscape
+     (where the notch/Dynamic Island moves to a SIDE edge and
+     env(safe-area-inset-right) becomes non-zero), under the notch itself. */
+  top: max(1rem, env(safe-area-inset-top));
+  right: max(1rem, env(safe-area-inset-right));
   z-index: 110;
   display: flex;
   flex-direction: column;

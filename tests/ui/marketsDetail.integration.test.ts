@@ -179,3 +179,26 @@ describe('Coin detail: pager names the neighbouring coin', () => {
     handle.pause();
   });
 });
+
+describe('Coin detail: opening it resets scroll to the top', () => {
+  it('scrolls to top on open, so the header cannot render off-screen after scrolling the list', async () => {
+    // Real-device bug (found via a Playwright rect measurement at 844x390
+    // landscape): the Markets list is long enough to scroll, but opening a
+    // coin's detail from a scrolled position never reset the window's
+    // scroll, so the detail header (back/pair-switcher/star) could render
+    // partially or fully above the viewport. Every other view transition in
+    // this app (activateView/openTool in main.ts) already resets scroll —
+    // this is the one that didn't.
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    (container.querySelector('.market-row') as HTMLElement).click();
+    await waitFor(() => container.querySelector('.detail-name') !== null);
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
+    handle.pause();
+  });
+});

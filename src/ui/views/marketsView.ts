@@ -700,6 +700,15 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     window.clearInterval(listTimer);
     listView.hidden = true;
     detailView.hidden = false;
+    // Every other view transition in this app (activateView/openTool in
+    // main.ts) resets scroll to the top; this one didn't. Opening a coin's
+    // detail after scrolling partway down a long Markets list left the
+    // window at its prior scroll position, so the detail header (back
+    // button, pair switcher, watchlist star) could render partially or
+    // fully above the viewport — confirmed via a real Playwright measurement
+    // at 844x390 landscape (scrollY carried over at 186px put the header at
+    // rect.top -23.6px, with the pair-switcher trigger entirely off-screen).
+    window.scrollTo({ top: 0 });
     let coin = index;
     // Candles by default; the choice persists across range/coin changes while
     // this detail stays open. `resume()` asks to preserve the last choice
