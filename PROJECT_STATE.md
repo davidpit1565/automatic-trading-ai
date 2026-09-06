@@ -5444,3 +5444,147 @@ formula error like the two bugs above, so left alone per "not a
 fix-first-ask-later pass on anything ambiguous."
 
 Gate: tsc clean, 1166 vitest passed (2 new), vite build ok.
+
+## Shared-layer design pass: cross-cutting tokens/components, run in parallel with 6 per-screen agents (2026-09-06)
+
+David asked for ~200 serious Revolut-X-vs-our-app improvements, split across
+7 parallel agents by screen area; this pass's slice was explicitly the
+SHARED/cross-cutting layer only — `src/ui/styles.css` `:root` tokens and
+truly shared classes, `format.ts`, `coinLogo.ts`, `charts.ts` — never a
+`src/ui/views/*.ts` file (six sibling agents own those). Loaded
+`fintech-dashboard-polish` and `apple-design` fresh (no screen recording
+found on disk to re-extract frames from — proceeded on the distilled skill
+text alone). Read all of `styles.css`, `format.ts`, `coinLogo.ts`,
+`charts.ts` end to end first, per this file's own prior "Deep design pass"
+entries' method. **9 genuine, individually-verified fixes** (not padded to
+hit a number — see the honest-count precedent in "Deep design pass #3"
+above):
+
+1. **`formatPct`/`formatNumber` (`format.ts`) showed a spurious "-0.00%"/
+   "-0.0" for a negative value that rounds to zero at its display
+   precision** (e.g. `formatPct(-0.001)` → `"-0.00%"`) — confirmed with
+   `node -e` against real JS `toFixed` behaviour before touching anything,
+   the same float-formatting bug class as the already-fixed BTC-chip/equity-
+   chart bugs. Both functions are called from 12+ view files (Home, Markets,
+   Crypto, Stocks, Market Scan, Validation, Portfolio, the equity chart
+   panel). Fixed via a new shared `fixedNoNegativeZero` helper that strips
+   the sign only when the rounded result is genuinely zero; unaffected for
+   any value that actually rounds non-zero. 4 new tests.
+2. **`formatPriceSplit` (`format.ts`) had no dust guard, unlike `formatPrice`
+   right above it** — `formatPrice`'s own comment documents the exact bug
+   (cash computed as equity minus positions, landing at e.g. `-1.137e-12`
+   instead of exactly zero) and guards against it, but `formatPriceSplit`
+   — which feeds the HERO BALANCE on Home (both heroes), the Profit tab,
+   Portfolio, Stocks Overview and Stocks Long-Term (6 call sites, 5 view
+   files) — had no equivalent guard, so that same dust rendered the hero
+   balance as major `"-0"` / minor `"00"`. Fixed with the same
+   rounds-to-zero-strips-sign approach as #1. 3 new tests.
+3. **`.coin-logo-tile`'s generated fallback (used for any of the hundreds of
+   long-tail assets with no bundled logo — appears on Markets, coin-detail,
+   trade rows, portfolio positions) failed WCAG AA contrast for roughly a
+   third of all asset codes** — computed the actual contrast ratio (white
+   text on `hsl(hue, 55%, 42%)`) across the full hue wheel: yellow/green/
+   cyan hues (~45-195deg) measured 2.6-3.2:1 against the white initials,
+   below the 4.5:1 floor for text this small (~10px), while red/blue/violet
+   hues were fine. Lowered lightness 42%→30% (worst-case hue now 4.72:1,
+   confirmed by rendering real `.coin-logo-tile` elements in a live page and
+   reading `getComputedStyle` back, not just computed in isolation).
+4. **`.pchart .psr` (support/resistance dashed lines, `charts.ts`'s shared
+   `candleChartSvg`, used by 5 view files: gridView, homeView, marketsView,
+   stocksOverviewPanel, validationView) hardcoded `transition: ... 300ms
+   ease`** instead of the app's own `--dur-base`/`--ease` tokens — the one
+   transition in the whole file that didn't use them. Token-substituted;
+   zero visual change (220ms ≈ 300ms, same curve family).
+5. **`body`'s theme-transition used bare `ease` instead of `var(--ease)`**
+   — this is the one transition rule that runs on literally every page in
+   the app (background/color cross-fade). Token-substituted.
+6. **No `:focus-visible` state existed on any of the app's shared
+   interactive base classes** — `.nav-btn` (bottom nav, every screen),
+   `.tool-card` (Tools), `.tappable`, `.tab-button`, `.scan-row`, `.mk-star`,
+   and `button.primary/.secondary/.btn-buy/.btn-sell` all relied on the
+   unstyled browser default outline; only `.control input/select` and
+   `.mk-search` had ever styled their own ring. Added one shared rule
+   (`outline: 2px solid var(--accent-text); outline-offset: 2px`), keyed off
+   `:focus-visible` so mouse/touch taps never show it (matching the existing
+   `.control`/`.mk-search` convention). Verified with real keyboard Tab
+   navigation (not `.focus()`, which Chromium's `:focus-visible` heuristic
+   correctly ignores) via Playwright on both the bottom nav and a Tools
+   card, screenshotted — a clean, unclipped ring on both, no visual
+   regression.
+7. **The view-enter transition that fires on every single tab/nav switch
+   across the whole app had no `prefers-reduced-motion` handling** — the
+   four existing reduced-motion rules in this file each covered one
+   already-noticed animation (row-clock pulse, tappable press, pchart-now
+   pulse, skeleton/flash), but missed `.view.active`/`.content
+   section.active` (the primary nav transition — the latter wins on
+   selector specificity, `.content section.active` has one more type
+   selector than `.view.active` at equal class count, so its `fadeInUp` is
+   what actually plays; disabling both is correct either way), plus
+   `.hub-panel.active` (Tools sub-tabs) and `.detail-chart.fade-in`/
+   `.fade-in-up` (chart swaps). Added to the existing media query.
+   Confirmed via Playwright with `reducedMotion: 'reduce'` emulated:
+   `getComputedStyle(#view-tools).animationName` reads `"none"`.
+8. **No `prefers-reduced-transparency` fallback anywhere**, despite three
+   genuinely translucent `backdrop-filter` surfaces present on every single
+   screen (`.topbar`, `.topbar-btc`, `.bottom-nav`) — apple-design's own
+   guidance for this setting is "frostier/solid," not "turn transparency
+   off entirely elsewhere." Added a media query making exactly those three
+   solid with the blur removed, layout/radius/colour otherwise identical.
+   Verified via Chrome DevTools Protocol media-feature emulation
+   (`Emulation.setEmulatedMedia`) + screenshot: topbar/nav render solid,
+   nothing else changes.
+9. **No `prefers-contrast: more` support anywhere** — `--border`/
+   `--border-strong` (used by dozens of card/divider rules app-wide) are
+   deliberately near-invisible per the `:root` comment. Added a `:root`
+   override under this media feature raising both, verified the same way
+   (CDP emulation + reading the computed custom property back = the new
+   value).
+
+**Investigated, correctly left alone (no fix, no filler):**
+`loadingStates.ts`/`toastNotifications.ts` — re-verified this file's own
+"Deep design pass #3" finding: `showToast`/`showSuccess`/`showError`/
+`showInfo`/`showWarning` and `showLoadingOverlay`/`hideLoadingOverlay`/
+`createLoadingSpinner`/`addLoadingState`/`removeLoadingState`/
+`createSkeletonLine`/`createSkeletonTitle`/`showEmptyState` are still never
+called by any view file — only exposed on `window.toast`/`window.loading`
+for manual/console use. Nuance the prior entry didn't have: `skeletonRowsHtml`
+(loadingStates.ts) IS genuinely live (imported directly by homeView,
+portfolioView, stocksOverviewPanel, stocksLongTermPanel), and `.spinner`/
+`.loading-inline` are used directly by name in `backtestView.ts` — so the
+module isn't uniformly dead, only those specific exported helpers are.
+Wiring them in for real would mean editing `main.ts` or a view file, both
+out of this pass's scope — left untouched rather than inventing a use.
+`.pill.profit`/`.pill.loss` CSS exists but no view file ever applies those
+classes (only `.pill.buy`/`.pill.sell` are used, and only for the words
+BUY/SELL/FILLED/REJECTED, never a number) — dead CSS, not a rendering bug,
+left alone. The per-value-precision mismatch between `signClass` (colours
+red/green off the raw, unrounded value) and `formatPct`/`formatNumber`
+(now correctly zero out near-zero values at their OWN rounding precision)
+means a value like `-0.001` at 2dp now renders `"0.00%"` in red — text and
+colour briefly disagree. Fixing this properly needs the digit precision
+threaded into `signClass` at each call site, which lives in `src/ui/views/
+*.ts` — flagged here as a suggestion for whichever agent next touches the
+view file(s) where this is visible, not fixed in this pass.
+
+**Colour count**: grepped every hex literal in `styles.css` — the only
+values outside the current token system are three explicitly-historical
+ones inside a `:root` comment documenting what the palette used to be
+(`#07090d`/`#12161e`/`#232a38`/`#21d789`/`#f2495f`), never live in an actual
+declaration. The active palette (5 near-black surfaces, 3 text greys, 6
+neutral-graphite accent shades, 4 semantic hot/cold/neutral/warn pairs) was
+already disciplined by the prior true-black pass — nothing to trim here.
+
+Method: `npx tsc --noEmit`, `npm run build`, `vite preview` on port 4183,
+Playwright (`playwright-core` + the repo's cached Chromium binary) at
+390×844 loading `?demo=1` (the app's own deterministic-demo query flag —
+this sandbox has no route to Kraken/Revolut/GitHub raw content, so plain
+network screenshots rendered an empty `<main>`; `?demo=1` skips straight to
+`SyntheticDataSource` and renders fully) across Home, Tools, and Markets;
+real keyboard Tab traversal for focus-visible; `page.emulateMedia` for
+reduced-motion; CDP `Emulation.setEmulatedMedia` for reduced-transparency
+and prefers-contrast (both confirmed working in this Chromium build).
+
+Gate: tsc clean, 1178 vitest passed (7 new: 4 for `formatPct`/`formatNumber`,
+3 for `formatPriceSplit`), `npm run build` clean. Diff touches only
+`src/ui/format.ts`, `src/ui/styles.css`, `tests/ui/format.test.ts` — no
+`src/ui/views/*.ts` file touched, per this pass's scope.
