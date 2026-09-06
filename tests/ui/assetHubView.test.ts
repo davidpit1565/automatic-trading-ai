@@ -240,6 +240,158 @@ describe('renderAssetHub — the SIMULATED wallet is hidden entirely once a live
   });
 });
 
+describe('renderAssetHub — kill-switch banner on the Profit tab (2026-09-06 readiness/kill-switch audit)', () => {
+  // Found missing entirely: Home already showed this on its own copy of the
+  // "Real money" hero (#hv-kill-switch), but anyone landing directly on
+  // Crypto/Stocks → Profit (this exact hero, shown a second time) had zero
+  // indication trading might currently be paused.
+  it('shows the paused banner, with reason, when the kill switch is engaged on the real account', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      fetchState: async () =>
+        cloudState({
+          live: {
+            cash: 50,
+            positions: [],
+            killSwitchEngaged: true,
+            killSwitchReason: 'manual pause',
+            recentEvents: [],
+            externalBtcQuantity: 0,
+            equityHistory: [],
+          },
+        }),
+    });
+    await flush();
+
+    const banner = container.querySelector<HTMLElement>('#hub-kill-switch')!;
+    expect(banner.hidden).toBe(false);
+    expect(banner.textContent).toContain('paused');
+    expect(banner.textContent).toContain('manual pause');
+    // Wording must actually describe what the kill switch does (verified
+    // against `runLiveOrderFlow`/`manualKillSwitchCommand.mts`): it blocks
+    // exits as well as new entries, and never closes a position itself.
+    expect(banner.textContent).toContain('no new trades or exits');
+    expect(banner.querySelector('svg')).not.toBeNull();
+  });
+
+  it('hides the banner when the kill switch is not engaged', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      fetchState: async () =>
+        cloudState({
+          live: {
+            cash: 50,
+            positions: [],
+            killSwitchEngaged: false,
+            killSwitchReason: null,
+            recentEvents: [],
+            externalBtcQuantity: 0,
+            equityHistory: [],
+          },
+        }),
+    });
+    await flush();
+
+    expect(container.querySelector<HTMLElement>('#hub-kill-switch')!.hidden).toBe(true);
+  });
+});
+
+describe('renderAssetHub — liveSubtitle swap once real money is live (2026-09-06 readiness/kill-switch audit)', () => {
+  // Crypto's own static subtitle ("...SIMULATED money...") went stale the
+  // moment real money went live (2026-09-03) on this exact screen — right
+  // next to the real-money hero. `liveSubtitle` is how a caller opts in to
+  // a real-money-aware replacement; omitting it (Stocks, which never goes
+  // live) keeps the static `subtitle` exactly as before.
+  it('swaps to liveSubtitle once a live account exists', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      subtitle: 'SIMULATED money only.',
+      liveSubtitle: 'REAL money is live here.',
+      fetchState: async () =>
+        cloudState({
+          live: {
+            cash: 50,
+            positions: [],
+            killSwitchEngaged: false,
+            killSwitchReason: null,
+            recentEvents: [],
+            externalBtcQuantity: 0,
+            equityHistory: [],
+          },
+        }),
+    });
+    await flush();
+
+    expect(container.querySelector('#hub-subtitle')!.textContent).toBe('REAL money is live here.');
+  });
+
+  it('keeps the static subtitle when there is no live account, even with liveSubtitle configured', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      subtitle: 'SIMULATED money only.',
+      liveSubtitle: 'REAL money is live here.',
+      fetchState: async () => cloudState({ live: null }),
+    });
+    await flush();
+
+    expect(container.querySelector('#hub-subtitle')!.textContent).toBe('SIMULATED money only.');
+  });
+
+  it('never touches the subtitle when liveSubtitle is omitted (Stocks today)', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, { ...baseOpts, subtitle: 'static text', fetchState: async () => cloudState({ live: null }) });
+    await flush();
+
+    expect(container.querySelector('#hub-subtitle')!.textContent).toBe('static text');
+  });
+});
+
+describe('renderAssetHub — readiness list distinguishes a blocking failure from an informational-only one (2026-09-06 readiness audit)', () => {
+  // Verified against the real committed state/stocks-state.json: Stocks
+  // reads "NOT READY" for exactly one gating reason (benchmark), yet
+  // trades/consistency also read !ok (informational-only, for a hold-only
+  // strategy) and previously rendered with the identical amber warning icon
+  // as the one real blocker — no way to tell "doesn't count" from "this is
+  // why it's not ready" at a glance.
+  it('renders a genuinely-blocking criterion as "no" and an informational-only one as "info", not both as "no"', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      fetchState: async () =>
+        cloudState({
+          readiness: {
+            ready: false,
+            summary: 'NOT READY — vs buy-and-hold S&P 500 (SPY) -0.27%.',
+            criteria: [
+              { key: 'trades', ok: false, detail: '11 / 20 closed trades (informational)' },
+              { key: 'benchmark', ok: false, detail: 'vs buy-and-hold S&P 500 (SPY) -0.27%' },
+              { key: 'days', ok: true, detail: '37 / 14 days of history' },
+            ],
+            unmet: ['benchmark'],
+          },
+        }),
+    });
+    await flush();
+
+    const items = [...container.querySelectorAll<HTMLElement>('#hub-readiness .readiness-list li')];
+    const byKeyword = (text: string) => items.find((li) => li.textContent?.includes(text))!;
+    expect(byKeyword('closed trades').className).toContain('info');
+    expect(byKeyword('closed trades').className).not.toContain('no');
+    expect(byKeyword('buy-and-hold').className).toContain('no');
+    expect(byKeyword('days of history').className).toContain('ok');
+  });
+});
+
 describe("renderAssetHub — Profit tab 'leading vs Bitcoin' (found in review, 2026-09-03: used to mean merely profitable, not actually beating BTC's own return)", () => {
   function bitcoinScenario(overrides: { agentEquity: number; btcAnchor: number; btcNow: number }): CloudState {
     return cloudState({

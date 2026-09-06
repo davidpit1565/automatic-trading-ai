@@ -11,7 +11,7 @@
 
 import { mountEquityChartPanel } from '../equityChartPanel';
 import { attachCoinLogoFallback, baseCodeFromSymbol, completedLogoHtml } from '../coinLogo';
-import { formatPrice, formatPct, formatPriceSplit } from '../format';
+import { formatPrice, formatPct, formatPriceSplit, escapeHtml } from '../format';
 import type { CloudState } from '../cloudState';
 import type { ViewHandle } from '../viewLifecycle';
 
@@ -25,6 +25,15 @@ export interface AssetHubOptions {
   readonly fetchState: () => Promise<CloudState | null>;
   /** True to show the "vs Bitcoin" benchmark line on the Profit sub-page. */
   readonly showBenchmark: boolean;
+  /**
+   * Replaces `subtitle` once a live (real-money) account exists. Found
+   * missing in the 2026-09-06 readiness/kill-switch audit: Crypto's own
+   * `subtitle` hardcodes "SIMULATED money", which read as flatly false once
+   * real money actually went live (2026-09-03) on this exact screen — right
+   * next to the real-money hero. Omit for a section that never goes live
+   * (Stocks today), where the static `subtitle` is always accurate.
+   */
+  readonly liveSubtitle?: string;
   /** Mounted eagerly (Overview is the default sub-tab). */
   readonly renderOverview: (container: HTMLElement) => ViewHandle | void;
   /** Mounted lazily, once, the first time the Market sub-tab is opened. */
@@ -48,7 +57,7 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
 
   container.innerHTML = `
     <h2 class="view-title">${opts.title}</h2>
-    <p class="view-sub">${opts.subtitle}</p>
+    <p class="view-sub" id="hub-subtitle">${opts.subtitle}</p>
     <div class="hub-tabs" role="tablist">
       <button class="hub-tab active" data-hub="overview" role="tab" aria-selected="true">Overview</button>
       <button class="hub-tab" data-hub="history" role="tab" aria-selected="false">History</button>
@@ -93,6 +102,13 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
         <div class="hero-value" id="hub-real-equity"><span class="hero-value-major">—</span></div>
         <div class="hero-change" id="hub-real-change" hidden></div>
         <div class="hero-bench" id="hub-real-breakdown"></div>
+        <!-- Found in the 2026-09-06 readiness/kill-switch audit: this exact
+             "Real money" card is duplicated from Home (homeView.ts's
+             #home-live-hero), but only Home ever showed the kill-switch
+             banner — anyone landing here directly (Crypto/Stocks → Profit,
+             without passing through Home first) saw the real-money balance
+             with zero indication that trading might currently be paused. -->
+        <div class="kill-switch-banner" id="hub-kill-switch" hidden></div>
         <div id="hub-real-equity-chart"></div>
       </section>
       <!-- Dominant figure ONLY while there's no live account to show instead
@@ -124,6 +140,8 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
   const realEquityEl = container.querySelector<HTMLElement>('#hub-real-equity')!;
   const realChangeEl = container.querySelector<HTMLElement>('#hub-real-change')!;
   const realBreakdownEl = container.querySelector<HTMLElement>('#hub-real-breakdown')!;
+  const killSwitchBanner = container.querySelector<HTMLElement>('#hub-kill-switch')!;
+  const subtitleEl = container.querySelector<HTMLElement>('#hub-subtitle')!;
   const realEquityChartSlot = container.querySelector<HTMLElement>('#hub-real-equity-chart')!;
 
   const historyChart = mountEquityChartPanel(historyChartSlot, { currencySymbol: opts.currencySymbol });
@@ -240,6 +258,20 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
       live.externalBtcQuantity > 0
         ? `Cash ${money(live.cash)} · BTC holding ${money(btcValue)} (untracked)`
         : `Cash ${money(live.cash)}`;
+
+    // Same wording and icon as Home's identical banner (homeView.ts,
+    // #hv-kill-switch) — found missing here entirely in the 2026-09-06
+    // readiness/kill-switch audit. This is the exact same "Real money" hero,
+    // shown a second time on this tab; the kill-switch state must be visible
+    // wherever that hero is, not only when a viewer happens to have passed
+    // through Home first.
+    if (live.killSwitchEngaged) {
+      killSwitchBanner.hidden = false;
+      const reason = live.killSwitchReason ? ` — ${escapeHtml(live.killSwitchReason)}` : '';
+      killSwitchBanner.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12"/><path d="M15 6v12"/></svg><span>Real-money trading paused — no new trades or exits can execute; open positions stay open, unmonitored, until resumed${reason}</span>`;
+    } else {
+      killSwitchBanner.hidden = true;
+    }
     realEquityChart.setHistory(live.equityHistory);
   }
 
@@ -307,15 +339,29 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     // (renderReadiness in homeView.ts) — this list previously fell back to
     // raw ✓/✗ text glyphs, the one place in the app still mixing an
     // unrelated icon style into an otherwise consistent outlined set.
+    // Found in the 2026-09-06 readiness/kill-switch audit, verified against
+    // the real committed `state/stocks-state.json`: a criterion that's !ok
+    // but NOT in `r.unmet` is informational only (see
+    // `assessRealMoneyReadiness`'s `gateOnBenchmark`/`gateOnTradeStats`) —
+    // its own `detail` text already says "(informational — ...)", but it
+    // used to render with the exact same amber warning icon and "no" styling
+    // as a criterion that actually blocks readiness. Live example right now:
+    // Stocks reads "NOT READY" for one real reason (benchmark), yet the list
+    // showed THREE warning icons (trades, benchmark, consistency) with no way
+    // to tell at a glance that two of them don't count. A neutral "info"
+    // state (`r.unmet` is the one source of truth for what's actually
+    // blocking) fixes that without touching the assessment logic itself.
     const items = r.criteria
-      .map(
-        (c) =>
-          `<li class="${c.ok ? 'ok' : 'no'}"><svg class="crit-icon" viewBox="0 0 24 24" aria-hidden="true">${
-            c.ok
-              ? '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>'
-              : '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v6"/><path d="M12 16.5h.01"/>'
-          }</svg><span>${c.detail}</span></li>`,
-      )
+      .map((c) => {
+        const state = c.ok ? 'ok' : r.unmet.includes(c.key) ? 'no' : 'info';
+        const icon =
+          state === 'ok'
+            ? '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>'
+            : state === 'no'
+              ? '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v6"/><path d="M12 16.5h.01"/>'
+              : '<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5h.01"/>';
+        return `<li class="${state}"><svg class="crit-icon" viewBox="0 0 24 24" aria-hidden="true">${icon}</svg><span>${c.detail}</span></li>`;
+      })
       .join('');
     readinessEl.innerHTML =
       `<div class="block-head"><h2>Real-money readiness</h2>${badge}</div><ul class="readiness-list">${items}</ul>`;
@@ -336,6 +382,11 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
       return;
     }
     loadedOnce = true;
+    // Swap to the real-money-aware subtitle once a live account exists —
+    // see `liveSubtitle`'s own doc comment for why this can't stay static.
+    if (opts.liveSubtitle) {
+      subtitleEl.textContent = state.live ? opts.liveSubtitle : opts.subtitle;
+    }
     renderHistoryList(state);
     renderRealActivity(state);
     renderProfit(state);
