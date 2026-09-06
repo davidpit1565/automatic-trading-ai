@@ -704,7 +704,13 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
    square that breaks the pill shape — invisible at rest, only appearing
    once the pointer is actually over the field (confirmed via a real
    hover screenshot, not just reading the CSS), so it's easy to miss without
-   checking. Revolut X's own numeric inputs never show it. */
+   checking. Revolut X's own numeric inputs never show it.
+   Round-2 cross-screen audit: the identical bug was confirmed (same
+   hover-screenshot method) on Portfolio's own #pp-quantity number input —
+   the one sibling number input the Grid/Backtest/Validation pass explicitly
+   flagged as "a parallel pass's scope" and deliberately left unchecked.
+   Added here rather than leaving it for a future pass, since it's the same
+   narrowly-scoped selector-list pattern, not a shared-rule change. */
 #grid-levels::-webkit-inner-spin-button, #grid-levels::-webkit-outer-spin-button,
 #grid-amount::-webkit-inner-spin-button, #grid-amount::-webkit-outer-spin-button,
 #grid-cash::-webkit-inner-spin-button, #grid-cash::-webkit-outer-spin-button,
@@ -712,13 +718,15 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
 #bt-fee::-webkit-inner-spin-button, #bt-fee::-webkit-outer-spin-button,
 #val-fee::-webkit-inner-spin-button, #val-fee::-webkit-outer-spin-button,
 #val-spread::-webkit-inner-spin-button, #val-spread::-webkit-outer-spin-button,
-#val-slippage::-webkit-inner-spin-button, #val-slippage::-webkit-outer-spin-button {
+#val-slippage::-webkit-inner-spin-button, #val-slippage::-webkit-outer-spin-button,
+#pp-quantity::-webkit-inner-spin-button, #pp-quantity::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 #grid-levels, #grid-amount, #grid-cash,
 #bt-cash, #bt-fee,
-#val-fee, #val-spread, #val-slippage {
+#val-fee, #val-spread, #val-slippage,
+#pp-quantity {
   -moz-appearance: textfield;
 }
 

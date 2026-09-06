@@ -104,6 +104,38 @@ describe('Monitoring view (DOM integration)', () => {
     }
   });
 
+  // Round-2 cross-screen consistency: Backtest/Validation's own wide tables
+  // already hint an off-screen right edge via `.table-scroll-fade`; all four
+  // of this screen's tables (up to 9 columns) lacked the identical
+  // affordance despite being at least as wide.
+  it('wraps every wide table (opportunities, watchlist, history, alerts) in the shared scroll-fade affordance', async () => {
+    const container = await renderView();
+    container.querySelector<HTMLButtonElement>('#mon-scan-now')!.click();
+    for (
+      let i = 0;
+      i < 600 && !container.querySelector('#mon-status')!.textContent!.includes('Last scan');
+      i++
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    const select = container.querySelector<HTMLSelectElement>('#mon-watch-symbol')!;
+    select.value = select.options[0]!.value;
+    container.querySelector<HTMLButtonElement>('#mon-watch-add')!.click();
+
+    for (const hostId of ['#mon-watchlist', '#mon-history', '#mon-alerts']) {
+      const host = container.querySelector(hostId)!;
+      const table = host.querySelector('table.data-table');
+      if (!table) continue; // that table's own empty state — nothing to wrap
+      expect(host.querySelector('.table-scroll-fade table.data-table'), `${hostId} missing scroll-fade`).not.toBeNull();
+    }
+    // Opportunities: only assert the wrapper when a table actually rendered
+    // (the demo scan may or may not qualify a setup this run).
+    const opportunitiesTable = container.querySelector('#mon-opportunities table.data-table');
+    if (opportunitiesTable) {
+      expect(container.querySelector('#mon-opportunities .table-scroll-fade table.data-table')).not.toBeNull();
+    }
+  });
+
   it('manual watchlist add and favourite toggle work through the store', async () => {
     const container = await renderView();
     const select = container.querySelector<HTMLSelectElement>('#mon-watch-symbol')!;
