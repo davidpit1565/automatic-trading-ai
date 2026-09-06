@@ -14,6 +14,7 @@
 
 import { SyntheticWalletTradeSource } from '../src/core/copyTrade/syntheticWalletTradeSource';
 import { replayCopyTrade, type ReplayParams } from '../src/core/copyTrade/replayEngine';
+import { scoreWalletQuality } from '../src/core/copyTrade/walletQuality';
 
 const args = process.argv.slice(2);
 const flag = (name: string, fallback: string): string => {
@@ -24,6 +25,13 @@ const flag = (name: string, fallback: string): string => {
 const WALLETS = flag('wallet', '').length > 0 ? [flag('wallet', '')] : ['WHALE_1', 'WHALE_2', 'WHALE_3'];
 const DAYS = Number(flag('days', '45'));
 const ANCHOR = Date.now();
+
+// Zero-cost params: fills equal the wallet's own recorded prices exactly, so
+// the resulting ReplayResult reflects the wallet's OWN historical
+// performance, uncontaminated by our copy-trading latency/slippage/fee
+// friction assumptions (those are a "what would copying it cost us" concern,
+// separate from "how good is this wallet's own track record").
+const OWN_PERFORMANCE_PARAMS: ReplayParams = { detectionLatencyMs: 0, slippagePct: 0, feePct: 0, positionSizeUsd: 1_000 };
 
 const SCENARIOS: { name: string; params: ReplayParams }[] = [
   { name: 'Optimistic (fast bot, low slippage)', params: { detectionLatencyMs: 5_000, slippagePct: 0.3, feePct: 0.3, positionSizeUsd: 1_000 } },
@@ -71,10 +79,20 @@ async function main(): Promise<void> {
           num(result.aggregate.maxDrawdownPct, 2),
       );
     }
+
+    const quality = scoreWalletQuality(replayCopyTrade(trades, OWN_PERFORMANCE_PARAMS));
+    const scoreStr = quality.score === null ? 'n/a' : quality.score.toFixed(1);
+    console.log(
+      `Wallet quality score (own track record, zero-friction): ${scoreStr}/100 ` +
+        `[confidence: ${quality.confidence}, ${quality.tradeCount} closed trades, ` +
+        `${quality.tokensProfitable}/${quality.tokensTraded} tokens profitable] ` +
+        '— heuristic first pass, not validated; see walletQuality.ts.',
+    );
   }
   console.log(
     '\nNote: synthetic demo data only (SyntheticWalletTradeSource) — not real on-chain history. ' +
-      'Slippage/latency figures are a modeled approximation; see replayEngine.ts.',
+      'Slippage/latency figures are a modeled approximation; see replayEngine.ts. ' +
+      'Wallet quality scores are a modeled heuristic; see walletQuality.ts.',
   );
 }
 
