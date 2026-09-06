@@ -7737,3 +7737,47 @@ touched, no changes to any real-money-adjacent file
 (`server/liveOrchestrator.mts`, `revolutXBrokerAdapter.mts`,
 `liveEntryMirror.mts`, `liveExitFlow.mts`, `manualBuyCommand.mts`,
 `manualSellCommand.mts` — none opened by any of the 4 agents).
+
+## Round 4: remaining core-module correctness audit — 1 verified fix (2026-09-06)
+
+Continuing the same targeted-correctness approach into `src/core/**` modules
+none of the 3 prior rounds had covered: indicators, strategies, scan,
+validation (agent A), and data, monitor, feedback, portfolio (agent B).
+Same discipline as round 3 — fix only concretely-verified bugs, "nothing
+found" a valid and expected outcome, independently re-verified before
+merging.
+
+**Agent A (indicators/strategies/scan/validation): no bugs found.** Hand-
+traced RSI/EMA/SMA/MACD/Bollinger/ATR/ADX/Stochastic/volume against their
+textbook definitions with concrete number sequences, checked buy-hold/DCA/
+grid/trend strategy signal logic, and checked `marketScanner.ts`'s scoring
+plus `robustness.ts`/`walkForward.ts`/`performance.ts`'s statistics — all
+correct. Reported honestly as a clean result, no manufactured changes.
+
+**Agent B (data/monitor/feedback/portfolio) — 1 real bug found and fixed:
+overlapping-scan race in `MonitoringEngine.runScanOnce`.** PR #221.
+`IntervalScheduler` fires its task on every tick without waiting for the
+previous one to finish, and a scan can legitimately outlast its own
+interval (e.g. an exchange-wide slowdown pushing `krakenPublic.ts`'s
+per-symbol retry/backoff past a 5-minute interval across ~20 symbols).
+Two truly concurrent `runScanOnce` calls raced on `previouslyQualified` —
+whichever finished last silently clobbered the other's newer snapshot,
+corrupting the next cycle's disappearance tracking (a symbol that
+genuinely disappeared could permanently miss its `disappearedAt`, or the
+reverse). Fixed by coalescing an overlapping call onto the scan already in
+flight — the same in-flight-dedup pattern `CachingSource.getCandles`
+already uses in this codebase — rather than papering over one symptom.
+New regression test in `tests/monitor/monitoringEngine.test.ts` stalls a
+scan mid-flight, fires an overlapping call, and asserts both callers get
+the identical result with side effects (log/alert) firing exactly once.
+
+Also explicitly reviewed `realMoneyReadiness.ts` for any change that could
+make the real-money gate more permissive (this round's instructions
+flagged it as high-severity if found) — all six criteria correctly AND
+together, comparison directions correct, opt-outs narrowly scoped and
+documented as deliberate. No permissiveness issue found, nothing to flag.
+
+Gate: `tsc --noEmit` clean, `npm run build` clean, `vitest run` 1303/1303
+— independently re-verified in an isolated worktree before merging, same
+as every prior round. No changes to `src/ui/**`, `server/**`, or any
+real-money-adjacent file.
