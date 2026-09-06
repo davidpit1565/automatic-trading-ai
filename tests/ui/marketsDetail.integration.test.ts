@@ -323,6 +323,35 @@ describe('Coin detail: Trade tab Buy/Sell exposes its state to assistive tech', 
   });
 });
 
+describe('Coin detail: watchlist star exposes its state to assistive tech', () => {
+  it('sets aria-pressed and a state-reflecting aria-label, flipped by the toggle', async () => {
+    // Round-3 light-UX-nits sweep: the list-row `.mk-star` right above this
+    // one in marketsView.ts already gets aria-pressed + a dynamic aria-label
+    // — this detail-view star (`#mk-star`) had a static "Watch this market"
+    // label and no aria-pressed at all, so its accessible name never
+    // reflected the toggle, only the sighted-only `.active` class did.
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+    (container.querySelector('.market-row') as HTMLElement).click();
+    await waitFor(() => container.querySelector('#mk-star') !== null);
+
+    const star = container.querySelector<HTMLButtonElement>('#mk-star')!;
+    expect(star.getAttribute('aria-pressed')).toBe('false');
+    expect(star.getAttribute('aria-label')).toMatch(/^Add .+ to watchlist$/);
+
+    star.click();
+    expect(star.getAttribute('aria-pressed')).toBe('true');
+    expect(star.getAttribute('aria-label')).toMatch(/^Remove .+ from watchlist$/);
+
+    star.click();
+    expect(star.getAttribute('aria-pressed')).toBe('false');
+    expect(star.getAttribute('aria-label')).toMatch(/^Add .+ to watchlist$/);
+    handle.pause();
+  });
+});
+
 describe('Coin detail: pair-switcher is a floating overlay, not a page-pushing block', () => {
   it('nests inside the positioned .detail-head (its anchor) and closes on outside click / Escape', async () => {
     const container = document.createElement('section');

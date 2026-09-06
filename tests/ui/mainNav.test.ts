@@ -147,6 +147,33 @@ describe('main.ts global chrome (DOM integration)', () => {
     expect(document.activeElement).not.toBe(document.body);
   });
 
+  // Round-3 light-UX-nits sweep: `value` (Home's "Portfolio value"
+  // drill-down, opened by tapping the sim hero) has no bottom-nav button of
+  // its own — reached only via that hero and its own "← Home" back link.
+  it('keeps the Crypto tab active and the bottom nav keyboard-reachable while on the value drill-down', async () => {
+    await import('../../src/ui/main.ts');
+    await waitFor(() => document.getElementById('home-sim-hero') !== null);
+
+    const cryptoTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="crypto"]')!;
+    const hero = document.getElementById('home-sim-hero')!;
+    expect(hero.dataset['nav']).toBe('value');
+
+    hero.click();
+    await waitFor(() => document.getElementById('view-value')?.classList.contains('active') === true);
+
+    // Previously every `.nav-btn` failed `dataset.nav === 'value'` at once:
+    // all four lost `aria-selected` AND dropped to `tabIndex: -1`, making the
+    // whole bottom nav unreachable by Tab while this screen was open, with no
+    // tab shown as active either.
+    expect(cryptoTab.getAttribute('aria-selected')).toBe('true');
+    expect(cryptoTab.tabIndex).toBe(0);
+    expect(cryptoTab.classList.contains('active')).toBe(true);
+    document.querySelectorAll<HTMLElement>('.nav-btn:not([data-nav="crypto"])').forEach((b) => {
+      expect(b.getAttribute('aria-selected')).toBe('false');
+      expect(b.tabIndex).toBe(-1);
+    });
+  });
+
   // David asked (2026-09-06) to stop showing simulated-money data anywhere on
   // the site. portfolioView.ts is a standalone simulated (paper) trading
   // dashboard — its Tools-grid entry must be unreachable, while the

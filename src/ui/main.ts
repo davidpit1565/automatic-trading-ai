@@ -145,8 +145,15 @@ async function bootstrap(): Promise<void> {
     // order at a time; the rest reachable via the arrow-key handler below) —
     // previously all four were separate Tab stops, which isn't the native
     // tablist pattern.
+    // `value` (Home's "Portfolio value" drill-down) has no bottom-nav button
+    // of its own — it's reached only via Home's hero card and its own "←
+    // Home" back link — so without this alias every `.nav-btn` above failed
+    // `b.dataset['nav'] === name` at once: all four lost `aria-selected` AND
+    // dropped to `tabIndex: -1`, making the entire bottom nav unreachable by
+    // Tab while this screen was open, with no tab shown as active either.
+    const navName = name === 'value' ? 'crypto' : name;
     document.querySelectorAll<HTMLButtonElement>('.nav-btn').forEach((b) => {
-      const active = b.dataset['nav'] === name;
+      const active = b.dataset['nav'] === navName;
       b.classList.toggle('active', active);
       b.setAttribute('aria-selected', String(active));
       b.tabIndex = active ? 0 : -1;

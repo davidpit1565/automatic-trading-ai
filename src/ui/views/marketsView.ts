@@ -222,7 +222,7 @@ function detailHeaderHtml(
           <div class="row-sub">${m.symbol} · EUR</div>
         </div></div>
       </div>
-      <button class="star-btn ${starred ? 'active' : ''}" id="mk-star" aria-label="Watch this market"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+      <button class="star-btn ${starred ? 'active' : ''}" id="mk-star" aria-pressed="${starred}" aria-label="${starred ? 'Remove' : 'Add'} ${escapeHtml(m.label)} ${starred ? 'from' : 'to'} watchlist"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
       <div class="pair-menu" id="mk-pair-menu" role="listbox" hidden>${menuItems}</div>
     </div>
     <div class="detail-price-row">
@@ -823,6 +823,15 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         const nowStarred = getWatchlist().toggle(m.symbol);
         const btn = detailView.querySelector('#mk-star');
         btn?.classList.toggle('active', nowStarred);
+        // Matches the list-row `.mk-star`'s own aria-pressed/aria-label
+        // convention (this file, list rendering above) — this button had
+        // neither, so its accessible name never reflected the toggle, only
+        // the visual `.active` class did.
+        btn?.setAttribute('aria-pressed', String(nowStarred));
+        btn?.setAttribute(
+          'aria-label',
+          `${nowStarred ? 'Remove' : 'Add'} ${m.label} ${nowStarred ? 'from' : 'to'} watchlist`,
+        );
         if (nowStarred) {
           btn?.classList.add('pop');
           btn?.addEventListener('animationend', () => btn.classList.remove('pop'), { once: true });
