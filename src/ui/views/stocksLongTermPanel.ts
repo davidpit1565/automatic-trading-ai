@@ -24,15 +24,6 @@ const LONG_TERM_KEY = 'long-term';
  */
 const MEANINGFUL_TRADES = 20;
 
-function row(title: string, value: string): HTMLElement {
-  const r = document.createElement('div');
-  r.className = 'row';
-  r.innerHTML = `
-    <div class="row-main"><div><div class="row-title">${title}</div></div></div>
-    <div class="row-side"><span class="row-title">${value}</span></div>`;
-  return r;
-}
-
 export function renderStocksLongTermPanel(container: HTMLElement): ViewHandle {
   container.innerHTML = `
     <section class="block">
@@ -51,7 +42,7 @@ export function renderStocksLongTermPanel(container: HTMLElement): ViewHandle {
         <div class="hero-split"><span id="lt-trades"></span><span id="lt-open"></span></div>
       </section>
       <section class="block"><div class="block-head"><h2>Track record</h2></div>
-        <div class="stack stack-card" id="lt-stats"></div>
+        <div class="stack" id="lt-stats"></div>
       </section>
       <p class="muted-line" id="lt-status">Loading…</p>
     </div>`;
@@ -118,8 +109,17 @@ export function renderStocksLongTermPanel(container: HTMLElement): ViewHandle {
         }),
       );
     } else {
-      statsEl.appendChild(row('Win rate', standing.winRatePct === null ? 'n/a' : `${standing.winRatePct.toFixed(1)}%`));
-      statsEl.appendChild(row('Profit factor', standing.profitFactor === null ? 'n/a' : standing.profitFactor.toFixed(2)));
+      // Same "big number + small label" stat-row/stat-tile component the
+      // rest of the app's own at-a-glance summaries use (Grid, Validation,
+      // Backtest's comparison summary) — this was the one such summary
+      // still using the generic scrollable-list `.row` styling meant for
+      // an actual list of trades/positions, not two standalone metrics.
+      const statRow = document.createElement('div');
+      statRow.className = 'stat-row';
+      statRow.innerHTML = `
+        <div class="stat-tile"><div class="stat-tile-value">${standing.winRatePct === null ? 'n/a' : `${standing.winRatePct.toFixed(1)}%`}</div><div class="stat-tile-label">Win rate</div></div>
+        <div class="stat-tile"><div class="stat-tile-value">${standing.profitFactor === null ? 'n/a' : standing.profitFactor.toFixed(2)}</div><div class="stat-tile-label">Profit factor</div></div>`;
+      statsEl.appendChild(statRow);
     }
     const stamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     statusEl.textContent = `Live · updated ${stamp}`;

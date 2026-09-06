@@ -84,3 +84,53 @@ describe('Grid view — result presentation', () => {
     ]);
   });
 });
+
+describe('Grid view — Configure/Results section structure', () => {
+  it('groups the form under a Configure heading and results under a Results heading, with an empty state before the first run', () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderGridView(container, fakeSource(async () => ({ ok: true, value: [] })));
+
+    const headings = [...container.querySelectorAll('.block-head h2')].map((h) => h.textContent);
+    expect(headings).toEqual(['Configure', 'Results']);
+    expect(container.querySelector('#grid-results .empty')?.textContent).toMatch(/press Simulate/i);
+  });
+});
+
+describe('Grid view — loading state', () => {
+  it('shows the shared spinner while candle history loads, matching Backtest\'s own treatment', () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderGridView(container, fakeSource(async () => ({ ok: true, value: [] })));
+
+    container.querySelector<HTMLButtonElement>('#grid-run')!.click();
+    // The status update happens synchronously before the first `await`, so
+    // it's already on screen the instant .click() returns — no need to wait.
+    const status = container.querySelector('#grid-status')!;
+    expect(status.querySelector('.spinner')).not.toBeNull();
+    expect(status.textContent).toContain('Loading');
+  });
+});
+
+describe('Grid view — final equity tabular-price treatment', () => {
+  it('gives the Final equity tile the same two-tier decimal styling money values get elsewhere', async () => {
+    const candles = generateSyntheticCandles({
+      seed: 3, startPrice: 100, count: 200, timeframe: '1h',
+      startTimestamp: 1_700_000_000_000, drift: 0.001, volatility: 0.01,
+    });
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderGridView(container, fakeSource(async () => ({ ok: true, value: candles })));
+
+    // A small initial cash keeps final equity under 1000, where formatPrice
+    // actually carries a decimal point for tieredPriceHtml to split.
+    container.querySelector<HTMLInputElement>('#grid-cash')!.value = '80';
+    container.querySelector<HTMLButtonElement>('#grid-run')!.click();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    const value = container.querySelector('#grid-results .stat-tile-value')!;
+    expect(value.querySelector('.tiered-price')).not.toBeNull();
+    expect(value.querySelector('.tiered-minor')).not.toBeNull();
+  });
+});
