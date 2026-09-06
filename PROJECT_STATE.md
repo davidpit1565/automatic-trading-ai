@@ -7657,3 +7657,83 @@ Next step after this remains blocked on something only David can provide: a
 real on-chain data provider (API key + vendor choice — Bitquery leading
 candidate discussed). No further self-directed step exists in this area
 until that decision is made.
+
+## Round 3: targeted correctness + design-system audit — 4 verified fixes (2026-09-06)
+
+David asked to keep finding and fixing self-doable steps ("small and
+focused", his own framing) across both the new copy-trade module and the
+existing Kraken/Revolut X app, after rounds 1-2 (screen-by-screen, then
+cross-cutting UI dimensions) already shipped 142 improvements. Dispatched 4
+narrowly-scoped agents in parallel (disjoint file ownership to minimize
+conflicts), each instructed to fix only concretely-verified bugs — no
+speculative refactors, no manufactured findings, "nothing to fix" a valid
+outcome. Every PR was independently re-verified (hand-computed math,
+isolated-worktree gate re-run) before merging, same discipline as every
+other merge this session. All 4 merged: PR #217 (core trading-logic), #216
+(server automation), #218 (design-system), #219 (light UX nits).
+
+**#217 — `PaperAutoPilot.previewBestOpportunity` (`/tip` command) priced
+held positions at stale entry price, not current price**, when building
+the exposure snapshot fed to the risk engine — the identical bug class
+already fixed once for the real trading path (PR #48, 2026-08-04) had crept
+back into this newer preview-only call site. A position that ran up since
+entry read back as far less concentrated than it really is, so `/tip`
+could tell a human "you'd open this" when `runCycleOnce`'s real
+mark-to-market pricing would refuse it for exposure. Fixed by pricing held
+positions from the same market scan the method already runs (falling back
+to entry price only for a symbol the scan didn't return). New test in
+`tests/autopilot/paperAutoPilotTip.test.ts` seeds a known held position, a
+large synthetic run-up, and a tight exposure cap — confirmed red without
+the fix, green with it.
+
+**#216 — `server/systemMonitor.mts`'s `monitorSystemChanges` dropped an
+alert forever on a single failed Telegram send.** It persisted the new
+comparison baseline unconditionally, before checking whether the send
+actually succeeded — a transient failure silently and permanently lost the
+change (the next cycle compared against a baseline that already reflected
+it). Every sibling notification path in this codebase already followed the
+opposite, correct convention (persist "already notified" only after
+confirming `result.sent`); this was the one place that didn't. Fixed to
+match; new `tests/server/systemMonitorAlertRetry.test.ts` covers both a
+failed-send retry and the still-advances-on-no-change case.
+
+**#218 — one remaining bare "⚠" emoji** in Market Scan's warnings list and
+Validation's robustness-flags list, the last place mixing an emoji into
+the app's otherwise consistent outlined-SVG icon set. Replaced with the
+same outlined exclamation-circle path Home/Crypto's readiness list already
+uses. Every other item on the Revolut X design-system checklist (two-tier
+currency typography, tabular-nums, stat-tile reuse, sparkline-in-card,
+order-book depth bars, restrained color system, card elevation, status as
+color+text) was checked against the real code and found already compliant
+from prior rounds — reported as passing, not re-fixed speculatively.
+
+**#219 — two small UX nits**: (1) Home's "Portfolio value" drill-down
+(`#view-value`) has no bottom-nav button of its own, so `activateView`'s
+nav-highlighting loop matched nothing on that screen — every bottom-nav
+button lost `aria-selected` and dropped to `tabIndex: -1` at once, making
+the whole tablist unreachable by Tab while that screen was open. Fixed by
+aliasing `value` → `crypto` for highlighting only. (2) The coin-detail
+watchlist star (`#mk-star`) never set `aria-pressed` or an Add/Remove
+`aria-label`, unlike its list-row sibling in the same file which already
+did both correctly — brought into line.
+
+**Environment note worth recording**: all 4 agents this round reported the
+same discovery — this session's shared container gives concurrent
+background agents the same working directory (`/home/user/automatic-trading-ai`)
+rather than isolated checkouts, so an agent can find its branch swapped out
+from under it mid-task by a sibling agent. Each one detected this and
+recovered correctly (isolated `git worktree`, restoring the shared
+directory to the state a sibling left it in) with no data loss — but it's
+a real hazard for any future round that dispatches multiple agents in
+parallel against this same environment. The orchestrating session also
+reviewed every PR from an isolated worktree rather than the shared
+directory for the same reason.
+
+Gate (each PR individually, re-verified independently before merging):
+`tsc --noEmit` clean and `npm run build` clean on all 4; `vitest run` —
+1298/1298 (#217), 1299/1299 (#216), 1297/1297 (#218), 1299/1299 (#219).
+Combined result on `main` after all 4 merges: nothing under `src/core/copyTrade/`
+touched, no changes to any real-money-adjacent file
+(`server/liveOrchestrator.mts`, `revolutXBrokerAdapter.mts`,
+`liveEntryMirror.mts`, `liveExitFlow.mts`, `manualBuyCommand.mts`,
+`manualSellCommand.mts` — none opened by any of the 4 agents).
