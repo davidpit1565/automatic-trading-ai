@@ -262,19 +262,28 @@ export async function monitorSystemChanges(
     // Build alert if there are changes
     const message = buildChangeAlert(current, previous, now, label, currencySymbol);
 
-    // Store current state for next comparison
-    store.set('monitor-last-state', current);
-
     // Send alert if changes detected
     if (message) {
       const result = await sendTelegramMessage(message, telegram);
       if (result.sent) {
         console.log('System monitor alert sent.');
+        // Only advance the comparison baseline once the alert actually went
+        // out. Found in review, 2026-09-06: this used to store `current` as
+        // the new baseline unconditionally, before knowing whether the send
+        // succeeded — a transient Telegram failure silently and permanently
+        // dropped that change (the next cycle compared against the state
+        // that already reflected it, so the diff vanished with no retry),
+        // unlike every other notification in this codebase (see
+        // autopilotRunner.mts's maybeSendSummaries/maybeSendAllClear), which
+        // only persists "already notified" state after confirming `sent`.
+        store.set('monitor-last-state', current);
         store.set('monitor-last-alert', now);
       } else {
         console.log('System monitor alert failed:', result.reason);
       }
     } else {
+      // Nothing to report — safe to advance the baseline unconditionally.
+      store.set('monitor-last-state', current);
       console.log('System monitor: no changes detected.');
     }
   } catch (error) {
