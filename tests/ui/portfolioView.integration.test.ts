@@ -26,9 +26,54 @@ function slowSource(): ActiveDataSource {
   return { source, instruments: [INSTRUMENT], isLive: false, kind: 'demo', diagnostics: [] };
 }
 
+function readySource(): ActiveDataSource {
+  const source: MarketDataSource = {
+    name: 'fake',
+    getInstruments: async () => ({ ok: true, value: [INSTRUMENT] }),
+    getCandles: async () => ({
+      ok: true,
+      value: [{ timestamp: 0, open: 100, high: 100, low: 100, close: 100, volume: 1 }],
+    }),
+  };
+  return { source, instruments: [INSTRUMENT], isLive: false, kind: 'demo', diagnostics: [] };
+}
+
 beforeEach(() => {
   document.body.innerHTML = '';
   window.localStorage.clear();
+});
+
+describe('Portfolio view — currency symbol and zero-P&L colour', () => {
+  it('shows the € symbol on the hero equity value, not a bare number', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderPortfolioView(container, readySource());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(container.querySelector('#pp-equity .hero-value-currency')!.textContent).toBe('€');
+  });
+
+  it('a fresh (unmoved) portfolio is neutral, not coloured green, at 0.00% all time', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderPortfolioView(container, readySource());
+    await new Promise((r) => setTimeout(r, 0));
+    const change = container.querySelector('#pp-change')!;
+    expect(change.textContent).toContain('0.00%');
+    expect(change.className).not.toMatch(/\b(up|down)\b/);
+  });
+
+  it('positions and trade journal rows show € too', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const data = readySource();
+    renderPortfolioView(container, data);
+    await new Promise((r) => setTimeout(r, 0));
+    container.querySelector<HTMLButtonElement>('#pp-buy')!.click();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(container.querySelector('#pp-positions')!.textContent).toContain('€');
+    expect(container.querySelector('#pp-trades')!.textContent).toContain('€');
+  });
 });
 
 describe('Portfolio view — trade button re-entrancy', () => {

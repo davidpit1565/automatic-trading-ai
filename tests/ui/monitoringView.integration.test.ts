@@ -61,6 +61,23 @@ describe('Monitoring view (DOM integration)', () => {
     expect(container.querySelector('#mon-status')!.textContent).toContain('stopped');
   });
 
+  it('Start/Stop buttons reflect the engine state instead of both always being clickable', async () => {
+    const container = await renderView();
+    const start = container.querySelector<HTMLButtonElement>('#mon-start')!;
+    const stop = container.querySelector<HTMLButtonElement>('#mon-stop')!;
+    // Stopped initially: Start is the valid action, Stop is not.
+    expect(start.disabled).toBe(false);
+    expect(stop.disabled).toBe(true);
+
+    start.click();
+    expect(start.disabled).toBe(true);
+    expect(stop.disabled).toBe(false);
+
+    stop.click();
+    expect(start.disabled).toBe(false);
+    expect(stop.disabled).toBe(true);
+  });
+
   it('renders status as separate stat tiles, not one run-on sentence', async () => {
     const container = await renderView();
     // Stopped, no scan yet: just the two tiles that always apply.
@@ -101,6 +118,17 @@ describe('Monitoring view (DOM integration)', () => {
     } else {
       expect(container.querySelectorAll('#mon-history tbody tr').length).toBeGreaterThan(0);
       expect(container.querySelectorAll('#mon-alerts tbody tr').length).toBeGreaterThan(0);
+
+      // Confidence and Validation columns carry the app's own colour
+      // language (signClass / verdict-text-*) instead of flat, uncoloured
+      // text — every qualified opportunity's confidence is > 0, so it must
+      // be coloured "positive", and every verdict gets a matching class.
+      const oppConfidenceCells = container.querySelectorAll('#mon-opportunities tbody tr td:nth-child(3)');
+      expect(oppConfidenceCells.length).toBeGreaterThan(0);
+      oppConfidenceCells.forEach((cell) => expect(cell.className).toContain('positive'));
+
+      const historyVerdictCells = container.querySelectorAll('#mon-history tbody tr td:nth-child(7)');
+      historyVerdictCells.forEach((cell) => expect(cell.className).toMatch(/verdict-text-/));
     }
   });
 
@@ -136,6 +164,42 @@ describe('Monitoring view (DOM integration)', () => {
     }
   });
 
+  it('disables Scan now while a manual scan is in flight, and re-enables after', async () => {
+    const source = new SyntheticDataSource(ANCHOR);
+    const instrumentsResult = await source.getInstruments();
+    if (!instrumentsResult.ok) throw new Error('demo instruments unavailable');
+    let releaseGate: (() => void) | null = null;
+    const gate = new Promise<void>((resolve) => (releaseGate = resolve));
+    const slow: ActiveDataSource = {
+      source: {
+        name: 'slow',
+        getInstruments: () => source.getInstruments(),
+        getCandles: async (symbol, timeframe, limit) => {
+          await gate; // stays pending until the test releases it
+          return source.getCandles(symbol, timeframe, limit);
+        },
+      },
+      instruments: instrumentsResult.value,
+      isLive: false,
+      kind: 'demo',
+      diagnostics: [],
+    };
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderMonitoringView(container, slow);
+
+    const scanNow = container.querySelector<HTMLButtonElement>('#mon-scan-now')!;
+    expect(scanNow.disabled).toBe(false);
+    scanNow.click();
+    expect(scanNow.disabled).toBe(true);
+
+    releaseGate!();
+    for (let i = 0; i < 600 && scanNow.disabled; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    expect(scanNow.disabled).toBe(false);
+  });
+
   it('manual watchlist add and favourite toggle work through the store', async () => {
     const container = await renderView();
     const select = container.querySelector<HTMLSelectElement>('#mon-watch-symbol')!;
@@ -147,7 +211,9 @@ describe('Monitoring view (DOM integration)', () => {
 
     container.querySelector<HTMLButtonElement>('#mon-watchlist [data-fav]')!.click();
     rows = container.querySelectorAll('#mon-watchlist tbody tr');
-    expect(rows[0]!.textContent).toContain('★');
+    // The favourite marker is the app's own star icon (matching Markets'
+    // .star-btn), not a bare "★" glyph.
+    expect(rows[0]!.querySelector('.watch-fav-icon')).not.toBeNull();
 
     container.querySelector<HTMLButtonElement>('#mon-watchlist [data-del]')!.click();
     expect(container.querySelector('#mon-watchlist')!.textContent).toContain('empty');
