@@ -178,4 +178,112 @@ describe('Coin detail: pager names the neighbouring coin', () => {
     expect(container.querySelector<HTMLButtonElement>('#mk-prev')!.disabled).toBe(true);
     handle.pause();
   });
+
+  it('scrolls back to the top when switching coins, so the new header is not left off-screen', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+    (container.querySelector('.market-row') as HTMLElement).click();
+    await waitFor(() => container.querySelector('#mk-next') !== null);
+
+    const scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
+    (container.querySelector<HTMLButtonElement>('#mk-next')!).click();
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
+    handle.pause();
+  });
+});
+
+describe('Coin detail: view-mode tabs are a real ARIA tablist', () => {
+  it('carries role=tablist/tab and aria-selected, matching the category strip\'s own pattern', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+    (container.querySelector('.market-row') as HTMLElement).click();
+    await waitFor(() => container.querySelector('.view-tab') !== null);
+
+    expect(container.querySelector('#mk-view-tabs')!.getAttribute('role')).toBe('tablist');
+    const chartTab = container.querySelector<HTMLElement>('.view-tab[data-view="chart"]')!;
+    const tableTab = container.querySelector<HTMLElement>('.view-tab[data-view="table"]')!;
+    expect(chartTab.getAttribute('role')).toBe('tab');
+    expect(chartTab.getAttribute('aria-selected')).toBe('true');
+    expect(tableTab.getAttribute('aria-selected')).toBe('false');
+
+    tableTab.click();
+    await waitFor(() => container.querySelector('.view-tab[data-view="table"]')!.getAttribute('aria-selected') === 'true');
+    expect(container.querySelector('.view-tab[data-view="chart"]')!.getAttribute('aria-selected')).toBe('false');
+    handle.pause();
+  });
+});
+
+describe('Coin detail: Trade tab Buy/Sell exposes its state to assistive tech', () => {
+  it('sets aria-pressed on both sides, flipped by the toggle', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+    await openDetailAndSwitchTo(container, 'trade');
+    await waitFor(() => container.querySelector('.of-btn.buy') !== null);
+
+    const buyBtn = container.querySelector<HTMLButtonElement>('.of-btn.buy')!;
+    const sellBtn = container.querySelector<HTMLButtonElement>('.of-btn.sell')!;
+    expect(buyBtn.getAttribute('aria-pressed')).toBe('true');
+    expect(sellBtn.getAttribute('aria-pressed')).toBe('false');
+
+    sellBtn.click();
+    expect(buyBtn.getAttribute('aria-pressed')).toBe('false');
+    expect(sellBtn.getAttribute('aria-pressed')).toBe('true');
+    handle.pause();
+  });
+});
+
+describe('Coin detail: pair-switcher is a floating overlay, not a page-pushing block', () => {
+  it('nests inside the positioned .detail-head (its anchor) and closes on outside click / Escape', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+    (container.querySelector('.market-row') as HTMLElement).click();
+    await waitFor(() => container.querySelector('#mk-pair-toggle') !== null);
+
+    // Must be a DESCENDANT of .detail-head — CSS `position: absolute; top:
+    // 100%` only anchors correctly below the header if it lives inside the
+    // element that has `position: relative`, not merely next to it.
+    const head = container.querySelector('.detail-head')!;
+    const menu = container.querySelector('#mk-pair-menu')!;
+    expect(head.contains(menu)).toBe(true);
+
+    container.querySelector<HTMLButtonElement>('#mk-pair-toggle')!.click();
+    expect(menu.hasAttribute('hidden')).toBe(false);
+    expect(container.querySelector('#mk-pair-toggle')!.getAttribute('aria-expanded')).toBe('true');
+
+    // Tapping something else on the page (not the toggle, not the menu) closes it.
+    container.querySelector('.detail-stats-row')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(menu.hasAttribute('hidden')).toBe(true);
+
+    container.querySelector<HTMLButtonElement>('#mk-pair-toggle')!.click();
+    expect(menu.hasAttribute('hidden')).toBe(false);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(menu.hasAttribute('hidden')).toBe(true);
+    handle.pause();
+  });
+});
+
+describe('Coin detail: coin logo has the same broken-image fallback as the list', () => {
+  it('swaps a failed image for the letter tile instead of leaving a broken <img>', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+    (container.querySelector('.market-row') as HTMLElement).click();
+    await waitFor(() => container.querySelector('.detail-coin img.coin-logo') !== null);
+
+    const img = container.querySelector('.detail-coin img.coin-logo')!;
+    img.dispatchEvent(new Event('error'));
+    expect(container.querySelector('.detail-coin img.coin-logo')).toBeNull();
+    expect(container.querySelector('.detail-coin .coin-logo-tile')).not.toBeNull();
+    handle.pause();
+  });
 });

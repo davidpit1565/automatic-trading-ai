@@ -12,6 +12,7 @@
 import { mountEquityChartPanel } from '../equityChartPanel';
 import { attachCoinLogoFallback, baseCodeFromSymbol, completedLogoHtml } from '../coinLogo';
 import { formatPrice, formatPct, formatPriceSplit, escapeHtml } from '../format';
+import { skeletonRowsHtml } from '../loadingStates';
 import type { CloudState } from '../cloudState';
 import type { ViewHandle } from '../viewLifecycle';
 
@@ -85,7 +86,15 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
            Profit tab. Stays visible for Stocks (no live account there). -->
       <div id="hub-sim-history">
         <div id="hub-history-chart"></div>
-        <div class="stack stack-card" id="hub-history-list"><div class="empty">Loading…</div></div>
+        <!-- Shimmering row placeholders, not a bare "Loading…" line — a
+             plain text row collapses this whole card down to one short line
+             (confirmed by screenshot: a single pill floating over an
+             otherwise-blank viewport) and then the real rows shove
+             everything below back down once they land. skeletonRowsHtml
+             already existed for exactly this (marketsView.ts/valueView.ts
+             use the same shimmer treatment for their own first paint) but
+             had no caller on this tab. -->
+        <div class="stack stack-card" id="hub-history-list">${skeletonRowsHtml(3)}</div>
       </div>
     </div>
     <div class="hub-panel" data-hub-panel="market"></div>
@@ -201,8 +210,16 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     for (const e of live.recentEvents) {
       const filled = e.event === 'filled';
       const row = el('div', `row trade ${filled ? 'buy' : 'sell'}`);
+      // Same coin-logo treatment the SIMULATED trade rows just above already
+      // use (renderHistoryList) — real bug, found 2026-09-06 by screenshot:
+      // this list showed a bare status pill with no identity at all, reading
+      // sparser/less finished than every other trade row in the app. Not
+      // every real audit entry's intent id carries a parseable symbol (a
+      // pre-trade verification failure, the kill switch) — those correctly
+      // fall back to the plain layout rather than a wrong or missing icon.
+      const icon = e.symbol ? completedLogoHtml(baseCodeFromSymbol(e.symbol)) : '';
       row.innerHTML = `
-        <div class="row-main"><div><div class="row-title"><span class="pill ${filled ? 'buy' : 'sell'}">${filled ? 'FILLED' : 'REJECTED'}</span></div>
+        <div class="row-main">${icon}<div><div class="row-title"><span class="pill ${filled ? 'buy' : 'sell'}">${filled ? 'FILLED' : 'REJECTED'}</span>${e.symbol ? ` ${e.symbol}` : ''}</div>
           <div class="row-sub">${e.detail}</div></div></div>
         <div class="row-side"><span class="row-sub">${new Date(e.at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></div>`;
       realActivityListEl.appendChild(row);
@@ -251,12 +268,24 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     // Always show cash (matches Home's #hv-live-cash) — previously this
     // whole line vanished whenever there was no untracked BTC holding,
     // leaving the card with no cash/composition detail at all.
-    const btcPrice = state.marketSnapshot.find((m) => m.symbol === 'XBTEUR')?.price ?? 0;
-    const btcValue = live.externalBtcQuantity * btcPrice;
+    const btcPrice = state.marketSnapshot.find((m) => m.symbol === 'XBTEUR')?.price;
     realBreakdownEl.hidden = false;
+    // Real-money-safety fix, found 2026-09-06 by checking the actual
+    // committed crypto state file: it carries no `market-snapshot` field at
+    // all (that field only ever gets populated for Stocks), so `btcPrice`
+    // is always undefined here for Crypto today. The previous `?? 0`
+    // fallback would have priced any real untracked BTC holding at €0.00 —
+    // a confidently-wrong figure for an actual balance, not an honestly
+    // "unavailable" one — the moment `externalBtcQuantity` is next nonzero
+    // (it has been before: David converted EUR→BTC manually, 2026-09-03).
+    // Not reproducible against today's real state (externalBtcQuantity is 0
+    // right now, so nothing currently renders €0.00), but the code path is
+    // real and provably reachable, so it's fixed rather than left latent.
     realBreakdownEl.textContent =
       live.externalBtcQuantity > 0
-        ? `Cash ${money(live.cash)} · BTC holding ${money(btcValue)} (untracked)`
+        ? btcPrice
+          ? `Cash ${money(live.cash)} · BTC holding ${money(live.externalBtcQuantity * btcPrice)} (untracked)`
+          : `Cash ${money(live.cash)} · BTC holding ${live.externalBtcQuantity} BTC (untracked, price unavailable)`
         : `Cash ${money(live.cash)}`;
 
     // Same wording and icon as Home's identical banner (homeView.ts,

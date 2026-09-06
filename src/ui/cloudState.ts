@@ -142,8 +142,12 @@ export interface LiveAccountState {
   readonly killSwitchEngaged: boolean;
   readonly killSwitchReason: string | null;
   /** Real (not simulated) trade outcomes — filled or broker-rejected —
-   * newest first, capped to a short recent list. */
-  readonly recentEvents: { at: number; event: string; detail: string }[];
+   * newest first, capped to a short recent list. `symbol`, when parseable
+   * from the audit entry's own intent id (not every entry has one — e.g. a
+   * pre-trade symbol-verification failure or the kill switch), lets the UI
+   * show the same coin icon its simulated trade rows already do instead of
+   * a bare status pill with no identity at all. */
+  readonly recentEvents: { at: number; event: string; detail: string; symbol?: string | null }[];
   /** BTC sitting in the real account outside the bot's own tracked
    * positions (David converted EUR→BTC manually while funding the account,
    * 2026-09-03) — reporting only, never included in trade-sizing equity. */
@@ -189,7 +193,7 @@ interface RawState {
   'live:live-cash-eur'?: number;
   'live:live-open-positions'?: Record<string, RawLivePosition> | null;
   'live:kill-switch'?: { engaged?: boolean; reason?: string | null };
-  'live:audit-log'?: Array<{ timestamp?: number; event?: string; detail?: string }>;
+  'live:audit-log'?: Array<{ timestamp?: number; event?: string; detail?: string; intentId?: string }>;
   'live:live-external-btc-qty'?: number;
   'live:live-equity-history'?: Array<{ at: number; equity: number }>;
 }
@@ -219,6 +223,15 @@ export function tidyNoteNumbers(note: string): string {
   return note.replace(/\d+\.\d{5,}/g, (n) => formatPrice(Number(n)));
 }
 
+/** Pull the traded symbol out of a live audit entry's own intent id, e.g.
+ * `"live-entry:ADAEUR:manual-reconcile-20260904:exit:..."` → `"ADAEUR"`.
+ * Not every intent carries one (a pre-trade symbol-verification failure like
+ * `"verify-symbol-exists"`, or `"manual-kill-switch"`) — those correctly
+ * return null rather than a wrong guess. */
+function parseLiveEntrySymbol(intentId: string | undefined): string | null {
+  return /^live-entry:([A-Z0-9]+):/.exec(intentId ?? '')?.[1] ?? null;
+}
+
 /** Real account state is null (not an all-zero object) until the live
  * ledger has ever been initialized — e.g. the stocks state file, which
  * carries no 'live:' keys at all, must not render an empty "€0.00" real
@@ -240,7 +253,12 @@ function parseLiveAccountState(raw: RawState): LiveAccountState | null {
   const killSwitch = raw['live:kill-switch'];
   const recentEvents = (raw['live:audit-log'] ?? [])
     .filter((e) => e.event === 'filled' || e.event === 'rejected')
-    .map((e) => ({ at: e.timestamp ?? 0, event: e.event ?? '', detail: tidyNoteNumbers(e.detail ?? '') }))
+    .map((e) => ({
+      at: e.timestamp ?? 0,
+      event: e.event ?? '',
+      detail: tidyNoteNumbers(e.detail ?? ''),
+      symbol: parseLiveEntrySymbol(e.intentId),
+    }))
     .sort((a, b) => b.at - a.at)
     .slice(0, 5);
   return {
