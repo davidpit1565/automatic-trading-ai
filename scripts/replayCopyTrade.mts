@@ -15,6 +15,8 @@
 import { SyntheticWalletTradeSource } from '../src/core/copyTrade/syntheticWalletTradeSource';
 import { replayCopyTrade, type ReplayParams } from '../src/core/copyTrade/replayEngine';
 import { scoreWalletQuality } from '../src/core/copyTrade/walletQuality';
+import { detectConsensus } from '../src/core/copyTrade/consensusSignal';
+import type { WalletTrade } from '../src/core/copyTrade/walletTradeSource';
 
 const args = process.argv.slice(2);
 const flag = (name: string, fallback: string): string => {
@@ -40,9 +42,16 @@ const SCENARIOS: { name: string; params: ReplayParams }[] = [
   { name: 'Pessimistic (thin liquidity, high latency)', params: { detectionLatencyMs: 300_000, slippagePct: 5, feePct: 0.5, positionSizeUsd: 1_000 } },
 ];
 
+// Two independent wallets moving into the same token within ~6h of each
+// other is the "consensus" candidate window — a placeholder assumption
+// (see consensusSignal.ts), not a measured constant.
+const CONSENSUS_WINDOW_MS = 6 * 3_600_000;
+const CONSENSUS_MIN_WALLETS = 2;
+
 async function main(): Promise<void> {
   const source = new SyntheticWalletTradeSource(ANCHOR);
   const sinceMs = ANCHOR - DAYS * 86_400_000;
+  const allTrades: WalletTrade[] = [];
 
   for (const wallet of WALLETS) {
     const fetched = await source.getTrades(wallet, sinceMs, ANCHOR);
@@ -51,6 +60,7 @@ async function main(): Promise<void> {
       continue;
     }
     const trades = fetched.value;
+    allTrades.push(...trades);
     console.log(`\n=== Wallet ${wallet} — ${trades.length} synthetic trades over ${DAYS}d ===`);
     if (trades.length === 0) {
       console.log('(no trades in window)');
@@ -89,10 +99,29 @@ async function main(): Promise<void> {
         '— heuristic first pass, not validated; see walletQuality.ts.',
     );
   }
+
+  if (WALLETS.length > 1) {
+    const events = detectConsensus(allTrades, { windowMs: CONSENSUS_WINDOW_MS, minWallets: CONSENSUS_MIN_WALLETS });
+    console.log(`\n=== Consensus check across ${WALLETS.length} tracked wallets (window: ${CONSENSUS_WINDOW_MS / 3_600_000}h, min ${CONSENSUS_MIN_WALLETS} wallets) ===`);
+    if (events.length === 0) {
+      console.log('(no consensus clusters found in this window)');
+    } else {
+      for (const event of events) {
+        const when = new Date(event.windowStart).toISOString();
+        console.log(
+          `${when} — ${event.side.toUpperCase()} ${event.symbol} (${event.chain}): ` +
+            `${event.wallets.length} wallets [${event.wallets.join(', ')}], ${event.tradeCount} trades`,
+        );
+      }
+    }
+    console.log('Detection only — not scored, not alerted on, not connected to any trading decision. See consensusSignal.ts.');
+  }
+
   console.log(
     '\nNote: synthetic demo data only (SyntheticWalletTradeSource) — not real on-chain history. ' +
       'Slippage/latency figures are a modeled approximation; see replayEngine.ts. ' +
-      'Wallet quality scores are a modeled heuristic; see walletQuality.ts.',
+      'Wallet quality scores are a modeled heuristic; see walletQuality.ts. ' +
+      'Consensus clustering is a modeled tradeoff; see consensusSignal.ts.',
   );
 }
 
