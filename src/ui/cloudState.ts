@@ -42,6 +42,15 @@ export interface CloudReadiness {
   readonly ready: boolean;
   readonly summary: string;
   readonly criteria: CloudReadinessCriterion[];
+  /**
+   * Keys of criteria that actually block `ready` (see
+   * `assessRealMoneyReadiness`'s own `unmet`). Was parsed out of the raw
+   * state entirely until the 2026-09-06 readiness audit — without it, the
+   * UI had no way to tell a genuinely-blocking `!ok` criterion apart from an
+   * informational one (e.g. Stocks' trades/consistency, never gating for a
+   * hold-only strategy) that also happens to read `!ok`.
+   */
+  readonly unmet: readonly string[];
 }
 
 /** One curated symbol's last-known price, as recorded by the cloud agent's
@@ -163,6 +172,7 @@ interface RawState {
     ready?: boolean;
     summary?: string;
     criteria?: Array<{ key?: string; ok?: boolean; detail?: string }>;
+    unmet?: string[];
   };
   'market-snapshot'?: {
     symbols?: Array<{ symbol?: string; price?: number; changePct?: number; updatedAt?: number }>;
@@ -317,16 +327,25 @@ async function fetchCloudStateOnce(fetchFn: typeof fetch, stateUrl: string): Pro
 
     const anchor = raw['benchmark-anchor'];
     const rawReadiness = raw['real-money-readiness'];
+    const readinessCriteria = (rawReadiness?.criteria ?? []).map((c) => ({
+      key: c.key ?? '',
+      ok: c.ok === true,
+      detail: c.detail ?? '',
+    }));
     const readiness: CloudReadiness | null =
       rawReadiness && typeof rawReadiness.ready === 'boolean'
         ? {
             ready: rawReadiness.ready,
             summary: rawReadiness.summary ?? '',
-            criteria: (rawReadiness.criteria ?? []).map((c) => ({
-              key: c.key ?? '',
-              ok: c.ok === true,
-              detail: c.detail ?? '',
-            })),
+            criteria: readinessCriteria,
+            // Falls back to "every unmet criterion blocks" (the pre-2026-09-06
+            // behavior) when the raw state has no `unmet` array at all — an
+            // old/malformed state file, say — rather than defaulting to `[]`,
+            // which would instead read as "nothing blocks", silently
+            // demoting every real blocker to merely informational.
+            unmet: Array.isArray(rawReadiness.unmet)
+              ? rawReadiness.unmet
+              : readinessCriteria.filter((c) => !c.ok).map((c) => c.key),
           }
         : null;
     return {
