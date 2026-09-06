@@ -6696,3 +6696,134 @@ Gate: `tsc --noEmit` clean, 1207/1207 vitest passed (4 new: 2 in
 `src/ui/views/monitoringView.ts`, `src/ui/views/stocksMarketPanel.ts` + the
 2 test files above only — no shared/tokens file, no other view file
 touched.
+
+## Round-2 deep dive: real-money readiness / kill-switch / live-vs-simulated UX audit — 6 verified fixes, 2 flagged capital-protection (2026-09-06)
+
+Part of David's "compare against Revolut X, ship 200 serious improvements"
+round 2 — this agent's slice, unlike round 1's per-SCREEN split, was the
+app's most safety-critical SURFACE wherever it appears: the real-money
+readiness checklist, the kill switch, and any live-vs-simulated confirmation/
+status UI. Read this file's own prior "The simulated wallet is now hidden
+everywhere once real money is live" entry (2026-09-05) first, specifically so
+nothing here re-breaks that intentional hide — confirmed nothing does.
+
+Before proposing anything, read the actual kill-switch code, not just its
+UI text: `PersistedKillSwitch` (`src/core/autopilot/killSwitch.ts`),
+`runLiveOrderFlow` (`server/liveOrchestrator.mts`), and
+`manualKillSwitchCommand.mts`'s own doc comment, which states plainly that
+`/pause` "halts every live order this project can place — new entries AND
+exits alike." Cross-checked against `PaperAutoPilot.runCycleOnce`
+(`src/core/autopilot/paperAutoPilot.ts`): the kill-switch check sits before
+exits and entries both, skipping the whole cycle. Confirmed: engaging the
+kill switch does not itself close any position — an open real-money position
+sits exactly as it is, with no automatic exit possible, until a human
+resumes.
+
+**Flagged first, per this task's own instruction — capital-protection-relevant,
+verified extra carefully:**
+
+1. **The kill-switch "paused" banner never said what pausing actually does,
+   and a reasonable reading of it is wrong.** Home's `#hv-kill-switch`
+   (`homeView.ts`) read only "Real-money trading paused — {reason}". A
+   reader could easily assume "paused" means only new trades stop while an
+   open position is still being watched and can still be closed for them —
+   checked against the code above, neither is true. Reworded to state the
+   actual behavior plainly: "Real-money trading paused — no new trades or
+   exits can execute; open positions stay open, unmonitored, until
+   resumed{reason}". This is the single highest-priority finding of this
+   pass — the whole point of a kill-switch banner is to accurately describe
+   what safety net does and doesn't exist right now, and the old wording
+   didn't.
+2. **The kill-switch banner existed on Home but was entirely absent from
+   the Crypto/Stocks hub's own "Real money" card (Profit tab)** — the exact
+   same hero, shown a second time on the app's own asset-hub screen
+   (`assetHubView.ts`). Anyone landing directly on Crypto → Profit without
+   passing through Home first saw the real-money balance with zero
+   indication that trading might currently be paused. Added the identical
+   banner (`#hub-kill-switch`), same wording, same icon, driven by the same
+   `state.live.killSwitchEngaged`/`killSwitchReason` fields already fetched
+   there.
+
+**Other verified fixes:**
+
+3. **Crypto's own subtitle hardcoded "SIMULATED money" even after real
+   money went live 2026-09-03** (`cryptoView.ts`: "The real cloud agent —
+   SIMULATED money, matches the Telegram alerts.") — this exact text
+   renders on every sub-tab of the Crypto hub, including Overview and
+   Profit, which is where the REAL-money hero has lived since real money
+   went live. "SIMULATED money" directly under a real-money balance is
+   exactly the real-vs-simulated confusion this audit was asked to hunt
+   for. Added `AssetHubOptions.liveSubtitle`, swapped in once
+   `state.live` exists: "The real cloud agent — REAL money is live here.
+   The simulated paper agent keeps running underneath but is no longer the
+   primary account shown." Stocks (never goes live) passes no
+   `liveSubtitle` and is untouched.
+4. **The readiness checklist rendered a purely-informational unmet
+   criterion identically to one that actually blocks readiness** — same
+   amber warning icon, same "no" styling, in both `homeView.ts`'s and
+   `assetHubView.ts`'s copies of the list. `assessRealMoneyReadiness`
+   already marks some criteria non-gating (`gateOnBenchmark`/
+   `gateOnTradeStats` — e.g. Stocks' trades/consistency, never gating for a
+   hold-only strategy) and already appends "(informational — ...)" to their
+   `detail` text, but the list never used that distinction visually.
+   Verified live against the real committed `state/stocks-state.json`:
+   Stocks currently reads "NOT READY" for exactly one real reason
+   (benchmark, -0.27% vs SPY), yet the list showed THREE amber warning
+   icons (trades, benchmark, consistency) with no way to tell at a glance
+   that two of them don't count — a user reading top-to-bottom would
+   reasonably conclude all three are why it's not ready. Fixed by adding
+   `unmet: readonly string[]` to `CloudReadiness` (was parsed out of the
+   raw state entirely until now) and a third neutral "info" li state,
+   keyed off `r.unmet.includes(c.key)` rather than parsing the detail
+   string. Defensive fallback: if `unmet` itself is absent from the raw
+   state (old/malformed data), every `!ok` criterion is treated as
+   blocking — the pre-fix behavior — rather than defaulting to "nothing
+   blocks."
+5. **Grid Simulation / Backtesting Lab / Validation's results carried no
+   SIMULATED tag anywhere**, unlike every account screen in the app (Home,
+   Crypto, Stocks, Portfolio all tag simulated data explicitly). All three
+   are pure historical-backtest tools with no live money behind them at
+   all — added the same `tag-sim` "SIMULATED" badge to each one's main
+   results heading, matching the existing convention exactly
+   (`<h2>Results <span class="tag-sim">SIMULATED</span></h2>`, same pattern
+   `homeView.ts`'s "Open positions" heading already uses).
+
+**Checked, found already correct, not touched:** the SIMULATED-wallet-hide
+logic from 2026-09-05 (`#hub-sim-hero`/`#hub-sim-history`/`#hub-readiness`
+hiding once `state.live` exists) — re-verified with a real screenshot of the
+real committed live state, still correct, nothing here re-broke it. History
+tab's real-vs-simulated sections are mutually exclusive
+(`realActivityWrap.hidden = !live`, `simHistoryWrap.hidden = Boolean(live)`),
+so no missing-tag ambiguity is actually reachable there. The Telegram-side
+kill-switch messaging (`buildKillSwitchKeyboardIntro`, "עוצר את כל המסחר
+בכסף אמיתי מיידית") was already reasonably accurate ("stops ALL trading"),
+unlike the web banner — left alone.
+
+Method: `fintech-dashboard-polish`/`apple-design` loaded first. Read the
+kill-switch/readiness code paths (`killSwitch.ts`, `liveOrchestrator.mts`,
+`manualKillSwitchCommand.mts`, `realMoneyReadiness.ts`) before writing a word
+of UI copy — required by this task, since the whole point was catching UI
+text that doesn't match actual behavior. Built `dist/`, ran `vite preview`,
+real Playwright (`playwright-core`, `/opt/pw-browsers/chromium`, 390×844,
+`?demo=1`) with `page.route` mocking BOTH the real committed
+`state/autopilot-state.json` (real money live, kill switch forced engaged to
+verify the banner) and `state/stocks-state.json` (pre-live, informational
+vs blocking readiness criteria) — every fix above is backed by a real
+before/after screenshot, not a code-only assertion.
+
+Tests: 3 new in `cloudState.test.ts` (`unmet` parsing, empty-criteria
+default, fallback-to-all-blocking when `unmet` itself is absent), 7 new in
+`assetHubView.test.ts` (kill-switch banner shown/hidden with reason,
+`liveSubtitle` swap in both directions and when omitted, readiness
+info-vs-no distinction), 1 new in `homeView.integration.test.ts`
+(info-vs-no distinction) plus wording assertions added to its existing
+kill-switch test, 1 new in `backtestView.integration.test.ts` (SIMULATED
+tag), assertions added to existing tests in `gridView.integration.test.ts`
+and `validationView.integration.test.ts` (SIMULATED tag).
+
+Gate: `tsc --noEmit` clean, 1214/1214 vitest passed (up from 1210 baseline),
+`npm run build` clean. Diff: `src/ui/cloudState.ts`, `src/ui/styles.css`,
+`src/ui/views/assetHubView.ts`, `src/ui/views/backtestView.ts`,
+`src/ui/views/cryptoView.ts`, `src/ui/views/gridView.ts`,
+`src/ui/views/homeView.ts`, `src/ui/views/validationView.ts` + 6 test files
+— nothing under `server/**`, `state/**`, or `src/core/**`.

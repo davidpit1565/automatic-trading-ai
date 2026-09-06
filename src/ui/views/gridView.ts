@@ -68,7 +68,11 @@ export function renderGridView(container: HTMLElement, data: ActiveDataSource): 
       <div class="status-line" id="grid-status"></div>
     </section>
     <section class="block">
-      <div class="block-head"><h2>Results</h2></div>
+      <!-- Found in the 2026-09-06 readiness/kill-switch audit: unlike every
+           account screen (Home, Crypto, Stocks, Portfolio), this tool's
+           results carried no SIMULATED tag at all despite being a pure
+           historical backtest with no live money behind it whatsoever. -->
+      <div class="block-head"><h2>Results <span class="tag-sim">SIMULATED</span></h2></div>
       <div id="grid-results"><div class="empty">Configure a grid above and press Simulate to see results.</div></div>
     </section>
   `;

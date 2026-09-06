@@ -160,6 +160,37 @@ describe('Home view (DOM integration)', () => {
     expect(card.querySelector('.readiness-list li.no')).not.toBeNull();
   });
 
+  it('renders an informational-only unmet criterion as "info", distinct from a criterion that actually blocks readiness (2026-09-06 readiness audit)', async () => {
+    const raw = {
+      'portfolio-engine': { cash: 5954, initialCash: 10000, baseCurrency: 'EUR' },
+      'open-positions': [],
+      'audit-log': [],
+      'equity-history': [],
+      'real-money-readiness': {
+        ready: false,
+        summary: 'NOT READY — vs buy-and-hold BTC +5.00%.',
+        criteria: [
+          { key: 'trades', ok: false, detail: '11 / 20 closed trades (informational)' },
+          { key: 'benchmark', ok: false, detail: 'vs buy-and-hold BTC +5.00%' },
+          { key: 'days', ok: true, detail: '20 / 14 days of history' },
+        ],
+        unmet: ['benchmark'],
+      },
+    };
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: true, json: () => Promise.resolve(raw) }));
+
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderHomeView(container, await makeData());
+
+    await waitFor(() => container.querySelector('#home-readiness .readiness-list') !== null);
+    const items = [...container.querySelectorAll<HTMLElement>('#home-readiness .readiness-list li')];
+    const byText = (text: string) => items.find((li) => li.textContent?.includes(text))!;
+    expect(byText('closed trades').className).toContain('info');
+    expect(byText('closed trades').className).not.toContain('no');
+    expect(byText('buy-and-hold').className).toContain('no');
+  });
+
   it('hides the real-money section entirely when the live ledger has never been initialized', async () => {
     const raw = { 'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'EUR' } };
     vi.stubGlobal('fetch', () => Promise.resolve({ ok: true, json: () => Promise.resolve(raw) }));
@@ -245,6 +276,14 @@ describe('Home view (DOM integration)', () => {
     // single outlined-SVG icon language.
     expect(container.querySelector('#hv-kill-switch svg')).not.toBeNull();
     expect(container.querySelector('#hv-kill-switch')!.textContent).not.toContain('⏸');
+    // 2026-09-06 readiness/kill-switch audit: the old wording just said
+    // "paused" with no scope — verified against
+    // `runLiveOrderFlow`/`manualKillSwitchCommand.mts` that engaging the
+    // kill switch blocks BOTH new entries and exits and never closes a
+    // position itself, so the banner must say exactly that instead of
+    // leaving a reader to guess whether an open position is still protected.
+    expect(container.querySelector('#hv-kill-switch')!.textContent).toContain('no new trades or exits');
+    expect(container.querySelector('#hv-kill-switch')!.textContent).toContain('open positions stay open');
   });
 
   it('clears the "vs Bitcoin" banner if a later cycle cannot price BTC (no stale comparison shown as current)', async () => {

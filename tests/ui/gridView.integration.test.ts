@@ -91,8 +91,8 @@ describe('Grid view — Configure/Results section structure', () => {
     document.body.appendChild(container);
     renderGridView(container, fakeSource(async () => ({ ok: true, value: [] })));
 
-    const headings = [...container.querySelectorAll('.block-head h2')].map((h) => h.textContent);
-    expect(headings).toEqual(['Configure', 'Results']);
+    const headings = [...container.querySelectorAll('.block-head h2')].map((h) => h.textContent?.trim());
+    expect(headings).toEqual(['Configure', 'Results SIMULATED']);
     expect(container.querySelector('#grid-results .empty')?.textContent).toMatch(/press Simulate/i);
   });
 });

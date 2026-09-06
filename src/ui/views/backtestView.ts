@@ -48,7 +48,10 @@ export function renderBacktestView(container: HTMLElement, data: ActiveDataSourc
       <div class="status-line" id="bt-status"></div>
     </section>
     <section class="block">
-      <div class="block-head"><h2>Results</h2></div>
+      <!-- Same fix as gridView.ts's identical header, same audit: a pure
+           historical backtest with no SIMULATED tag, inconsistent with
+           every account screen in the app. -->
+      <div class="block-head"><h2>Results <span class="tag-sim">SIMULATED</span></h2></div>
       <div id="bt-results"><div class="empty">Configure a backtest above and press Run to compare strategies.</div></div>
     </section>
   `;
