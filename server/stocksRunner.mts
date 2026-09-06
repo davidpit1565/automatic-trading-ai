@@ -43,7 +43,7 @@ import { maxDrawdownPct } from '../src/core/backtest/metrics';
 import { assessRealMoneyReadiness } from '../src/core/feedback/realMoneyReadiness';
 import { FileStore } from './fileStore.mts';
 import { checkManualKillSwitchCommands } from './manualKillSwitchCommand.mts';
-import { buildStockCycleMessage, sendTelegramMessage } from './telegram.mts';
+import { buildStockCycleMessage, sendTelegramMessage, SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED } from './telegram.mts';
 
 const STATE_PATH = process.env['STOCKS_STATE_PATH'] ?? 'state/stocks-state.json';
 const INITIAL_CASH = 10_000; // USD
@@ -529,7 +529,10 @@ export async function runStocksCycle(
     return k === null || !alerted.has(k);
   });
   const message = buildStockCycleMessage({ timestamp: cycle.timestamp, opened: freshOpened, closed: freshClosed });
-  if (message !== null) {
+  // Stocks has no live account at all — every fill here is simulated, so this
+  // notification is silenced entirely (David, 2026-09-06). See
+  // SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED's doc comment in telegram.mts.
+  if (message !== null && SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED) {
     const result = await sendTelegramMessage(message, telegram);
     console.log(result.sent ? 'Stocks Telegram notification sent.' : `No notification: ${result.reason}`);
     if (result.sent) {

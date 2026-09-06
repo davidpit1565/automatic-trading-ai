@@ -68,7 +68,10 @@ describe('monitorSystemChanges', () => {
     );
   });
 
-  it('handles errors gracefully without crashing', async () => {
+  it('never touches the store or sends anything now — silenced entirely, simulated-only (David, 2026-09-06)', async () => {
+    // This monitor only ever reads the SIMULATED crypto/stocks state files
+    // (see systemMonitorRunner.mts's two call sites) — silenced regardless
+    // of Telegram being configured, so a store failure is never even reached.
     const mockStore = {
       get: () => {
         throw new Error('store get failure');
@@ -77,24 +80,21 @@ describe('monitorSystemChanges', () => {
         throw new Error('store set failure');
       },
     };
-    const consoleSpy = vi.spyOn(console, 'error');
+    const fetchFn = vi.fn();
+    vi.stubGlobal('fetch', fetchFn);
 
-    // This should not throw, even though store fails
     await expect(
       monitorSystemChanges(mockStore as any, { token: 'T', chatId: 'C' }, Date.now()),
     ).resolves.toBeUndefined();
 
-    // Verify error was logged
-    const calls = consoleSpy.mock.calls.filter((call) =>
-      call[0]?.toString().includes('System monitor error'),
-    );
-    expect(calls.length).toBeGreaterThan(0);
+    expect(fetchFn).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 
-  it("labels the alert for the agent it's actually about, with the right currency symbol", async () => {
-    // Two robots share this same code path (see systemMonitorRunner.mts) —
-    // an alert must say which one it's about and never claim € for a USD
-    // portfolio (or vice versa).
+  it('sends nothing even with real data and a fully valid config (simulated engine only, no live equivalent)', async () => {
+    // Two robots share this same code path (see systemMonitorRunner.mts),
+    // and neither is ever the live-money store — so, unlike a labeled
+    // currency check, the correct behavior now is "never sends" for both.
     const now = Date.now();
     const data: Record<string, unknown> = {
       'monitor-last-state': {
@@ -126,11 +126,7 @@ describe('monitorSystemChanges', () => {
 
     await monitorSystemChanges(mockStore as any, { token: 'T', chatId: 'C' }, now, 'Stocks', '$');
 
-    expect(sentBody).not.toBeNull();
-    const text = (JSON.parse(sentBody!) as { text: string }).text;
-    expect(text).toContain('Stocks');
-    expect(text).toContain('$10500.00');
-    expect(text).not.toContain('€');
+    expect(sentBody).toBeNull();
 
     vi.unstubAllGlobals();
   });

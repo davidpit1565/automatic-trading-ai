@@ -237,6 +237,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   posWrap.appendChild(posList);
 
   const actWrap = el('section', 'block');
+  actWrap.id = 'home-activity-wrap';
   actWrap.innerHTML = `<div class="block-head"><h2>Recent activity</h2><button class="link-btn" data-hub="history">See all</button></div>`;
   const actList = el('div', 'stack stack-card');
   actList.id = 'home-activity';
@@ -356,6 +357,14 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     // reachable (nothing removed): the Profit tab shows both real and
     // simulated side by side on purpose.
     posWrap.hidden = Boolean(live);
+    // Same reasoning again (David, 2026-09-06: no simulated-money display
+    // anywhere once real money is live): "Recent activity" below renders
+    // `state.history`, the SIMULATED paper account's own trade list —
+    // unfiltered by `live`, unlike every other simulated block on this
+    // screen. The real account's own activity already has a home: the
+    // Profit tab's History section (assetHubView.ts), reachable via this
+    // same "See all" link.
+    actWrap.hidden = Boolean(live);
     if (!live) return;
 
     const invested = live.positions.reduce((s, p) => s + p.quantity * (prices[p.symbol] ?? p.entryPrice), 0);

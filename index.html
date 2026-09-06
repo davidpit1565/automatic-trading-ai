@@ -77,8 +77,16 @@
               </button>
             </div>
 
-            <h3 class="tools-group-title">Account</h3>
-            <div class="tools-grid">
+            <!-- David asked (2026-09-06) to stop showing simulated-money data
+                 anywhere on the site. This standalone paper-trading dashboard
+                 (portfolioView.ts — PaperPortfolio, STARTING_CASH) is 100%
+                 simulated, so its nav entry is hidden entirely rather than
+                 shown tagged "simulated" — same "hide the display, keep the
+                 underlying thing working" pattern PR #195 used for the
+                 crypto hub. The route/section (#tab-portfolio, TOOL_VIEWS in
+                 main.ts) is left fully intact, just unreachable from here. -->
+            <h3 class="tools-group-title" hidden>Account</h3>
+            <div class="tools-grid" hidden>
               <button class="tool-card" data-tab="portfolio">
                 <span class="tool-icon-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9l6.5 4"/><circle cx="12" cy="12" r="8.5"/></svg></span>
                 <span class="tool-card-text"><strong>Portfolio</strong><small>Positions &amp; analytics</small></span>

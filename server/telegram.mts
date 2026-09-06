@@ -41,6 +41,22 @@ export interface TelegramConfig {
   fetchFn?: typeof fetch;
 }
 
+/**
+ * David asked (2026-09-06, after a screenshot of a simulated FILEUR fill
+ * notification) to go completely silent on the Telegram bot for anything
+ * describing SIMULATED (paper) trades or simulated-account status — buy/sell
+ * fills, exit/close notifications, periodic/daily digests of simulated P&L
+ * or positions, and monitoring alerts about the simulated engine. The
+ * underlying paper-trading engine itself keeps running exactly as before
+ * (it is still how a not-yet-live asset accumulates the track record needed
+ * to pass the real-money readiness gate — see `realMoneyReadiness.ts`) —
+ * only its Telegram OUTPUT is silenced. Real-money notifications
+ * (`buildLiveEntryResultMessage`, kill-switch outcomes, the live section of
+ * the daily digest, etc.) are entirely unaffected by this flag and must
+ * never be gated behind it.
+ */
+export const SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED = false;
+
 /** Same bound already used for every other outbound HTTP call in this
  * project (krakenPublic.ts, revolutXBrokerAdapter.mts) — this file was the
  * one place missing it. Found 2026-09-03 after the crypto autopilot's
@@ -194,6 +210,15 @@ export interface DailySummaryInput {
    * hasn't run yet.
    */
   readonly candidateWatch?: ShadowStanding | null;
+  /**
+   * Silences every simulated-money section of the digest (crypto equity/
+   * cash/P&L/positions/benchmark/readiness/shadows, and the stocks section)
+   * — David's ask (2026-09-06) to never show simulated data in a Telegram
+   * message. The REAL-money `live` section is unaffected either way. When
+   * true and `live` is absent, `buildDailySummary` returns null (nothing to
+   * report) so the caller sends no message at all.
+   */
+  readonly hideSimulated?: boolean;
 }
 
 /** One line for a long-term shadow wallet's standing — shared by crypto and
@@ -289,61 +314,69 @@ export function readinessLineHe(readiness: RealMoneyReadiness): string {
  * Once-a-day portfolio digest so the user knows the agent is alive and how
  * it is doing, without a message every cycle. Sent at most once per day.
  */
-export function buildDailySummary(input: DailySummaryInput): string {
-  const ret = `${input.totalReturnPct >= 0 ? '+' : ''}${input.totalReturnPct.toFixed(2)}%`;
-  const lines: string[] = [
-    input.heading ?? '📊 סיכום יומי — סוכן מסחר',
-    `💰 שווי תיק: ${euro(input.equity)} (${ret} מההתחלה)`,
-    `💵 מזומן פנוי: ${euro(input.cash)}`,
-    `📈 רווח/הפסד: ${signedEuro(input.realizedPnl)} ממומש · ${signedEuro(input.unrealizedPnl)} על הנייר`,
-    `🔄 24 שעות אחרונות: ${input.openedLast24h} קניות, ${input.closedLast24h} מכירות`,
-  ];
-  if (input.benchmark) {
-    lines.push(...benchmarkLines(input.benchmark, '🏁 '));
-  }
-  if (input.positions.length === 0) {
-    lines.push('📌 אין פוזיציות פתוחות כרגע.');
-  } else {
-    lines.push(`📌 פוזיציות פתוחות (${input.positions.length}):`);
-    for (const p of input.positions) {
-      lines.push(`   • ${p.symbol}: ${euro(p.marketValue)} (${p.pctOfEquity.toFixed(1)}% מהתיק)`);
-    }
-  }
-  if (input.openedLast24h === 0 && input.closedLast24h === 0) {
-    lines.push('🛡️ אין עסקאות כרגע — ממתין להזדמנות טובה ומגן על הכסף. הכול תקין.');
-  }
-  if (input.readiness) {
-    lines.push(readinessLineHe(input.readiness));
-  }
-  if (input.shadows) {
-    lines.push(...shadowSummaryLines(input.shadows));
-  }
-  if (input.longTermShadow) {
-    lines.push(...longTermShadowLines(input.longTermShadow, '🌱 ארנק השקעות לטווח ארוך:'));
-  }
-  if (input.candidateWatch) {
-    lines.push(...candidateWatchLines(input.candidateWatch));
-  }
-  if (input.stocks) {
-    const s = input.stocks;
-    const sRet = `${s.totalReturnPct >= 0 ? '+' : ''}${s.totalReturnPct.toFixed(2)}%`;
+export function buildDailySummary(input: DailySummaryInput): string | null {
+  const lines: string[] = [];
+  if (!input.hideSimulated) {
+    const ret = `${input.totalReturnPct >= 0 ? '+' : ''}${input.totalReturnPct.toFixed(2)}%`;
     lines.push(
-      '',
-      '📈 מניות (ארה"ב, כסף מדומה — חשבון נפרד):',
-      `   💰 שווי: ${usd(s.equity)} (${sRet} מההתחלה) · 💵 מזומן: ${usd(s.cash)}`,
-      `   📊 רווח/הפסד: ${signedUsd(s.realizedPnl)} ממומש · ${signedUsd(s.unrealizedPnl)} על הנייר`,
-      `   🔄 24 שעות אחרונות: ${s.openedLast24h} קניות, ${s.closedLast24h} מכירות`,
+      input.heading ?? '📊 סיכום יומי — סוכן מסחר',
+      `💰 שווי תיק: ${euro(input.equity)} (${ret} מההתחלה)`,
+      `💵 מזומן פנוי: ${euro(input.cash)}`,
+      `📈 רווח/הפסד: ${signedEuro(input.realizedPnl)} ממומש · ${signedEuro(input.unrealizedPnl)} על הנייר`,
+      `🔄 24 שעות אחרונות: ${input.openedLast24h} קניות, ${input.closedLast24h} מכירות`,
     );
-    if (s.benchmark) {
-      lines.push(...benchmarkLines(s.benchmark, '   🏁 '));
+    if (input.benchmark) {
+      lines.push(...benchmarkLines(input.benchmark, '🏁 '));
     }
-    if (s.longTermShadow) {
-      lines.push(...longTermShadowLines(s.longTermShadow, '   🌱 ארנק השקעות לטווח ארוך:'));
+    if (input.positions.length === 0) {
+      lines.push('📌 אין פוזיציות פתוחות כרגע.');
+    } else {
+      lines.push(`📌 פוזיציות פתוחות (${input.positions.length}):`);
+      for (const p of input.positions) {
+        lines.push(`   • ${p.symbol}: ${euro(p.marketValue)} (${p.pctOfEquity.toFixed(1)}% מהתיק)`);
+      }
+    }
+    if (input.openedLast24h === 0 && input.closedLast24h === 0) {
+      lines.push('🛡️ אין עסקאות כרגע — ממתין להזדמנות טובה ומגן על הכסף. הכול תקין.');
+    }
+    if (input.readiness) {
+      lines.push(readinessLineHe(input.readiness));
+    }
+    if (input.shadows) {
+      lines.push(...shadowSummaryLines(input.shadows));
+    }
+    if (input.longTermShadow) {
+      lines.push(...longTermShadowLines(input.longTermShadow, '🌱 ארנק השקעות לטווח ארוך:'));
+    }
+    if (input.candidateWatch) {
+      lines.push(...candidateWatchLines(input.candidateWatch));
+    }
+    if (input.stocks) {
+      const s = input.stocks;
+      const sRet = `${s.totalReturnPct >= 0 ? '+' : ''}${s.totalReturnPct.toFixed(2)}%`;
+      lines.push(
+        '',
+        '📈 מניות (ארה"ב, כסף מדומה — חשבון נפרד):',
+        `   💰 שווי: ${usd(s.equity)} (${sRet} מההתחלה) · 💵 מזומן: ${usd(s.cash)}`,
+        `   📊 רווח/הפסד: ${signedUsd(s.realizedPnl)} ממומש · ${signedUsd(s.unrealizedPnl)} על הנייר`,
+        `   🔄 24 שעות אחרונות: ${s.openedLast24h} קניות, ${s.closedLast24h} מכירות`,
+      );
+      if (s.benchmark) {
+        lines.push(...benchmarkLines(s.benchmark, '   🏁 '));
+      }
+      if (s.longTermShadow) {
+        lines.push(...longTermShadowLines(s.longTermShadow, '   🌱 ארנק השקעות לטווח ארוך:'));
+      }
     }
   }
   if (input.live) {
     const l = input.live;
-    lines.push('', '💶 חשבון אמיתי (Revolut X — כסף אמיתי):', `   💰 שווי כולל: ${euro(l.equity)}`);
+    // hideSimulated leaves `lines` empty going in — start with the heading
+    // and skip the separator blank line that only makes sense after a
+    // simulated section actually rendered above.
+    if (lines.length === 0 && input.heading) lines.push(input.heading);
+    if (lines.length > 0) lines.push('');
+    lines.push('💶 חשבון אמיתי (Revolut X — כסף אמיתי):', `   💰 שווי כולל: ${euro(l.equity)}`);
     const parts = [`מזומן ${euro(l.cash)}`];
     if (l.externalBtcValue > 0) parts.push(`BTC לא-מנוהל ${euro(l.externalBtcValue)}`);
     lines.push(`   (${parts.join(' · ')})`);
@@ -361,6 +394,7 @@ export function buildDailySummary(input: DailySummaryInput): string {
         : "   ▶️ קיל סוויץ' כבוי — המסחר האמיתי פעיל",
     );
   }
+  if (lines.length === 0) return null; // hideSimulated with no live account: nothing to report
   return lines.join('\n');
 }
 

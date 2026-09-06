@@ -146,4 +146,21 @@ describe('main.ts global chrome (DOM integration)', () => {
     expect(document.activeElement).toBe(backtestCard);
     expect(document.activeElement).not.toBe(document.body);
   });
+
+  // David asked (2026-09-06) to stop showing simulated-money data anywhere on
+  // the site. portfolioView.ts is a standalone simulated (paper) trading
+  // dashboard — its Tools-grid entry must be unreachable, while the
+  // underlying route/section stays fully intact (same "hide, don't delete"
+  // pattern PR #195 used for the crypto hub's simulated hero).
+  it('hides the simulated Portfolio dashboard\'s nav entry, without removing its route', async () => {
+    await import('../../src/ui/main.ts');
+
+    const portfolioButton = document.querySelector<HTMLElement>('[data-tab="portfolio"]');
+    expect(portfolioButton).not.toBeNull();
+    // Hidden via its containing group, not deleted from the DOM.
+    expect(portfolioButton!.closest<HTMLElement>('.tools-grid')?.hidden).toBe(true);
+    expect(portfolioButton!.closest('[hidden]')).not.toBeNull();
+    // The route itself is untouched — its target section still exists.
+    expect(document.getElementById('tab-portfolio')).not.toBeNull();
+  });
 });
