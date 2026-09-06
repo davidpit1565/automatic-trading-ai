@@ -162,8 +162,8 @@ Best-strategy tile sign parity, table-scroll-fade class toggling via
 simulated `scrollWidth`/`scrollLeft`, status-line line split, Sharpe/
 Degradation/Profit-factor/Expectancy color-by-actual-value assertions that
 don't hardcode fragile demo-data magic numbers). Full gate: `tsc --noEmit`
-clean, `vitest run` 1182/1182 (was 1171 before this pass — net +11, none
-weakened), `npm run build` clean. Diff confined to `src/ui/views/
+clean, `vitest run` 1189/1189 (net +11 from this pass over this branch's
+`origin/main` base, none weakened), `npm run build` clean. Diff confined to `src/ui/views/
 {gridView,backtestView,validationView}.ts`, the additive block of
 `src/ui/styles.css` this entry describes, and the three matching
 `tests/ui/*.integration.test.ts` files — nothing under `server/**`,
