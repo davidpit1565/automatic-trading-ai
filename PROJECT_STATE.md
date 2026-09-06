@@ -6589,6 +6589,114 @@ nothing under `server/**`, `state/**`, or `src/core/**`, and no view file
 owned by another parallel agent (`marketsView.ts`, `assetHubView.ts`, any
 `stocks*.ts`, any Tools view) touched.
 
+## Round 2, loading/empty/error state audit across every screen: 3 verified fixes (2026-09-06)
+
+David's round 2 ask: not another screen-scoped pass (round 1, above, already
+shipped 105 fixes split by screen), but a cross-cutting DIMENSION audit —
+loading/empty/error states across every view under `src/ui/views/*.ts`.
+Loaded `fintech-dashboard-polish`, `apple-design`, and this repo's own
+`empty-loading-error-states` skill first. Read only today's two round-1
+PROJECT_STATE entries above (not the full 6000+ line file) to avoid
+re-proposing anything already shipped — confirmed `skeletonRowsHtml`/
+`skeletonMarketCardsHtml` are already wired into `homeView`, `portfolioView`,
+`stocksOverviewPanel`, `stocksLongTermPanel`, `gridView`, `backtestView`,
+`validationView`; `showLoadingOverlay`/`showEmptyState`/etc. in
+`loadingStates.ts` are still dead code (unchanged from that finding, left
+alone here too — wiring them in is out of this pass's scope).
+
+Method: grepped every `src/ui/views/*.ts` for loading/empty/error handling
+to find files with NO coverage at all (`monitoringView.ts`,
+`stocksMarketPanel.ts` — 0 matches), read those in full, then verified each
+suspected gap two ways: a real DOM/mocked-fetch vitest test proving the
+exact behavior, AND (for the visual/first-paint question) real Playwright
+screenshots (`playwright-core`, `/opt/pw-browsers/chromium`, 390×844,
+`vite preview` on port 4183, `?demo=1`) across all 4 primary nav tabs
+(Crypto/Stocks/Markets/Tools) and all 7 Tools sub-screens (Market Scan,
+Monitoring, Backtesting, Validation, Grid, Portfolio, Learn) at both
+first-paint (~150ms) and settled (~950ms). The Crypto/Stocks Overview tabs'
+"Waiting for the cloud agent…"/"Assessing the paper track record…"
+placeholders never resolved in these screenshots — confirmed this is the
+sandbox genuinely having no route to the cloud-state endpoint (same
+constraint the shared-layer pass noted for Kraken/Revolut/GitHub), not a
+bug: `homeView.ts`'s `loadState()` already has the correct once-only
+"Couldn't reach the cloud agent" fallback for exactly this case (a prior,
+already-shipped fix), so this was the fallback working as designed, not a
+new gap. All 7 Tools sub-screens' first paints (empty config forms, honest
+"press Run to see results" hints) were already correct — no filler added
+for screens that already handle this well.
+
+**3 verified fixes, both in files round 1's screen-split never reached
+(neither was in any of the 7 agents' named scope: Monitoring and Stocks
+Market are cross-cutting/Tools-adjacent, not owned by a single screen
+agent):**
+
+1. **`stocksMarketPanel.ts`'s periodic refresh silently wiped every already-
+   loaded row back to "no data yet" on a single transient fetch failure**,
+   and reported it as `"Live · 0/475 stocks priced"` — actively misleading,
+   claiming "Live" while actually offline, and indistinguishable from
+   "genuinely zero snapshots exist yet." Root cause: `load()` ran
+   `bySymbol.get(symbol) ?? null` unconditionally even when
+   `fetchStocksState()` resolved `null` (fetch failed), instead of keeping
+   the last good snapshot. Fixed to match the established convention three
+   other files already use (`valueView.ts`, `assetHubView.ts`,
+   `homeView.ts`): keep showing the last good data, and only surface the
+   honest "Couldn't reach the cloud agent — retrying." message before the
+   *first* successful load (a later background failure stays quiet, same
+   as those three). Verified with 2 new tests: one proving a real price
+   loaded first is still on screen (and the status line unchanged, not
+   reset to "0/N") after a later fetch starts rejecting; one proving the
+   first-load-failure case shows the honest message, not "Live · 0/N".
+2. **`monitoringView.ts`'s "Current opportunities" showed the exact same
+   reassuring "refusing weak setups is the system protecting capital"
+   message whether the scan genuinely found nothing, OR every single
+   monitored market failed to even fetch (network down)** —
+   `MonitorScanResult.failures` was computed and returned by
+   `MonitoringEngine.runScanOnce` but silently never read by this view,
+   even though the sibling Market Scan view (`marketScanView.ts`) already
+   surfaces the identical `scan.failures` shape distinctly (its own
+   `.scan-failures`/`.error-line`). Added the same distinction here: an
+   all-failed scan now shows `.error-line` naming the failure count instead
+   of the misleading empty message, and a partial failure now appends the
+   same `.scan-failures` list Market Scan already uses. Verified with a new
+   test that injects a `source.getCandles` stub returning `{ ok: false }`
+   for every symbol (a faithful stand-in for a real network outage, since
+   every real data source in this codebase already resolves network
+   failures to a `Result`, never throws) and asserts the honest message
+   appears, not "protecting capital".
+3. **Clicking "Scan now" a second time left the PREVIOUS scan's results
+   table sitting on screen, unchanged, for the entire duration of the new
+   scan** — the only visible sign anything was happening was the `#mon-
+   status` line above switching to "Scanning…"; the results table itself
+   gave zero indication it was stale. Same stale-content-during-refetch bug
+   class already fixed once in Markets' view-tabs (PR #203) — real against
+   Kraken (not the fast demo source), a 12-symbol scan can take several
+   seconds, making the window genuinely visible. Fixed by clearing
+   `#mon-opportunities` to a `Scanning…` placeholder synchronously in the
+   click handler, before the scan starts. Verified with a new test that
+   holds a manually-controlled promise inside a stubbed `getCandles` open
+   across a second scan and asserts the DOM shows the in-flight placeholder
+   (not the first scan's stale table) while the second scan is pending.
+
+**Investigated, correctly left alone (no fix, no filler):** Backtest/
+Validation/Grid's result areas already clear `results.innerHTML = ''` and
+show a real spinner status on every re-run (confirmed by reading all
+three's click handlers) — the exact re-run-staleness pattern named in this
+pass's brief, already fixed for these three before this pass started.
+Portfolio's trade list after buy/sell: the buy/sell buttons stay disabled
+and the status line shows "Fetching…"/the trade confirmation throughout the
+whole async chain (price fetch → trade → position-price refresh), so unlike
+the flagged Monitoring/Markets cases there genuinely is a continuous
+in-flight indicator the whole time — a real but different (and much
+smaller) design tradeoff, not the "no indication at all" bug this pass
+targets, so left alone rather than manufacturing a fix.
+
+Gate: `tsc --noEmit` clean, 1207/1207 vitest passed (4 new: 2 in
+`tests/ui/stocksMarketPanel.test.ts`, 2 in
+`tests/ui/monitoringView.integration.test.ts`), `npm run build` clean. Diff:
+`src/ui/views/monitoringView.ts`, `src/ui/views/stocksMarketPanel.ts` + the
+2 test files above only — no shared/tokens file, no other view file
+touched.
+
 ## Round-2 deep dive: real-money readiness / kill-switch / live-vs-simulated UX audit — 6 verified fixes, 2 flagged capital-protection (2026-09-06)
 
 Part of David's "compare against Revolut X, ship 200 serious improvements"
