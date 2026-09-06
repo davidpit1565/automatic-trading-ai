@@ -406,7 +406,16 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       // single outlined-SVG icon language (readiness checks, tool icons, nav
       // icons all use it, never an emoji).
       const reason = live.killSwitchReason ? ` — ${escapeHtml(live.killSwitchReason)}` : '';
-      banner.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12"/><path d="M15 6v12"/></svg><span>Real-money trading paused${reason}</span>`;
+      // Wording checked against what engaging the kill switch actually does
+      // (`runLiveOrderFlow`/`manualKillSwitchCommand.mts`, verified 2026-09-06):
+      // it blocks EVERY live order — new entries AND exits alike — and does
+      // not itself close anything. The old text, "Real-money trading
+      // paused", never said that, and a reader could reasonably assume
+      // "paused" meant only new trades stop while an existing position is
+      // still being watched and can still be closed for them. Neither is
+      // true: while engaged, an open real-money position sits exactly as it
+      // is, with no automatic exit possible, until a human resumes.
+      banner.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12"/><path d="M15 6v12"/></svg><span>Real-money trading paused — no new trades or exits can execute; open positions stay open, unmonitored, until resumed${reason}</span>`;
     } else {
       banner.hidden = true;
     }
@@ -453,15 +462,23 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     const badge = r.ready
       ? `<span class="ready-badge go">READY</span>`
       : `<span class="ready-badge no">NOT READY</span>`;
+    // Found in the 2026-09-06 readiness/kill-switch audit (see
+    // assetHubView.ts's identical fix): a criterion that's !ok but not in
+    // `r.unmet` is informational only (`assessRealMoneyReadiness`'s
+    // `gateOnBenchmark`/`gateOnTradeStats`) and must not render with the
+    // same blocking amber-warning look as one that's actually why the
+    // badge above says NOT READY.
     const items = r.criteria
-      .map(
-        (c) =>
-          `<li class="${c.ok ? 'ok' : 'no'}"><svg class="crit-icon" viewBox="0 0 24 24" aria-hidden="true">${
-            c.ok
-              ? '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>'
-              : '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v6"/><path d="M12 16.5h.01"/>'
-          }</svg><span>${c.detail}</span></li>`,
-      )
+      .map((c) => {
+        const critState = c.ok ? 'ok' : r.unmet.includes(c.key) ? 'no' : 'info';
+        const icon =
+          critState === 'ok'
+            ? '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>'
+            : critState === 'no'
+              ? '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v6"/><path d="M12 16.5h.01"/>'
+              : '<circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5h.01"/>';
+        return `<li class="${critState}"><svg class="crit-icon" viewBox="0 0 24 24" aria-hidden="true">${icon}</svg><span>${c.detail}</span></li>`;
+      })
       .join('');
     readyWrap.innerHTML =
       `<div class="block-head"><h2>Real-money readiness</h2>${badge}</div>` +
