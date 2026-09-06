@@ -19,15 +19,19 @@ export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
   container.innerHTML = `
     <!-- hero-bare matches Home's balance treatment (homeView.ts): this is
          the identical dominant-balance-of-the-screen pattern, so it gets
-         the same bare, un-boxed, giant-scale treatment. -->
-    <section class="hero hero-bare">
-      <div class="hero-label">Portfolio value <span class="tag-sim">SIMULATED</span></div>
+         the same bare, un-boxed, giant-scale treatment. tappable + the
+         "history ›" affordance also match Home's hero exactly — Home's own
+         hero jumps to its Value view the same way, but here it jumps to
+         this same hub's own History sub-tab (see the click handler below). -->
+    <section class="hero hero-bare tappable">
+      <div class="hero-label">Portfolio value <span class="tag-sim">SIMULATED</span><span class="hero-more">history ›</span></div>
       <div class="hero-value" id="stocks-ov-equity">—</div>
       <div class="hero-change" id="stocks-ov-change"></div>
       <div class="hero-split"><span id="stocks-ov-cash"></span><span id="stocks-ov-invested"></span></div>
+      <div class="hero-bench" id="stocks-ov-bench" hidden></div>
       <div class="hero-spark" id="stocks-ov-spark"></div>
     </section>
-    <section class="block"><div class="block-head"><h2>Open positions</h2></div><div class="stack stack-card" id="stocks-ov-positions">${skeletonRowsHtml(2)}</div></section>
+    <section class="block"><div class="block-head"><h2>Open positions <span class="tag-sim">SIMULATED</span></h2></div><div class="stack stack-card" id="stocks-ov-positions">${skeletonRowsHtml(2)}</div></section>
     <p class="muted-line" id="stocks-ov-status">Loading…</p>`;
   attachCoinLogoFallback(container);
 
@@ -36,10 +40,21 @@ export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
   const changeEl = container.querySelector<HTMLElement>('#stocks-ov-change')!;
   const cashEl = container.querySelector<HTMLElement>('#stocks-ov-cash')!;
   const investedEl = container.querySelector<HTMLElement>('#stocks-ov-invested')!;
+  const benchEl = container.querySelector<HTMLElement>('#stocks-ov-bench')!;
   const sparkEl = container.querySelector<HTMLElement>('#stocks-ov-spark')!;
   const positionsEl = container.querySelector<HTMLElement>('#stocks-ov-positions')!;
   const statusEl = container.querySelector<HTMLElement>('#stocks-ov-status')!;
   let loadedOnce = false;
+
+  // Same mechanism Home's own hero uses to jump to a sibling sub-tab, minus
+  // the top-level [data-nav] delegate (History here is a HUB sub-tab, not a
+  // separate top-level view) — the hub's own tab buttons are siblings of
+  // this panel's parent (see assetHubView.ts), so walk up one level to find
+  // them rather than a global document.querySelector, which would find
+  // Crypto's identical History tab instead whenever Crypto is also mounted.
+  heroEl.addEventListener('click', () => {
+    container.parentElement?.querySelector<HTMLButtonElement>('.hub-tab[data-hub="history"]')?.click();
+  });
 
   async function load(): Promise<void> {
     const state = await fetchStocksState();
@@ -62,6 +77,22 @@ export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
     changeEl.className = `hero-change ${totalReturn >= 0 ? 'up' : 'down'}`;
     cashEl.textContent = `Cash ${dollar(state.cash)}`;
     investedEl.textContent = `Invested ${dollar(equity - state.cash)}`;
+
+    // Mirrors homeView.ts's "vs Bitcoin" benchmark line — same wording
+    // shape, this hub's own buy-and-hold comparison (SPY) instead. The
+    // server already computes this (see cloudState.ts's CloudBenchmarkResult
+    // doc comment); it just had nowhere to render before.
+    if (state.benchmarkResult) {
+      const { label, portfolioPct, assetPct } = state.benchmarkResult;
+      const shortLabel = /\(([^)]+)\)/.exec(label)?.[1] ?? label;
+      const longLabel = label.replace(/\s*\([^)]*\)\s*$/, '').trim() || label;
+      benchEl.hidden = false;
+      benchEl.textContent =
+        `vs ${longLabel} — agent ${formatPct(portfolioPct)} · ${shortLabel} ${formatPct(assetPct)}` +
+        `${portfolioPct >= assetPct ? ' · leading' : ''}`;
+    } else {
+      benchEl.hidden = true;
+    }
     const stamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     statusEl.textContent = `Live · updated ${stamp}`;
 
@@ -88,7 +119,9 @@ export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
       dollar,
     );
     if (state.positions.length === 0) {
-      positionsEl.appendChild(Object.assign(document.createElement('div'), { className: 'empty', textContent: 'Holding cash — no open positions.' }));
+      // Same wording homeView.ts's identical empty state uses — this one
+      // read as a flat status line next to Home's more inviting phrasing.
+      positionsEl.appendChild(Object.assign(document.createElement('div'), { className: 'empty', textContent: 'Holding cash and waiting for a good setup.' }));
     }
   }
 

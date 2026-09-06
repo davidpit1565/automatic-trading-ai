@@ -70,6 +70,19 @@ export interface CloudShadowStanding {
   readonly startedAt: number;
 }
 
+/** A precomputed "agent vs buy-and-hold" comparison, already resolved
+ * server-side (see `server/stocksRunner.mts`'s `computeBenchmark` and its
+ * `autopilotRunner.mts` crypto equivalent) — both percentages are already
+ * scaled (0.63 means +0.63%), matching what `formatPct` expects directly.
+ * Crypto's own equivalent line reads it from the differently-shaped
+ * `benchmark` field above (anchored on `btc`); this one is generic over
+ * whichever asset the server anchored against (stocks anchors on SPY). */
+export interface CloudBenchmarkResult {
+  readonly label: string;
+  readonly portfolioPct: number;
+  readonly assetPct: number;
+}
+
 export interface CloudState {
   readonly cash: number;
   readonly initialCash: number;
@@ -79,6 +92,11 @@ export interface CloudState {
   readonly history: CloudTrade[];
   readonly lastRunAt: number | null;
   readonly benchmark: { btc: number; equity: number } | null;
+  /** Same "agent vs buy-and-hold" comparison as `benchmark` above, but for
+   * whichever asset the server actually anchored against — populated for
+   * stocks (SPY), null wherever the raw state has no `benchmark-result` key
+   * (crypto today). See `CloudBenchmarkResult`'s own doc comment. */
+  readonly benchmarkResult: CloudBenchmarkResult | null;
   /** Portfolio value over time (oldest→newest), for the value chart. */
   readonly equityHistory: { at: number; equity: number }[];
   /** Honest real-money readiness verdict, or null if not computed yet. */
@@ -133,6 +151,9 @@ interface RawState {
   'audit-log'?: Array<{ timestamp: number; event: string; detail: string }>;
   'autopilot-last-run'?: { at?: number };
   'benchmark-anchor'?: { btc?: number; equity?: number };
+  /** Precomputed comparison alongside the anchor above — see
+   * `CloudBenchmarkResult`. Crypto's raw state has no such key. */
+  'benchmark-result'?: { label?: string; portfolioPct?: number; assetPct?: number };
   'equity-history'?: Array<{ at: number; equity: number }>;
   'real-money-readiness'?: {
     ready?: boolean;
@@ -299,6 +320,12 @@ async function fetchCloudStateOnce(fetchFn: typeof fetch, stateUrl: string): Pro
       lastRunAt: raw['autopilot-last-run']?.at ?? null,
       benchmark:
         anchor && anchor.btc && anchor.equity ? { btc: anchor.btc, equity: anchor.equity } : null,
+      benchmarkResult: (() => {
+        const r = raw['benchmark-result'];
+        return r && typeof r.label === 'string' && typeof r.portfolioPct === 'number' && typeof r.assetPct === 'number'
+          ? { label: r.label, portfolioPct: r.portfolioPct, assetPct: r.assetPct }
+          : null;
+      })(),
       equityHistory: Array.isArray(raw['equity-history']) ? raw['equity-history'] : [],
       readiness,
       marketSnapshot: (raw['market-snapshot']?.symbols ?? [])

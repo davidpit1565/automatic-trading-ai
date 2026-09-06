@@ -1322,6 +1322,16 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 @media (prefers-reduced-motion: reduce) { .row-clock.fresh { animation: none; } }
 .market-more { padding: 0.9rem; text-align: center; font-size: 0.82rem; color: var(--text-dim); }
 
+/* Stocks Market's own rows are deliberately a plain, non-tappable `<div>`
+   (see stocksMarketPanel.ts's file header — no per-symbol chart to open),
+   unlike crypto's identical-looking `<button class="market-row">` rows. The
+   shared `.market-row:hover` fill above still fired on them regardless,
+   telegraphing "tap me" on a row that does nothing when tapped — found by
+   actually hovering a real row, not just reading the shared rule. Scoped to
+   this list's own id rather than touching the shared rule crypto still
+   needs. */
+#stocks-market-list .market-row:hover { background: transparent; }
+
 @media (min-width: 860px) {
   /* Keeps the right padding that clears the overlaid star — a plain
      `padding: 0.8rem 1.1rem` here would put the price back under it. */
