@@ -156,6 +156,37 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
     expect(container.querySelector('#hub-real-breakdown')!.textContent).toContain('Cash');
   });
 
+  it("shows a coin icon + symbol on a real-activity row when one is parseable, matching the simulated trade rows' own treatment (real bug, 2026-09-06)", async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      fetchState: async () =>
+        cloudState({
+          live: {
+            cash: 50,
+            positions: [],
+            killSwitchEngaged: false,
+            killSwitchReason: null,
+            recentEvents: [
+              { at: 2, event: 'rejected', detail: 'auto-expired after 20m', symbol: 'DOTEUR' },
+              // No parseable symbol (e.g. a pre-trade verification failure) — must fall back cleanly, no icon.
+              { at: 1, event: 'rejected', detail: "'USELESS/EUR' not found", symbol: null },
+            ],
+            externalBtcQuantity: 0,
+            equityHistory: [],
+          },
+        }),
+    });
+    await flush();
+
+    const rows = container.querySelectorAll('#hub-real-activity-list .row');
+    expect(rows.length).toBe(2);
+    expect(rows[0]!.querySelector('.coin-logo')).not.toBeNull();
+    expect(rows[0]!.textContent).toContain('DOTEUR');
+    expect(rows[1]!.querySelector('.coin-logo')).toBeNull();
+  });
+
   it('shows the untracked-BTC breakdown and feeds the real equity chart once external BTC and history exist', async () => {
     const container = document.createElement('section');
     document.body.appendChild(container);
@@ -193,6 +224,33 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
     expect(change.textContent).toContain('50');
     expect(change.textContent).toContain('since tracking began');
     expect(change.classList.contains('up')).toBe(true);
+  });
+
+  it("never prices an untracked BTC holding at a confident €0.00 when no BTC price is available (real-money-safety fix, 2026-09-06 — the real crypto state file carries no market-snapshot at all)", async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      fetchState: async () =>
+        cloudState({
+          marketSnapshot: [], // matches the real crypto state file today — no XBTEUR entry
+          live: {
+            cash: 50,
+            positions: [],
+            killSwitchEngaged: false,
+            killSwitchReason: null,
+            recentEvents: [],
+            externalBtcQuantity: 0.001,
+            equityHistory: [],
+          },
+        }),
+    });
+    await flush();
+
+    const breakdown = container.querySelector<HTMLElement>('#hub-real-breakdown')!;
+    expect(breakdown.hidden).toBe(false);
+    expect(breakdown.textContent).toContain('price unavailable');
+    expect(breakdown.textContent).not.toContain('€0.00');
   });
 });
 

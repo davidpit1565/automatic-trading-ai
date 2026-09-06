@@ -5588,3 +5588,160 @@ Gate: tsc clean, 1178 vitest passed (7 new: 4 for `formatPct`/`formatNumber`,
 3 for `formatPriceSplit`), `npm run build` clean. Diff touches only
 `src/ui/format.ts`, `src/ui/styles.css`, `tests/ui/format.test.ts` — no
 `src/ui/views/*.ts` file touched, per this pass's scope.
+
+## Crypto asset-hub design pass: 10 verified fixes, one a real functional bug missed by 3 prior design passes (2026-09-06)
+
+Part of David's "compare Revolut X, ship 200 serious improvements" ask,
+split across parallel agents by screen area — this agent's scope was the
+Crypto asset-hub shell (Overview/History/Market/Profit tabs in
+`assetHubView.ts`), the shared `equityChartPanel.ts`, and `valueView.ts`.
+Given three prior "Deep design pass" entries and four "Creative upgrade
+pass" entries already covered this exact area extensively (screenshot-
+verified, see above), a genuinely-warranted pass here surfaces far fewer
+new items than a first pass would — 10 confirmed, individually-verifiable
+fixes, not a padded 28-30. Per this task's own explicit instruction, no
+filler was manufactured to hit a target count.
+
+**Method**: `npm run build` + `vite preview` + Playwright-core
+(`chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })`),
+390×844 viewport, real screenshots of Overview/History/Market/Profit for
+BOTH the real committed `state/autopilot-state.json` (real money live,
+~€102.84 equity, one BTC position, routed in via `page.route` so the real
+committed file is what's actually rendered) AND a synthetic no-live-money
+state (the same file with every `live:`-prefixed key stripped, to check
+the pre-real-money path still renders correctly). Also hovered the actual
+rendered chart at multiple x-fractions (0.5 through 1.0) to catch
+interaction bugs invisible from a static screenshot.
+
+1. **Crosshair/tooltip crashed silently across most of the chart's width
+   in Line mode (the default) — a real functional bug, not cosmetic.**
+   `equityChartPanel.ts`'s `paint()` built `geo` (and `geo.indexAtFraction`)
+   from the RAW, unbucketed points array in line mode, but fed the
+   crosshair the bucketed `candles` array (bucketize() aims for ~30
+   entries regardless of how many raw samples exist) — a length mismatch.
+   Any account with more samples than ~30 (every real account, in
+   practice — the real crypto account has 411) hit `candles[idx] ===
+   undefined` past roughly the first 30 candles' worth of x-position,
+   throwing inside the pointermove handler and killing the crosshair for
+   the rest of the chart. Reproduced live: hovering the real Profit-tab
+   chart at x-fractions 0.5-0.995 threw `Cannot read properties of
+   undefined (reading 'close')` every time, confirmed via
+   `page.on('pageerror', ...)`. Fixed by building a synthetic
+   one-sample-per-point `Candle[]` (open=high=low=close=the value) for
+   line mode's crosshair, matching `geo`'s own length — `wireCrosshair`'s
+   signature is unchanged. Affects all three shared callers: History tab,
+   Profit tab's real-money chart, and `valueView.ts`. Screenshot-confirmed
+   fixed (tooltip now shows correctly at every fraction including the
+   right edge). New test: `equityChartPanel.test.ts` — 200 raw samples,
+   hover near the right edge, assert the tooltip still shows.
+
+2. **The Profit tab's real-money chart duplicated its own parent hero's
+   percentage on first load.** With `showHero: false` (used only for the
+   "Real money" hero's chart), the default `rangeKey === 'All'` computes
+   its return% from `history[0]` with no `trueStartEquity` override
+   (real accounts have none) — mathematically identical to the hero's own
+   "since tracking began" figure computed the same way from the same
+   array. Screenshot showed "▲2.11% since tracking began" then, a few
+   lines down, "▲+2.11% · All" — the same number twice. Every OTHER range
+   genuinely differs (a shorter window's own return, confirmed distinct on
+   the real account: 1D showed -11.65%, correctly red), so only the `All`
+   case — the one range provably guaranteed to match, not merely
+   coincidentally similar for a young account — is now suppressed.
+   Screenshot-confirmed fixed. New tests for both branches.
+
+3. **History tab's own list started on a bare "Loading…" pill instead of
+   the app's established skeleton-row shimmer.** Screenshot showed a
+   single floating pill over an otherwise-blank viewport — exactly the
+   "collapses the layout" failure mode `loadingStates.ts`'s own doc
+   comment for `skeletonRowsHtml` warns about, and precedent already
+   exists: Home's own equivalent list (`homeView.ts`'s recent-activity
+   list) uses this exact skeleton for the SAME kind of first-paint gap,
+   while `valueView.ts`/`marketsView.ts` do too — `hub-history-list` had
+   simply never wired it up. (Checked first whether the hero-value "—"
+   placeholders and the empty `#hub-readiness` block were the same kind of
+   gap — they're not: Home's identical hero and readiness section use the
+   exact same bare "—"/empty-until-loaded convention, so those are
+   deliberate house style, not a defect, and were left untouched.)
+
+4. **Real activity rows (History tab) showed a bare status pill with no
+   coin identity** — unlike every SIMULATED trade row in the app, which
+   shows a coin logo. The real audit log's `intentId` (e.g.
+   `"live-entry:DOTEUR:..."`) carries the symbol, but `cloudState.ts`
+   discarded it when parsing `recentEvents`. Added an additive optional
+   `symbol` field (parsed via a regex on `intentId`, `null` when not
+   parseable — a pre-trade verification failure or the kill switch
+   correctly fall back with no icon) and reused the exact same
+   `completedLogoHtml`/`baseCodeFromSymbol` treatment the simulated
+   history rows already use. Verified `recentEvents` has no other consumer
+   in the codebase before touching its shape. Screenshot-confirmed: real
+   rows now show a coin icon + "DOTEUR"/"ADAEUR" next to the REJECTED
+   pill, matching the rest of the app.
+
+5. **Real-money-safety fix: an untracked BTC holding could render a
+   confidently-wrong "€0.00" instead of an honest "price unavailable."**
+   Checked the actual real committed crypto state file: it carries no
+   `market-snapshot` field at all (that only exists for Stocks), so the
+   BTC price lookup always fell back to `?? 0` for Crypto — not
+   reproducible against today's real state screenshot (external BTC
+   quantity is 0 right now), but the code path is real and has fired
+   before (David converted EUR→BTC manually, 2026-09-03). Now shows the
+   raw BTC quantity with "(untracked, price unavailable)" instead of
+   pricing a real position at zero. New test constructs the exact
+   real-shape scenario (empty `marketSnapshot`, nonzero
+   `externalBtcQuantity`) and asserts no "€0.00" ever renders.
+
+6. **The Candles toggle was tappable but silently inert for a brand-new
+   account.** With fewer than 2 bucketable candles (an account's first
+   ~10-15 minutes), `paint()` already force-overrides the chart to line
+   mode — but the Candles button stayed enabled, so tapping it reverted
+   the highlighted button back to "Line" with zero feedback about why.
+   Now `disabled` (new `.ctoggle-btn:disabled` rule, mirroring
+   `.pager:disabled`'s existing treatment) whenever `candles.length < 2`.
+   New test simulates a 2-sample history and asserts the button is
+   disabled.
+
+7. **Tapping an already-active range or chart-mode button still faded the
+   chart out and back in** — a ~200ms flash with no informational change,
+   violating the "kill any latency that isn't earning its keep" principle.
+   Both click handlers now no-op when the tapped value matches the current
+   one. New test.
+
+8. **Missing `aria-pressed` on the range bar and Line/Candles toggle.**
+   `.hub-tabs` (assetHubView.ts) already carries `role="tab"`/
+   `aria-selected` for its own single-select segmented group, but this
+   chart panel's two identical-shaped segmented groups carried no ARIA
+   state at all — a screen-reader user had no way to tell which range or
+   chart mode was active. Added `aria-pressed`, updated on every repaint.
+   New test.
+
+9. **`font-variant-numeric: tabular-nums` added to `.hero-bench`** (the
+   Cash/vs-Bitcoin line under the Profit-tab heroes) — it shows money
+   figures that refresh every 60s poll; without it, a digit-count change
+   jitters the pill's width between refreshes.
+
+10. **`font-variant-numeric: tabular-nums` added to `.readiness-list li`**
+   (the real-money-readiness criteria, e.g. "50 / 20 closed trades") — same
+   jitter-on-refresh reasoning as #9. Both are pure CSS additions to shared
+   classes also used by Home/Portfolio/Stocks (noted below), safe by
+   construction (no visual effect on non-numeric text).
+
+**Shared-file touches for the parallel Stocks agent to check for
+conflicts**: `assetHubView.ts` changes are all in the GENERIC
+History/Profit code paths (shared verbatim by Stocks) — the skeleton-row
+loading state, the real-activity icon, and the BTC-price-unavailable fix
+all apply equally to Stocks' own asset-hub tabs (though Stocks has no live
+account today, so items 4/5 are currently Crypto-only in practice).
+`cloudState.ts`'s `recentEvents.symbol` field is additive/optional and
+verified to have exactly one consumer in the codebase (`assetHubView.ts`)
+before being touched. `styles.css`'s `.hero-bench`/`.readiness-list li`/
+`.ctoggle-btn:disabled` rules are shared, generic classes also rendered by
+`homeView.ts`, `portfolioView.ts`, `stocksLongTermPanel.ts`, and
+`stocksOverviewPanel.ts` — all pure additions (new properties on existing
+selectors), no existing rule changed, verified safe for every consumer.
+
+Not touched: `homeView.ts`, `main.ts`, `marketsView.ts`, any `stocks*.ts`
+file, any Tools view, `server/**`, `src/core/**` — per this agent's scope.
+
+Full gate (after rebasing onto the sibling shared-layer pass above): tsc
+clean, 1187/1187 vitest (9 new here across `assetHubView.test.ts`/
+`cloudState.test.ts`/`equityChartPanel.test.ts`), `npm run build` clean.
