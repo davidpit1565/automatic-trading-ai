@@ -50,11 +50,18 @@ describe('Stocks Market panel — category/sort interaction (DOM integration)', 
     renderStocksMarketPanel(container);
     await waitFor(() => container.querySelector('.market-row') !== null);
 
-    container.querySelector<HTMLButtonElement>('[data-cat="gainers"]')!.click();
+    const gainersTab = container.querySelector<HTMLButtonElement>('[data-cat="gainers"]')!;
+    gainersTab.click();
     await waitFor(() => container.querySelectorAll('.market-row').length > 0);
 
     const symbolsInOrder = Array.from(container.querySelectorAll('.row-title')).map((el) => el.textContent);
     expect(symbolsInOrder.slice(0, 3)).toEqual([third!.symbol, second!.symbol, first!.symbol]);
+
+    // Roving tabindex: only the now-active tab is a Tab stop — the default
+    // "Popular" tab (index 0, active on mount) must have yielded its stop.
+    expect(gainersTab.tabIndex).toBe(0);
+    const popularTab = container.querySelector<HTMLButtonElement>('[data-cat="popular"]');
+    if (popularTab) expect(popularTab.tabIndex).toBe(-1);
   });
 
   it('marks the curated (actually-traded) majors with the same TRADED badge the crypto Markets list uses', async () => {

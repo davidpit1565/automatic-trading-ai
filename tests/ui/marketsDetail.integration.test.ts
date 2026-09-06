@@ -156,11 +156,95 @@ describe('Coin detail: Trade tab order form', () => {
     const sellBtn = container.querySelector<HTMLButtonElement>('.of-btn.sell')!;
     expect(buyBtn.className).toContain('active');
     expect(container.querySelector('#mk-of-note')!.innerHTML).toContain('/buy XBTEUR');
+    // A segmented control toggling only its fill colour gives a keyboard/
+    // screen-reader user no way to tell either side is "on" — aria-pressed
+    // is what `.mk-star`'s own toggle button already relies on for this.
+    expect(buyBtn.getAttribute('aria-pressed')).toBe('true');
+    expect(sellBtn.getAttribute('aria-pressed')).toBe('false');
 
     sellBtn.click();
     expect(sellBtn.className).toContain('active');
     expect(buyBtn.className).not.toContain('active');
     expect(container.querySelector('#mk-of-note')!.innerHTML).toContain('/sell XBTEUR');
+    expect(sellBtn.getAttribute('aria-pressed')).toBe('true');
+    expect(buyBtn.getAttribute('aria-pressed')).toBe('false');
+    handle.pause();
+  });
+});
+
+describe('Coin detail: view-tab chart/orderbook/trades/trade switcher', () => {
+  it('carries real tablist semantics, kept in sync with which view is showing', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+    (container.querySelector('.market-row') as HTMLElement).click();
+    await waitFor(() => container.querySelector('.view-tab') !== null);
+
+    // This tab group previously had no role="tablist"/role="tab"/
+    // aria-selected at all, unlike every sibling tab group in the app
+    // (.mk-tabs a few lines up in the same file) — a screen reader had no
+    // way to know these four buttons were a tab group or which was active.
+    expect(container.querySelector('#mk-view-tabs')!.getAttribute('role')).toBe('tablist');
+    const chartTab = container.querySelector<HTMLElement>('.view-tab[data-view="chart"]')!;
+    const tradeTab = container.querySelector<HTMLElement>('.view-tab[data-view="trade"]')!;
+    expect(chartTab.getAttribute('role')).toBe('tab');
+    expect(chartTab.getAttribute('aria-selected')).toBe('true');
+    expect(tradeTab.getAttribute('aria-selected')).toBe('false');
+
+    tradeTab.click();
+    await waitFor(() => container.querySelector('.of-btn.buy') !== null);
+    const tradeTabAfter = container.querySelector<HTMLElement>('.view-tab[data-view="trade"]')!;
+    const chartTabAfter = container.querySelector<HTMLElement>('.view-tab[data-view="chart"]')!;
+    expect(tradeTabAfter.getAttribute('aria-selected')).toBe('true');
+    expect(chartTabAfter.getAttribute('aria-selected')).toBe('false');
+    handle.pause();
+  });
+});
+
+describe('Coin detail: pair-picker popup dismissal', () => {
+  it('closes on a real Escape keydown and returns focus to the toggle', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+    (container.querySelector('.market-row') as HTMLElement).click();
+    await waitFor(() => container.querySelector('#mk-pair-toggle') !== null);
+
+    const toggle = container.querySelector<HTMLButtonElement>('#mk-pair-toggle')!;
+    const menu = container.querySelector<HTMLElement>('#mk-pair-menu')!;
+    toggle.click();
+    expect(menu.hidden).toBe(false);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+
+    // A real KeyboardEvent, not a direct function call — this is the exact
+    // event the popup's own listener (attached to `detailView`) receives
+    // from a real keyboard user pressing Escape.
+    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(menu.hidden).toBe(true);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(toggle);
+    handle.pause();
+  });
+
+  it('closes on a real click outside the popup, without picking an item', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+    (container.querySelector('.market-row') as HTMLElement).click();
+    await waitFor(() => container.querySelector('#mk-pair-toggle') !== null);
+
+    const toggle = container.querySelector<HTMLButtonElement>('#mk-pair-toggle')!;
+    const menu = container.querySelector<HTMLElement>('#mk-pair-menu')!;
+    toggle.click();
+    expect(menu.hidden).toBe(false);
+
+    // Previously this popup had exactly one dismissal path (picking an
+    // item) — a click anywhere else on the page left it visually stuck open.
+    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(menu.hidden).toBe(true);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
     handle.pause();
   });
 });

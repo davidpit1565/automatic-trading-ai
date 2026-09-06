@@ -193,11 +193,12 @@ function detailHeaderHtml(
   // role="tablist"/"tab" + aria-selected — the same ARIA tab pattern
   // `.mk-tabs` (the category strip on the list) already uses correctly;
   // this row visually IS a tab bar but had none of it, so a screen-reader
-  // user got five unlabelled-as-a-group buttons instead.
+  // user got five unlabelled-as-a-group buttons instead. Round-2 a11y audit
+  // added the roving `tabindex="-1"` on inactive tabs (arrow-key navigation
+  // between tabs relies on exactly one being a Tab stop at a time).
   const tabs = VIEW_TABS.map(
     (t) =>
-      `<button class="view-tab ${t.key === viewMode ? 'active' : ''}" data-view="${t.key}" ` +
-      `role="tab" aria-selected="${t.key === viewMode}" aria-label="${t.label}">` +
+      `<button class="view-tab ${t.key === viewMode ? 'active' : ''}" role="tab" aria-selected="${t.key === viewMode}" ${t.key === viewMode ? '' : 'tabindex="-1"'} data-view="${t.key}" aria-label="${t.label}">` +
       `<svg viewBox="0 0 24 24" aria-hidden="true">${t.icon}</svg></button>`,
   ).join('');
   const menuItems = rows
@@ -445,8 +446,8 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       <div class="mk-tabs" id="mk-tabs" role="tablist">${CATEGORIES.map(
         (c, i) =>
           `<button class="mk-tab${i === initialIndex ? ' active' : ''}" role="tab" ` +
-          `aria-selected="${i === initialIndex}" data-cat="${c.key}">${c.label}</button>`,
-      ).join('')}<button class="mk-tab" role="tab" aria-selected="false" data-cat="watchlist"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Watchlist</button></div>
+          `aria-selected="${i === initialIndex}" ${i === initialIndex ? '' : 'tabindex="-1"'} data-cat="${c.key}">${c.label}</button>`,
+      ).join('')}<button class="mk-tab" role="tab" aria-selected="false" tabindex="-1" data-cat="watchlist"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Watchlist</button></div>
       <div class="mk-controls">
         <input id="mk-search" class="mk-search" type="search" inputmode="search"
           placeholder="Search 500+ markets…" aria-label="Search markets" autocomplete="off">
@@ -464,6 +465,37 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   const detailView = container.querySelector<HTMLElement>('#mk-detail-view')!;
   const list = container.querySelector<HTMLElement>('#mk-list')!;
   const status = container.querySelector<HTMLElement>('#mk-status')!;
+
+  // Escape / click-outside dismissal for the pair-picker popup
+  // (`#mk-pair-menu`, aria-haspopup="listbox") that lives inside the
+  // coin-detail view. Its own open/select wiring lives in `openDetail` ->
+  // `wireCommonControls` below and is legitimately re-attached to fresh
+  // nodes on every detail open/re-paint (the whole header markup, including
+  // this popup, is rebuilt each time). These two listeners must NOT live
+  // there too: `detailView` and `document` are never destroyed, so
+  // attaching to them inside that per-paint code would stack a new listener
+  // on every view-tab switch/coin change, never releasing the old ones.
+  // Attached exactly once here, re-querying the popup fresh at event time
+  // (its identity changes across renders, unlike `detailView`/`document`
+  // themselves) rather than capturing it in a stale closure.
+  detailView.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const pairMenu = detailView.querySelector<HTMLElement>('#mk-pair-menu');
+    if (!pairMenu || pairMenu.hidden) return;
+    pairMenu.hidden = true;
+    const pairToggle = detailView.querySelector<HTMLButtonElement>('#mk-pair-toggle');
+    pairToggle?.setAttribute('aria-expanded', 'false');
+    pairToggle?.focus();
+  });
+  document.addEventListener('click', (event) => {
+    const pairMenu = detailView.querySelector<HTMLElement>('#mk-pair-menu');
+    if (!pairMenu || pairMenu.hidden) return;
+    const pairToggle = detailView.querySelector<HTMLElement>('#mk-pair-toggle');
+    const target = event.target as HTMLElement;
+    if (pairMenu.contains(target) || target === pairToggle || pairToggle?.contains(target)) return;
+    pairMenu.hidden = true;
+    pairToggle?.setAttribute('aria-expanded', 'false');
+  });
 
   let markets: MarketRow[] = [];
   /** Category + search + sort applied to `markets` — what the list shows. */
@@ -831,7 +863,11 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
           // (e.g. the candlestick chart) stayed fully on screen, unrelated
           // to whichever tab icon had just been tapped, for however long
           // that fetch took. Same fade-out/fade-in pattern the range and
-          // chart-type toggles already use below.
+          // chart-type toggles already use below. (Round-2 a11y audit note:
+          // no manual aria-selected/tabIndex sync is needed here — unlike
+          // `.mk-tabs`/`.hub-tab`, `paint()` fully re-renders
+          // `detailHeaderHtml` from `viewMode` on every call, so the fresh
+          // markup already reflects the new selection.)
           const current = detailView.querySelector<HTMLElement>('.detail-chart, .detail-nonchart');
           current?.classList.add('fade-out');
           void paint().then(() => {
@@ -1240,6 +1276,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
       const active = el.dataset['cat'] === key;
       el.classList.toggle('active', active);
       el.setAttribute('aria-selected', String(active));
+      el.tabIndex = active ? 0 : -1;
     }
     renderList();
   });

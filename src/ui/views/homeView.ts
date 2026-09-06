@@ -162,6 +162,13 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   liveHero.id = 'home-live-hero';
   liveHero.dataset['hub'] = 'profit';
   liveHero.hidden = true;
+  // A <section> with a click handler is invisible to the Tab key and does
+  // nothing on Enter/Space — role="button" + tabindex opts it into the
+  // global keyboard-activation delegate in main.ts (which the shared-layer
+  // pass's own .tappable:focus-visible ring, in styles.css, was already
+  // waiting for). Same reasoning for `hero` just below.
+  liveHero.setAttribute('role', 'button');
+  liveHero.tabIndex = 0;
   liveHero.innerHTML = `
     <div class="hero-label">Real money <span class="tag-live">REAL</span><span class="hero-more">profit ›</span></div>
     <div class="hero-value" id="hv-live-equity"><span class="skeleton-bar hero-value-skeleton"></span></div>
@@ -185,6 +192,8 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
   const hero = el('section', 'hero hero-bare tappable');
   hero.id = 'home-sim-hero';
   hero.dataset['nav'] = 'value';
+  hero.setAttribute('role', 'button');
+  hero.tabIndex = 0;
   hero.innerHTML = `
     <div class="hero-label">Portfolio value <span class="tag-sim">SIMULATED</span><span class="hero-more">history ›</span></div>
     <div class="hero-value" id="hv-equity"><span class="skeleton-bar hero-value-skeleton"></span></div>
@@ -212,7 +221,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
     <div class="block-head"><h2>Top movers</h2><button class="link-btn" id="movers-seeall" data-nav="markets">See all</button></div>
     <div class="mk-tabs movers-toggle" role="tablist">
       <button class="mk-tab active" role="tab" aria-selected="true" data-mover="gainers">Gainers</button>
-      <button class="mk-tab" role="tab" aria-selected="false" data-mover="losers">Losers</button>
+      <button class="mk-tab" role="tab" aria-selected="false" tabindex="-1" data-mover="losers">Losers</button>
     </div>`;
   const moversList = el('div', 'stack stack-card');
   moversList.id = 'home-movers';
@@ -273,6 +282,8 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       const up = m.changePct >= 0;
       const row = el('div', 'row tappable');
       row.dataset['nav'] = 'markets';
+      row.setAttribute('role', 'button');
+      row.tabIndex = 0;
       row.innerHTML = `
         <div class="row-main">${coinLogoHtml(m.base)}<div><div class="row-title">${m.label}</div><div class="row-sub">${m.base}</div></div></div>
         <div class="row-side"><span class="row-title">${tieredPriceHtml(euro(m.price))}</span><span class="chg ${up ? 'up' : 'down'}">${formatPct(m.changePct)}</span></div>`;
@@ -291,6 +302,8 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       const base = baseFor(data, m.symbol);
       const card = el('div', 'market-card tappable');
       card.dataset['nav'] = 'markets';
+      card.setAttribute('role', 'button');
+      card.tabIndex = 0;
       card.innerHTML = `
         <div class="market-top"><div class="market-id">${coinLogoHtml(base)}<span class="market-name">${m.label}</span></div></div>
         <div class="market-price-row">
@@ -598,6 +611,7 @@ export function renderHomeView(container: HTMLElement, data: ActiveDataSource): 
       const active = tab === btn;
       tab.classList.toggle('active', active);
       tab.setAttribute('aria-selected', String(active));
+      tab.tabIndex = active ? 0 : -1;
     }
     renderMovers();
   });

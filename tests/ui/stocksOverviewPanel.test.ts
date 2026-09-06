@@ -67,8 +67,15 @@ describe('Stocks Overview panel (DOM integration)', () => {
       clicked = true;
     });
 
-    panel.querySelector<HTMLElement>('.hero')!.click();
+    const hero = panel.querySelector<HTMLElement>('.hero')!;
+    hero.click();
     expect(clicked).toBe(true);
+    // Same gap as Home's identical hero (homeView.ts): a <section> with a
+    // click handler is invisible to the Tab key and inert on Enter/Space
+    // without these — role="button" opts it into the app's global
+    // keyboard-activation delegate (main.ts), proven end-to-end there.
+    expect(hero.getAttribute('role')).toBe('button');
+    expect(hero.tabIndex).toBe(0);
   });
 
   it('shows the "vs S&P 500" benchmark line once benchmark-result is present, hidden otherwise', async () => {
