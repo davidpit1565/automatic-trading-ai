@@ -759,8 +759,19 @@ export class PaperAutoPilot {
   async previewBestOpportunity(timestamp: number): Promise<TipResult> {
     const scan = await scanMarket(this.options.source, this.options.symbols, this.options.timeframe, SCAN_CANDLES);
     const held = new Set(this.options.positions.openPositions().map((p) => p.symbol));
+    // Mark held positions to their CURRENT scanned price, not stale entry
+    // price — the same mark-to-market fix already applied to runCycleOnce's
+    // exposure caps (see riskEngine.ts's `OpenPosition.currentPrice` doc).
+    // Without this, a held position that ran up since entry reads back as
+    // far LESS concentrated than it really is, so this preview could approve
+    // a trade the real risk engine (seeing the correct current price) would
+    // refuse — violating this method's own "must report exactly what the
+    // autopilot itself would act on" contract.
     const marketPrices: Record<string, number> = {};
-    for (const p of this.options.positions.openPositions()) marketPrices[p.symbol] = p.entryPrice;
+    for (const scanResult of scan.results) marketPrices[scanResult.symbol] = scanResult.snapshot.price;
+    for (const p of this.options.positions.openPositions()) {
+      if (!(p.symbol in marketPrices)) marketPrices[p.symbol] = p.entryPrice;
+    }
 
     const qualified: TipCandidate[] = [];
     const misses: { readonly symbol: string; readonly confidence: number; readonly reason: string }[] = [];

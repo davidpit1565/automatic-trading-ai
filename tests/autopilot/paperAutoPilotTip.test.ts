@@ -15,6 +15,7 @@ import { ManualScheduler } from '../../src/core/monitor/scheduler';
 import { PortfolioEngine } from '../../src/core/position/portfolioEngine';
 import { PositionEngine } from '../../src/core/position/positionEngine';
 import { TradeJournal } from '../../src/core/position/tradeJournal';
+import { DEFAULT_RISK_LIMITS } from '../../src/core/risk/riskEngine';
 import { ok } from '../../src/core/types';
 
 const T = 1_700_000_000_000;
@@ -110,5 +111,56 @@ describe('previewBestOpportunity', () => {
 
     expect(result.qualified).toBeNull();
     expect(result.closestMiss).toBeNull();
+  });
+
+  it('marks an already-held position to its CURRENT price, not its stale entry price, when sizing a new candidate', async () => {
+    const store = new MemoryStore();
+    const journal = new TradeJournal(store);
+    const positions = new PositionEngine(store, journal);
+    const portfolio = new PortfolioEngine(store, positions, { initialCash: 10_000, baseCurrency: 'USD' });
+
+    // Seed a held position directly at a known entry price/quantity so the
+    // "real" vs "stale" notional is hand-computable: cost 50*100 = 5,000,
+    // leaving 5,000 cash.
+    const opened = portfolio.open({
+      symbol: 'HELD/USD',
+      quantity: 50,
+      entryPrice: 100,
+      stopLoss: 90,
+      takeProfit: 200,
+      timestamp: T,
+      fee: 0,
+    });
+    expect(opened.ok).toBe(true);
+
+    const pilot = new PaperAutoPilot({
+      // HELD/USD drifts hugely upward over the 150 scanned candles, so its
+      // CURRENT price is now far above its 100 entry price. QUAL/USD is a
+      // normal qualifying candidate (same drift as the sibling tests above).
+      source: makeSource({ 'HELD/USD': { drift: 0.03 }, 'QUAL/USD': { drift: 0.001 } }),
+      symbols: ['HELD/USD', 'QUAL/USD'],
+      timeframe: '1h',
+      scheduler: new ManualScheduler(),
+      portfolio,
+      positions,
+      killSwitch: new PersistedKillSwitch(store),
+      audit: new PersistedAuditLog(store),
+      getDailyLoss: () => 0,
+      clock: () => T,
+      riskLimits: { ...DEFAULT_RISK_LIMITS, maxTotalExposurePct: 55 },
+    });
+
+    const result = await pilot.previewBestOpportunity(T);
+
+    // Correctly marked to market, HELD/USD's real current-price notional
+    // alone already exceeds the 55%-of-equity total-exposure cap, so
+    // QUAL/USD must be refused — exactly what runCycleOnce's own
+    // mark-to-market pricing would refuse. Before the fix, HELD/USD was
+    // priced at its stale 100 entry price (notional 5,000 of a 10,000 stale
+    // "equity" = 50%, comfortably under the 55% cap), so this wrongly
+    // qualified QUAL/USD as something the autopilot would actually open.
+    expect(result.qualified).toBeNull();
+    expect(result.closestMiss?.symbol).toBe('QUAL/USD');
+    expect(result.closestMiss?.reason).toContain('exposure');
   });
 });
