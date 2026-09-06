@@ -56,4 +56,12 @@ describe('dashboard styles', () => {
     }
     expect(css).toMatch(/\.scan-row\s*\{[^}]*cursor:\s*pointer/);
   });
+
+  it('opts into the safe area so env(safe-area-inset-*) is non-zero on a notched device, and the topbar/bottom-nav actually reserve it', () => {
+    // Without viewport-fit=cover every env(safe-area-inset-*) below silently
+    // resolves to 0 — this is the precondition the two rules after it depend on.
+    expect(html).toMatch(/<meta name="viewport" content="[^"]*viewport-fit=cover[^"]*"/);
+    expect(css).toMatch(/\.topbar\s*\{[^}]*env\(safe-area-inset-top\)/);
+    expect(css).toMatch(/\.bottom-nav\s*\{[^}]*env\(safe-area-inset-bottom\)/);
+  });
 });

@@ -5588,3 +5588,187 @@ Gate: tsc clean, 1178 vitest passed (7 new: 4 for `formatPct`/`formatNumber`,
 3 for `formatPriceSplit`), `npm run build` clean. Diff touches only
 `src/ui/format.ts`, `src/ui/styles.css`, `tests/ui/format.test.ts` — no
 `src/ui/views/*.ts` file touched, per this pass's scope.
+
+## Design pass, Home + global nav chrome slice: 12 verified fixes (2026-09-06)
+
+Part of David's "compare against Revolut X, ship 200 serious improvements"
+round, split across parallel agents by screen area. This agent's slice:
+`src/ui/views/homeView.ts`, `src/ui/main.ts` (bottom nav, topbar BTC chip,
+data-source banner, tool-grid nav), and the Home/global-nav-specific parts
+of `src/ui/styles.css` only — Markets/Stocks/Tools view-specific CSS is
+other agents' scope, untouched here.
+
+Loaded `fintech-dashboard-polish` and `apple-design` first. Read the prior
+"Creative upgrade pass #1-#4", "Deep design pass #1-#3", "True-black Revolut
+X theme landed", and "Design-system consistency pass" entries above in full
+before starting, specifically to avoid re-proposing anything they already
+shipped (two-tier pricing, sparklines, depth bars, hairline lists,
+hero-bare, press states, table-scroll wrappers, badge fixes). Built `dist/`,
+ran `vite preview`, and took real Playwright screenshots (`playwright-core`,
+`/opt/pw-browsers/chromium`, 390×844, `?demo=1` + the real committed
+`state/autopilot-state.json` mocked via `page.route`) of Home across every
+primary tab and at 1280×900 desktop, before touching any code — a genuine
+before/after screenshot (or a DOM/computed-style check where a screenshot
+couldn't catch the exact timing) backs every item below. Did not re-extract
+frames from the on-disk Revolut X screen recording — the skill's existing
+notes already answered every question this slice raised.
+
+Went in expecting ~28-30 items (this agent's share of 200 across several
+parallel agents); found 13 real, independently-verifiable ones on its own
+merge base. At rebase time onto `origin/main` (needed since a parallel
+"shared-layer" agent had already merged PR #198 while this work was in
+progress), one of those 13 — a `prefers-reduced-motion` fade for
+primary/hub-tab switches — turned out to already be shipped there, as a
+broader fix covering more selectors than this one did. Dropped it rather
+than re-landing a duplicate; kept everything else, including one distinct,
+unconflicted fix (item 10 below) that its own reduced-motion work never
+addressed. Net: 12 real, independently-verifiable, non-duplicate ones —
+stopped there rather than padding the count; three prior exhaustive passes
+already covered most of the standard checklist for this exact screen.
+
+1. **Topbar BTC chip was dead UI.** The single most prominent live number in
+   the whole header (visible on every screen, not just Home) did nothing
+   when tapped — no cursor, no press state, no destination. Gave it
+   `data-nav="markets"` (picked up by the existing delegated `[data-nav]`
+   click listener in `main.ts`, no new wiring needed) plus `cursor:pointer`,
+   a hover tint, and a real `:active` scale press state (with a
+   `prefers-reduced-motion` fallback). Verified: a real Playwright click on
+   `#topbar-btc` now switches the active view to `view-markets` and lights
+   up the Markets nav button; new test in `tests/ui/mainNav.test.ts` (a new
+   file — main.ts had zero prior test coverage).
+2. **Top movers row prices were flat strings next to two-tier prices two
+   rows above.** The Markets strip cards directly above "Top movers" on the
+   same screen already render `€160.93` with the `.93` dimmed/smaller
+   (`tieredPriceHtml`); the movers list a few pixels below rendered
+   `€160.93` as one flat string. Wrapped in the same `tieredPriceHtml` call
+   already used everywhere else. Verified via screenshot: Litecoin
+   `€85.74`, Solana `€160.93`, Dogecoin `€0.1227` all now show the dimmed
+   decimal in the movers list, matching the cards above.
+   (Considered the identical fix for the topbar BTC price too — reverted it
+   after the screenshot showed BTC's price is always ≥ €1,000, and
+   `formatPrice` drops decimals entirely above that threshold, so the wrap
+   would be a genuine no-op for the one symbol this chip ever shows. Kept
+   the diff to what actually changed a pixel.)
+3. **The "Markets" strip was the one async section on Home with no loading
+   state at all.** Top movers, Open positions, and Recent activity each
+   already show a real shimmering skeleton before their data loads
+   (`skeletonRowsHtml`); the Markets strip a few lines above them rendered
+   nothing — a blank gap — for that same moment. Added
+   `skeletonMarketCardsHtml` (`loadingStates.ts`) — a placeholder shaped
+   like `.market-card` (icon, big price bar, sparkline-shaped bar) built
+   from the same `.skeleton-dot`/`.skeleton-bar` shimmer primitives, kept
+   off the real `.market-card` class per this file's own established
+   convention ("a placeholder must never be picked up by code selecting
+   real cards"). The demo data source resolves too fast to catch the exact
+   race on a screenshot, so verified two ways: a real screenshot of the
+   skeleton's shape (icon + bars, correctly shimmer-styled, two cards side
+   by side) via direct DOM injection, and a new DOM test asserting
+   `#home-markets .skeleton-market-card` exists synchronously on mount,
+   before any fetch resolves.
+4. **The hero balance's first paint was a bare giant "—" glyph, not a real
+   loading state.** Every other async section on Home got a real skeleton;
+   the single most prominent element on the whole screen (the giant
+   `hero-bare` balance) rendered a stark, unstyled em-dash at full 2.7rem+
+   scale with no shimmer for that same moment. Replaced with a
+   `.hero-value-skeleton` shimmer bar for both the SIMULATED and REAL hero.
+   Also handled the genuine-offline case so this can't repeat the "shimmers
+   forever" bug this same function already guards against for Open
+   positions/Recent activity: if the cloud state fetch never resolves, the
+   skeleton is swapped for the honest static "—" instead of shimmering
+   indefinitely. Verified via a screenshot with an artificially delayed
+   (but still successful) state fetch, showing the real shimmer bar
+   mid-load, and a new test asserting the offline fallback actually fires.
+5. **Kill-switch "paused" banner used a bare "⏸" emoji** — the one place on
+   Home that broke the app's single outlined-SVG icon language (readiness
+   checks, tool-grid icons, and nav icons all use it; nowhere else in this
+   file uses an emoji). Replaced with an inline SVG pause icon sized/stroked
+   to match. Verified: existing kill-switch test still passes, plus a new
+   assertion that `#hv-kill-switch` now contains an `<svg>` and no longer
+   contains "⏸".
+6. **Desktop sidebar nav overlapped and cut off the data-source banner's
+   text.** A prior pass (PR referenced above) fixed the sidebar drawing over
+   the *topbar* by pinning it to `top: 5rem` — but the amber "Live data
+   unavailable" banner is a separate element between the topbar and
+   `<main>`, never given the same `210px` clearance `.content`/`.topbar`
+   already reserve for the sidebar. Confirmed on a real 1280×900 screenshot
+   in demo/offline mode: the banner's own text was genuinely cut off behind
+   the floating nav card. Added the same `margin-inline-start: 210px` in the
+   existing desktop breakpoint. Verified with a before/after screenshot —
+   the full banner text is now readable, clear of the sidebar.
+7. **`viewport-fit=cover` was missing from the viewport meta tag.** This app
+   already opts into edge-to-edge content
+   (`apple-mobile-web-app-status-bar-style: black-translucent`) and the CSS
+   already uses `env(safe-area-inset-bottom)` for the bottom-nav's content
+   clearance — but per spec, `env(safe-area-inset-*)` only resolves to a
+   real, non-zero value when the page declares `viewport-fit=cover`; without
+   it, every safe-area calc in this file was silently computing against 0
+   on a real notched/Dynamic-Island device, even though it reads as correct
+   in the source. Added the meta tag — the actual precondition for items 8
+   and 9 below to do anything on a real device.
+8. **Topbar had no safe-area-inset-top padding at all**, in any of its four
+   width breakpoints — on an installed iOS PWA (which this app's own meta
+   tags request), the brand wordmark and BTC chip would render partly under
+   the status bar/notch. Added `max(<existing value>, env(safe-area-inset-top))`
+   to all four `.topbar` padding rules (base + 3 responsive breakpoints) so
+   the existing value is preserved everywhere with no inset, and real
+   clearance is added only where one exists.
+9. **Bottom-nav's fixed `bottom: 20px` never accounted for the home-indicator
+   gesture strip (~34px on a notched iPhone)** — it only ever read as
+   "enough" because `env(safe-area-inset-bottom)` was silently 0 without
+   item 7's fix. Fixing item 7 without also fixing this would have been a
+   regression: the nav pill would newly sit right at (or under) the
+   swipe-up gesture zone on a real device once the inset became real.
+   Changed to `calc(20px + env(safe-area-inset-bottom))`.
+10. **`.view.active`'s own page-transition rule was dead code, silently
+    shadowed since it was written.** Found via `getComputedStyle` while
+    verifying primary-tab transition behavior: `.view.active`'s declared
+    `animation: viewfade ...` never actually plays — every `.view.active`
+    element is a `<section>` inside `.content`, and a more specific rule
+    (`.content section.active { animation: fadeInUp ... }`, three sections
+    away) always wins on specificity regardless of source order. Two
+    competing, only-one-of-which-works transition systems existed for the
+    literal same elements — including in the shared-layer pass's own
+    reduced-motion fix above, whose comment explicitly neutralizes BOTH
+    `.view.active` and `.content section.active` "regardless of which one
+    currently cascades," precisely because the dead one was never cleaned
+    up. Removed the dead declaration here and pointed a comment at the one
+    that actually runs, so there's exactly one source of truth left. Zero
+    visible change (confirmed: `fadeInUp` played before and after, in both
+    normal and reduced motion) — pure dead-code correctness, and it makes
+    that other pass's own defensive "regardless of which one" caveat moot
+    going forward.
+11. **`.link-btn` ("See all" on Markets/Top movers/Recent activity) was
+    hover-only** — no `:active` state, unlike every other tappable element
+    on this screen (`.tappable`, `.mk-tab`, `.nav-btn` all have one). A
+    phone has no `:hover` to fall back on, so all three "See all" links gave
+    zero tap feedback. Added a real `:active` (opacity + scale) with a
+    reduced-motion fallback. `.link-btn` is used only in `homeView.ts`, so
+    this is zero-risk for the other parallel agents' screens.
+12. **Markets strip cards had no scroll-snap** — a swipe left a card resting
+    mid-width, cut in half by the strip's own trailing fade mask, instead of
+    landing cleanly on a card boundary the way Revolut X's own horizontal
+    card carousels do. Added `scroll-snap-type: x proximity` to
+    `.markets-strip` and `scroll-snap-align: start` to `.market-card`
+    (`proximity`, not `mandatory`, so a fast flick isn't fought).
+
+**Not counted, considered and rejected**: retokenizing every raw
+`rem`/`px` spacing value in Home-adjacent CSS onto the `--sp-*` scale —
+most of the values in scope (`.markets-strip` gap, `.hub-tabs` padding,
+etc.) are fine-grained micro-adjustments that don't map cleanly onto the
+7-step scale, and several of the classes involved (`.hero`, `.hub-tabs`,
+`.mk-tab`) are shared with other agents' in-flight screens — not worth the
+merge-conflict risk for a cosmetic, sub-pixel-scale win.
+
+Tests: 5 new (`tests/ui/mainNav.test.ts` — new file, main.ts's first-ever
+test coverage; 4 added to `tests/ui/homeView.integration.test.ts`; 2 static
+assertions added to `tests/ui/dashboard.test.ts`). Rebased onto
+`origin/main` after the shared-layer pass above merged first (real conflicts
+in `src/ui/styles.css`'s reduced-motion block and `PROJECT_STATE.md`'s tail,
+both resolved by hand as described). Full gate green on the final, rebased
+tree: `tsc --noEmit` clean, 1183/1183 vitest (1178 from the merged
+shared-layer baseline + 5 new here, none broken), `npm run build` clean.
+Diff: `index.html`, `src/ui/loadingStates.ts`, `src/ui/main.ts`,
+`src/ui/styles.css`, `src/ui/views/homeView.ts` + the 3 test files above —
+nothing under `server/**`, `state/**`, or `src/core/**`, and no view file
+owned by another parallel agent (`marketsView.ts`, `assetHubView.ts`, any
+`stocks*.ts`, any Tools view) touched.
