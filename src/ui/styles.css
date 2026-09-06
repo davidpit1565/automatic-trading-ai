@@ -1207,6 +1207,19 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .mk-tabs { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none;
   padding-bottom: 0.5rem; margin-bottom: 0.25rem; -webkit-overflow-scrolling: touch; }
 .mk-tabs::-webkit-scrollbar { display: none; }
+/* Scroll-edge fade, not a hard cut: this strip has more tabs than fit at
+   390px ("Volume" used to be sliced mid-word with nothing signalling more
+   tabs existed off-screen) — a soft mask at whichever edge still has
+   content hints "scroll →" the way a hard clip never does. Classes toggled
+   in JS from the strip's own scroll position; the base rule fades both
+   edges so unstyled JS-disabled environments still get a (harmless) hint. */
+.mk-tabs { -webkit-mask-image: linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%); }
+.mk-tabs.at-start { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent 100%); }
+.mk-tabs.at-end { -webkit-mask-image: linear-gradient(to right, transparent 0, #000 20px);
+  mask-image: linear-gradient(to right, transparent 0, #000 20px); }
+.mk-tabs.at-start.at-end { -webkit-mask-image: none; mask-image: none; }
 .mk-tab { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.48rem 0.95rem; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--surface); color: var(--text-dim);
   font-size: 0.86rem; font-weight: var(--fw-semibold); cursor: pointer; transition: all var(--dur-fast) var(--ease); }
@@ -1244,8 +1257,16 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    tap target and the star is not nested inside it (a button inside a button is
    invalid HTML and its clicks are unreliable). */
 .mk-controls { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
-.mk-search { flex: 1 1 auto; min-width: 0; padding: 0.58rem 1rem; border-radius: var(--r-pill);
+/* A leading search (magnifying-glass) icon — every other control in this row
+   (.mk-sort) already carries its own icon the same way (an inline SVG data
+   URI as a background-image, no extra DOM), but the search field itself had
+   none: an icon-less search box is the odd one out next to a chevron-bearing
+   sort control, and every reference search field (Revolut X included) leads
+   with this icon. */
+.mk-search { flex: 1 1 auto; min-width: 0; padding: 0.58rem 1rem 0.58rem 2.35rem; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.9rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='11' cy='11' r='7' stroke='%239a9aa4' stroke-width='2'/%3E%3Cpath d='M21 21l-4.35-4.35' stroke='%239a9aa4' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 0.85rem center;
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .mk-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
 .mk-sort { flex: 0 0 auto; padding: 0.58rem 1.85rem 0.58rem 0.9rem; border-radius: var(--r-pill);
@@ -1271,6 +1292,14 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .mk-star:active { transform: translateY(-50%) scale(0.85); }
 .mk-star.on { color: var(--warn); }
 .mk-star.on svg { fill: currentColor; }
+/* Press feedback (:active above) already existed; this is the separate
+   "it actually got added" moment — a little overshoot-and-settle bounce
+   on the star itself when a tap newly favourites the row, not just a
+   colour swap. Composes the same translateY(-50%) base as :active, for the
+   same reason (a bare scale() would re-anchor and visibly jump the icon). */
+.mk-star.pop svg { animation: starPop 380ms var(--ease-out); }
+@keyframes starPop { 0% { transform: scale(1); } 35% { transform: scale(1.4); } 60% { transform: scale(0.9); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .mk-star.pop svg { animation: none; } }
 
 /* The markets list is ONE grouped card with hairline separators, not 60
    individually-outlined floating cards with gaps between them. The reference
@@ -1302,9 +1331,17 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    found from a real screenshot. It rides here instead: flex with only the
    text portion allowed to shrink/ellipsis, so the badge itself is never
    partially clipped. */
-.market-row-id .row-sub { display: flex; align-items: center; gap: 0.35rem; min-width: 0; overflow: hidden; }
+.market-row-id .row-sub { display: flex; align-items: center; gap: 0.3rem; min-width: 0; overflow: hidden; }
 .market-row-id .row-sub-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.market-row-id .row-sub .tag-traded { flex-shrink: 0; }
+/* Moving the badge here (see the comment above) fixed the NAME line but
+   measured on a real 390px row it still claims most of THIS line: the badge
+   alone renders at ~64px against only ~87px total available for the whole
+   secondary line, leaving the freshness clock + symbol text ~6px of real
+   width — effectively invisible, not just truncated. Tightening the badge's
+   own padding/tracking here (this selector only — the shared `.tag-traded`
+   used elsewhere, e.g. Stocks' Market panel, is untouched) recovers close to
+   20px for the text without shrinking the badge's legibility. */
+.market-row-id .row-sub .tag-traded { flex-shrink: 0; padding: 0.1rem 0.32rem; letter-spacing: 0; }
 .market-row-num { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
 /* Hidden on phone (the row already has 3 real columns there); shown as a 4th
    desktop column below — real information (already fetched with the row,
@@ -1548,7 +1585,8 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
   transition: transform var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
 .tappable:active { transform: scale(0.985); opacity: 0.92; }
 @media (prefers-reduced-motion: reduce) { .tappable:active { transform: none; } }
-.detail-head { display: flex; justify-content: space-between; align-items: center; margin: 0.5rem 0 0.9rem; }
+.detail-head { display: flex; justify-content: space-between; align-items: center; margin: 0.5rem 0 0.9rem;
+  position: relative; /* anchors .pair-menu, a floating overlay, below it */ }
 .detail-head-left { display: flex; align-items: center; gap: 0.7rem; }
 .detail-coin { display: flex; align-items: center; gap: 0.6rem; }
 .detail-coin .coin-logo { width: 30px; height: 30px; }
@@ -1572,10 +1610,24 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    .detail-name keeps its exact prior look/text so nothing else changes. */
 .detail-name-btn { display: flex; align-items: center; gap: 0.3rem; background: none; border: none;
   color: inherit; padding: 0; cursor: pointer; }
-.pair-chevron { width: 15px; height: 15px; fill: none; stroke: var(--text-dim); stroke-width: 2.2;
+/* stroke-width 1.8-2, matching every other icon on this screen (.mk-star,
+   .icon-btn, .view-tab, .star-btn) — this one and .pager below ran heavier
+   (2.2/2.4), reading as a slightly bolder icon family on the same page. */
+.pair-chevron { width: 15px; height: 15px; fill: none; stroke: var(--text-dim); stroke-width: 1.8;
   stroke-linecap: round; stroke-linejoin: round; }
-.pair-menu { position: relative; z-index: 5; margin: -0.4rem 0 0.9rem; max-height: 320px; overflow-y: auto;
+/* A floating overlay anchored below the coin name — like Revolut X's own
+   "BTC-EUR ▾" dropdown, it sits ON TOP of the price/stats/chart below it
+   rather than displacing them. It previously sat in normal flow (a bare
+   `position: relative`), which shoved the entire rest of the detail page
+   down by its own height (up to 320px) every time it opened — confirmed on
+   a real screenshot: opening it pushed the hero price, stat tiles and view
+   tabs down below the fold, which reads as the page having broken rather
+   than a dropdown having opened. */
+.pair-menu { position: absolute; top: 100%; left: 0; right: 0; z-index: 20; margin-top: 0.4rem;
+  max-height: 320px; overflow-y: auto; transform-origin: top left;
+  animation: pairMenuIn var(--dur-fast) var(--ease-out);
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); }
+@keyframes pairMenuIn { from { opacity: 0; transform: scale(0.97) translateY(-4px); } to { opacity: 1; transform: none; } }
 .pair-menu-item { width: 100%; display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.9rem;
   background: transparent; border: none; border-bottom: 1px solid var(--border); color: var(--text); cursor: pointer;
   text-align: left; }
@@ -1597,6 +1649,8 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .star-btn:hover { background: var(--surface-hover); color: var(--text); }
 .star-btn:active { transform: scale(0.9); }
 .star-btn.active { color: var(--warn); background: var(--warn-tint); }
+/* Same toggle-moment bounce as the list's .mk-star.pop, reused here. */
+.star-btn.pop svg { animation: starPop 380ms var(--ease-out); }
 .detail-stats-row { display: flex; gap: 0.6rem; margin-bottom: 0.9rem; }
 /* Fill-difference elevation, no border — the reference separates a card
    from its background via a barely-there fill contrast, never a visible
@@ -1615,7 +1669,8 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .view-tab:active { transform: scale(0.94); }
 .view-tab.active { background: var(--surface-raised); color: #fff; }
 .detail-nonchart { background: linear-gradient(160deg, var(--surface-raised), var(--surface)); border: 1px solid var(--border); border-radius: var(--r-lg);
-  padding: 0.8rem; box-shadow: var(--shadow-xs); min-height: 160px; }
+  padding: 0.8rem; box-shadow: var(--shadow-xs); min-height: 160px;
+  transition: opacity var(--dur-base) var(--ease); }
 
 /* Trade tab — mirrors Revolut X's order form visually; every control is
    inert by design (see orderFormHtml's doc comment in marketsView.ts). */
@@ -1640,7 +1695,13 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .orderbook-table { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
 .orderbook-head { display: flex; justify-content: space-between; color: var(--text-dim); font-size: 0.72rem;
   padding: 0 0.2rem 0.3rem; }
-.orderbook-row { display: flex; justify-content: space-between; padding: 0.2rem; border-radius: var(--r-xs); }
+.orderbook-row { display: flex; justify-content: space-between; padding: 0.2rem; border-radius: var(--r-xs);
+  transition: background var(--dur-fast) var(--ease); }
+/* Every other dense row in the app (.market-row, .pair-menu-item) highlights
+   on hover; the order-book ladder had no such feedback at all. Sits behind
+   the depth bars (both establish their own stacking context, see the
+   .ob-bid/.ob-ask comment below) so it never masks them. */
+.orderbook-row:hover { background: var(--surface-hover); }
 /* Cumulative-depth bar behind each side's own number (see orderBookTableHtml's
    doc comment) — a size a viewer can compare at a glance, the number itself
    only for the precise value. Grows toward the shared centre from each
@@ -1681,7 +1742,13 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .trade-tape-head span:nth-child(2), .trade-tape-row span:nth-child(2) { text-align: center; }
 .trade-tape-head span:last-child, .trade-tape-row span:last-child { text-align: right; color: var(--text-dim); }
 .trade-tape { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.85rem; }
-.trade-tape-row { border-radius: var(--r-xs); }
+.trade-tape-row { border-radius: var(--r-xs); transition: filter var(--dur-fast) var(--ease); }
+/* Same gap as the order book above — a fast-scrolling tape of otherwise
+   identical rows had no hover feedback to help a mouse user track a row.
+   `filter: brightness` rather than swapping `background`: every row already
+   carries its own buy/sell gradient wash (below), which a plain background
+   override would silently replace instead of lightening. */
+.trade-tape-row:hover { filter: brightness(1.35); }
 .trade-tape-row.buy { background: linear-gradient(to right, var(--hot-tint) 0%, transparent 55%); }
 .trade-tape-row.sell { background: linear-gradient(to right, var(--cold-tint) 0%, transparent 55%); }
 /* The coin-detail price is that screen's hero the same way the balance is
@@ -1703,7 +1770,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .pager { display: flex; align-items: center; gap: 0.35rem; background: var(--surface); border: 1px solid var(--border); color: var(--text);
   border-radius: var(--r-pill); padding: 0.5rem 0.9rem; cursor: pointer; font-weight: var(--fw-semibold); font-size: 0.85rem;
   transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
-.pager svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.pager svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .pager:hover:not(:disabled) { border-color: var(--border-strong); }
 .pager:active:not(:disabled) { transform: scale(0.96); }
 .pager:disabled { opacity: 0.4; cursor: default; }
@@ -1751,9 +1818,15 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .ctoggle-btn { background: transparent; border: none; color: var(--text-dim);
   border-radius: var(--r-pill); padding: 0.42rem 0.72rem; font-size: 0.8rem; font-weight: 700; cursor: pointer;
   transition: all var(--dur-fast) var(--ease); }
-.ctoggle-btn:hover { color: var(--text); }
-.ctoggle-btn:active { transform: scale(0.94); }
+.ctoggle-btn:hover:not(:disabled) { color: var(--text); }
+.ctoggle-btn:active:not(:disabled) { transform: scale(0.94); }
 .ctoggle-btn.active { background: var(--surface-raised); color: #fff; }
+/* A long range (1Y/5Y/10Y/All) forces line mode and disables "Candles" (see
+   marketsView.ts) — but this rule was missing entirely, so a disabled button
+   looked identical to any other unselected-but-tappable one, with no signal
+   that tapping it does nothing. Matches the `.pager:disabled` treatment
+   already established elsewhere in this same file. */
+.ctoggle-btn:disabled { opacity: 0.4; cursor: default; }
 
 /* Candlestick chart: green up / red down bodies + wicks. Full-opacity,
    crisply-stroked bodies — the semi-transparent fill in the previous pass
@@ -1805,6 +1878,15 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .detail-chart { transition: opacity var(--dur-base) var(--ease); }
 .detail-chart.fade-out { opacity: 0; }
 .detail-chart.fade-in { opacity: 1; animation: fadeIn var(--dur-slow) var(--ease-out); }
+/* Same fade, applied to the Order book/Depth/Trades/Trade pane. Switching a
+   view-tab used to leave the PREVIOUS tab's content fully visible for
+   however long its fetch took (confirmed on a real screenshot: tapping
+   "Order book" showed the active tab icon flip instantly while the
+   candlestick chart stayed on screen underneath, unrelated to what was
+   just tapped) — this gives the same instant, honest "something is loading"
+   feedback the chart's own range/mode switch already had. */
+.detail-nonchart.fade-out { opacity: 0; }
+.detail-nonchart.fade-in { opacity: 1; animation: fadeIn var(--dur-slow) var(--ease-out); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* Chart wrapper + floating tooltip */

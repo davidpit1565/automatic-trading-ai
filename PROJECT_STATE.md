@@ -1,5 +1,183 @@
 # PROJECT_STATE
 
+## Markets/coin-detail design pass: 17 real, screenshot-verified improvements (2026-09-06)
+
+David's ask: compare the app against Revolut X and ship 200 serious
+improvements across the whole app, split across parallel agents by screen
+area. This agent's scope: `marketsView.ts`/`markets.ts`/`charts.ts` and the
+Markets-specific parts of `styles.css` only. Per this file's own prior
+entries ("Creative upgrade pass #3", "Deep design pass #1/#2/#3", "True-black
+Revolut X theme landed", "Design-system consistency pass"), the two-tier
+pricing, sparklines, depth bars, true-black palette, hairline-grouped list,
+and press states were already shipped — this pass hunted for what those
+missed, not a re-proposal of any of it.
+
+**Method**: loaded `fintech-dashboard-polish` and `apple-design`. Built
+`dist/`, ran `vite preview`, and used real Playwright screenshots at 390×844
+— `?demo=1` for the Markets list (all 5 category tabs, search, sort,
+watchlist), and a `page.route` handler mocking Kraken's public
+AssetPairs/Ticker/OHLC/Depth/Trades endpoints (same technique as this repo's
+own `scripts/e2e.mjs`) for the coin-detail screen, since `?demo=1`'s
+synthetic source has no order book/trades capability to show Table/Depth/
+Trades/Trade with. Covered both an up coin (BTC) and a down coin (ETH,
+`open > price`), all 5 view-tabs, both chart types, and all 7 ranges.
+Several findings came from `getBoundingClientRect()`/computed-style
+measurement on the real rendered DOM, not just looking at pixels — that's how
+the scroll-position bug (#1) and the badge-crowding bug (#4) were actually
+confirmed rather than guessed at.
+
+1. **Switching coins (Prev/Next pager, or the pair-switcher menu) left the
+   viewport at its old scroll position — the new coin's own header/price
+   could render entirely off-screen, overlapping the fixed topbar.**
+   Confirmed by measurement: open BTC, scroll down 400px (to where the pager
+   actually sits after a normal chart), tap Next — `getBoundingClientRect()`
+   showed `.detail-head` at `top: -45px`, and the screenshot showed a giant
+   ghosted price number bleeding into the fixed topbar with no header/back
+   button/star visible at all. Real Revolut X (and this app's own
+   `main.ts`) always opens a new "page" at the top. Fixed: `window.scrollTo({
+   top: 0 })` on a fresh detail open and on every coin switch (prev/next/
+   pair-menu select), `marketsView.ts`. Verified: scripted the exact
+   scroll-then-next repro after the fix — `.detail-head`'s top is now a
+   normal positive on-screen value, screenshot shows a clean header.
+2. **The pair-switcher dropdown (`#mk-pair-menu`) was a static block in
+   normal flow, not a floating overlay** — opening it pushed the ENTIRE rest
+   of the detail page (hero price, stat tiles, chart) down by its own height
+   (up to 320px), confirmed on a real screenshot: the price/stats looked like
+   they'd vanished, not like a dropdown had opened. The code's own comment
+   says this was modelled on "Revolut X's Trade page" selector, which is a
+   true floating dropdown. Fixed: `.pair-menu` is now `position: absolute`
+   anchored to (and nested inside, so `top: 100%` resolves correctly) the
+   now-`position: relative` `.detail-head`, with a small materialize-in
+   animation, plus outside-click and Escape to dismiss (a real overlay needs
+   both, which the old in-flow block never did). Verified: real screenshot
+   shows the menu floating over the (unmoved) price/chart below it, and a
+   `getBoundingClientRect()` check that the price row's position is
+   unchanged before/after opening it; DOM test covers the nesting + both
+   dismiss paths.
+3. **"All 1 markets shown" — wrong plural** when a search or category
+   narrows the list to exactly one result. Verified on a real screenshot
+   (searching "bit" against the demo universe). Fixed: singular/plural based
+   on count. Test added.
+4. **The "TRADED" badge, moved to the row's secondary line by an earlier
+   pass specifically to stop it truncating the coin NAME, turned out to
+   crowd that secondary line (the freshness clock + symbol) down to ~6px of
+   rendered width — effectively invisible, not just truncated.** Measured via
+   `getBoundingClientRect()` on a real 390px row: the badge alone rendered at
+   63.67px against ~87px total available for the whole line. Fixed by
+   tightening the badge's own padding/letter-spacing FOR THIS PLACEMENT ONLY
+   (`.market-row-id .row-sub .tag-traded`, not the shared `.tag-traded` class
+   Stocks' Market panel also uses) — recovers the text to ~14.6px rendered
+   width. Honest note: this is a real, measured improvement (badge
+   56.06px vs 63.67px before), not a full resolution — the line is still
+   tight for every TRADED coin at 390px; a bigger fix (e.g. dropping the
+   redundant symbol text, or reworking the row grid) would be a larger
+   change than this pass's smallest-correct-diff mandate covers.
+5. **The search field had no leading search icon**, while the sort control
+   right next to it has its own chevron icon — an icon-less search box next
+   to an icon-bearing control is the inconsistency `fintech-dashboard-polish`
+   and the task's own "icon consistency" callout both flag. Fixed: same
+   inline-SVG-as-background-image technique the sort chevron already uses,
+   no new DOM. Verified on a real screenshot (`.mk-search`, shared with
+   Stocks' identical search field — a bonus, not a regression, there).
+6. **The chart-type toggle's "Candles" button, forced-disabled on a long
+   range (1Y/5Y/10Y/All), had zero visual difference from a normal,
+   clickable, unselected button** — no opacity dip, no cursor change, unlike
+   this same file's own `.pager:disabled` rule. Confirmed via
+   `getComputedStyle` before/after: `opacity` was `1`/`cursor: pointer`
+   before, `0.4`/`cursor: default` after — matches `.pager`'s established
+   treatment. Verified on a real 1Y-range screenshot (Candles now visibly
+   dimmed).
+7. **The category tab strip (`.mk-tabs`) had no signal that it scrolls** —
+   a mid-word cut ("Volu…" for "Volume") was the only hint, with no fade or
+   affordance. Per `apple-design`'s "scroll edge effects, not hard dividers"
+   guidance: added a `mask-image` fade at whichever edge still has
+   off-screen tabs, toggled by a real scroll listener (`at-start`/`at-end`
+   classes) so it's correct at both ends, not a permanent static fade.
+8. **Order-book rows had no hover feedback** (every other dense row/list
+   item in the app does). Added `.orderbook-row:hover`. Verified via
+   screenshot: a hovered row visibly lightens against its neighbours,
+   without disturbing the depth bars behind the text (which establish their
+   own stacking context, per the existing z-index comment).
+9. **Trades-tape rows had no hover feedback either.** Used `filter:
+   brightness()` rather than swapping `background` (every row already has
+   its own buy/sell gradient wash — a plain `background` override on hover
+   would have replaced that tint outright, not lightened it; confirmed this
+   would have been a real regression before switching approach). Verified on
+   a real screenshot: a hovered row is visibly brighter, tint intact.
+10. **The watchlist star had press feedback (already shipped) but no
+    "it worked" moment** — favouriting a market only swapped its colour,
+    with no motion distinguishing "I tapped it" from "it's now saved". Added
+    a small overshoot-and-settle bounce (`.pop`, on the icon only, so it
+    composes cleanly with the list star's existing `translateY(-50%)` base
+    transform) on the newly-favourited transition only, both list (`.mk-star`)
+    and detail (`.star-btn`), respecting `prefers-reduced-motion`. Test
+    confirms the class lands on the fresh (re-rendered) button when starring
+    on, and is absent when un-starring.
+11. **Pull-to-refresh's "are we at the top?" guard read `.content`'s own
+    `scrollTop` — always `0`, because `.content` has no `overflow` rule of
+    its own and never scrolls internally; the page scrolls via the document/
+    window instead.** Confirmed by `getBoundingClientRect()`: `.content`'s
+    own `scrollTop` stayed `0` even after the page visibly scrolled 400px+.
+    That silently defeated the guard's whole purpose (per its own doc
+    comment: "never competes with normal scrolling") — a downward touch-drag
+    anywhere in a long, already-scrolled list could arm the refresh
+    indicator. Fixed: check `window.scrollY` instead.
+12. **The coin-detail view-mode tabs (Chart/Order book/Depth/Trades/Trade)
+    had no ARIA tab semantics**, unlike the category tab strip on the SAME
+    file's list view, which already correctly uses `role="tablist"`/`"tab"`/
+    `aria-selected`. Added the identical pattern here. Test confirms the
+    roles and that `aria-selected` flips on switch.
+13. **The Trade tab's Buy/Sell toggle (now genuinely functional per
+    "Creative upgrade pass #3") exposed no state to assistive tech** — a
+    screen-reader user gets no indication of which side is selected. Added
+    `aria-pressed`, flipped on click. Test confirms both the initial state
+    and the flip.
+14. **Icon stroke-width crept from the established 1.8-2 family** (`.mk-star`,
+    `.icon-btn`, `.view-tab`, `.star-btn`) up to 2.2 (`.pair-chevron`) and 2.4
+    (`.pager` prev/next chevrons) — measured by stroke-to-size RATIO (not
+    just the raw number, since these icons are smaller than the rest): 14.7%
+    and 17.1% respectively, against ~9.5-10.6% everywhere else. Tightened
+    both to 1.8, matching the rest of the icon family used across this exact
+    screen.
+15. **Switching a view-tab (Order book/Depth/Trades/Trade) gave no
+    feedback while its fetch was in flight — the PREVIOUS tab's content
+    stayed fully on screen, mismatched against the now-active tab icon, for
+    however long the network took.** Confirmed on a real screenshot with an
+    artificially delayed `/Depth` response: 800ms after tapping "Order book"
+    (tab icon already showing active), the candlestick chart from the
+    PREVIOUS (Chart) tab was still the only thing rendered. Fixed with the
+    same fade-out/fade-in pattern this file's own range-btn/ctoggle-btn
+    switches already use, generalized to whichever of `.detail-chart`/
+    `.detail-nonchart` is currently on screen.
+16. **The coin-detail header's own logo had no broken-image fallback** —
+    `attachCoinLogoFallback` was wired for the list (`list`) but never for
+    `detailView`, so a failed logo load on the detail screen showed the
+    browser's bare broken-image glyph, exactly what `coinLogoHtml`'s own doc
+    comment says this fallback exists to prevent. Confirmed by forcing every
+    `coins/*.svg` request to fail: the list correctly fell back to letter
+    tiles everywhere, the detail header's `<img>` stayed visibly broken.
+    Fixed with one more `attachCoinLogoFallback(detailView)` call. Test
+    dispatches a synthetic `error` event on the image and confirms the swap.
+
+**Looked at, no defect found**: order-book/depth/trades empty states (forced
+empty Kraken responses — render a clean, pre-existing `.empty` message, no
+bug); a long coin name ("Ethereum Classic", 17 chars) in the detail header
+(measured — no overflow, no overlap with the star button); category-tab
+auto-scroll-into-view on selection (native browser focus-scroll already
+handles it, confirmed via measurement — no gap worth a custom fix);
+two-tier/tiered pricing on the 24h High/Low/Volume stat tiles and the Trade
+tab's Amount/Price fields (deliberately flat per `fintech-dashboard-polish`'s
+own reference pattern — two-tier is for the ONE hero price, not secondary
+stat-tile numbers; the reference's own example markup uses a flat
+`<div class="stat-value">` for exactly this).
+
+Full gate: `tsc --noEmit` clean, `npx vitest run` 1185/1185 (1178 pre-existing
+on `origin/main` + 7 new — 2 in `marketsList.integration.test.ts`, 5 in
+`marketsDetail.integration.test.ts`), `npm run build` clean. Diff is exactly
+`src/ui/views/marketsView.ts` + `src/ui/styles.css` + the two markets test
+files (4 files) — nothing under `server/**`, `state/**`, or `src/core/**`
+touched.
+
 ## Adversarial review of `liveManualTradeSync.mts` (PR #192) — 2 real bugs found and fixed (2026-09-05)
 PR #192 added `syncManualTradesFromBroker` (detects a real trade David makes
 directly in the Revolut X app) and wired it into `runLiveMirror`, written and
