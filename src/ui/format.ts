@@ -18,14 +18,34 @@ export function formatPrice(value: number): string {
 }
 
 /**
+ * Rounds to `digits` decimals without ever showing a spurious "-0.00"/"-0.0"
+ * for a negative value that rounds to exactly zero at this precision (e.g. a
+ * -0.001% change, or -0.03 on a Bollinger %B reading close to its lower
+ * band) — the same class of float-dust-reads-as-fake-negative bug
+ * `formatPrice`'s own dust guard exists for above, generalized to any caller
+ * that rounds a possibly-negative value with `toFixed`.
+ */
+function fixedNoNegativeZero(value: number, digits: number): string {
+  const fixed = value.toFixed(digits);
+  return fixed.startsWith('-') && Number(fixed) === 0 ? fixed.slice(1) : fixed;
+}
+
+/**
  * Splits a euro amount into a bold "major" part and a lighter, smaller
  * "minor" (cents) part — the big-integer-plus-small-decimal treatment used
  * for the hero balance, e.g. major "26" / minor ".85".
  */
 export function formatPriceSplit(value: number): { major: string; minor: string } {
-  const [major, minor = '00'] = value
-    .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    .split('.');
+  const formatted = value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Same dust as formatPrice's own guard (a cash balance computed as equity
+  // minus positions, landing at e.g. -1.137e-12 instead of exactly zero) —
+  // formatPriceSplit had no equivalent guard, so that dust split into major
+  // "-0" / minor "00", rendering the hero balance as a negative zero.
+  // `Number(formatted)` is NaN (not 0) for any comma-grouped large value, so
+  // this only ever strips the sign off something that actually rounds to
+  // zero at 2dp — never a real large negative balance.
+  const clean = formatted.startsWith('-') && Number(formatted) === 0 ? formatted.slice(1) : formatted;
+  const [major, minor = '00'] = clean.split('.');
   return { major: major!, minor };
 }
 
@@ -53,11 +73,11 @@ export function tieredPriceHtml(formatted: string): string {
 export function formatPct(value: number | null, digits = 2): string {
   if (value === null) return '—';
   const sign = value > 0 ? '+' : '';
-  return `${sign}${value.toFixed(digits)}%`;
+  return `${sign}${fixedNoNegativeZero(value, digits)}%`;
 }
 
 export function formatNumber(value: number | null, digits = 1): string {
-  return value === null ? '—' : value.toFixed(digits);
+  return value === null ? '—' : fixedNoNegativeZero(value, digits);
 }
 
 export function signClass(value: number | null): string {

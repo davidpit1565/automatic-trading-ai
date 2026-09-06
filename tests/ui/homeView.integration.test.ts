@@ -52,6 +52,32 @@ describe('Home view (DOM integration)', () => {
     expect(container.querySelector('#home-markets')!.children.length).toBeGreaterThan(0);
   });
 
+  it('shows a real shimmering skeleton (not a blank gap) for the hero balance and the Markets strip before any data has loaded', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderHomeView(container, await makeData());
+
+    // Asserted synchronously, right after mount — before the state fetch or
+    // the markets/movers fetches have had a chance to resolve. Every other
+    // async section on Home (Top movers, Open positions, Recent activity)
+    // already had a real skeleton at this exact moment; the hero balance and
+    // the Markets strip previously rendered a bare "—" / nothing at all.
+    expect(container.querySelector('#hv-equity .hero-value-skeleton')).not.toBeNull();
+    expect(container.querySelector('#home-markets .skeleton-market-card')).not.toBeNull();
+  });
+
+  it('replaces the hero balance skeleton with an honest static dash (not an eternal shimmer) when the cloud agent is genuinely unreachable', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderHomeView(container, await makeData());
+    expect(container.querySelector('#hv-equity .hero-value-skeleton')).not.toBeNull();
+
+    // The default beforeEach stub already rejects every fetch — wait for
+    // loadState()'s own fail-soft branch to run and swap the placeholder.
+    await waitFor(() => container.querySelector('#hv-equity .hero-value-skeleton') === null);
+    expect(container.querySelector('#hv-equity')!.textContent).toBe('—');
+  });
+
   it('shows Top movers (gainers by default), toggles to losers, and deep-links "See all" into the Markets view scoped to whichever tab is showing', async () => {
     const container = document.createElement('section');
     document.body.appendChild(container);
@@ -88,6 +114,19 @@ describe('Home view (DOM integration)', () => {
     expect(marketsContainer.querySelector<HTMLElement>('[data-cat="losers"]')!.classList.contains('active')).toBe(
       true,
     );
+  });
+
+  it('renders every Top movers row price with the same two-tier (tiered-price) typography the Markets strip cards use', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderHomeView(container, await makeData());
+
+    await waitFor(() => container.querySelector('#home-movers .row, #home-movers .empty') !== null);
+    const rows = container.querySelectorAll('#home-movers .row');
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of Array.from(rows)) {
+      expect(row.querySelector('.row-side .tiered-price')).not.toBeNull();
+    }
   });
 
   it('renders the real-money readiness card from cloud state', async () => {
@@ -202,6 +241,10 @@ describe('Home view (DOM integration)', () => {
     await waitFor(() => container.querySelector<HTMLElement>('#hv-kill-switch')?.hidden === false);
     expect(container.querySelector('#hv-kill-switch')!.textContent).toContain('paused');
     expect(container.querySelector('#hv-kill-switch')!.textContent).toContain('manual pause');
+    // Was a bare "⏸" emoji — the one place on Home that broke the app's
+    // single outlined-SVG icon language.
+    expect(container.querySelector('#hv-kill-switch svg')).not.toBeNull();
+    expect(container.querySelector('#hv-kill-switch')!.textContent).not.toContain('⏸');
   });
 
   it('clears the "vs Bitcoin" banner if a later cycle cannot price BTC (no stale comparison shown as current)', async () => {
