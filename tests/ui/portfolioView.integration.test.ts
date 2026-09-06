@@ -100,3 +100,23 @@ describe('Portfolio view — trade button re-entrancy', () => {
     expect(sell.disabled).toBe(false);
   });
 });
+
+describe('Portfolio view — cross-screen copy parity', () => {
+  // Round-2 cross-screen consistency: Home's and Stocks Overview's
+  // identical empty-positions state both read "Holding cash and waiting for
+  // a good setup."; Portfolio's own copy was the flatter, differently-worded
+  // "No open positions." for the exact same concept.
+  it('uses the same empty-positions copy as Home/Stocks Overview', async () => {
+    const data = slowSource();
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderPortfolioView(container, data);
+    (data.source as unknown as { _release: () => void })._release();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(container.querySelector('#pp-positions')!.textContent).toContain(
+      'Holding cash and waiting for a good setup.',
+    );
+  });
+});
