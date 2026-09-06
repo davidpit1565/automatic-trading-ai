@@ -381,6 +381,14 @@ button.btn-sell:active { transform: scale(0.98); }
 button.btn-buy:disabled,
 button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: none; }
 
+/* Buy/Sell as one paired control, split evenly across the row — without
+   this the two pills' own roomy padding (built for a single full-width
+   CTA) doesn't fit side by side at phone width, so plain `.controls`
+   flex-wrap stacked all three (Buy/Sell/Reset) one below the other instead
+   of the paired-buttons-plus-a-separate-Reset layout already intended. */
+.trade-actions .btn-buy,
+.trade-actions .btn-sell { flex: 1; text-align: center; }
+
 /* A repeatable "big number + small label" tile — the single most-reused
    component in the reference's own UI (price/change/high/low on every
    screen) that this app had never built as its own generic class; every
@@ -494,6 +502,37 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
   background: var(--surface-raised);
 }
 
+/* Note: .scan-row:focus-visible's own ring is already covered by the
+   shared focus-visible rule below (Focus-visible section) — this row is
+   newly keyboard-reachable (tabindex/role added in the view) but needed no
+   extra CSS of its own once that shared rule already lists it. */
+
+/* Market cell now carries the row's own expand/collapse chevron — the only
+   affordance for "this row is expandable" used to be the cursor style. */
+.scan-market-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Same down-chevron used by the pair-switcher on Markets — rotated to point
+   up once the row is expanded, so its own state doubles as feedback. */
+.scan-chevron {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--text-dim);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 auto;
+  transition: transform var(--dur-fast) var(--ease);
+}
+.scan-row.expanded .scan-chevron {
+  transform: rotate(180deg);
+}
+
 .badge {
   display: inline-block;
   padding: 0.15rem 0.6rem;
@@ -569,10 +608,20 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
    small filled bar answers it at a glance, the same idea as the order
    book's depth bars. */
 .scan-score { display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
-.score-bar { width: 48px; height: 4px; border-radius: 2px; background: var(--surface-raised); overflow: hidden; }
-.score-bar-fill { display: block; height: 100%; }
-.score-bar-fill.up { background: var(--hot); }
-.score-bar-fill.down { background: var(--cold); }
+/* Anchored at the bar's own centre (not its left edge): a -100..+100 value
+   is a DIRECTION as well as a magnitude, and a fill that only ever grows
+   from the left threw the direction away — a -80 and a +80 score used to
+   render as the identical shape, colour aside. The centre tick makes the
+   zero point visible so a bullish/bearish read doesn't depend on colour
+   alone. `overflow: visible` so nothing clips at the exact centre line. */
+.score-bar { position: relative; width: 48px; height: 4px; border-radius: 2px; background: var(--surface-raised); overflow: visible; }
+.score-bar::after {
+  content: ''; position: absolute; left: 50%; top: -1px; bottom: -1px; width: 1px;
+  background: rgba(255, 255, 255, 0.16); transform: translateX(-50%);
+}
+.score-bar-fill { display: block; position: absolute; top: 0; bottom: 0; border-radius: 2px; }
+.score-bar-fill.up { left: 50%; background: var(--hot); }
+.score-bar-fill.down { right: 50%; background: var(--cold); }
 
 .scan-failures {
   margin-top: 1rem;
@@ -619,6 +668,15 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
   gap: 1rem;
   margin: 0.5rem 0;
   font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The per-row technical-stats line (ATR/Bollinger/+DI-DI/Stoch) packs six
+   numbers into one dense line — `.status-line` elsewhere in the app never
+   needed tabular-nums since it's usually one or two facts, but this one is
+   digit-dense enough that proportional numerals let it jitter/misalign. */
+.scan-detail-stats {
+  font-variant-numeric: tabular-nums;
 }
 
 .signal-explanation {
@@ -677,6 +735,39 @@ button.btn-sell:disabled { opacity: 0.5; cursor: wait; transform: none; filter: 
 .verdict-insufficient-data {
   background: var(--neutral-tint);
 }
+
+/* ---------- Monitoring ---------- */
+
+/* Same robust/caution/overfitted/insufficient-data vocabulary as the
+   .verdict-panel tints above, applied as TEXT colour instead of a full
+   panel background — a dense data-table cell needs a coloured word, not
+   the roomy tint the Backtest/Validation tabs use for a whole panel.
+   Monitoring's own Validation columns rendered every verdict as flat grey
+   text despite this taxonomy already existing in the app. */
+.verdict-text-robust { color: var(--hot); font-weight: var(--fw-semibold); }
+.verdict-text-caution { color: var(--warn); font-weight: var(--fw-semibold); }
+.verdict-text-overfitted { color: var(--cold); font-weight: var(--fw-semibold); }
+.verdict-text-insufficient-data,
+.verdict-text-not-run { color: var(--text-dim); }
+
+/* A watchlist entry's Status column was plain text even though its three
+   possible values (qualified/watch/none) map directly onto the same
+   hot/neutral/dim language `signClass` already gives every other status in
+   this app — "qualified" reused .positive (shared with Market Scan);
+   "watch" stays the unstyled default (a live, still-relevant state, same
+   as .signClass's own "no colour" for a neutral fact); "none" gets this. */
+.watch-status-none { color: var(--text-dim); }
+
+/* Same star glyph as Markets' own watchlist toggle (.star-btn), filled
+   with the identical --warn "favourited" colour, so a favourited row here
+   reads with the app's one star icon instead of a bare "★" character. */
+.watch-fav-icon { width: 12px; height: 12px; fill: var(--warn); vertical-align: -1px; margin-inline-end: 2px; }
+
+/* A compact secondary-button variant for actions embedded in a dense
+   data-table row — the page-level .secondary pill's roomy padding (built
+   for a single full-width CTA) doubled up two-per-cell made each watchlist
+   row noticeably taller than every other row in the same table. */
+button.secondary.table-action { padding: 0.4rem 0.85rem; font-size: 0.8rem; }
 
 .equity-curve {
   width: 100%;
@@ -1202,8 +1293,12 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .hero-change.compact.up { color: var(--hot); }
 .hero-change.compact.down { color: var(--cold); }
 .hero-split { display: flex; gap: 1.5rem; color: var(--text-dim); font-size: var(--fs-sub); margin-top: 1.1rem; }
+/* tabular-nums: this line's own money figures (Cash/vs-Bitcoin) refresh on
+   every poll — without it, a digit-count change (e.g. €99.62 -> €100.15)
+   jitters this pill's width from one refresh to the next. */
 .hero-bench { margin-top: 0.8rem; font-size: 0.82rem; background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border); border-radius: var(--r-sm); padding: 0.48rem 0.75rem; }
+  border: 1px solid var(--border); border-radius: var(--r-sm); padding: 0.48rem 0.75rem;
+  font-variant-numeric: tabular-nums; }
 /* Bleeds to the hero card's own edges (negative margins matching its
    padding) and taller — the reference's sparkline runs edge-to-edge under
    the balance rather than sitting in its own inset box. The hero's
@@ -1318,6 +1413,19 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .mk-tabs { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none;
   padding-bottom: 0.5rem; margin-bottom: 0.25rem; -webkit-overflow-scrolling: touch; }
 .mk-tabs::-webkit-scrollbar { display: none; }
+/* Scroll-edge fade, not a hard cut: this strip has more tabs than fit at
+   390px ("Volume" used to be sliced mid-word with nothing signalling more
+   tabs existed off-screen) — a soft mask at whichever edge still has
+   content hints "scroll →" the way a hard clip never does. Classes toggled
+   in JS from the strip's own scroll position; the base rule fades both
+   edges so unstyled JS-disabled environments still get a (harmless) hint. */
+.mk-tabs { -webkit-mask-image: linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%); }
+.mk-tabs.at-start { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent 100%); }
+.mk-tabs.at-end { -webkit-mask-image: linear-gradient(to right, transparent 0, #000 20px);
+  mask-image: linear-gradient(to right, transparent 0, #000 20px); }
+.mk-tabs.at-start.at-end { -webkit-mask-image: none; mask-image: none; }
 .mk-tab { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.48rem 0.95rem; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--surface); color: var(--text-dim);
   min-height: 44px; /* was 32px measured */
@@ -1356,9 +1464,17 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    tap target and the star is not nested inside it (a button inside a button is
    invalid HTML and its clicks are unreliable). */
 .mk-controls { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
-.mk-search { flex: 1 1 auto; min-width: 0; padding: 0.58rem 1rem; border-radius: var(--r-pill);
+/* A leading search (magnifying-glass) icon — every other control in this row
+   (.mk-sort) already carries its own icon the same way (an inline SVG data
+   URI as a background-image, no extra DOM), but the search field itself had
+   none: an icon-less search box is the odd one out next to a chevron-bearing
+   sort control, and every reference search field (Revolut X included) leads
+   with this icon. */
+.mk-search { flex: 1 1 auto; min-width: 0; padding: 0.58rem 1rem 0.58rem 2.35rem; border-radius: var(--r-pill);
   border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.9rem;
   min-height: 44px; /* was 37px measured */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='11' cy='11' r='7' stroke='%239a9aa4' stroke-width='2'/%3E%3Cpath d='M21 21l-4.35-4.35' stroke='%239a9aa4' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 0.85rem center;
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .mk-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
 .mk-sort { flex: 0 0 auto; min-height: 44px; /* was 37px measured */ padding: 0.58rem 1.85rem 0.58rem 0.9rem; border-radius: var(--r-pill);
@@ -1389,6 +1505,14 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .mk-star:active { transform: translateY(-50%) scale(0.85); }
 .mk-star.on { color: var(--warn); }
 .mk-star.on svg { fill: currentColor; }
+/* Press feedback (:active above) already existed; this is the separate
+   "it actually got added" moment — a little overshoot-and-settle bounce
+   on the star itself when a tap newly favourites the row, not just a
+   colour swap. Composes the same translateY(-50%) base as :active, for the
+   same reason (a bare scale() would re-anchor and visibly jump the icon). */
+.mk-star.pop svg { animation: starPop 380ms var(--ease-out); }
+@keyframes starPop { 0% { transform: scale(1); } 35% { transform: scale(1.4); } 60% { transform: scale(0.9); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .mk-star.pop svg { animation: none; } }
 
 /* The markets list is ONE grouped card with hairline separators, not 60
    individually-outlined floating cards with gaps between them. The reference
@@ -1421,9 +1545,17 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    found from a real screenshot. It rides here instead: flex with only the
    text portion allowed to shrink/ellipsis, so the badge itself is never
    partially clipped. */
-.market-row-id .row-sub { display: flex; align-items: center; gap: 0.35rem; min-width: 0; overflow: hidden; }
+.market-row-id .row-sub { display: flex; align-items: center; gap: 0.3rem; min-width: 0; overflow: hidden; }
 .market-row-id .row-sub-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.market-row-id .row-sub .tag-traded { flex-shrink: 0; }
+/* Moving the badge here (see the comment above) fixed the NAME line but
+   measured on a real 390px row it still claims most of THIS line: the badge
+   alone renders at ~64px against only ~87px total available for the whole
+   secondary line, leaving the freshness clock + symbol text ~6px of real
+   width — effectively invisible, not just truncated. Tightening the badge's
+   own padding/tracking here (this selector only — the shared `.tag-traded`
+   used elsewhere, e.g. Stocks' Market panel, is untouched) recovers close to
+   20px for the text without shrinking the badge's legibility. */
+.market-row-id .row-sub .tag-traded { flex-shrink: 0; padding: 0.1rem 0.32rem; letter-spacing: 0; }
 .market-row-num { display: flex; flex-direction: column; align-items: flex-end; gap: 0.15rem; }
 /* Hidden on phone (the row already has 3 real columns there); shown as a 4th
    desktop column below — real information (already fetched with the row,
@@ -1690,7 +1822,8 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
   transition: transform var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
 .tappable:active { transform: scale(0.985); opacity: 0.92; }
 @media (prefers-reduced-motion: reduce) { .tappable:active { transform: none; } }
-.detail-head { display: flex; justify-content: space-between; align-items: center; margin: 0.5rem 0 0.9rem; }
+.detail-head { display: flex; justify-content: space-between; align-items: center; margin: 0.5rem 0 0.9rem;
+  position: relative; /* anchors .pair-menu, a floating overlay, below it */ }
 .detail-head-left { display: flex; align-items: center; gap: 0.7rem; }
 .detail-coin { display: flex; align-items: center; gap: 0.6rem; }
 .detail-coin .coin-logo { width: 30px; height: 30px; }
@@ -1719,16 +1852,43 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
    header; align-items:center keeps the name/chevron centered in the taller
    box. */
 .detail-name-btn { display: flex; align-items: center; gap: 0.3rem; background: none; border: none;
-  color: inherit; padding: 0; cursor: pointer; min-height: 44px; }
-.pair-chevron { width: 15px; height: 15px; fill: none; stroke: var(--text-dim); stroke-width: 2.2;
+  color: inherit; padding: 0; cursor: pointer; min-height: 44px; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+/* This trigger had a click handler (opens the pair-switcher menu) and an
+   aria-expanded state, but zero visual feedback of any kind on press —
+   confirmed live via Playwright: matches(':active') true, computed
+   transform/opacity unchanged. Matches the `.link-btn:active` treatment
+   already used for this app's other text/icon-plus-label triggers. */
+.detail-name-btn:hover { opacity: 0.8; }
+.detail-name-btn:active { opacity: 0.6; transform: scale(0.96); }
+/* stroke-width 1.8-2, matching every other icon on this screen (.mk-star,
+   .icon-btn, .view-tab, .star-btn) — this one and .pager below ran heavier
+   (2.2/2.4), reading as a slightly bolder icon family on the same page. */
+.pair-chevron { width: 15px; height: 15px; fill: none; stroke: var(--text-dim); stroke-width: 1.8;
   stroke-linecap: round; stroke-linejoin: round; }
-.pair-menu { position: relative; z-index: 5; margin: -0.4rem 0 0.9rem; max-height: 320px; overflow-y: auto;
+/* A floating overlay anchored below the coin name — like Revolut X's own
+   "BTC-EUR ▾" dropdown, it sits ON TOP of the price/stats/chart below it
+   rather than displacing them. It previously sat in normal flow (a bare
+   `position: relative`), which shoved the entire rest of the detail page
+   down by its own height (up to 320px) every time it opened — confirmed on
+   a real screenshot: opening it pushed the hero price, stat tiles and view
+   tabs down below the fold, which reads as the page having broken rather
+   than a dropdown having opened. */
+.pair-menu { position: absolute; top: 100%; left: 0; right: 0; z-index: 20; margin-top: 0.4rem;
+  max-height: 320px; overflow-y: auto; transform-origin: top left;
+  animation: pairMenuIn var(--dur-fast) var(--ease-out);
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); }
+@keyframes pairMenuIn { from { opacity: 0; transform: scale(0.97) translateY(-4px); } to { opacity: 1; transform: none; } }
 .pair-menu-item { width: 100%; display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.9rem;
   background: transparent; border: none; border-bottom: 1px solid var(--border); color: var(--text); cursor: pointer;
-  text-align: left; }
+  text-align: left; transition: background var(--dur-fast) var(--ease); }
 .pair-menu-item:last-child { border-bottom: none; }
 .pair-menu-item:hover { background: var(--surface-hover); }
+/* Same gap as .detail-name-btn above, on the menu this button opens — a
+   real, live, enabled <button> (confirmed via Playwright: no `:active` rule
+   existed anywhere in the stylesheet for this selector) with hover feedback
+   but none on an actual tap. Same background-only treatment as `.scan-row`
+   right above it in this file, so no reduced-motion carve-out is needed. */
+.pair-menu-item:active { background: var(--surface-hover); }
 .pair-menu-item.active { background: var(--surface-raised); }
 .pair-menu-item .row-title { flex: 1; font-size: 0.9rem; font-weight: var(--fw-semibold); }
 .pair-menu-item .row-sub { font-size: 0.78rem; }
@@ -1746,6 +1906,8 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .star-btn:hover { background: var(--surface-hover); color: var(--text); }
 .star-btn:active { transform: scale(0.9); }
 .star-btn.active { color: var(--warn); background: var(--warn-tint); }
+/* Same toggle-moment bounce as the list's .mk-star.pop, reused here. */
+.star-btn.pop svg { animation: starPop 380ms var(--ease-out); }
 .detail-stats-row { display: flex; gap: 0.6rem; margin-bottom: 0.9rem; }
 /* Fill-difference elevation, no border — the reference separates a card
    from its background via a barely-there fill contrast, never a visible
@@ -1765,7 +1927,8 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .view-tab:active { transform: scale(0.94); }
 .view-tab.active { background: var(--surface-raised); color: #fff; }
 .detail-nonchart { background: linear-gradient(160deg, var(--surface-raised), var(--surface)); border: 1px solid var(--border); border-radius: var(--r-lg);
-  padding: 0.8rem; box-shadow: var(--shadow-xs); min-height: 160px; }
+  padding: 0.8rem; box-shadow: var(--shadow-xs); min-height: 160px;
+  transition: opacity var(--dur-base) var(--ease); }
 
 /* Trade tab — mirrors Revolut X's order form visually; every control is
    inert by design (see orderFormHtml's doc comment in marketsView.ts). */
@@ -1790,7 +1953,13 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .orderbook-table { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
 .orderbook-head { display: flex; justify-content: space-between; color: var(--text-dim); font-size: 0.72rem;
   padding: 0 0.2rem 0.3rem; }
-.orderbook-row { display: flex; justify-content: space-between; padding: 0.2rem; border-radius: var(--r-xs); }
+.orderbook-row { display: flex; justify-content: space-between; padding: 0.2rem; border-radius: var(--r-xs);
+  transition: background var(--dur-fast) var(--ease); }
+/* Every other dense row in the app (.market-row, .pair-menu-item) highlights
+   on hover; the order-book ladder had no such feedback at all. Sits behind
+   the depth bars (both establish their own stacking context, see the
+   .ob-bid/.ob-ask comment below) so it never masks them. */
+.orderbook-row:hover { background: var(--surface-hover); }
 /* Cumulative-depth bar behind each side's own number (see orderBookTableHtml's
    doc comment) — a size a viewer can compare at a glance, the number itself
    only for the precise value. Grows toward the shared centre from each
@@ -1831,7 +2000,13 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .trade-tape-head span:nth-child(2), .trade-tape-row span:nth-child(2) { text-align: center; }
 .trade-tape-head span:last-child, .trade-tape-row span:last-child { text-align: right; color: var(--text-dim); }
 .trade-tape { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.85rem; }
-.trade-tape-row { border-radius: var(--r-xs); }
+.trade-tape-row { border-radius: var(--r-xs); transition: filter var(--dur-fast) var(--ease); }
+/* Same gap as the order book above — a fast-scrolling tape of otherwise
+   identical rows had no hover feedback to help a mouse user track a row.
+   `filter: brightness` rather than swapping `background`: every row already
+   carries its own buy/sell gradient wash (below), which a plain background
+   override would silently replace instead of lightening. */
+.trade-tape-row:hover { filter: brightness(1.35); }
 .trade-tape-row.buy { background: linear-gradient(to right, var(--hot-tint) 0%, transparent 55%); }
 .trade-tape-row.sell { background: linear-gradient(to right, var(--cold-tint) 0%, transparent 55%); }
 /* The coin-detail price is that screen's hero the same way the balance is
@@ -1854,7 +2029,7 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
   border-radius: var(--r-pill); padding: 0.5rem 0.9rem; cursor: pointer; font-weight: var(--fw-semibold); font-size: 0.85rem;
   min-height: 44px; /* was 33px measured */
   transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
-.pager svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.pager svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .pager:hover:not(:disabled) { border-color: var(--border-strong); }
 .pager:active:not(:disabled) { transform: scale(0.96); }
 .pager:disabled { opacity: 0.4; cursor: default; }
@@ -1904,9 +2079,17 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
   border-radius: var(--r-pill); padding: 0.42rem 0.72rem; font-size: 0.8rem; font-weight: 700; cursor: pointer;
   display: flex; align-items: center; justify-content: center; min-height: 44px; /* was 28px measured */
   transition: all var(--dur-fast) var(--ease); }
-.ctoggle-btn:hover { color: var(--text); }
-.ctoggle-btn:active { transform: scale(0.94); }
+.ctoggle-btn:hover:not(:disabled) { color: var(--text); }
+.ctoggle-btn:active:not(:disabled) { transform: scale(0.94); }
 .ctoggle-btn.active { background: var(--surface-raised); color: #fff; }
+/* Two independent screens force this button into a disabled state and both
+   needed this same rule (it was missing entirely before): Markets forces
+   line mode and disables "Candles" on a long range (1Y/5Y/10Y/All, see
+   marketsView.ts); a brand-new crypto account (its first ~10-15 minutes)
+   hasn't recorded enough samples to bucket into 2+ candles yet either. Both
+   match the `.pager:disabled` treatment already established elsewhere in
+   this file. */
+.ctoggle-btn:disabled { opacity: 0.4; cursor: default; }
 
 /* Candlestick chart: green up / red down bodies + wicks. Full-opacity,
    crisply-stroked bodies — the semi-transparent fill in the previous pass
@@ -1958,6 +2141,15 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .detail-chart { transition: opacity var(--dur-base) var(--ease); }
 .detail-chart.fade-out { opacity: 0; }
 .detail-chart.fade-in { opacity: 1; animation: fadeIn var(--dur-slow) var(--ease-out); }
+/* Same fade, applied to the Order book/Depth/Trades/Trade pane. Switching a
+   view-tab used to leave the PREVIOUS tab's content fully visible for
+   however long its fetch took (confirmed on a real screenshot: tapping
+   "Order book" showed the active tab icon flip instantly while the
+   candlestick chart stayed on screen underneath, unrelated to what was
+   just tapped) — this gives the same instant, honest "something is loading"
+   feedback the chart's own range/mode switch already had. */
+.detail-nonchart.fade-out { opacity: 0; }
+.detail-nonchart.fade-in { opacity: 1; animation: fadeIn var(--dur-slow) var(--ease-out); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* Chart wrapper + floating tooltip */
@@ -1984,14 +2176,24 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .readiness-note { color: var(--text-dim); font-size: 0.8rem; margin: 0.25rem 0 0.6rem; }
 .readiness-list { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-direction: column;
   background: linear-gradient(160deg, var(--surface-raised), var(--surface)); border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+/* tabular-nums: each criterion's own counts ("50 / 20 closed trades",
+   "after-fee return +4.68%") refresh every poll — without it, a digit-count
+   change jitters the row's text width from one refresh to the next. */
 .readiness-list li { font-size: 0.85rem; padding: 0.6rem 0.75rem; display: flex; align-items: center; gap: 0.6rem;
-  border-bottom: 1px solid var(--border); }
+  border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
 .readiness-list li:last-child { border-bottom: none; }
 .readiness-list .crit-icon { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .readiness-list li.ok { color: var(--text); }
 .readiness-list li.ok .crit-icon { stroke: var(--hot); }
 .readiness-list li.no { color: var(--text-dim); }
 .readiness-list li.no .crit-icon { stroke: var(--warn); }
+/* Informational-only criterion (2026-09-06 readiness audit): !ok but not
+   actually gating (e.g. Stocks' trades/consistency for a hold-only
+   strategy). Deliberately neutral, not the same amber-warning colour as
+   `.no` — a viewer scanning the list must be able to tell "doesn't count"
+   from "this is why it's not ready" without reading every detail string. */
+.readiness-list li.info { color: var(--text-dim); }
+.readiness-list li.info .crit-icon { stroke: var(--neutral); }
 
 /* ---------- Loading Spinners ---------- */
 
@@ -2294,6 +2496,45 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
   .row-price.flash-up, .row-price.flash-down { animation-duration: 1ms; }
   .view.active, .content section.active, .hub-panel.active,
   .detail-chart.fade-in, .fade-in-up { animation: none; }
+}
+
+/* Only .topbar-btc/.link-btn/.tappable ever got a reduced-motion carve-out
+   for their `:active` scale-press — every OTHER tappable base class shares
+   the identical `transform: scale(...)` pattern but was never covered, so a
+   real device with Reduce Motion on still played the full press-squish on
+   literally every button, tab, nav row, star and pager in the app. Verified
+   with Playwright (`page.emulateMedia({reducedMotion:'reduce'})` + a held
+   mousedown + `getComputedStyle`): `.nav-btn:active` computed
+   `matrix(0.92,0,0,0.92,0,0)` identically with reduced-motion on or off
+   before this fix. `.scan-row:active` is deliberately excluded — it only
+   changes `background`, a colour cue Apple's own reduced-motion guidance
+   says to keep. */
+@media (prefers-reduced-motion: reduce) {
+  button.primary:active,
+  button.secondary:active,
+  button.btn-buy:active,
+  button.btn-sell:active,
+  .nav-btn:active,
+  .hub-tab:active,
+  .mk-tab:active,
+  .tool-card:active,
+  .tool-back:active,
+  .icon-btn:active,
+  .star-btn:active,
+  .view-tab:active,
+  .of-btn:active,
+  .pager:active:not(:disabled),
+  .range-btn:active,
+  .ctoggle-btn:active,
+  .detail-name-btn:active { transform: none; }
+  .mk-star:active { transform: translateY(-50%); }
+  /* `.spinner` (live in Backtest/Grid/Validation's candle-loading status
+     line) spun at 0.8s/infinite regardless of this setting — verified via
+     direct DOM injection of the real markup, animation-name read back as
+     "spin" with reduced-motion on. A loading spinner is still a genuine
+     "in progress" status signal, not decorative motion, so this freezes the
+     ring rather than hiding it entirely. */
+  .spinner { animation: none; }
 }
 
 /* ---------- Focus-visible (keyboard accessibility) ----------

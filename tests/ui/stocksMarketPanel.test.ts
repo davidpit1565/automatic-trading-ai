@@ -106,6 +106,50 @@ describe('Stocks Market panel — category/sort interaction (DOM integration)', 
     expect(status).toContain(`1/${BROWSABLE_STOCK_INSTRUMENTS.length} stocks priced`);
   });
 
+  it('keeps showing the last good prices (and an honest status) instead of wiping the list when a later refresh fails', async () => {
+    const [first] = BROWSABLE_STOCK_INSTRUMENTS;
+    const now = Date.now();
+    const goodRaw = {
+      'portfolio-engine': { cash: 10_000, initialCash: 10_000, baseCurrency: 'USD' },
+      'open-positions': [],
+      'audit-log': [],
+      'market-snapshot': { symbols: [{ symbol: first!.symbol, price: 123.45, changePct: 1, updatedAt: now }] },
+    };
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: true, json: () => Promise.resolve(goodRaw) }));
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderStocksMarketPanel(container);
+    await waitFor(() => (container.querySelector('#sm-status')?.textContent ?? '').includes('1/'));
+    expect(container.querySelector('.row-price')!.textContent).toContain('123.45');
+
+    // The cloud agent's state feed goes unreachable on a later poll — real
+    // rows already on screen must not revert to "no data yet", and the
+    // status line must not silently reset to the misleading
+    // "Live · 0/N stocks priced" it used to show (per the same
+    // stale-data-on-error convention valueView.ts uses: a background
+    // failure after the first success stays quiet rather than re-alarming).
+    const statusBefore = container.querySelector('#sm-status')!.textContent;
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('network down')));
+    await handle.resume?.();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    expect(container.querySelector('.row-price')!.textContent).toContain('123.45');
+    expect(container.querySelector('#sm-status')!.textContent).not.toContain('0/');
+    expect(container.querySelector('#sm-status')!.textContent).toBe(statusBefore);
+  });
+
+  it('shows the honest "Couldn\'t reach the cloud agent" status on a first-load failure, not the misleading "Live · 0/N" line', async () => {
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('offline')));
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderStocksMarketPanel(container);
+    await waitFor(() => (container.querySelector('#sm-status')?.textContent ?? '') !== '');
+
+    const status = container.querySelector('#sm-status')!.textContent!;
+    expect(status).toContain("Couldn't reach the cloud agent");
+    expect(status).not.toContain('Live ·');
+  });
+
   it('flashes a row whose price actually changed since the previous render, like the crypto Markets list', async () => {
     const [first] = BROWSABLE_STOCK_INSTRUMENTS;
     let price = 100;

@@ -148,6 +148,7 @@ export function renderStocksMarketPanel(container: HTMLElement): ViewHandle {
   let query = '';
   let sortKey: SortKey = 'default';
   let category: CategoryKey = 'popular';
+  let loadedOnce = false;
 
   function render(): void {
     const filtered = allRows.filter((r) => matches(r, query));
@@ -171,7 +172,23 @@ export function renderStocksMarketPanel(container: HTMLElement): ViewHandle {
 
   async function load(): Promise<void> {
     const state = await fetchStocksState();
-    const bySymbol = new Map((state?.marketSnapshot ?? []).map((s) => [s.symbol, s]));
+    if (!state) {
+      // A transient fetch failure must not wipe rows that already loaded
+      // real prices back to "no data yet" — the bug this branch used to
+      // have: `state?.marketSnapshot ?? []` silently ran unconditionally, so
+      // any later network hiccup re-populated every row from an empty map,
+      // erasing the whole list back to blank. Keep the last good snapshot,
+      // and only speak up (with the same "Couldn't reach the cloud agent"
+      // wording valueView/assetHubView/homeView already use) before the
+      // first successful load — a background failure after that stays
+      // quiet, per the same convention.
+      if (!loadedOnce) {
+        statusEl.textContent = "Couldn't reach the cloud agent — retrying.";
+      }
+      return;
+    }
+    loadedOnce = true;
+    const bySymbol = new Map((state.marketSnapshot ?? []).map((s) => [s.symbol, s]));
     for (let i = 0; i < allRows.length; i++) {
       const symbol = allRows[i]!.symbol;
       allRows[i] = { symbol, snapshot: bySymbol.get(symbol) ?? null };

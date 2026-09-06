@@ -21,11 +21,26 @@ import {
   inAppChannel,
   requestNotificationPermission,
 } from '../alertChannels';
-import { escapeHtml, formatPrice, signClass, truncate } from '../format';
+import { escapeHtml, formatNumber, formatPrice, signClass, truncate } from '../format';
 
 const MONITOR_SYMBOL_LIMIT = 12;
 const ALERT_COOLDOWN_MS = 3_600_000; // one hour per symbol+timeframe
 const MONITOR_COSTS = { initialCash: 10_000, feeRate: 0.001, spreadPct: 0.001, slippagePct: 0.0005 };
+
+/** Same star used by Markets' own watchlist toggle (`marketsView.ts`'s
+ * `.star-btn`) — this row used to prefix a favourited symbol with a plain
+ * "★" text glyph, the one place in the app spelling "favourite" with a
+ * bare Unicode character instead of the shared icon. */
+const FAVORITE_ICON =
+  '<svg class="watch-fav-icon" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+
+/** Maps a validation verdict to the app's own robust/caution/overfitted/
+ * insufficient-data colour language — already defined in styles.css for
+ * the Backtest/Validation tabs' `.verdict-panel`, but never applied to
+ * Monitoring's own tables, which showed every verdict as flat grey text. */
+function verdictClass(verdict: string): string {
+  return `verdict-text-${verdict}`;
+}
 
 export function renderMonitoringView(container: HTMLElement, data: ActiveDataSource): void {
   const store = new LocalStorageStore();
@@ -112,6 +127,9 @@ export function renderMonitoringView(container: HTMLElement, data: ActiveDataSou
   `;
 
   const statusLine = container.querySelector<HTMLElement>('#mon-status')!;
+  const startButton = container.querySelector<HTMLButtonElement>('#mon-start')!;
+  const stopButton = container.querySelector<HTMLButtonElement>('#mon-stop')!;
+  const scanNowButton = container.querySelector<HTMLButtonElement>('#mon-scan-now')!;
 
   /** A run-on "· "-joined sentence made a viewer parse four unrelated facts
    * (is it running, when did it last scan, when's the next one, what did it
@@ -121,13 +139,30 @@ export function renderMonitoringView(container: HTMLElement, data: ActiveDataSou
   function refreshStatus(): void {
     const status = engine.status();
     const running = status.running;
+    // Start/Stop used to stay enabled regardless of the engine's own
+    // running state — clicking Start while already RUNNING (or Stop while
+    // already stopped) silently did nothing, with no visual cue either way.
+    startButton.disabled = running;
+    stopButton.disabled = !running;
     const lastScanText = status.lastScanAt !== null ? new Date(status.lastScanAt).toLocaleString() : 'No scan yet';
     const outcomeTile =
       status.lastResult !== null
-        ? `<div class="stat-tile"><div class="stat-tile-value">` +
-          `${status.lastResult.outcomes.filter((o) => o.outcome === 'qualified').length} qualified / ` +
-          `${status.lastResult.outcomes.filter((o) => o.outcome === 'watch').length} watch / ` +
-          `${status.lastResult.failures.length} failed</div><div class="stat-tile-label">Last scan outcome</div></div>`
+        ? (() => {
+            const qualifiedCount = status.lastResult.outcomes.filter((o) => o.outcome === 'qualified').length;
+            const watchCount = status.lastResult.outcomes.filter((o) => o.outcome === 'watch').length;
+            const failedCount = status.lastResult.failures.length;
+            // Still one tile (three related counts from a single scan), but
+            // each number now carries the same green/red/neutral language
+            // signClass already gives every other count in this app instead
+            // of three plain white numbers a reader had to weigh themselves.
+            return (
+              `<div class="stat-tile"><div class="stat-tile-value">` +
+              `<span class="${qualifiedCount > 0 ? 'up' : ''}">${qualifiedCount}</span> qualified / ` +
+              `<span>${watchCount}</span> watch / ` +
+              `<span class="${failedCount > 0 ? 'down' : ''}">${failedCount}</span> failed` +
+              `</div><div class="stat-tile-label">Last scan outcome</div></div>`
+            );
+          })()
         : '';
     const nextScanTile =
       running && status.nextScanAt !== null
@@ -149,22 +184,46 @@ export function renderMonitoringView(container: HTMLElement, data: ActiveDataSou
     renderAlerts(container.querySelector('#mon-alerts')!, engine);
   }
 
-  container.querySelector('#mon-start')!.addEventListener('click', () => {
+  startButton.addEventListener('click', () => {
     const interval = container.querySelector<HTMLSelectElement>('#mon-interval')!
       .value as MonitorInterval;
     engine.start(interval);
     refreshStatus();
   });
-  container.querySelector('#mon-stop')!.addEventListener('click', () => {
+  stopButton.addEventListener('click', () => {
     engine.stop();
     refreshStatus();
   });
-  container.querySelector('#mon-scan-now')!.addEventListener('click', () => {
+  scanNowButton.addEventListener('click', () => {
+    // Market Scan's own "Run scan" already disables itself for the
+    // duration of a scan; this button never did, so a second click while
+    // one manual scan was still in flight could fire a second overlapping
+    // run.
+    scanNowButton.disabled = true;
     statusLine.textContent = 'Scanning…';
-    void engine.runScanOnce(Date.now()).then(refreshAll);
+    // The opportunities table used to sit untouched showing the PREVIOUS
+    // scan's results with no sign a new scan was in flight — the same
+    // stale-content-during-refetch bug class already fixed once in Markets'
+    // view-tabs (PR #203). A real scan against Kraken (unlike the demo
+    // source) can take several seconds for 12 symbols, so this window is
+    // genuinely visible, not just theoretical.
+    container.querySelector('#mon-opportunities')!.innerHTML = '<div class="empty">Scanning…</div>';
+    void engine
+      .runScanOnce(Date.now())
+      .then(refreshAll)
+      .finally(() => {
+        scanNowButton.disabled = false;
+      });
   });
   container.querySelector('#mon-notify-perm')!.addEventListener('click', () => {
-    void requestNotificationPermission();
+    // Used to call this and discard the result — the button gave zero
+    // feedback either way, even though the promise already resolves with
+    // exactly what happened (granted/denied/unsupported).
+    void requestNotificationPermission().then((permission) => {
+      if (permission === 'granted') window.toast.success('Browser notifications enabled.');
+      else if (permission === 'unsupported') window.toast.info('This browser does not support notifications.');
+      else window.toast.warning('Notifications are blocked — enable them in your browser settings.');
+    });
   });
   container.querySelector('#mon-watch-add')!.addEventListener('click', () => {
     const symbol = container.querySelector<HTMLSelectElement>('#mon-watch-symbol')!.value;
@@ -182,12 +241,18 @@ function renderOpportunities(element: Element, engine: MonitoringEngine): void {
     return;
   }
   const qualified = result.outcomes.filter((o) => o.outcome === 'qualified');
+  // Every monitored symbol failed to even fetch (network down) must not read
+  // as "the market genuinely has nothing worth trading" — the exact same
+  // `result.failures` shape the sibling Market Scan view already surfaces
+  // distinctly via its own `.scan-failures`/`.error-line`, silently dropped
+  // here even though `MonitorScanResult` already carries it.
+  const allFailed = result.outcomes.length === 0 && result.failures.length > 0;
   if (qualified.length === 0) {
-    element.innerHTML =
-      '<div class="empty">No qualified opportunities in the last scan — refusing weak setups is the system protecting capital.</div>';
-    return;
-  }
-  element.innerHTML = `
+    element.innerHTML = allFailed
+      ? `<p class="error-line">Scan failed for all ${result.failures.length} monitored markets — check your connection and try "Scan now" again.</p>`
+      : '<div class="empty">No qualified opportunities in the last scan — refusing weak setups is the system protecting capital.</div>';
+  } else {
+    element.innerHTML = `
     <div class="table-scroll">
     <table class="data-table">
       <thead><tr>
@@ -199,19 +264,28 @@ function renderOpportunities(element: Element, engine: MonitoringEngine): void {
           .map(({ opportunity: o }) => `<tr title="${escapeHtml(o!.explanation)}">
             <td>${escapeHtml(o!.symbol)}</td>
             <td>${formatPrice(o!.price)}</td>
-            <td>${o!.confidence.toFixed(0)}</td>
+            <td class="${signClass(o!.confidence)}">${o!.confidence.toFixed(0)}</td>
             <td>${formatPrice(o!.entry)}</td>
             <td>${formatPrice(o!.stopLoss)}</td>
             <td>${formatPrice(o!.takeProfit)}</td>
             <td>${o!.positionSize.toLocaleString('en-US', { maximumFractionDigits: 6 })}</td>
             <td>${o!.riskPct.toFixed(2)}%</td>
-            <td>${escapeHtml(o!.validationVerdict)}</td>
+            <td class="${verdictClass(o!.validationVerdict)}">${escapeHtml(o!.validationVerdict)}</td>
           </tr>`)
           .join('')}
       </tbody>
     </table>
     </div>
   `;
+  }
+  if (result.failures.length > 0 && !allFailed) {
+    element.insertAdjacentHTML(
+      'beforeend',
+      `<div class="scan-failures"><strong>Not scanned (${result.failures.length}):</strong> ${result.failures
+        .map((f) => `${escapeHtml(f.symbol)} — ${escapeHtml(f.reason)}`)
+        .join('; ')}</div>`,
+    );
+  }
 }
 
 function renderWatchlist(
@@ -234,20 +308,22 @@ function renderWatchlist(
       </tr></thead>
       <tbody>
         ${entries
-          .map(
-            (e) => `<tr>
-              <td>${e.favorite ? '★ ' : ''}${escapeHtml(e.symbol)}</td>
+          .map((e) => {
+            const statusClass =
+              e.currentStatus === 'qualified' ? 'positive' : e.currentStatus === 'none' ? 'watch-status-none' : '';
+            return `<tr>
+              <td>${e.favorite ? FAVORITE_ICON : ''}${escapeHtml(e.symbol)}</td>
               <td>${e.source}</td>
-              <td>${e.currentStatus}</td>
-              <td>${e.highestConfidence === null ? '—' : e.highestConfidence.toFixed(0)}</td>
+              <td class="${statusClass}">${e.currentStatus}</td>
+              <td class="${signClass(e.highestConfidence)}">${e.highestConfidence === null ? '—' : e.highestConfidence.toFixed(0)}</td>
               <td>${e.firstDetectedAt === null ? '—' : new Date(e.firstDetectedAt).toLocaleString()}</td>
               <td>${e.lastScanAt === null ? '—' : new Date(e.lastScanAt).toLocaleString()}</td>
               <td>
-                <button class="secondary" data-fav="${escapeHtml(e.symbol)}">${e.favorite ? 'Unfavourite' : 'Favourite'}</button>
-                <button class="secondary" data-del="${escapeHtml(e.symbol)}">Remove</button>
+                <button class="secondary table-action" data-fav="${escapeHtml(e.symbol)}">${e.favorite ? 'Unfavourite' : 'Favourite'}</button>
+                <button class="secondary table-action" data-del="${escapeHtml(e.symbol)}">Remove</button>
               </td>
-            </tr>`,
-          )
+            </tr>`;
+          })
           .join('')}
       </tbody>
     </table>
@@ -286,11 +362,11 @@ function renderHistory(element: Element, engine: MonitoringEngine): void {
             (r) => `<tr>
               <td>${new Date(r.detectedAt).toLocaleString()}</td>
               <td>${escapeHtml(r.symbol)}</td>
-              <td>${r.confidence.toFixed(0)}</td>
+              <td class="${signClass(r.confidence)}">${r.confidence.toFixed(0)}</td>
               <td>${formatPrice(r.entry)}</td>
-              <td>${r.snapshot.rsi === null ? '—' : r.snapshot.rsi.toFixed(0)}</td>
-              <td>${r.snapshot.adx === null ? '—' : r.snapshot.adx.toFixed(0)}</td>
-              <td>${escapeHtml(r.validationVerdict)}</td>
+              <td>${formatNumber(r.snapshot.rsi)}</td>
+              <td>${formatNumber(r.snapshot.adx)}</td>
+              <td class="${verdictClass(r.validationVerdict)}">${escapeHtml(r.validationVerdict)}</td>
               <td class="${r.disappearedAt === null ? 'positive' : ''}">${
                 r.disappearedAt === null
                   ? 'active'
