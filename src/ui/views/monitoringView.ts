@@ -161,6 +161,13 @@ export function renderMonitoringView(container: HTMLElement, data: ActiveDataSou
   });
   container.querySelector('#mon-scan-now')!.addEventListener('click', () => {
     statusLine.textContent = 'Scanning…';
+    // The opportunities table used to sit untouched showing the PREVIOUS
+    // scan's results with no sign a new scan was in flight — the same
+    // stale-content-during-refetch bug class already fixed once in Markets'
+    // view-tabs (PR #203). A real scan against Kraken (unlike the demo
+    // source) can take several seconds for 12 symbols, so this window is
+    // genuinely visible, not just theoretical.
+    container.querySelector('#mon-opportunities')!.innerHTML = '<div class="empty">Scanning…</div>';
     void engine.runScanOnce(Date.now()).then(refreshAll);
   });
   container.querySelector('#mon-notify-perm')!.addEventListener('click', () => {
@@ -182,12 +189,18 @@ function renderOpportunities(element: Element, engine: MonitoringEngine): void {
     return;
   }
   const qualified = result.outcomes.filter((o) => o.outcome === 'qualified');
+  // Every monitored symbol failed to even fetch (network down) must not read
+  // as "the market genuinely has nothing worth trading" — the exact same
+  // `result.failures` shape the sibling Market Scan view already surfaces
+  // distinctly via its own `.scan-failures`/`.error-line`, silently dropped
+  // here even though `MonitorScanResult` already carries it.
+  const allFailed = result.outcomes.length === 0 && result.failures.length > 0;
   if (qualified.length === 0) {
-    element.innerHTML =
-      '<div class="empty">No qualified opportunities in the last scan — refusing weak setups is the system protecting capital.</div>';
-    return;
-  }
-  element.innerHTML = `
+    element.innerHTML = allFailed
+      ? `<p class="error-line">Scan failed for all ${result.failures.length} monitored markets — check your connection and try "Scan now" again.</p>`
+      : '<div class="empty">No qualified opportunities in the last scan — refusing weak setups is the system protecting capital.</div>';
+  } else {
+    element.innerHTML = `
     <div class="table-scroll">
     <table class="data-table">
       <thead><tr>
@@ -212,6 +225,15 @@ function renderOpportunities(element: Element, engine: MonitoringEngine): void {
     </table>
     </div>
   `;
+  }
+  if (result.failures.length > 0 && !allFailed) {
+    element.insertAdjacentHTML(
+      'beforeend',
+      `<div class="scan-failures"><strong>Not scanned (${result.failures.length}):</strong> ${result.failures
+        .map((f) => `${escapeHtml(f.symbol)} — ${escapeHtml(f.reason)}`)
+        .join('; ')}</div>`,
+    );
+  }
 }
 
 function renderWatchlist(
