@@ -7520,3 +7520,71 @@ Gate: `tsc --noEmit` clean, 1284/1284 vitest passed (up from 1273 baseline —
 `scripts/replayCopyTrade.mts`, `tests/copyTrade/` (2 new test files) —
 nothing under `server/**`, `src/ui/**`, or any existing `src/core/**` file
 touched.
+
+## Wallet quality scoring — Replay Engine extension, research tool only (2026-09-06)
+
+Step 2 of David's "smart money" exploration: given a wallet's OWN historical
+`ReplayResult` (Stage 1's Replay Engine output for that wallet), produce an
+interpretable quality score so several tracked wallets can be ranked before
+ever deciding which are worth following. New file
+`src/core/copyTrade/walletQuality.ts`, same isolation as the Replay Engine —
+pure function, no I/O, no network, no live data, no connection to
+`server/liveOrchestrator.mts` or any real-money path.
+
+**Scoring formula — a first-pass modeled heuristic, NOT empirically
+validated** (same honesty convention as `replayEngine.ts`'s slippage/latency
+model; full derivation in `walletQuality.ts`'s top doc comment):
+
+```
+roiScore            = clamp(50 + aggregate.roiPct / 2, 0, 100)   // 0% ROI -> 50
+winRateScore         = aggregate.winRatePct ?? 50
+drawdownScore        = clamp(100 - aggregate.maxDrawdownPct, 0, 100)
+rawPerformanceScore  = 0.5*roiScore + 0.25*winRateScore + 0.25*drawdownScore
+
+sampleSizeWeight     = tradeCount / (tradeCount + K)     // K = sampleSizeHalfWeightTrades, default 10
+tokensProfitable     = count of perToken entries with realizedPnl > 0
+diversityWeight      = 0.5 + 0.5 * min(tokensProfitable, D) / D   // D = diversitySaturationTokens, default 3
+confidenceWeight     = sampleSizeWeight * diversityWeight
+
+score = 50 + (rawPerformanceScore - 50) * confidenceWeight
+```
+
+Both weights shrink the score toward the neutral midpoint (50) as evidence
+thins out — a single lucky trade (low `sampleSizeWeight`) or profit
+concentrated in one token campaign (low `diversityWeight`) can't produce a
+misleadingly extreme score. Zero closed trades short-circuits to
+`score: null`, `confidence: 'insufficient'` — never a falsely confident
+number. `confidence` (`'insufficient' | 'low' | 'medium' | 'high'`, bucketed
+on `tradeCount`) is presentational only; it does not feed back into `score`.
+`K` and `D` are overridable per call via `WalletQualityOptions`.
+
+- `scoreWalletQuality(result: ReplayResult, opts?): WalletQualityScore` —
+  the scoring function above.
+- `rankWalletsByQuality(wallets, opts?): RankedWallet<TId>[]` — scores and
+  sorts several wallets' `ReplayResult`s descending by score;
+  insufficient-data wallets (`score === null`) sort last.
+- `scripts/replayCopyTrade.mts` — additive change: after each wallet's
+  scenario table, prints its quality score computed from a dedicated
+  zero-friction replay (`detectionLatencyMs/slippagePct/feePct = 0`), since
+  the score should reflect the wallet's OWN track record, not our simulated
+  copy-trading friction.
+
+6 new tests (`tests/copyTrade/walletQuality.test.ts`): exact formula
+verified by hand-computed values, low-sample-size wallet scoring lower than a
+high-sample wallet at the same raw ROI, multi-token-profitable wallet
+scoring higher than single-token at equal aggregate stats, large-drawdown
+wallet scoring lower than small-drawdown at equal ROI, ranking helper
+ordering (including insufficient-data last), and the zero-trades edge case
+(`score: null`, no crash).
+
+Deliberately deferred, same scope boundary as the Replay Engine: no real
+on-chain data provider, no full multi-factor "Smart Money Score" (no
+real-time trade-size-vs-liquidity or multi-wallet consensus factors — not
+measurable without live data), no Telegram alerts, no consensus with the
+Signal Engine, no live execution path.
+
+Gate: `tsc --noEmit` clean, 1290/1290 vitest passed (up from 1284 baseline —
+6 new), `npm run build` clean. Diff: `src/core/copyTrade/walletQuality.ts`
+(new), `scripts/replayCopyTrade.mts` (additive), `tests/copyTrade/` (1 new
+test file) — nothing under `server/**`, `src/ui/**`, or any existing
+`src/core/**` file touched.
