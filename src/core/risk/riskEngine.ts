@@ -415,7 +415,7 @@ export function assessTrade(
     return rejected();
   }
 
-  warnings.push(...constraintsApplied.map((c) => `size capped: ${c}`));
+  warnings.push(...constraintsApplied);
   reasons.push(
     `risking ${maxLoss.toFixed(2)} (${riskPctUsed.toFixed(2)}% of equity) for a ` +
       `${rewardRisk.toFixed(1)}:1 reward/risk — within every configured limit`,

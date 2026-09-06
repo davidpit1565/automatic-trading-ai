@@ -187,7 +187,12 @@ describe('live account state parsing (the real Revolut X account, separate from 
       'live:kill-switch': { engaged: true, reason: 'network failure before a response was received' },
       'live:audit-log': [
         { timestamp: 2_000, event: 'awaiting-confirmation', detail: 'confirmation request sent to Telegram' },
-        { timestamp: 3_000, event: 'rejected', detail: "Revolut X rejected the order: HTTP 400 — Invalid client order ID" },
+        {
+          timestamp: 3_000,
+          event: 'rejected',
+          detail: "Revolut X rejected the order: HTTP 400 — Invalid client order ID",
+          intentId: 'live-entry:DOTEUR:1788602254561',
+        },
       ],
       'live:live-external-btc-qty': 0.00075,
       'live:live-equity-history': [{ at: 4_000, equity: 150.42 }],
@@ -199,10 +204,30 @@ describe('live account state parsing (the real Revolut X account, separate from 
       killSwitchEngaged: true,
       killSwitchReason: 'network failure before a response was received',
       // Only real outcome events (filled/rejected) — 'awaiting-confirmation' is excluded.
-      recentEvents: [{ at: 3_000, event: 'rejected', detail: "Revolut X rejected the order: HTTP 400 — Invalid client order ID" }],
+      // symbol is parsed from the entry's own intentId, for the real-activity
+      // list's coin icon (see assetHubView.ts's renderRealActivity).
+      recentEvents: [{
+        at: 3_000,
+        event: 'rejected',
+        detail: "Revolut X rejected the order: HTTP 400 — Invalid client order ID",
+        symbol: 'DOTEUR',
+      }],
       externalBtcQuantity: 0.00075,
       equityHistory: [{ at: 4_000, equity: 150.42 }],
     });
+  });
+
+  it('falls back to a null symbol when the intent id carries no parseable one (e.g. a pre-trade verification failure or the kill switch)', async () => {
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'live:live-cash-eur': 50,
+      'live:audit-log': [
+        { timestamp: 1_000, event: 'rejected', detail: "'USELESS/EUR' not found among tradable pairs", intentId: 'verify-symbol-exists' },
+        { timestamp: 2_000, event: 'rejected', detail: 'kill switch engaged' }, // no intentId at all
+      ],
+    });
+    const state = await fetchCloudState(okFetch(body));
+    expect(state!.live!.recentEvents.every((e) => e.symbol === null)).toBe(true);
   });
 
   it('defaults an absent kill-switch/positions/audit-log/external-btc/equity-history to a safe empty state, not a crash', async () => {
