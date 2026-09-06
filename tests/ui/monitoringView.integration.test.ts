@@ -61,6 +61,23 @@ describe('Monitoring view (DOM integration)', () => {
     expect(container.querySelector('#mon-status')!.textContent).toContain('stopped');
   });
 
+  it('Start/Stop buttons reflect the engine state instead of both always being clickable', async () => {
+    const container = await renderView();
+    const start = container.querySelector<HTMLButtonElement>('#mon-start')!;
+    const stop = container.querySelector<HTMLButtonElement>('#mon-stop')!;
+    // Stopped initially: Start is the valid action, Stop is not.
+    expect(start.disabled).toBe(false);
+    expect(stop.disabled).toBe(true);
+
+    start.click();
+    expect(start.disabled).toBe(true);
+    expect(stop.disabled).toBe(false);
+
+    stop.click();
+    expect(start.disabled).toBe(false);
+    expect(stop.disabled).toBe(true);
+  });
+
   it('renders status as separate stat tiles, not one run-on sentence', async () => {
     const container = await renderView();
     // Stopped, no scan yet: just the two tiles that always apply.
@@ -101,7 +118,135 @@ describe('Monitoring view (DOM integration)', () => {
     } else {
       expect(container.querySelectorAll('#mon-history tbody tr').length).toBeGreaterThan(0);
       expect(container.querySelectorAll('#mon-alerts tbody tr').length).toBeGreaterThan(0);
+
+      // Confidence and Validation columns carry the app's own colour
+      // language (signClass / verdict-text-*) instead of flat, uncoloured
+      // text — every qualified opportunity's confidence is > 0, so it must
+      // be coloured "positive", and every verdict gets a matching class.
+      const oppConfidenceCells = container.querySelectorAll('#mon-opportunities tbody tr td:nth-child(3)');
+      expect(oppConfidenceCells.length).toBeGreaterThan(0);
+      oppConfidenceCells.forEach((cell) => expect(cell.className).toContain('positive'));
+
+      const historyVerdictCells = container.querySelectorAll('#mon-history tbody tr td:nth-child(7)');
+      historyVerdictCells.forEach((cell) => expect(cell.className).toMatch(/verdict-text-/));
     }
+  });
+
+  it('shows an honest error, not "protecting capital", when every monitored market fails to fetch', async () => {
+    const data = await makeData();
+    // A genuine network outage: every candle fetch fails, so the scan
+    // returns zero outcomes and only failures — same Result-shaped failure
+    // the sibling Market Scan view already handles distinctly.
+    const failingSource = {
+      ...data.source,
+      getCandles: async () => ({ ok: false as const, error: 'network unreachable' }),
+    };
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderMonitoringView(container, { ...data, source: failingSource });
+
+    container.querySelector<HTMLButtonElement>('#mon-scan-now')!.click();
+    await new Promise((resolve) => {
+      const check = (): void => {
+        const t = container.querySelector('#mon-opportunities')!.textContent!;
+        if (!t.includes('No scan has run yet') && !t.includes('Scanning…')) resolve(undefined);
+        else setTimeout(check, 10);
+      };
+      check();
+    });
+
+    const text = container.querySelector('#mon-opportunities')!.textContent!;
+    expect(text).toContain('Scan failed for all');
+    expect(text).not.toContain('protecting capital');
+  });
+
+  it('clears the previous scan\'s stale results instead of leaving them on screen while a new scan is in flight', async () => {
+    const data = await makeData();
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+
+    // First scan populates #mon-opportunities with real (demo) content —
+    // must wait for it to fully settle (not just start, i.e. past the
+    // in-flight "Scanning…" placeholder itself) before moving on.
+    renderMonitoringView(container, data);
+    container.querySelector<HTMLButtonElement>('#mon-scan-now')!.click();
+    for (
+      let i = 0;
+      i < 600 &&
+      (container.querySelector('#mon-opportunities')!.textContent!.includes('No scan has run yet') ||
+        container.querySelector('#mon-opportunities')!.textContent!.includes('Scanning…'));
+      i++
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    const firstResultText = container.querySelector('#mon-opportunities')!.textContent!;
+    expect(firstResultText).not.toContain('No scan has run yet');
+    expect(firstResultText).not.toContain('Scanning…');
+
+    // Second scan: hold getCandles open so we can observe the mid-flight DOM
+    // before it resolves — the exact window the old code left untouched.
+    let releaseSecondScan: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      releaseSecondScan = resolve;
+    });
+    const stallingSource = {
+      ...data.source,
+      getCandles: async (...args: Parameters<typeof data.source.getCandles>) => {
+        await held;
+        return data.source.getCandles(...args);
+      },
+    };
+    // Re-render against the stalling source, reusing the same container.
+    renderMonitoringView(container, { ...data, source: stallingSource });
+    container.querySelector<HTMLButtonElement>('#mon-scan-now')!.click();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(container.querySelector('#mon-opportunities')!.textContent).toContain('Scanning…');
+    expect(container.querySelector('#mon-opportunities')!.textContent).not.toBe(firstResultText);
+
+    // Let the held scan actually finish before the test ends — an
+    // unresolved background write would otherwise leak into localStorage
+    // (shared across this file's tests) after this test returns.
+    releaseSecondScan();
+    for (let i = 0; i < 600 && container.querySelector('#mon-opportunities')!.textContent!.includes('Scanning…'); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  });
+
+  it('disables Scan now while a manual scan is in flight, and re-enables after', async () => {
+    const source = new SyntheticDataSource(ANCHOR);
+    const instrumentsResult = await source.getInstruments();
+    if (!instrumentsResult.ok) throw new Error('demo instruments unavailable');
+    let releaseGate: (() => void) | null = null;
+    const gate = new Promise<void>((resolve) => (releaseGate = resolve));
+    const slow: ActiveDataSource = {
+      source: {
+        name: 'slow',
+        getInstruments: () => source.getInstruments(),
+        getCandles: async (symbol, timeframe, limit) => {
+          await gate; // stays pending until the test releases it
+          return source.getCandles(symbol, timeframe, limit);
+        },
+      },
+      instruments: instrumentsResult.value,
+      isLive: false,
+      kind: 'demo',
+      diagnostics: [],
+    };
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderMonitoringView(container, slow);
+
+    const scanNow = container.querySelector<HTMLButtonElement>('#mon-scan-now')!;
+    expect(scanNow.disabled).toBe(false);
+    scanNow.click();
+    expect(scanNow.disabled).toBe(true);
+
+    releaseGate!();
+    for (let i = 0; i < 600 && scanNow.disabled; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    expect(scanNow.disabled).toBe(false);
   });
 
   it('manual watchlist add and favourite toggle work through the store', async () => {
@@ -115,7 +260,9 @@ describe('Monitoring view (DOM integration)', () => {
 
     container.querySelector<HTMLButtonElement>('#mon-watchlist [data-fav]')!.click();
     rows = container.querySelectorAll('#mon-watchlist tbody tr');
-    expect(rows[0]!.textContent).toContain('★');
+    // The favourite marker is the app's own star icon (matching Markets'
+    // .star-btn), not a bare "★" glyph.
+    expect(rows[0]!.querySelector('.watch-fav-icon')).not.toBeNull();
 
     container.querySelector<HTMLButtonElement>('#mon-watchlist [data-del]')!.click();
     expect(container.querySelector('#mon-watchlist')!.textContent).toContain('empty');

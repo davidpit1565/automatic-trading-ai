@@ -19,6 +19,14 @@ import {
 import type { Timeframe } from '../../core/types';
 import type { ActiveDataSource } from '../dataSource';
 import { escapeHtml, formatNumber, formatPct, formatPrice, signClass } from '../format';
+import { skeletonRowsHtml } from '../loadingStates';
+
+/** Same down-chevron path used by the pair-switcher on Markets
+ * (`marketsView.ts`'s `.pair-chevron`) — reused here so a scan row's
+ * "click to expand" affordance comes from the app's one existing chevron
+ * icon rather than relying on cursor style alone. */
+const CHEVRON_SVG =
+  '<svg class="scan-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
 const TIMEFRAMES: Timeframe[] = ['15m', '1h', '4h', '1d'];
 const SCAN_SYMBOL_LIMIT = 12;
@@ -62,7 +70,7 @@ export function renderMarketScanView(container: HTMLElement, data: ActiveDataSou
       <button class="primary" id="scan-run">Run scan</button>
     </div>
     <div class="status-line" id="scan-status"></div>
-    <div id="scan-results"></div>
+    <div id="scan-results"><div class="empty">Run a scan to score markets from −100 to +100.</div></div>
     <p class="disclaimer">
       Scores measure current technical evidence only. They are not predictions and not
       financial advice.
@@ -77,12 +85,16 @@ export function renderMarketScanView(container: HTMLElement, data: ActiveDataSou
   runButton.addEventListener('click', async () => {
     runButton.disabled = true;
     const timeframe = timeframeSelect.value as Timeframe;
-    status.textContent = `Scanning ${Math.min(data.instruments.length, SCAN_SYMBOL_LIMIT)} markets on ${timeframe} (${data.source.name})…`;
-    results.innerHTML = '';
+    status.textContent = `Scanning ${Math.min(data.instruments.length, SCAN_SYMBOL_LIMIT)} markets on ${timeframe} · source: ${data.source.name}…`;
+    // A placeholder row-shaped skeleton (the same one Portfolio's own
+    // first-paint uses) reads as "loading" — the blank gap it replaced,
+    // between clicking Run and the results appearing, read as nothing.
+    results.innerHTML = skeletonRowsHtml(4);
     try {
       const symbols = data.instruments.slice(0, SCAN_SYMBOL_LIMIT).map((i) => i.symbol);
       const scan = await scanMarket(data.source, symbols, timeframe, SCAN_CANDLES);
       status.textContent = `Scanned ${scan.results.length} markets on ${timeframe} · source: ${data.source.name}`;
+      results.innerHTML = '';
       renderScanTable(results, scan, buildRiskContext());
     } catch (cause) {
       status.textContent = '';
@@ -122,19 +134,24 @@ function renderScanTable(container: HTMLElement, scan: MarketScan, risk: RiskCon
     const row = document.createElement('tr');
     row.className = 'scan-row';
     row.setAttribute('aria-expanded', 'false');
-    // `aria-expanded` already correctly announced the disclosure state, but
-    // a <tr> is never in the Tab order and Enter/Space do nothing on it —
-    // this whole table's only interactive affordance was mouse/touch-only.
-    // role="button" opts it into the global Enter/Space-activation delegate
-    // in main.ts (the same one every other custom "obviously clickable"
-    // element in the app now relies on), and the existing .scan-row
-    // :focus-visible ring (styles.css, from an earlier shared-layer pass)
-    // was already written for exactly this — it just had nothing focusable
-    // to attach to until now.
-    row.setAttribute('role', 'button');
+    // A <tr> has no native activation semantics — without these it was
+    // only ever expandable with a mouse (confirmed: no tabindex, no
+    // role, no keydown handler). role="button" + tabindex make it reachable
+    // by keyboard, matching the row's own aria-expanded which already
+    // assumed a disclosure-widget contract.
     row.tabIndex = 0;
+    row.setAttribute('role', 'button');
+    // Score is -100..+100 evidence STRENGTH — direction (bullish/bearish)
+    // and magnitude are two separate facts. A bar that only ever fills
+    // from the left edge (the old version) encodes magnitude but throws
+    // away direction: a -80 and a +80 rendered as the identical shape,
+    // color aside. Anchoring the fill at the bar's own centre — growing
+    // right for bullish, left for bearish — encodes both, the same idea
+    // as the order book's own bid/ask depth bars.
+    const scoreDir = result.score > 0 ? 'up' : result.score < 0 ? 'down' : '';
+    const scoreFillPct = Math.min(50, Math.round(Math.abs(result.score) / 2));
     row.innerHTML = `
-      <td>${escapeHtml(result.symbol)}</td>
+      <td class="scan-market-cell">${escapeHtml(result.symbol)}${CHEVRON_SVG}</td>
       <td>${formatPrice(result.snapshot.price)}</td>
       <td class="${signClass(result.snapshot.changePct)}">${formatPct(result.snapshot.changePct)}</td>
       <td>${formatNumber(result.snapshot.rsi)}</td>
@@ -142,17 +159,24 @@ function renderScanTable(container: HTMLElement, scan: MarketScan, risk: RiskCon
       <td>${result.snapshot.relativeVolume === null ? '—' : `${result.snapshot.relativeVolume.toFixed(2)}×`}</td>
       <td class="scan-score">
         <span class="${signClass(result.score)}">${result.score.toFixed(0)}</span>
-        <span class="score-bar"><span class="score-bar-fill ${result.score >= 0 ? 'up' : 'down'}" style="width:${Math.min(100, Math.abs(result.score)).toFixed(0)}%"></span></span>
+        <span class="score-bar"><span class="score-bar-fill ${scoreDir}" style="width:${scoreFillPct}%"></span></span>
       </td>
       <td>${temperatureBadge(result)}</td>
     `;
 
     const detail = buildDetailRow(result, risk);
     detail.hidden = true;
-    row.addEventListener('click', () => {
+    const toggle = (): void => {
       detail.hidden = !detail.hidden;
       row.classList.toggle('expanded', !detail.hidden);
       row.setAttribute('aria-expanded', String(!detail.hidden));
+    };
+    row.addEventListener('click', toggle);
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggle();
+      }
     });
 
     tbody.appendChild(row);
@@ -176,16 +200,22 @@ function buildDetailRow(result: ScanResult, risk: RiskContext): HTMLTableRowElem
   const detail = document.createElement('tr');
   detail.className = 'scan-detail';
   const componentsHtml = result.components
-    .map(
-      (component) => `
+    .map((component) => {
+      // `toFixed` keeps the ORIGINAL value's sign even once its magnitude
+      // rounds away — a genuine (if tiny) negative contribution like -0.03
+      // was rendering as "-0.0 pts" (a red, signed "negative zero" that
+      // reads like a typo). Snap anything that displays as zero to a real
+      // zero first, so the sign/colour and the printed digits always agree.
+      const c = Math.abs(component.contribution) < 0.05 ? 0 : component.contribution;
+      return `
         <div class="scan-component">
           <div class="label">${escapeHtml(component.label)}</div>
           <div class="detail">${escapeHtml(component.detail)}</div>
-          <div class="contribution ${signClass(component.contribution)}">
-            ${component.contribution >= 0 ? '+' : ''}${component.contribution.toFixed(1)} pts
+          <div class="contribution ${signClass(c)}">
+            ${c > 0 ? '+' : ''}${c.toFixed(1)} pts
           </div>
-        </div>`,
-    )
+        </div>`;
+    })
     .join('');
   const warningsHtml =
     result.warnings.length > 0
@@ -196,7 +226,7 @@ function buildDetailRow(result: ScanResult, risk: RiskContext): HTMLTableRowElem
     <td colspan="8">
       <div class="scan-detail-grid">${componentsHtml}</div>
       ${warningsHtml}
-      <p class="status-line">
+      <p class="status-line scan-detail-stats">
         ATR ${formatNumber(s.atrPct, 2)}% · Bollinger %B ${formatNumber(s.percentB, 2)} ·
         bandwidth ${s.bollingerBandwidth === null ? '—' : (s.bollingerBandwidth * 100).toFixed(1) + '%'} ·
         +DI ${formatNumber(s.plusDi)} / −DI ${formatNumber(s.minusDi)} ·

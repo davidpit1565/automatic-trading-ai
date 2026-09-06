@@ -361,6 +361,17 @@ describe('Markets search, sort and watchlist', () => {
     handle.pause();
   });
 
+  it('says "market" (singular), not "markets", when exactly one is shown', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    await type(container, 'bitcoin');
+    expect(container.querySelector('.market-more')!.textContent).toBe('All 1 market shown');
+    handle.pause();
+  });
+
   it('says so when nothing matches, rather than showing a blank list', async () => {
     const container = document.createElement('section');
     document.body.appendChild(container);
@@ -414,6 +425,21 @@ describe('Markets search, sort and watchlist', () => {
     const titles = [...container.querySelectorAll('.market-row .row-title')].map((e) => e.textContent);
     expect(titles).toEqual(['Bitcoin']);
     expect(container.querySelector<HTMLElement>('[data-star="XBTEUR"]')!.className).toContain('on');
+    handle.pause();
+  });
+
+  it('bounces the star icon when it is newly favourited, not when un-starred', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    const handle = renderMarketsView(container, makeData());
+    await waitFor(() => container.querySelector('.market-row') !== null);
+
+    container.querySelector<HTMLElement>('[data-star="XBTEUR"]')!.click();
+    // `renderList()` rebuilds the row, so the class lands on the FRESH button.
+    expect(container.querySelector<HTMLElement>('[data-star="XBTEUR"]')!.className).toContain('pop');
+
+    container.querySelector<HTMLElement>('[data-star="XBTEUR"]')!.click();
+    expect(container.querySelector<HTMLElement>('[data-star="XBTEUR"]')!.className).not.toContain('pop');
     handle.pause();
   });
 

@@ -190,13 +190,12 @@ function detailHeaderHtml(
   currentIndex: number,
 ): string {
   const up = changePct >= 0;
-  // Icon-only buttons switching between four whole panels (Chart/Orderbook/
-  // Trades/Trade) directly below — the exact same "several buttons, one
-  // active at a time, switches what's showing" shape as `.mk-tabs` a few
-  // lines up in this same file, which correctly carries role="tablist"/
-  // role="tab"/aria-selected. This sibling had none of it: no tablist
-  // semantics at all, so a screen-reader user got four unlabelled-as-a-group
-  // buttons with no indication which view was currently showing.
+  // role="tablist"/"tab" + aria-selected — the same ARIA tab pattern
+  // `.mk-tabs` (the category strip on the list) already uses correctly;
+  // this row visually IS a tab bar but had none of it, so a screen-reader
+  // user got five unlabelled-as-a-group buttons instead. Round-2 a11y audit
+  // added the roving `tabindex="-1"` on inactive tabs (arrow-key navigation
+  // between tabs relies on exactly one being a Tab stop at a time).
   const tabs = VIEW_TABS.map(
     (t) =>
       `<button class="view-tab ${t.key === viewMode ? 'active' : ''}" role="tab" aria-selected="${t.key === viewMode}" ${t.key === viewMode ? '' : 'tabindex="-1"'} data-view="${t.key}" aria-label="${t.label}">` +
@@ -224,8 +223,8 @@ function detailHeaderHtml(
         </div></div>
       </div>
       <button class="star-btn ${starred ? 'active' : ''}" id="mk-star" aria-label="Watch this market"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>
+      <div class="pair-menu" id="mk-pair-menu" role="listbox" hidden>${menuItems}</div>
     </div>
-    <div class="pair-menu" id="mk-pair-menu" role="listbox" hidden>${menuItems}</div>
     <div class="detail-price-row">
       <div class="row-title big" id="mk-price">${tieredPriceHtml(`€${formatMarketPrice(price)}`)}</div>
       <div class="chg ${up ? 'up' : 'down'}" id="mk-change">${formatPct(changePct)}</div>
@@ -270,14 +269,8 @@ function wireOrderForm(detailView: HTMLElement, m: MarketRow): void {
     btn.addEventListener('click', () => {
       const side = btn.dataset['side'] as 'buy' | 'sell';
       buttons.forEach((b) => {
-        const active = b === btn;
-        b.classList.toggle('active', active);
-        // A two-state segmented control (Revolut's own Buy/Sell toggle
-        // pattern) with no accessible state at all — sighted users see which
-        // side is active from the fill colour; a screen-reader/keyboard user
-        // got no indication either button was ever "on". Same aria-pressed
-        // convention `.mk-star` already uses for its own toggle button.
-        b.setAttribute('aria-pressed', String(active));
+        b.classList.toggle('active', b === btn);
+        b.setAttribute('aria-pressed', String(b === btn));
       });
       note.innerHTML =
         `This mirrors Revolut X's order form for reference, but there's no direct submit here — every real order already goes through the cloud agent's own safety checks (confidence gates, risk sizing, a Telegram confirmation prompt). Send <code>/${side} ${escapeHtml(m.symbol)}</code> to the Telegram bot to actually place one.`;
@@ -657,7 +650,7 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     const more =
       shown < view.length
         ? `<div id="mk-more" class="market-more">Loading more markets… (${shown} of ${view.length})</div>`
-        : `<div class="market-more muted-line">All ${view.length} markets shown</div>`;
+        : `<div class="market-more muted-line">All ${view.length} ${view.length === 1 ? 'market' : 'markets'} shown</div>`;
     list.innerHTML = rows + more;
     observeMore();
     status.textContent =
@@ -693,15 +686,21 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
    */
   function attachPullToRefresh(): void {
     const indicator = container.querySelector<HTMLElement>('#mk-pull')!;
-    const scroller = (): HTMLElement | null => listView.closest<HTMLElement>('.content');
+    // `.content` (what actually scrolls) has no `overflow` rule of its own —
+    // the page scrolls via the document/window, not this element — so its
+    // own `.scrollTop` reads 0 no matter how far down the page the user
+    // actually is. That made this "are we at the top?" guard always true,
+    // silently defeating the whole point of checking it: pulling down
+    // anywhere in a long, scrolled list could arm the refresh indicator,
+    // competing with an ordinary scroll exactly as the guard was meant to
+    // prevent. `window.scrollY` reflects the real document scroll position.
     let startY: number | null = null;
     let pulled = 0;
 
     listView.addEventListener(
       'touchstart',
       (event) => {
-        const top = scroller()?.scrollTop ?? 0;
-        startY = top <= 0 && event.touches.length === 1 ? (event.touches[0]?.clientY ?? null) : null;
+        startY = window.scrollY <= 0 && event.touches.length === 1 ? (event.touches[0]?.clientY ?? null) : null;
         pulled = 0;
       },
       { passive: true },
@@ -737,6 +736,29 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   }
   attachPullToRefresh();
 
+  // The pair-switcher dropdown (`#mk-pair-menu`) is a floating overlay (see
+  // its CSS), so it needs the usual dismissal affordances: tapping anywhere
+  // outside it, or Escape, closes it without picking a pair. Registered ONCE
+  // here (not inside `openDetail`/`paint`, which can each run many times per
+  // coin) and re-queries the live menu/toggle on every event, so it stays
+  // correct across re-renders without piling up duplicate listeners.
+  document.addEventListener('click', (event) => {
+    const pairMenu = detailView.querySelector<HTMLElement>('#mk-pair-menu');
+    const pairToggle = detailView.querySelector<HTMLButtonElement>('#mk-pair-toggle');
+    if (!pairMenu || pairMenu.hidden) return;
+    const target = event.target as HTMLElement;
+    if (pairMenu.contains(target) || target === pairToggle || pairToggle?.contains(target)) return;
+    pairMenu.hidden = true;
+    pairToggle?.setAttribute('aria-expanded', 'false');
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const pairMenu = detailView.querySelector<HTMLElement>('#mk-pair-menu');
+    if (!pairMenu || pairMenu.hidden) return;
+    pairMenu.hidden = true;
+    detailView.querySelector('#mk-pair-toggle')?.setAttribute('aria-expanded', 'false');
+  });
+
   function openDetail(index: number, opts: { preserveRange?: boolean } = {}): void {
     // Freeze the ordering the user was looking at, so prev/next stays coherent
     // even as a refresh reshuffles a category like Gainers underneath.
@@ -747,6 +769,11 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
     window.clearInterval(listTimer);
     listView.hidden = true;
     detailView.hidden = false;
+    // A fresh tap from the list is a new "page" — start at the top, the same
+    // convention `main.ts` uses for every primary view switch. `resume()`
+    // (preserveRange) is reopening the same coin after backgrounding, not a
+    // fresh navigation, so its scroll position is left alone.
+    if (!opts.preserveRange) window.scrollTo({ top: 0 });
     let coin = index;
     // Candles by default; the choice persists across range/coin changes while
     // this detail stays open. `resume()` asks to preserve the last choice
@@ -775,6 +802,11 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
           coin--;
           rangeKey = '1D';
           savedRangeKey = rangeKey;
+          // Switching coins is a fresh "page" — without this, tapping the
+          // pager from a scrolled-down position (e.g. after viewing closed
+          // orders) leaves the new coin's own header/price scrolled off the
+          // top of the screen, overlapping the fixed topbar.
+          window.scrollTo({ top: 0 });
           void paint();
         }
       });
@@ -783,15 +815,26 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
           coin++;
           rangeKey = '1D';
           savedRangeKey = rangeKey;
+          window.scrollTo({ top: 0 });
           void paint();
         }
       });
       detailView.querySelector('#mk-star')?.addEventListener('click', () => {
         const nowStarred = getWatchlist().toggle(m.symbol);
-        detailView.querySelector('#mk-star')?.classList.toggle('active', nowStarred);
+        const btn = detailView.querySelector('#mk-star');
+        btn?.classList.toggle('active', nowStarred);
+        if (nowStarred) {
+          btn?.classList.add('pop');
+          btn?.addEventListener('animationend', () => btn.classList.remove('pop'), { once: true });
+        }
       });
       const pairToggle = detailView.querySelector<HTMLButtonElement>('#mk-pair-toggle');
       const pairMenu = detailView.querySelector<HTMLElement>('#mk-pair-menu');
+      const closePairMenu = (): void => {
+        if (!pairMenu || pairMenu.hidden) return;
+        pairMenu.hidden = true;
+        pairToggle?.setAttribute('aria-expanded', 'false');
+      };
       pairToggle?.addEventListener('click', () => {
         if (!pairMenu) return;
         pairMenu.hidden = !pairMenu.hidden;
@@ -801,12 +844,12 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
         const item = (event.target as HTMLElement).closest<HTMLButtonElement>('.pair-menu-item');
         if (!item) return;
         const idx = Number(item.dataset['idx']);
-        pairMenu.hidden = true;
-        pairToggle?.setAttribute('aria-expanded', 'false');
+        closePairMenu();
         if (!Number.isInteger(idx) || idx === coin || idx < 0 || idx >= detailRows.length) return;
         coin = idx;
         rangeKey = '1D';
         savedRangeKey = rangeKey;
+        window.scrollTo({ top: 0 });
         void paint();
       });
       detailView.querySelectorAll<HTMLButtonElement>('.view-tab').forEach((b) => {
@@ -815,12 +858,25 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
           if (next === viewMode) return;
           viewMode = next;
           savedViewMode = next;
-          // No manual aria-selected/tabIndex sync needed here — unlike
-          // `.mk-tabs`/`.hub-tab` (updated in place), `paint()` fully
-          // re-renders `detailHeaderHtml` from `viewMode` (now `next`) on
-          // every call, so the freshly-built markup already reflects the
-          // new selection correctly.
-          void paint();
+          // Order book/Depth/Trades await a network fetch before `paint()`
+          // replaces anything — without this, the PREVIOUS tab's content
+          // (e.g. the candlestick chart) stayed fully on screen, unrelated
+          // to whichever tab icon had just been tapped, for however long
+          // that fetch took. Same fade-out/fade-in pattern the range and
+          // chart-type toggles already use below. (Round-2 a11y audit note:
+          // no manual aria-selected/tabIndex sync is needed here — unlike
+          // `.mk-tabs`/`.hub-tab`, `paint()` fully re-renders
+          // `detailHeaderHtml` from `viewMode` on every call, so the fresh
+          // markup already reflects the new selection.)
+          const current = detailView.querySelector<HTMLElement>('.detail-chart, .detail-nonchart');
+          current?.classList.add('fade-out');
+          void paint().then(() => {
+            const fresh = detailView.querySelector<HTMLElement>('.detail-chart, .detail-nonchart');
+            if (fresh) {
+              fresh.classList.add('fade-in');
+              setTimeout(() => fresh.classList.remove('fade-in'), 300);
+            }
+          });
         });
       });
     };
@@ -1168,17 +1224,45 @@ export function renderMarketsView(container: HTMLElement, data: ActiveDataSource
   });
   // One capture-phase listener covers every row's logo (error does not bubble).
   attachCoinLogoFallback(list);
+  // The coin-detail header's own logo (`.detail-coin`, re-rendered on every
+  // paint/coin-switch) had no equivalent — a failed image load there showed
+  // the browser's bare broken-image glyph instead of the intended letter
+  // tile, exactly the outcome `coinLogoHtml`'s own doc comment says this
+  // fallback exists to avoid. Confirmed by forcing every coin logo request
+  // to fail: the list correctly fell back everywhere, the detail header's
+  // <img> stayed broken. One listener on `detailView` covers every open.
+  attachCoinLogoFallback(detailView);
 
   // Starring must not also open the coin — the star sits above the row.
   list.addEventListener('click', (event) => {
     const star = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-star]');
     if (!star) return;
     event.stopPropagation();
-    getWatchlist().toggle(star.dataset['star']!);
+    const symbol = star.dataset['star']!;
+    const nowStarred = getWatchlist().toggle(symbol);
     renderList();
+    // `renderList()` just replaced this row's markup, so the bounce (see
+    // `.mk-star.pop`) targets the FRESH star button, not the one the tap
+    // landed on — that one is already detached. Only on newly-favourited
+    // (never on un-starring), matching the toggle-moment delight this is for.
+    if (nowStarred) {
+      const fresh = list.querySelector<HTMLElement>(`[data-star="${CSS.escape(symbol)}"]`);
+      fresh?.classList.add('pop');
+      fresh?.addEventListener('animationend', () => fresh.classList.remove('pop'), { once: true });
+    }
   });
 
-  container.querySelector('#mk-tabs')!.addEventListener('click', (event) => {
+  // Scroll-edge fade for the category strip (see the `.mk-tabs` CSS) — marks
+  // which edge, if any, still has tabs scrolled out of view.
+  const mkTabsEl = container.querySelector<HTMLElement>('#mk-tabs')!;
+  const updateTabsFade = (): void => {
+    mkTabsEl.classList.toggle('at-start', mkTabsEl.scrollLeft <= 1);
+    mkTabsEl.classList.toggle('at-end', mkTabsEl.scrollLeft + mkTabsEl.clientWidth >= mkTabsEl.scrollWidth - 1);
+  };
+  updateTabsFade();
+  mkTabsEl.addEventListener('scroll', updateTabsFade, { passive: true });
+
+  mkTabsEl.addEventListener('click', (event) => {
     const tab = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-cat]');
     if (!tab) return;
     const key = tab.dataset['cat']!;

@@ -175,6 +175,37 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
     expect(container.querySelector('#hub-real-breakdown')!.textContent).toContain('Cash');
   });
 
+  it("shows a coin icon + symbol on a real-activity row when one is parseable, matching the simulated trade rows' own treatment (real bug, 2026-09-06)", async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      fetchState: async () =>
+        cloudState({
+          live: {
+            cash: 50,
+            positions: [],
+            killSwitchEngaged: false,
+            killSwitchReason: null,
+            recentEvents: [
+              { at: 2, event: 'rejected', detail: 'auto-expired after 20m', symbol: 'DOTEUR' },
+              // No parseable symbol (e.g. a pre-trade verification failure) — must fall back cleanly, no icon.
+              { at: 1, event: 'rejected', detail: "'USELESS/EUR' not found", symbol: null },
+            ],
+            externalBtcQuantity: 0,
+            equityHistory: [],
+          },
+        }),
+    });
+    await flush();
+
+    const rows = container.querySelectorAll('#hub-real-activity-list .row');
+    expect(rows.length).toBe(2);
+    expect(rows[0]!.querySelector('.coin-logo')).not.toBeNull();
+    expect(rows[0]!.textContent).toContain('DOTEUR');
+    expect(rows[1]!.querySelector('.coin-logo')).toBeNull();
+  });
+
   it('shows the untracked-BTC breakdown and feeds the real equity chart once external BTC and history exist', async () => {
     const container = document.createElement('section');
     document.body.appendChild(container);
@@ -212,6 +243,33 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
     expect(change.textContent).toContain('50');
     expect(change.textContent).toContain('since tracking began');
     expect(change.classList.contains('up')).toBe(true);
+  });
+
+  it("never prices an untracked BTC holding at a confident €0.00 when no BTC price is available (real-money-safety fix, 2026-09-06 — the real crypto state file carries no market-snapshot at all)", async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      fetchState: async () =>
+        cloudState({
+          marketSnapshot: [], // matches the real crypto state file today — no XBTEUR entry
+          live: {
+            cash: 50,
+            positions: [],
+            killSwitchEngaged: false,
+            killSwitchReason: null,
+            recentEvents: [],
+            externalBtcQuantity: 0.001,
+            equityHistory: [],
+          },
+        }),
+    });
+    await flush();
+
+    const breakdown = container.querySelector<HTMLElement>('#hub-real-breakdown')!;
+    expect(breakdown.hidden).toBe(false);
+    expect(breakdown.textContent).toContain('price unavailable');
+    expect(breakdown.textContent).not.toContain('€0.00');
   });
 });
 
@@ -255,6 +313,158 @@ describe('renderAssetHub — the SIMULATED wallet is hidden entirely once a live
 
     expect(container.querySelector<HTMLElement>('#hub-sim-hero')!.hidden).toBe(false);
     expect(container.querySelector<HTMLElement>('#hub-sim-history')!.hidden).toBe(false);
+  });
+});
+
+describe('renderAssetHub — kill-switch banner on the Profit tab (2026-09-06 readiness/kill-switch audit)', () => {
+  // Found missing entirely: Home already showed this on its own copy of the
+  // "Real money" hero (#hv-kill-switch), but anyone landing directly on
+  // Crypto/Stocks → Profit (this exact hero, shown a second time) had zero
+  // indication trading might currently be paused.
+  it('shows the paused banner, with reason, when the kill switch is engaged on the real account', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      fetchState: async () =>
+        cloudState({
+          live: {
+            cash: 50,
+            positions: [],
+            killSwitchEngaged: true,
+            killSwitchReason: 'manual pause',
+            recentEvents: [],
+            externalBtcQuantity: 0,
+            equityHistory: [],
+          },
+        }),
+    });
+    await flush();
+
+    const banner = container.querySelector<HTMLElement>('#hub-kill-switch')!;
+    expect(banner.hidden).toBe(false);
+    expect(banner.textContent).toContain('paused');
+    expect(banner.textContent).toContain('manual pause');
+    // Wording must actually describe what the kill switch does (verified
+    // against `runLiveOrderFlow`/`manualKillSwitchCommand.mts`): it blocks
+    // exits as well as new entries, and never closes a position itself.
+    expect(banner.textContent).toContain('no new trades or exits');
+    expect(banner.querySelector('svg')).not.toBeNull();
+  });
+
+  it('hides the banner when the kill switch is not engaged', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      fetchState: async () =>
+        cloudState({
+          live: {
+            cash: 50,
+            positions: [],
+            killSwitchEngaged: false,
+            killSwitchReason: null,
+            recentEvents: [],
+            externalBtcQuantity: 0,
+            equityHistory: [],
+          },
+        }),
+    });
+    await flush();
+
+    expect(container.querySelector<HTMLElement>('#hub-kill-switch')!.hidden).toBe(true);
+  });
+});
+
+describe('renderAssetHub — liveSubtitle swap once real money is live (2026-09-06 readiness/kill-switch audit)', () => {
+  // Crypto's own static subtitle ("...SIMULATED money...") went stale the
+  // moment real money went live (2026-09-03) on this exact screen — right
+  // next to the real-money hero. `liveSubtitle` is how a caller opts in to
+  // a real-money-aware replacement; omitting it (Stocks, which never goes
+  // live) keeps the static `subtitle` exactly as before.
+  it('swaps to liveSubtitle once a live account exists', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      subtitle: 'SIMULATED money only.',
+      liveSubtitle: 'REAL money is live here.',
+      fetchState: async () =>
+        cloudState({
+          live: {
+            cash: 50,
+            positions: [],
+            killSwitchEngaged: false,
+            killSwitchReason: null,
+            recentEvents: [],
+            externalBtcQuantity: 0,
+            equityHistory: [],
+          },
+        }),
+    });
+    await flush();
+
+    expect(container.querySelector('#hub-subtitle')!.textContent).toBe('REAL money is live here.');
+  });
+
+  it('keeps the static subtitle when there is no live account, even with liveSubtitle configured', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      subtitle: 'SIMULATED money only.',
+      liveSubtitle: 'REAL money is live here.',
+      fetchState: async () => cloudState({ live: null }),
+    });
+    await flush();
+
+    expect(container.querySelector('#hub-subtitle')!.textContent).toBe('SIMULATED money only.');
+  });
+
+  it('never touches the subtitle when liveSubtitle is omitted (Stocks today)', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, { ...baseOpts, subtitle: 'static text', fetchState: async () => cloudState({ live: null }) });
+    await flush();
+
+    expect(container.querySelector('#hub-subtitle')!.textContent).toBe('static text');
+  });
+});
+
+describe('renderAssetHub — readiness list distinguishes a blocking failure from an informational-only one (2026-09-06 readiness audit)', () => {
+  // Verified against the real committed state/stocks-state.json: Stocks
+  // reads "NOT READY" for exactly one gating reason (benchmark), yet
+  // trades/consistency also read !ok (informational-only, for a hold-only
+  // strategy) and previously rendered with the identical amber warning icon
+  // as the one real blocker — no way to tell "doesn't count" from "this is
+  // why it's not ready" at a glance.
+  it('renders a genuinely-blocking criterion as "no" and an informational-only one as "info", not both as "no"', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      fetchState: async () =>
+        cloudState({
+          readiness: {
+            ready: false,
+            summary: 'NOT READY — vs buy-and-hold S&P 500 (SPY) -0.27%.',
+            criteria: [
+              { key: 'trades', ok: false, detail: '11 / 20 closed trades (informational)' },
+              { key: 'benchmark', ok: false, detail: 'vs buy-and-hold S&P 500 (SPY) -0.27%' },
+              { key: 'days', ok: true, detail: '37 / 14 days of history' },
+            ],
+            unmet: ['benchmark'],
+          },
+        }),
+    });
+    await flush();
+
+    const items = [...container.querySelectorAll<HTMLElement>('#hub-readiness .readiness-list li')];
+    const byKeyword = (text: string) => items.find((li) => li.textContent?.includes(text))!;
+    expect(byKeyword('closed trades').className).toContain('info');
+    expect(byKeyword('closed trades').className).not.toContain('no');
+    expect(byKeyword('buy-and-hold').className).toContain('no');
+    expect(byKeyword('days of history').className).toContain('ok');
   });
 });
 
