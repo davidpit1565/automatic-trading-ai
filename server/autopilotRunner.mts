@@ -102,6 +102,7 @@ import {
   pollAllTelegramUpdates,
   sendTelegramMessage,
   stashUnclaimedTelegramUpdates,
+  SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED,
   type DailySummaryLive,
   type DailySummaryStocks,
   type TelegramTextMessage,
@@ -743,7 +744,9 @@ async function runCycle(
     opened: freshOpened,
     closed: freshClosed,
   });
-  if (message !== null) {
+  // Simulated buy/sell fills — silenced (David, 2026-09-06). See
+  // SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED's doc comment.
+  if (message !== null && SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED) {
     const result = await sendTelegramMessage(message, telegram);
     console.log(result.sent ? 'Telegram notification sent.' : `No notification: ${result.reason}`);
     if (result.sent) {
@@ -761,7 +764,9 @@ async function runCycle(
 
   // Circuit-breaker alert: tell the user (once per day) that new buying is
   // paused while the portfolio recovers toward its peak.
-  if (telegram.token && telegram.chatId && breakerEngaged(store)) {
+  // Simulated-only (breakerEngaged reads the paper equity history) — silenced,
+  // see SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED.
+  if (SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED && telegram.token && telegram.chatId && breakerEngaged(store)) {
     const { day } = localDayAndHour(now, getSummaryTimezone());
     if (store.get<string>('dd-halt-alert-day') !== day) {
       const a = await sendTelegramMessage(buildDrawdownHaltAlert(DD_BREAKER_PCT), telegram);
@@ -770,7 +775,13 @@ async function runCycle(
   }
 
   // Tell the user (once per day) when a safety limit pauses new buying.
-  if (telegram.token && telegram.chatId && cycle.skipped.some((s) => /daily loss limit/i.test(s.reason))) {
+  // Simulated-only (the paper autopilot's own daily-loss limit) — silenced.
+  if (
+    SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED &&
+    telegram.token &&
+    telegram.chatId &&
+    cycle.skipped.some((s) => /daily loss limit/i.test(s.reason))
+  ) {
     const { day } = localDayAndHour(now, getSummaryTimezone());
     if (store.get<string>('risk-halt-alert-day') !== day) {
       const halt = await sendTelegramMessage(buildRiskHaltAlert(), telegram);
@@ -782,7 +793,9 @@ async function runCycle(
   }
 
   // Safety net: cheap invariant checks every cycle; alert once/day on trouble.
-  if (telegram.token && telegram.chatId) {
+  // Checks the simulated `portfolio` — silenced (real-money invariants have
+  // their own separate audit-log-based safety net, untouched here).
+  if (SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED && telegram.token && telegram.chatId) {
     const problems: string[] = [];
     if (portfolio.cash() < -1e-6) problems.push('מזומן שלילי');
     if (portfolio.openPositions().length > MAX_OPEN_POSITIONS) {
@@ -1490,7 +1503,9 @@ export async function maybeSendMoveAlerts(
     // this file, which only persists its "sent" flag after checking
     // `result.sent`.
     current[p.id] = prevExtreme;
-    if (isNewExtreme) {
+    // `portfolio.openPositions()` above is the SIMULATED paper portfolio —
+    // silenced (David, 2026-09-06). See SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED.
+    if (isNewExtreme && SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED) {
       const result = await sendTelegramMessage(buildMoveAlert(p.symbol, movePct), telegram);
       console.log(result.sent ? `Move alert sent for ${p.symbol}.` : `Move alert failed: ${result.reason}`);
       if (result.sent) current[p.id] = { neg, pos };
@@ -1662,16 +1677,28 @@ export async function maybeSendSummaries(
   const candidateWatchSaved = store.get<{ standings: ShadowStanding[] }>(CANDIDATE_WATCH_STANDINGS_KEY);
   const candidateWatch = candidateWatchSaved?.standings.find((s) => s.key === 'candidate-watch') ?? null;
   for (const slot of dueSlots) {
-    const result = await sendTelegramMessage(
-      buildDailySummary({
-        ...baseSummary,
-        heading: slot.heading,
-        ...(shadowSaved ? { shadows: shadowSaved.standings } : {}),
-        ...(longTermShadow ? { longTermShadow } : {}),
-        ...(candidateWatch ? { candidateWatch } : {}),
-      }),
-      telegram,
-    );
+    // Simulated crypto/stocks sections silenced (David, 2026-09-06) — only
+    // the REAL Revolut X section (`baseSummary.live`) still renders. See
+    // SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED and buildDailySummary's
+    // `hideSimulated` doc comment.
+    const built = buildDailySummary({
+      ...baseSummary,
+      heading: slot.heading,
+      hideSimulated: !SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED,
+      ...(shadowSaved ? { shadows: shadowSaved.standings } : {}),
+      ...(longTermShadow ? { longTermShadow } : {}),
+      ...(candidateWatch ? { candidateWatch } : {}),
+    });
+    if (built === null) {
+      // Nothing left to report (no live account) — mark the slot done for
+      // today without sending anything, so the rest of today's cycles don't
+      // keep recomputing this for nothing.
+      store.set(slot.key, today);
+      persistStateToGit(store, `daily summary silenced (${slot.key})`);
+      console.log(`Summary silenced (${slot.key}): simulated-only, no live account.`);
+      continue;
+    }
+    const result = await sendTelegramMessage(built, telegram);
     if (result.sent) {
       store.set(slot.key, today);
       // Real incident, 2026-09-04: this "already sent today" fact only used
@@ -1730,6 +1757,8 @@ export async function checkStatusRequests(
   const snap = portfolio.snapshot(prices, now);
   const since = now - DAY_MS;
   const benchmark = await computeBenchmark(store, source, snap.equity, now);
+  // Simulated section silenced (David, 2026-09-06) — /status now reports
+  // only the REAL Revolut X account. See SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED.
   const message = buildDailySummary({
     heading: '📋 מצב נוכחי — לפי בקשה',
     equity: snap.equity,
@@ -1745,7 +1774,12 @@ export async function checkStatusRequests(
     readiness: store.get<RealMoneyReadiness>(READINESS_KEY) ?? null,
     stocks: readStocksSummary(now),
     live: readLiveSummary(liveStore, prices),
+    hideSimulated: !SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED,
   });
+  if (message === null) {
+    console.log('Status not sent: simulated-only, no live account.');
+    return true;
+  }
   const result = await sendTelegramMessage(message, telegram);
   console.log(result.sent ? 'Status sent (on demand).' : `Status not sent: ${result.reason}`);
   return true;
@@ -1754,7 +1788,7 @@ export async function checkStatusRequests(
 const HELP_MESSAGE = [
   '📋 פקודות זמינות:',
   '',
-  '/status — מצב נוכחי של שני החשבונות (מדומה + אמיתי): הון, מזומן, פוזיציות פתוחות, קניות/מכירות ב-24 השעות האחרונות.',
+  '/status — מצב נוכחי של החשבון האמיתי: הון, מזומן, פוזיציות פתוחות, קניות/מכירות ב-24 השעות האחרונות.',
   '/tip — הזדמנות המסחר הכי טובה כרגע (אותם קריטריונים בדיוק כמו הסוכן האוטומטי) — לא מבצע כלום, רק מדווח.',
   '/discover — סקר שוק על-פי דרישה: בודק מטבעות שעדיין לא ברשימת המסחר על נתונים אמיתיים ומדווח אם משהו שווה הוספה. לא מוסיף כלום אוטומטית.',
   '/buy SYMBOL — פתיחת פוזיציה אמיתית ידנית (למשל /buy XBTEUR). עובר את אותה שרשרת בטיחות (אישור בטלגרם, מתג חירום).',
@@ -1794,6 +1828,9 @@ async function maybeSendAllClear(
   telegram: { token: string; chatId: string },
   now: number,
 ): Promise<void> {
+  // Describes the simulated engine's own protections — silenced (David,
+  // 2026-09-06). See SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED.
+  if (!SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED) return;
   if (!telegram.token || !telegram.chatId) return;
   const last = store.get<number>(ALLCLEAR_KEY);
   if (last !== undefined && now - last < ALLCLEAR_INTERVAL_MS) return;
@@ -1819,6 +1856,9 @@ export async function maybeSendPeriodicReports(
   telegram: { token: string; chatId: string },
   now: number,
 ): Promise<void> {
+  // Weekly/monthly report of the simulated `portfolio` — silenced (David,
+  // 2026-09-06). See SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED.
+  if (!SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED) return;
   if (!telegram.token || !telegram.chatId) return;
   const { day, hour } = localDayAndHour(now, getSummaryTimezone());
   if (hour < 22) return; // evening only

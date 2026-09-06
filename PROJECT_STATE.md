@@ -6589,6 +6589,127 @@ nothing under `server/**`, `state/**`, or `src/core/**`, and no view file
 owned by another parallel agent (`marketsView.ts`, `assetHubView.ts`, any
 `stocks*.ts`, any Tools view) touched.
 
+## Silenced all simulated-money trading: no Telegram notifications, no site display (2026-09-06)
+
+David, after a Telegram screenshot showing a simulated FILEUR buy fill:
+"תבטל לגמרי את הכסף המדומה במסחר, אנחנו לא צריכים אותו, ואם כן אז שיהיה שקט
+לגמרי, ושלא ישלח הודעות בבוט לגמרי, ושלא תופיע באתר" (disable the simulated
+money completely; if it still has to exist under the hood, let it be totally
+quiet — no bot messages, no site display). His crypto account is live for
+BTC only; every other crypto asset and all of Stocks are still simulated-only
+— the paper-trading engine is how a not-yet-live asset earns the track record
+the real-money readiness gate requires, so per this repo's own non-negotiable
+rule ("SIMULATED money only in core") the ENGINE stays running exactly as
+before. Only its Telegram output and site display are silenced — nothing
+under `src/core/**` touched, and every real-money code path (`liveEntryMirror`,
+`liveExitFlow`, `liveOrchestrator`, `revolutXBrokerAdapter`, the kill switch,
+`manualBuyCommand`/`manualSellCommand`, `liveBlackoutQueue`) is untouched.
+
+### 1. Telegram — every simulated-money message silenced
+
+Added one shared, exported flag — `SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED =
+false` (`server/telegram.mts`) — and gated every send site that describes
+ONLY simulated money behind it, read at each site rather than duplicated:
+
+- **`server/autopilotRunner.mts`**: the crypto buy/sell fill message
+  (`buildCycleMessage`), the drawdown-halt alert, the daily-loss risk-halt
+  alert, the cash/position-count safety-net alert, per-position move alerts
+  (`maybeSendMoveAlerts`), the periodic all-clear (`maybeSendAllClear`), and
+  the weekly/monthly performance report (`maybeSendPeriodicReports` — no
+  live equivalent exists at all, so this now never sends anything).
+- **`server/stocksRunner.mts`**: the stocks buy/sell fill message
+  (`buildStockCycleMessage`) — Stocks has no live account, so every fill
+  here was simulated; this notification is now silenced entirely.
+- **`server/systemMonitor.mts`**: `monitorSystemChanges` only ever reads the
+  simulated crypto/stocks state files (see its two `systemMonitorRunner.mts`
+  call sites) — its equity/P&L change alerts are simulated monitoring
+  alerts, now silenced.
+
+**The daily digest and `/status` were the hard case**: both build ONE
+message combining simulated crypto/stocks content with the REAL Revolut X
+section via `buildDailySummary`. Rather than suppressing the whole message
+(which would also silence real-money reporting), `buildDailySummary` gained
+a `hideSimulated` option: when set, it renders ONLY the `live` section
+(still fully live-Revolut-X-labeled) and returns `null` — not an empty
+string — when there's no live account either, so the caller sends nothing
+at all. `maybeSendSummaries` and `checkStatusRequests` now pass
+`hideSimulated: !SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED` and skip the send
+entirely on `null` (the daily slot is still marked done for the day so the
+rest of the day's cycles don't keep recomputing it). `/help`'s own line for
+`/status` updated to stop promising "both accounts (simulated + real)".
+
+**Left deliberately untouched** (real-money or not describable-as-simulated):
+`buildLiveEntryResultMessage`/`notifyLiveEntryOutcomes`, kill-switch outcome
+messages, the kill-switch keyboard intro, `liveBlackoutQueue.mts`'s blackout
+summary, `manualBuyCommand.mts`/`manualSellCommand.mts` (real-money-only, "buy
+now for real"/"sell whenever"), `manualKillSwitchCommand.mts` (a safety
+control, not a trade description), `manualTipCommand.mts`/`manualDiscoverCommand.mts`
+(advisory tools reporting a hypothetical opportunity/candidate scan, the
+Telegram equivalent of Market Scan — not an account balance), and
+`buildTestMessage()` (`SEND_TEST_MESSAGE=true`, a manual one-off delivery
+check, never fires in normal operation).
+
+Tests: `tests/server/telegram.test.ts` (new `SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED`
++ `hideSimulated` cases), `tests/server/autopilotRunner.test.ts` (rewrote the
+daily-summary/status/move-alert/periodic-report describe blocks to prove
+silence with no live account and real-only content with one),
+`tests/server/stocksRunner.test.ts` (new: a real buy fill sends no Telegram
+message), `tests/server/systemMonitor.test.ts` (rewrote both
+`monitorSystemChanges` tests: never touches the store or sends, regardless
+of configuration or data).
+
+### 2. Site — simulated-money display hidden
+
+- **Portfolio dashboard** (`src/ui/views/portfolioView.ts`): confirmed it's
+  a fully standalone, browser-`localStorage`-backed simulated paper-trading
+  dashboard (`PaperPortfolio`, `STARTING_CASH`, "Buy/Sell at market" —
+  entirely separate from the server-side autopilot). Its only entry point,
+  the "Portfolio" tool-card under Tools → Account (`index.html`), is now
+  `hidden` along with its group header — same "hide the display, keep the
+  underlying thing working" pattern PR #195 used for the crypto hub. The
+  route itself (`#tab-portfolio`, `TOOL_VIEWS.portfolio` in `main.ts`) is
+  untouched and still renders if reached another way. No other entry point
+  to this view exists anywhere in `src/ui/`.
+- **Home** (`src/ui/views/homeView.ts`): "Recent activity" rendered
+  `state.history` (the simulated paper account's own trade list)
+  unconditionally — the one simulated block on this screen NOT already
+  hidden once real money goes live (the sim hero, readiness card, and
+  simulated "Open positions" were already gated behind `state.live` since
+  2026-09-04/09-05). Added `actWrap.hidden = Boolean(live)`, matching the
+  existing pattern exactly (its "See all" link already points at the
+  Profit tab's History section, which shows real activity once live).
+  Market Scan / Monitoring confirmed to show no simulated wallet balance —
+  `PaperPortfolio` there feeds only an internal risk-sizing calculation
+  (`assessTrade`'s `positionSize`), never a displayed equity/cash figure —
+  left alone, per their own tool-not-account nature.
+- Crypto's own hub (`assetHubView.ts`) was already fully handled by PR #195
+  (2026-09-05) — nothing further needed there.
+
+Tests: `tests/ui/mainNav.test.ts` (new: the Portfolio tool-card is hidden via
+its `.tools-grid` container, while `#tab-portfolio` still exists),
+`tests/ui/homeView.integration.test.ts` (extended both existing
+live/no-live tests to also assert `#home-activity-wrap`'s hidden state;
+gave `actWrap` the id `home-activity-wrap` for this).
+
+### Open question flagged for David (not changed)
+
+**Stocks' account view** (`stocksOverviewPanel.ts`/`stocksMarketPanel.ts`/
+`stocksLongTermPanel.ts`) is currently 100% simulated (no live account for
+Stocks exists at all) and already tags itself "SIMULATED" throughout — it
+was deliberately left untouched. Hiding it the same way the crypto hub hides
+its simulated hero once real money is live isn't possible here (Stocks has
+no live side to reveal instead) — the literal-most reading of "no simulated
+money anywhere" would mean hiding the Stocks account screen's real positions
+UNTIL/UNLESS real money ever comes to Stocks, which reads as a much bigger,
+more irreversible-feeling call than "silence the noise" — genuinely
+ambiguous without asking David directly, so no code changed here. Flagged in
+the PR description for a direct answer.
+
+### Gate
+
+`npx tsc --noEmit` clean · `npx vitest run`: 1230/1230 passing (114 files,
+up from ~1226 on `main`) · `npm run build`: clean.
+
 ## Motion & microinteraction consistency audit, round 2: 4 verified fixes (2026-09-06)
 
 Round 2 of David's "compare against Revolut X, 200 improvements" mandate —
