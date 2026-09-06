@@ -195,6 +195,9 @@ export function mountEquityChartPanel(
 
     let chart: string;
     let geo: ChartGeometry | null = null;
+    // What the crosshair below actually indexes into — must be the same
+    // length as `geo` (one entry per index `geo.indexAtFraction` can return).
+    let crosshairSeries: Candle[];
     if (mode === 'candle') {
       // No EMA/support-resistance/volume overlays here — those are
       // technical-analysis signals for a tradable asset's price, and this
@@ -202,13 +205,39 @@ export function mountEquityChartPanel(
       // signal off of (see the `indicators` option's own doc comment).
       chart = candleChartSvg(candles, { formatX: range.fx, formatY: (v) => `${currency}${formatPrice(v)}`, indicators: false });
       geo = candleGeometry(candles);
+      crosshairSeries = candles;
     } else {
       const points = pts.map((p) => ({ timestamp: p.at, value: p.equity }));
       chart = priceChartSvg(points, { stroke: up ? HOT : COLD, formatX: range.fx, formatY: (v) => `${currency}${formatPrice(v)}` });
       geo = chartGeometry(points);
+      // Real bug, found 2026-09-06 by hovering the actual rendered chart
+      // (not from reading the code): line mode's geometry indexes `points`,
+      // one entry per RAW recorded sample — but the crosshair below was
+      // fed `candles`, the bucketed OHLC series, which has far FEWER entries
+      // once there's enough history (bucketize() aims for ~30 buckets
+      // regardless of how many raw samples exist). `geo.indexAtFraction`
+      // can return any index up to `points.length - 1`, so `candles[idx]`
+      // silently went out of bounds and threw inside the pointermove
+      // handler for most of the chart's width — hovering past roughly the
+      // first `TARGET_CANDLES`-worth of x-position killed the crosshair and
+      // tooltip entirely, on both this History/Profit panel and
+      // valueView.ts (all three share this component). A one-sample-per-
+      // point synthetic candle (open=high=low=close=the equity value) keeps
+      // `wireCrosshair`'s existing shape while indexing correctly for line
+      // mode.
+      crosshairSeries = points.map((p) => ({
+        timestamp: p.timestamp, open: p.value, high: p.value, low: p.value, close: p.value, volume: 0,
+      }));
     }
+    // aria-pressed: a real accessibility gap found 2026-09-06 — the hub-tabs
+    // segmented control (assetHubView.ts) already carries role="tab" /
+    // aria-selected for its own selection state, but this range bar and the
+    // Line/Candles toggle just below (the same kind of single-select
+    // segmented group) carried no ARIA state at all, so a screen-reader user
+    // had no way to tell which range or chart mode was currently active.
     const rangeBar = RANGES.map(
-      (r) => `<button class="range-btn ${r.key === rangeKey ? 'active' : ''}" data-range="${r.key}">${r.key}</button>`,
+      (r) =>
+        `<button class="range-btn ${r.key === rangeKey ? 'active' : ''}" data-range="${r.key}" aria-pressed="${r.key === rangeKey}">${r.key}</button>`,
     ).join('');
 
     container.innerHTML = `
@@ -228,27 +257,56 @@ export function mountEquityChartPanel(
              from, so showing it here would be its own new mismatch. -->
         <div class="hero-split"><span>${usingTrueStart ? 'since tracking began' : `since ${new Date(pts[0]!.at).toLocaleDateString('en-GB')}`}</span></div>
       </div>`
-          : `<div class="hero-change compact ${up ? 'up' : 'down'}">${formatPct(ret)} · ${rangeKey}</div>`
+          : // Real, screenshot-confirmed duplicate found 2026-09-06: with
+            // `showHero: false`, the caller (the Profit tab's "Real money"
+            // hero) already shows this exact same figure as its own
+            // "since tracking began" change line — computed from the same
+            // `history[0]` this chart's own "All" range uses (real accounts
+            // pass no `trueStartEquity`, so `usingTrueStart` is false and
+            // `first` here is `pts[0]`, which for "All" is `history[0]`
+            // itself, byte-for-byte the hero's own baseline). Every OTHER
+            // range genuinely differs (a shorter window's own return), so
+            // only "All" — the one range mathematically guaranteed to match
+            // — is suppressed here; switching to 1D/1W/1M/1Y still shows it.
+            rangeKey === 'All'
+              ? ''
+              : `<div class="hero-change compact ${up ? 'up' : 'down'}">${formatPct(ret)} · ${rangeKey}</div>`
       }
       <div class="chart-controls">
         <div class="range-bar">${rangeBar}</div>
         <div class="chart-toggle">
-          <button class="ctoggle-btn ${mode === 'line' ? 'active' : ''}" data-mode="line">Line</button>
-          <button class="ctoggle-btn ${mode === 'candle' ? 'active' : ''}" data-mode="candle">Candles</button>
+          <button class="ctoggle-btn ${mode === 'line' ? 'active' : ''}" data-mode="line" aria-pressed="${mode === 'line'}">Line</button>
+          <!-- Disabled, not silently ignored, when there isn't enough
+               history yet to bucket into 2+ candles (a brand-new account's
+               first ~10-15 minutes) — real bug: tapping this while mode
+               gets force-overridden back to 'line' above left the button
+               tappable but inert, with "Line" reverting to shown-active
+               instead of whatever the tap just selected. -->
+          <button class="ctoggle-btn ${mode === 'candle' ? 'active' : ''}" data-mode="candle" aria-pressed="${mode === 'candle'}" ${candles.length < 2 ? 'disabled' : ''}>Candles</button>
         </div>
       </div>
       <div class="detail-chart"><div class="pchart-wrap">${chart}<div class="pchart-tip" hidden></div></div></div>`;
 
     container.querySelectorAll<HTMLButtonElement>('.range-btn').forEach((b) => {
-      b.addEventListener('click', () => { rangeKey = b.dataset['range']!; repaintWithFade(); });
+      b.addEventListener('click', () => {
+        const next = b.dataset['range']!;
+        // Tapping the already-active range used to still fade the chart out
+        // and back in — a pointless 200ms flash with no informational
+        // change (real, reproducible: tap "All" while already on "All").
+        // Apple's own fluid-interface guidance is explicit about this: kill
+        // any latency/motion that isn't earning its keep.
+        if (next === rangeKey) return;
+        rangeKey = next;
+        repaintWithFade();
+      });
     });
     container.querySelectorAll<HTMLButtonElement>('.ctoggle-btn').forEach((b) => {
       b.addEventListener('click', () => {
         const m = b.dataset['mode'];
-        if (m === 'candle' || m === 'line') { chartMode = m; repaintWithFade(); }
+        if ((m === 'candle' || m === 'line') && m !== chartMode) { chartMode = m; repaintWithFade(); }
       });
     });
-    wireCrosshair(geo, mode, candles, range);
+    wireCrosshair(geo, mode, crosshairSeries, range);
   }
 
   /** Crosshair + tooltip, shared by candle (OHLC) and line (price) modes. */
