@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover is what makes env(safe-area-inset-*) resolve to a
+         real, non-zero value at all on a notched/Dynamic-Island device —
+         without it every safe-area-inset-* the CSS below relies on
+         (topbar top inset, bottom-nav's own clearance, .content's padding)
+         is silently 0, defeating those rules even though they read as
+         correct in the source. Required precisely because this app already
+         opts into edge-to-edge content via apple-mobile-web-app-status-bar-style
+         "black-translucent" below. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>AI Trading Assistant</title>
+    <meta name="theme-color" content="#07090d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Trading AI" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <!-- iOS home-screen icon: real Safari/iOS support for SVG apple-touch-icon
+         is unreliable across versions, so this needs an actual PNG. -->
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <script type="module" crossorigin src="/automatic-trading-ai/assets/index-B5uvCEsQ.js"></script>
+    <link rel="stylesheet" crossorigin href="/automatic-trading-ai/assets/index-DhH0Ba0n.css">
+  </head>
+  <body>
+    <div class="app">
+      <!-- Ambient colour wash behind the glass topbar — tracks the same
+           up/down portfolio sentiment as the hero card (see homeView.ts). -->
+      <div class="ambient-wash" aria-hidden="true"></div>
+
+      <!-- Toast notifications container -->
+      <div class="toast-container" id="toast-container"></div>
+
+      <header class="topbar">
+        <div class="brand"><span class="brand-dot"></span>Trading</div>
+        <div class="topbar-btc" id="topbar-btc" hidden></div>
+      </header>
+
+      <div id="data-source-banner" class="data-source-banner" hidden></div>
+
+      <main class="content">
+        <section id="view-crypto" class="view active" role="tabpanel" aria-label="Crypto"></section>
+        <section id="view-stocks" class="view" role="tabpanel" aria-label="Stocks"></section>
+        <section id="view-value" class="view" role="tabpanel" aria-label="Portfolio value"></section>
+        <section id="view-markets" class="view" role="tabpanel" aria-label="Markets"></section>
+
+        <section id="view-tools" class="view" role="tabpanel" aria-label="Tools">
+          <div id="tools-menu">
+            <h2 class="view-title">Tools</h2>
+            <p class="view-sub">Advanced analysis and simulation — all on simulated money.</p>
+            <h3 class="tools-group-title">Scanning</h3>
+            <div class="tools-grid">
+              <button class="tool-card" data-tab="scan">
+                <span class="tool-icon-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9l6 3"/></svg></span>
+                <span class="tool-card-text"><strong>Market Scan</strong><small>Score every market now</small></span>
+              </button>
+              <button class="tool-card" data-tab="monitoring">
+                <span class="tool-icon-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8a5 5 0 0 1 10 0c0 5.5 2 7 2 7H5s2-1.5 2-7"/><path d="M10 18a2 2 0 0 0 4 0"/></svg></span>
+                <span class="tool-card-text"><strong>Monitoring</strong><small>Continuous scanning</small></span>
+              </button>
+            </div>
+
+            <h3 class="tools-group-title">Strategy testing</h3>
+            <div class="tools-grid">
+              <button class="tool-card" data-tab="backtest">
+                <span class="tool-icon-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v5h5"/><path d="M12 8v4l3 2"/></svg></span>
+                <span class="tool-card-text"><strong>Backtesting</strong><small>Test strategies on history</small></span>
+              </button>
+              <button class="tool-card" data-tab="validation">
+                <span class="tool-icon-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z"/><path d="M9 12.5l2 2 4-4.5"/></svg></span>
+                <span class="tool-card-text"><strong>Validation</strong><small>Walk-forward robustness</small></span>
+              </button>
+              <button class="tool-card" data-tab="grid">
+                <span class="tool-icon-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 9.5h17M3.5 15h17M9.5 3.5v17M15 3.5v17"/></svg></span>
+                <span class="tool-card-text"><strong>Grid Sim</strong><small>Range-trading simulator</small></span>
+              </button>
+            </div>
+
+            <!-- David asked (2026-09-06) to stop showing simulated-money data
+                 anywhere on the site. This standalone paper-trading dashboard
+                 (portfolioView.ts — PaperPortfolio, STARTING_CASH) is 100%
+                 simulated, so its nav entry is hidden entirely rather than
+                 shown tagged "simulated" — same "hide the display, keep the
+                 underlying thing working" pattern PR #195 used for the
+                 crypto hub. The route/section (#tab-portfolio, TOOL_VIEWS in
+                 main.ts) is left fully intact, just unreachable from here. -->
+            <h3 class="tools-group-title" hidden>Account</h3>
+            <div class="tools-grid" hidden>
+              <button class="tool-card" data-tab="portfolio">
+                <span class="tool-icon-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9l6.5 4"/><circle cx="12" cy="12" r="8.5"/></svg></span>
+                <span class="tool-card-text"><strong>Portfolio</strong><small>Positions &amp; analytics</small></span>
+              </button>
+            </div>
+
+            <h3 class="tools-group-title">Help</h3>
+            <div class="tools-grid">
+              <button class="tool-card" data-tab="learn">
+                <span class="tool-icon-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.75h.01"/></svg></span>
+                <span class="tool-card-text"><strong>Guide</strong><small>How it works</small></span>
+              </button>
+            </div>
+          </div>
+
+          <div id="tool-detail" hidden>
+            <button class="tool-back" data-tool-back>← Back to Tools</button>
+            <section id="tab-scan" class="tab-panel" role="tabpanel"></section>
+            <section id="tab-backtest" class="tab-panel" role="tabpanel"></section>
+            <section id="tab-validation" class="tab-panel" role="tabpanel"></section>
+            <section id="tab-portfolio" class="tab-panel" role="tabpanel"></section>
+            <section id="tab-grid" class="tab-panel" role="tabpanel"></section>
+            <section id="tab-monitoring" class="tab-panel" role="tabpanel"></section>
+            <section id="tab-learn" class="tab-panel" role="tabpanel">
+              <h2 class="view-title">Learn</h2>
+              <article class="learn-card">
+                <h3>What this platform is</h3>
+                <p>
+                  A professional analysis assistant. It reads market data, computes technical
+                  indicators, backtests strategies on history, and scores current conditions.
+                  It does <strong>not</strong> place real orders and it never guarantees outcomes.
+                </p>
+              </article>
+              <article class="learn-card">
+                <h3>How to read a Market Scan</h3>
+                <p>
+                  Each market gets a score from −100 to +100 built from transparent components:
+                  trend (EMA 20/50 confirmed by ADX), momentum (RSI), MACD histogram, stochastic
+                  position, and volume. <span class="badge badge-hot">HOT</span> means strong
+                  bullish evidence, <span class="badge badge-cold">COLD</span> strong bearish
+                  evidence, <span class="badge badge-neutral">NEUTRAL</span> no clear edge.
+                </p>
+              </article>
+              <article class="learn-card">
+                <h3>Backtesting honestly</h3>
+                <p>
+                  Past performance never guarantees future results. Backtests here include fees,
+                  report maximum drawdown alongside returns, and liquidate at the end so
+                  strategies are compared on equal terms.
+                </p>
+              </article>
+              <article class="learn-card">
+                <h3>Risk first</h3>
+                <p>
+                  Position sizing, stop losses, and exposure limits matter more than entries.
+                  Any future live order will always require your explicit confirmation.
+                </p>
+              </article>
+              <p class="disclaimer">
+                Educational and analytical tool. Not financial advice. No profit is promised or implied.
+              </p>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" role="tablist" aria-label="Primary">
+        <button class="nav-btn active" data-nav="crypto" role="tab" aria-selected="true" aria-label="Crypto">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 7.5h4a2.25 2.25 0 0 1 0 4.5h-4m0 0h4.25a2.25 2.25 0 0 1 0 4.5H9.5M9.5 7.5v9"/></svg>
+          <span>Crypto</span>
+        </button>
+        <button class="nav-btn" data-nav="stocks" role="tab" aria-selected="false" tabindex="-1" aria-label="Stocks">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>
+          <span>Stocks</span>
+        </button>
+        <button class="nav-btn" data-nav="markets" role="tab" aria-selected="false" tabindex="-1" aria-label="Markets">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m4 14v-6m4 6V8m4 11v-9m4 9V6"/></svg>
+          <span>Markets</span>
+        </button>
+        <button class="nav-btn" data-nav="tools" role="tab" aria-selected="false" tabindex="-1" aria-label="Tools">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7M4 12h7M4 19h7M15 5h5M15 12h5M15 19h5"/></svg>
+          <span>Tools</span>
+        </button>
+      </nav>
+    </div>
+
+  </body>
+</html>
