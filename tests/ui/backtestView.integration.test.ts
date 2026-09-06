@@ -102,3 +102,16 @@ describe('Backtest view — table scroll-fade affordance', () => {
     expect(fadeWrap.classList.contains('is-scrolled-end')).toBe(true);
   });
 });
+
+describe('Backtest view — SIMULATED tag (2026-09-06 readiness/kill-switch audit)', () => {
+  it('marks the Results section as SIMULATED, matching every account screen in the app', () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderBacktestView(container, fakeData());
+
+    const resultsHeading = [...container.querySelectorAll('.block-head h2')].find((h) =>
+      h.textContent?.includes('Results'),
+    )!;
+    expect(resultsHeading.querySelector('.tag-sim')?.textContent).toBe('SIMULATED');
+  });
+});

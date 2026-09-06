@@ -2158,6 +2158,13 @@ body[data-sentiment="down"] { --wash-color: rgba(242, 109, 125, 0.14); }
 .readiness-list li.ok .crit-icon { stroke: var(--hot); }
 .readiness-list li.no { color: var(--text-dim); }
 .readiness-list li.no .crit-icon { stroke: var(--warn); }
+/* Informational-only criterion (2026-09-06 readiness audit): !ok but not
+   actually gating (e.g. Stocks' trades/consistency for a hold-only
+   strategy). Deliberately neutral, not the same amber-warning colour as
+   `.no` — a viewer scanning the list must be able to tell "doesn't count"
+   from "this is why it's not ready" without reading every detail string. */
+.readiness-list li.info { color: var(--text-dim); }
+.readiness-list li.info .crit-icon { stroke: var(--neutral); }
 
 /* ---------- Loading Spinners ---------- */
 

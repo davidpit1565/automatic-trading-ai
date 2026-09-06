@@ -189,7 +189,10 @@ function renderReport(
       }
     </div>
 
-    <div class="block-head"><h2>Out-of-sample equity (all folds, costs included)</h2></div>
+    <!-- Same fix as gridView.ts/backtestView.ts, same audit: a walk-forward
+         backtest with no SIMULATED tag anywhere, inconsistent with every
+         account screen in the app. -->
+    <div class="block-head"><h2>Out-of-sample equity (all folds, costs included) <span class="tag-sim">SIMULATED</span></h2></div>
     ${equityCurveSvg(report.oosEquityCurve)}
 
     <div class="block-head"><h2>Training vs unseen data</h2></div>

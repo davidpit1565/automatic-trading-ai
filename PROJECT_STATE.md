@@ -6684,3 +6684,242 @@ Gate: `tsc --noEmit` clean, 1208/1208 vitest (1203 baseline + 5 new, none
 broken), `npm run build` clean. Diff: `src/ui/styles.css` +
 `tests/ui/reducedMotion.test.ts` only — no view file touched, minimizing
 overlap with the other five parallel round-2 dimension agents.
+
+## Round 2, loading/empty/error state audit across every screen: 3 verified fixes (2026-09-06)
+
+David's round 2 ask: not another screen-scoped pass (round 1, above, already
+shipped 105 fixes split by screen), but a cross-cutting DIMENSION audit —
+loading/empty/error states across every view under `src/ui/views/*.ts`.
+Loaded `fintech-dashboard-polish`, `apple-design`, and this repo's own
+`empty-loading-error-states` skill first. Read only today's two round-1
+PROJECT_STATE entries above (not the full 6000+ line file) to avoid
+re-proposing anything already shipped — confirmed `skeletonRowsHtml`/
+`skeletonMarketCardsHtml` are already wired into `homeView`, `portfolioView`,
+`stocksOverviewPanel`, `stocksLongTermPanel`, `gridView`, `backtestView`,
+`validationView`; `showLoadingOverlay`/`showEmptyState`/etc. in
+`loadingStates.ts` are still dead code (unchanged from that finding, left
+alone here too — wiring them in is out of this pass's scope).
+
+Method: grepped every `src/ui/views/*.ts` for loading/empty/error handling
+to find files with NO coverage at all (`monitoringView.ts`,
+`stocksMarketPanel.ts` — 0 matches), read those in full, then verified each
+suspected gap two ways: a real DOM/mocked-fetch vitest test proving the
+exact behavior, AND (for the visual/first-paint question) real Playwright
+screenshots (`playwright-core`, `/opt/pw-browsers/chromium`, 390×844,
+`vite preview` on port 4183, `?demo=1`) across all 4 primary nav tabs
+(Crypto/Stocks/Markets/Tools) and all 7 Tools sub-screens (Market Scan,
+Monitoring, Backtesting, Validation, Grid, Portfolio, Learn) at both
+first-paint (~150ms) and settled (~950ms). The Crypto/Stocks Overview tabs'
+"Waiting for the cloud agent…"/"Assessing the paper track record…"
+placeholders never resolved in these screenshots — confirmed this is the
+sandbox genuinely having no route to the cloud-state endpoint (same
+constraint the shared-layer pass noted for Kraken/Revolut/GitHub), not a
+bug: `homeView.ts`'s `loadState()` already has the correct once-only
+"Couldn't reach the cloud agent" fallback for exactly this case (a prior,
+already-shipped fix), so this was the fallback working as designed, not a
+new gap. All 7 Tools sub-screens' first paints (empty config forms, honest
+"press Run to see results" hints) were already correct — no filler added
+for screens that already handle this well.
+
+**3 verified fixes, both in files round 1's screen-split never reached
+(neither was in any of the 7 agents' named scope: Monitoring and Stocks
+Market are cross-cutting/Tools-adjacent, not owned by a single screen
+agent):**
+
+1. **`stocksMarketPanel.ts`'s periodic refresh silently wiped every already-
+   loaded row back to "no data yet" on a single transient fetch failure**,
+   and reported it as `"Live · 0/475 stocks priced"` — actively misleading,
+   claiming "Live" while actually offline, and indistinguishable from
+   "genuinely zero snapshots exist yet." Root cause: `load()` ran
+   `bySymbol.get(symbol) ?? null` unconditionally even when
+   `fetchStocksState()` resolved `null` (fetch failed), instead of keeping
+   the last good snapshot. Fixed to match the established convention three
+   other files already use (`valueView.ts`, `assetHubView.ts`,
+   `homeView.ts`): keep showing the last good data, and only surface the
+   honest "Couldn't reach the cloud agent — retrying." message before the
+   *first* successful load (a later background failure stays quiet, same
+   as those three). Verified with 2 new tests: one proving a real price
+   loaded first is still on screen (and the status line unchanged, not
+   reset to "0/N") after a later fetch starts rejecting; one proving the
+   first-load-failure case shows the honest message, not "Live · 0/N".
+2. **`monitoringView.ts`'s "Current opportunities" showed the exact same
+   reassuring "refusing weak setups is the system protecting capital"
+   message whether the scan genuinely found nothing, OR every single
+   monitored market failed to even fetch (network down)** —
+   `MonitorScanResult.failures` was computed and returned by
+   `MonitoringEngine.runScanOnce` but silently never read by this view,
+   even though the sibling Market Scan view (`marketScanView.ts`) already
+   surfaces the identical `scan.failures` shape distinctly (its own
+   `.scan-failures`/`.error-line`). Added the same distinction here: an
+   all-failed scan now shows `.error-line` naming the failure count instead
+   of the misleading empty message, and a partial failure now appends the
+   same `.scan-failures` list Market Scan already uses. Verified with a new
+   test that injects a `source.getCandles` stub returning `{ ok: false }`
+   for every symbol (a faithful stand-in for a real network outage, since
+   every real data source in this codebase already resolves network
+   failures to a `Result`, never throws) and asserts the honest message
+   appears, not "protecting capital".
+3. **Clicking "Scan now" a second time left the PREVIOUS scan's results
+   table sitting on screen, unchanged, for the entire duration of the new
+   scan** — the only visible sign anything was happening was the `#mon-
+   status` line above switching to "Scanning…"; the results table itself
+   gave zero indication it was stale. Same stale-content-during-refetch bug
+   class already fixed once in Markets' view-tabs (PR #203) — real against
+   Kraken (not the fast demo source), a 12-symbol scan can take several
+   seconds, making the window genuinely visible. Fixed by clearing
+   `#mon-opportunities` to a `Scanning…` placeholder synchronously in the
+   click handler, before the scan starts. Verified with a new test that
+   holds a manually-controlled promise inside a stubbed `getCandles` open
+   across a second scan and asserts the DOM shows the in-flight placeholder
+   (not the first scan's stale table) while the second scan is pending.
+
+**Investigated, correctly left alone (no fix, no filler):** Backtest/
+Validation/Grid's result areas already clear `results.innerHTML = ''` and
+show a real spinner status on every re-run (confirmed by reading all
+three's click handlers) — the exact re-run-staleness pattern named in this
+pass's brief, already fixed for these three before this pass started.
+Portfolio's trade list after buy/sell: the buy/sell buttons stay disabled
+and the status line shows "Fetching…"/the trade confirmation throughout the
+whole async chain (price fetch → trade → position-price refresh), so unlike
+the flagged Monitoring/Markets cases there genuinely is a continuous
+in-flight indicator the whole time — a real but different (and much
+smaller) design tradeoff, not the "no indication at all" bug this pass
+targets, so left alone rather than manufacturing a fix.
+
+Gate: `tsc --noEmit` clean, 1207/1207 vitest passed (4 new: 2 in
+`tests/ui/stocksMarketPanel.test.ts`, 2 in
+`tests/ui/monitoringView.integration.test.ts`), `npm run build` clean. Diff:
+`src/ui/views/monitoringView.ts`, `src/ui/views/stocksMarketPanel.ts` + the
+2 test files above only — no shared/tokens file, no other view file
+touched.
+
+## Round-2 deep dive: real-money readiness / kill-switch / live-vs-simulated UX audit — 6 verified fixes, 2 flagged capital-protection (2026-09-06)
+
+Part of David's "compare against Revolut X, ship 200 serious improvements"
+round 2 — this agent's slice, unlike round 1's per-SCREEN split, was the
+app's most safety-critical SURFACE wherever it appears: the real-money
+readiness checklist, the kill switch, and any live-vs-simulated confirmation/
+status UI. Read this file's own prior "The simulated wallet is now hidden
+everywhere once real money is live" entry (2026-09-05) first, specifically so
+nothing here re-breaks that intentional hide — confirmed nothing does.
+
+Before proposing anything, read the actual kill-switch code, not just its
+UI text: `PersistedKillSwitch` (`src/core/autopilot/killSwitch.ts`),
+`runLiveOrderFlow` (`server/liveOrchestrator.mts`), and
+`manualKillSwitchCommand.mts`'s own doc comment, which states plainly that
+`/pause` "halts every live order this project can place — new entries AND
+exits alike." Cross-checked against `PaperAutoPilot.runCycleOnce`
+(`src/core/autopilot/paperAutoPilot.ts`): the kill-switch check sits before
+exits and entries both, skipping the whole cycle. Confirmed: engaging the
+kill switch does not itself close any position — an open real-money position
+sits exactly as it is, with no automatic exit possible, until a human
+resumes.
+
+**Flagged first, per this task's own instruction — capital-protection-relevant,
+verified extra carefully:**
+
+1. **The kill-switch "paused" banner never said what pausing actually does,
+   and a reasonable reading of it is wrong.** Home's `#hv-kill-switch`
+   (`homeView.ts`) read only "Real-money trading paused — {reason}". A
+   reader could easily assume "paused" means only new trades stop while an
+   open position is still being watched and can still be closed for them —
+   checked against the code above, neither is true. Reworded to state the
+   actual behavior plainly: "Real-money trading paused — no new trades or
+   exits can execute; open positions stay open, unmonitored, until
+   resumed{reason}". This is the single highest-priority finding of this
+   pass — the whole point of a kill-switch banner is to accurately describe
+   what safety net does and doesn't exist right now, and the old wording
+   didn't.
+2. **The kill-switch banner existed on Home but was entirely absent from
+   the Crypto/Stocks hub's own "Real money" card (Profit tab)** — the exact
+   same hero, shown a second time on the app's own asset-hub screen
+   (`assetHubView.ts`). Anyone landing directly on Crypto → Profit without
+   passing through Home first saw the real-money balance with zero
+   indication that trading might currently be paused. Added the identical
+   banner (`#hub-kill-switch`), same wording, same icon, driven by the same
+   `state.live.killSwitchEngaged`/`killSwitchReason` fields already fetched
+   there.
+
+**Other verified fixes:**
+
+3. **Crypto's own subtitle hardcoded "SIMULATED money" even after real
+   money went live 2026-09-03** (`cryptoView.ts`: "The real cloud agent —
+   SIMULATED money, matches the Telegram alerts.") — this exact text
+   renders on every sub-tab of the Crypto hub, including Overview and
+   Profit, which is where the REAL-money hero has lived since real money
+   went live. "SIMULATED money" directly under a real-money balance is
+   exactly the real-vs-simulated confusion this audit was asked to hunt
+   for. Added `AssetHubOptions.liveSubtitle`, swapped in once
+   `state.live` exists: "The real cloud agent — REAL money is live here.
+   The simulated paper agent keeps running underneath but is no longer the
+   primary account shown." Stocks (never goes live) passes no
+   `liveSubtitle` and is untouched.
+4. **The readiness checklist rendered a purely-informational unmet
+   criterion identically to one that actually blocks readiness** — same
+   amber warning icon, same "no" styling, in both `homeView.ts`'s and
+   `assetHubView.ts`'s copies of the list. `assessRealMoneyReadiness`
+   already marks some criteria non-gating (`gateOnBenchmark`/
+   `gateOnTradeStats` — e.g. Stocks' trades/consistency, never gating for a
+   hold-only strategy) and already appends "(informational — ...)" to their
+   `detail` text, but the list never used that distinction visually.
+   Verified live against the real committed `state/stocks-state.json`:
+   Stocks currently reads "NOT READY" for exactly one real reason
+   (benchmark, -0.27% vs SPY), yet the list showed THREE amber warning
+   icons (trades, benchmark, consistency) with no way to tell at a glance
+   that two of them don't count — a user reading top-to-bottom would
+   reasonably conclude all three are why it's not ready. Fixed by adding
+   `unmet: readonly string[]` to `CloudReadiness` (was parsed out of the
+   raw state entirely until now) and a third neutral "info" li state,
+   keyed off `r.unmet.includes(c.key)` rather than parsing the detail
+   string. Defensive fallback: if `unmet` itself is absent from the raw
+   state (old/malformed data), every `!ok` criterion is treated as
+   blocking — the pre-fix behavior — rather than defaulting to "nothing
+   blocks."
+5. **Grid Simulation / Backtesting Lab / Validation's results carried no
+   SIMULATED tag anywhere**, unlike every account screen in the app (Home,
+   Crypto, Stocks, Portfolio all tag simulated data explicitly). All three
+   are pure historical-backtest tools with no live money behind them at
+   all — added the same `tag-sim` "SIMULATED" badge to each one's main
+   results heading, matching the existing convention exactly
+   (`<h2>Results <span class="tag-sim">SIMULATED</span></h2>`, same pattern
+   `homeView.ts`'s "Open positions" heading already uses).
+
+**Checked, found already correct, not touched:** the SIMULATED-wallet-hide
+logic from 2026-09-05 (`#hub-sim-hero`/`#hub-sim-history`/`#hub-readiness`
+hiding once `state.live` exists) — re-verified with a real screenshot of the
+real committed live state, still correct, nothing here re-broke it. History
+tab's real-vs-simulated sections are mutually exclusive
+(`realActivityWrap.hidden = !live`, `simHistoryWrap.hidden = Boolean(live)`),
+so no missing-tag ambiguity is actually reachable there. The Telegram-side
+kill-switch messaging (`buildKillSwitchKeyboardIntro`, "עוצר את כל המסחר
+בכסף אמיתי מיידית") was already reasonably accurate ("stops ALL trading"),
+unlike the web banner — left alone.
+
+Method: `fintech-dashboard-polish`/`apple-design` loaded first. Read the
+kill-switch/readiness code paths (`killSwitch.ts`, `liveOrchestrator.mts`,
+`manualKillSwitchCommand.mts`, `realMoneyReadiness.ts`) before writing a word
+of UI copy — required by this task, since the whole point was catching UI
+text that doesn't match actual behavior. Built `dist/`, ran `vite preview`,
+real Playwright (`playwright-core`, `/opt/pw-browsers/chromium`, 390×844,
+`?demo=1`) with `page.route` mocking BOTH the real committed
+`state/autopilot-state.json` (real money live, kill switch forced engaged to
+verify the banner) and `state/stocks-state.json` (pre-live, informational
+vs blocking readiness criteria) — every fix above is backed by a real
+before/after screenshot, not a code-only assertion.
+
+Tests: 3 new in `cloudState.test.ts` (`unmet` parsing, empty-criteria
+default, fallback-to-all-blocking when `unmet` itself is absent), 7 new in
+`assetHubView.test.ts` (kill-switch banner shown/hidden with reason,
+`liveSubtitle` swap in both directions and when omitted, readiness
+info-vs-no distinction), 1 new in `homeView.integration.test.ts`
+(info-vs-no distinction) plus wording assertions added to its existing
+kill-switch test, 1 new in `backtestView.integration.test.ts` (SIMULATED
+tag), assertions added to existing tests in `gridView.integration.test.ts`
+and `validationView.integration.test.ts` (SIMULATED tag).
+
+Gate: `tsc --noEmit` clean, 1214/1214 vitest passed (up from 1210 baseline),
+`npm run build` clean. Diff: `src/ui/cloudState.ts`, `src/ui/styles.css`,
+`src/ui/views/assetHubView.ts`, `src/ui/views/backtestView.ts`,
+`src/ui/views/cryptoView.ts`, `src/ui/views/gridView.ts`,
+`src/ui/views/homeView.ts`, `src/ui/views/validationView.ts` + 6 test files
+— nothing under `server/**`, `state/**`, or `src/core/**`.
