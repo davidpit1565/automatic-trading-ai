@@ -60,4 +60,90 @@ describe('main.ts global chrome (DOM integration)', () => {
     await waitFor(() => document.getElementById('view-markets')?.classList.contains('active') === true);
     expect(document.querySelector('.nav-btn.active')?.getAttribute('data-nav')).toBe('markets');
   });
+
+  it('activates the topbar BTC chip on a real Enter/Space keydown, not just a click', async () => {
+    await import('../../src/ui/main.ts');
+    await waitFor(() => document.getElementById('topbar-btc')?.hidden === false);
+    const chip = document.getElementById('topbar-btc')!;
+
+    // This chip is a plain <div> — mouse/touch already worked (see the test
+    // above), but without role="button" + the global keydown delegate in
+    // main.ts, a keyboard-only user had no way to reach or activate it at
+    // all: not in the Tab order, and Enter/Space did nothing regardless.
+    expect(chip.getAttribute('role')).toBe('button');
+    expect(chip.tabIndex).toBe(0);
+
+    chip.focus();
+    chip.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await waitFor(() => document.getElementById('view-markets')?.classList.contains('active') === true);
+    expect(document.querySelector('.nav-btn.active')?.getAttribute('data-nav')).toBe('markets');
+  });
+
+  it('keeps the bottom-nav tablist\'s aria-selected and roving tabindex in sync as views switch', async () => {
+    await import('../../src/ui/main.ts');
+    await waitFor(() => document.getElementById('topbar-btc') !== null);
+
+    const cryptoTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="crypto"]')!;
+    const marketsTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="markets"]')!;
+    // Server-rendered initial state: Crypto is the default active view.
+    expect(cryptoTab.getAttribute('aria-selected')).toBe('true');
+    expect(cryptoTab.tabIndex).toBe(0);
+    expect(marketsTab.getAttribute('aria-selected')).toBe('false');
+    expect(marketsTab.tabIndex).toBe(-1);
+
+    marketsTab.click();
+    // Previously `activateView` only ever toggled the visual `.active`
+    // class — aria-selected was never written again after the very first
+    // (server-rendered) state, so a screen reader kept announcing "Crypto"
+    // as selected no matter which tab was actually showing.
+    expect(marketsTab.getAttribute('aria-selected')).toBe('true');
+    expect(marketsTab.tabIndex).toBe(0);
+    expect(cryptoTab.getAttribute('aria-selected')).toBe('false');
+    expect(cryptoTab.tabIndex).toBe(-1);
+  });
+
+  it('moves focus AND switches the active view on a real ArrowRight/ArrowLeft keydown across the bottom-nav tablist', async () => {
+    await import('../../src/ui/main.ts');
+    await waitFor(() => document.getElementById('topbar-btc') !== null);
+
+    const cryptoTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="crypto"]')!;
+    const stocksTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="stocks"]')!;
+    cryptoTab.focus();
+    // Real keyboard input, not a direct function call — this is the exact
+    // event a keyboard user's arrow-key press produces, handled by the
+    // delegated tablist keydown listener in main.ts (previously nothing:
+    // arrow keys did nothing on any of the app's several tablists).
+    cryptoTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(stocksTab);
+    expect(document.getElementById('view-stocks')?.classList.contains('active')).toBe(true);
+    expect(stocksTab.getAttribute('aria-selected')).toBe('true');
+
+    // Wraps around: ArrowLeft from the first tab goes to the last (Tools).
+    const toolsTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="tools"]')!;
+    cryptoTab.focus();
+    cryptoTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(toolsTab);
+    expect(document.getElementById('view-tools')?.classList.contains('active')).toBe(true);
+  });
+
+  it('manages focus across the Tools open/close DOM swap instead of silently dropping it to <body>', async () => {
+    await import('../../src/ui/main.ts');
+    await waitFor(() => document.getElementById('topbar-btc') !== null);
+
+    document.querySelector<HTMLElement>('.nav-btn[data-nav="tools"]')!.click();
+    const backtestCard = document.querySelector<HTMLElement>('[data-tab="backtest"]')!;
+    backtestCard.click();
+    // `#tools-menu` (which contains the just-clicked card) is now `hidden` —
+    // a browser drops focus to <body>, with no visible indication of where
+    // it went, the instant a focused element is hidden. Previously nothing
+    // in `openTool` moved focus anywhere, so a keyboard user landed nowhere.
+    expect(document.activeElement).toBe(document.querySelector('[data-tool-back]'));
+    expect(document.activeElement).not.toBe(document.body);
+
+    document.querySelector<HTMLElement>('[data-tool-back]')!.click();
+    // Same bug, the other direction: `#tool-detail` (containing the
+    // just-clicked Back button) becomes hidden on the way back to the menu.
+    expect(document.activeElement).toBe(backtestCard);
+    expect(document.activeElement).not.toBe(document.body);
+  });
 });

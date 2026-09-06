@@ -197,6 +197,13 @@ describe('Markets categories and logos', () => {
 
     expect(tickerCalls).toBe(afterLoad); // no extra network for a tab switch
     expect(container.querySelector('.mk-tab.active')!.textContent).toBe('Volume');
+    // Roving tabindex: only the now-active tab is a Tab stop — the default
+    // "Popular" tab (active on mount) must have yielded its stop, and the
+    // intermediate "Gainers" tab (clicked, then superseded) must not have
+    // kept one either.
+    expect(container.querySelector<HTMLElement>('[data-cat="volume"]')!.tabIndex).toBe(0);
+    expect(container.querySelector<HTMLElement>('[data-cat="popular"]')!.tabIndex).toBe(-1);
+    expect(container.querySelector<HTMLElement>('[data-cat="gainers"]')!.tabIndex).toBe(-1);
     handle.pause();
   });
 

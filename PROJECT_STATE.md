@@ -6067,3 +6067,173 @@ Diff: `index.html`, `src/ui/loadingStates.ts`, `src/ui/main.ts`,
 nothing under `server/**`, `state/**`, or `src/core/**`, and no view file
 owned by another parallel agent (`marketsView.ts`, `assetHubView.ts`, any
 `stocks*.ts`, any Tools view) touched.
+
+## Accessibility & keyboard-nav audit, round 2: 8 verified defects across the whole app (2026-09-06)
+
+Round-2 dimension audit (not screen-scoped): **accessibility and keyboard
+navigation across every view** (`src/ui/views/*.ts` + `src/ui/main.ts` +
+`index.html`), run in parallel with 6 sibling agents each auditing a
+different cross-cutting dimension (loading/empty/error states, motion,
+real-money/readiness UX, cross-screen consistency, mobile touch targets).
+Own branch off `origin/main` (`claude/design-200-round2-a11y`), not the
+screen-scoped branches above.
+
+Loaded `fintech-dashboard-polish` + `apple-design` first. Read this file's
+own four other 2026-09-06 entries in full before starting specifically to
+avoid re-proposing anything already shipped today: the shared-layer pass
+above added `:focus-visible` rings to `.tappable`/`.scan-row`/`.nav-btn`/
+etc. and `prefers-reduced-motion`/`prefers-contrast`/`prefers-reduced-
+transparency` support; the Home/global-nav-chrome pass gave the topbar BTC
+chip visual press/hover states. Neither pass made the underlying elements
+actually keyboard-focusable — which is exactly the gap this pass closed.
+Round 1's screen-scoped agents had already added `role="tab"`/`aria-
+selected`/`aria-pressed` to *some* tab groups (`.hub-tabs`, `.mk-tabs`,
+`.of-btn`... — checked before starting) but none of the app's several
+ARIA tablists had ever gotten arrow-key navigation, and several genuinely
+clickable elements had never gotten either a real button role or a
+keyboard handler at all.
+
+**Method**: `npm run build`, `vite preview`, real Playwright (`playwright-
+core`, `/opt/pw-browsers/chromium`) at 390×844 with `?demo=1`. Every item
+below was reproduced with a real, keyboard-driven Playwright script
+(`page.focus()` + `page.keyboard.press()`/real `KeyboardEvent` dispatch,
+not calling handler functions directly) BEFORE touching any code, and the
+same script re-run after the fix to confirm the actual behavior changed —
+not just that an attribute appeared. Also added/extended a committed
+vitest DOM test per fix, dispatching real `click`/`KeyboardEvent` objects
+(happy-dom), matching this repo's existing test convention.
+
+**8 real, individually-verified defects, all reproduced and fixed:**
+
+1. **None of the app's ~6 ARIA tablists (bottom nav, Crypto/Stocks'
+   Overview sub-tabs, the Markets category tabs on both Crypto and Stocks,
+   Home's Gainers/Losers toggle) supported arrow-key navigation** — the
+   defining keyboard behavior of the `role="tablist"` pattern, not an
+   optional extra. Left/Right/Home/End did nothing anywhere in the app;
+   every tab was also a separate Tab stop (not the roving-tabindex
+   convention the pattern implies). Fixed with one delegated keydown
+   handler in `main.ts`, keyed off the ARIA roles (not any specific class),
+   so it covers every tablist present and future; added roving `tabIndex`
+   sync (0 on the active tab, -1 on the rest) to each tablist's own
+   click handler and initial markup. Verified: real `ArrowRight`/`ArrowLeft`
+   `KeyboardEvent` on the bottom nav moves focus AND switches the active
+   view, with wraparound at both ends (`tests/ui/mainNav.test.ts`); roving
+   tabindex asserted on `mk-tabs` (`marketsList.integration.test.ts`,
+   `stocksMarketPanel.test.ts`) and `hub-tabs` (`assetHubView.test.ts`).
+2. **The bottom-nav tablist's `aria-selected` was only ever correct once**
+   — `activateView` in `main.ts` toggled the visual `.active` class on
+   every view switch but never wrote `aria-selected` again after the
+   server-rendered initial state, so a screen reader kept announcing
+   "Crypto" as selected no matter which tab was actually showing. Fixed in
+   the same `activateView` loop that already toggles `.active`. Verified:
+   `mainNav.test.ts`.
+3. **Several "obviously clickable" custom elements were reachable and
+   operable by mouse/touch only** — Home's two hero balance cards, its
+   Top-movers rows, its Markets-strip cards, Stocks Overview's hero, and
+   the topbar BTC chip are all plain `<div>`/`<section>` elements with a
+   click handler and (for most of them) an existing `:focus-visible` ring
+   from today's shared-layer pass — but with no `tabindex` and no
+   `role="button"`, that ring had nothing to ever attach to: none of these
+   were in the Tab order, and Enter/Space did nothing on any of them.
+   Confirmed with a real pre-fix Playwright Tab-traversal (40 Tab presses
+   never landed on the hero or a market-card). Added `role="button"
+   tabindex="0"` to each, plus one delegated `keydown` handler in `main.ts`
+   (Enter/Space → `.click()`) that covers every current and future
+   `role="button"` custom element at once. Verified: real `Enter`/`Space`
+   `KeyboardEvent`s on the hero/market-card/topbar chip actually navigate
+   (`mainNav.test.ts`, `homeView.integration.test.ts`,
+   `stocksOverviewPanel.test.ts`).
+4. **Opening or closing a Tool silently dropped keyboard focus to
+   `<body>`** — `openTool`/`resetTools` in `main.ts` hide one subtree
+   (`#tools-menu` or `#tool-detail`) and show the other; whichever
+   contained the just-clicked button (the tool card, or "← Back to
+   Tools") became `hidden`, and a browser drops focus to `<body>` the
+   instant a focused element is hidden — with zero visible indication of
+   where it went. A keyboard user had to Tab from the top of the document
+   again after every tool open/close. Confirmed with a real pre-fix
+   Playwright check (`document.activeElement === document.body` after
+   each action). Fixed by moving focus to "← Back to Tools" on open and to
+   the tool card that was open on "Back" — split into a separate
+   `backToToolsMenu()` so `activateView('tools')` itself (a plain nav-tab
+   click/arrow-key activation, not the Back button) stays focus-neutral;
+   an earlier version of this fix regressed the arrow-key tablist test
+   above by redirecting focus away from the just-activated Tools nav tab,
+   caught by that same test before merge. Verified: `mainNav.test.ts`.
+5. **Home's identical `.view-tab` chart/orderbook/trades/trade switcher
+   (marketsView.ts, inside a coin's detail view) had no tab semantics at
+   all** — no `role="tablist"`/`role="tab"`/`aria-selected`, unlike its own
+   sibling `.mk-tabs` a few lines up in the same file, which correctly
+   carries all three. A screen reader had no way to know these four icon
+   buttons were a tab group or which view was showing. Added the same
+   pattern `.mk-tabs` uses. Verified: `marketsDetail.integration.test.ts`.
+6. **The Trade tab's Buy/Sell segmented control exposed no accessible
+   state at all** — sighted users see which side is active from the fill
+   color; a screen-reader/keyboard user got no indication either button
+   was ever "on". Added `aria-pressed`, kept in sync on click — the same
+   convention `.mk-star`'s own toggle button already uses. Verified:
+   extended the existing "actually toggles" test in
+   `marketsDetail.integration.test.ts`.
+7. **The pair-picker popup (`#mk-pair-menu`, `aria-haspopup="listbox"`) had
+   exactly one dismissal path: picking an item.** No Escape, no
+   click-outside — a keyboard user who opened it and changed their mind
+   had the overlay stuck visually open with no way out except reopening
+   the toggle. Added both. Care was needed on *where* to attach these:
+   the popup's own open/select wiring lives inside `wireCommonControls`,
+   which is re-invoked on every view-tab switch/range/coin change (the
+   whole coin-detail header is rebuilt each time) — attaching Escape/
+   click-outside listeners there, as first drafted, would have stacked a
+   new `document`-level listener on every such re-render, since `document`
+   (unlike the popup's own re-created DOM nodes) never gets torn down.
+   Moved both listeners to run exactly once, at `renderMarketsView`'s
+   top level, re-querying the popup by ID at event time instead of
+   capturing a stale reference. Verified: real `Escape` `KeyboardEvent`
+   and a real click on `document.body` each close the popup
+   (`marketsDetail.integration.test.ts`).
+8. **Market Scan's expandable table row (`.scan-row`, a `<tr>`) had a
+   correct `aria-expanded` but was not keyboard-focusable at all** — a
+   `<tr>` is never in the Tab order and Enter/Space do nothing on it by
+   default, so this whole table's only interactive affordance (expand for
+   detail) was mouse/touch-only despite already carrying the right ARIA
+   state. This table's own `:focus-visible` rule (from today's
+   shared-layer pass) had nothing to attach to either. Added `role="button"
+   tabindex="0"`, which opts each row into fix #3's global keydown
+   delegate for free. Verified: real `Enter` `KeyboardEvent` toggles
+   `aria-expanded` (`marketScanView.integration.test.ts`), plus the same
+   check confirmed via real Playwright against a live build.
+
+**Checked, found already correct (no filler):** icon-only buttons across
+every view already carry `aria-label` (`mk-star`, `mk-back`, watchlist
+star); `.pair-menu-item`/`role="option"` selection semantics were already
+right; Portfolio/Monitoring's `<select>`/`<input>` controls are already
+properly wrapped in `<label>`; the pager ("‹ BTC" / "ETH ›") already uses
+real text, not icon-only; round 1's per-tab-group `aria-selected`/
+`aria-pressed` work (mentioned in the task brief) was real and left as-is
+everywhere it already existed — this pass only added what was missing
+around it (roving tabindex, arrow-key nav, and the bottom-nav's own
+never-synced `aria-selected`).
+
+**Found but out of scope, flagged separately (not fixed here):**
+`scripts/e2e.mjs`'s Paper Portfolio step waits for `#pp-positions table`,
+but `portfolioView.ts` renders positions as `.row` divs — confirmed live
+(the buy itself works correctly; only the smoke script's selector is
+stale) — this script isn't part of the tsc/vitest/build gate and wasn't
+touched.
+
+**Verification**: every one of the 8 items above was reproduced with a
+real pre-fix Playwright script (keyboard-driven, not attribute-reading)
+before any code changed, then re-verified after. Full gate: `tsc --noEmit`
+clean, `vitest run` 1211/1211 (was 1211 baseline on this branch's `origin/
+main` tip too — net test count unchanged is intentional: several fixes were
+proven by *extending* an existing test's assertions in place rather than
+adding a new parallel test for behavior already exercised there; 8 new `it`
+blocks were added across `mainNav.test.ts` (4), `marketsDetail.integration.
+test.ts` (3), and `assetHubView.test.ts` (1)), `npm run build` clean.
+
+Diff: `index.html`, `src/ui/main.ts`, `src/ui/views/{homeView,
+stocksOverviewPanel,assetHubView,marketsView,stocksMarketPanel,
+marketScanView}.ts`, plus `tests/ui/{mainNav,homeView.integration,
+stocksOverviewPanel,assetHubView,marketsDetail.integration,marketsList.
+integration,stocksMarketPanel,marketScanView.integration}.test.ts`.
+Nothing under `server/**`, `state/**`, or `src/core/**` touched; no color,
+layout, or copy changed anywhere (every fix is ARIA/keyboard-behavior
+only — zero visual diff, confirmed by screenshot on every screen touched).

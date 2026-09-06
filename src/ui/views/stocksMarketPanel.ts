@@ -118,7 +118,7 @@ export function renderStocksMarketPanel(container: HTMLElement): ViewHandle {
     <p class="view-sub">Every tracked US stock. Prices update once per agent cycle (market hours only), not live.</p>
     <div class="mk-tabs" id="sm-tabs" role="tablist">${CATEGORIES.map(
       (c, i) =>
-        `<button class="mk-tab${i === 0 ? ' active' : ''}" role="tab" aria-selected="${i === 0}" data-cat="${c.key}">${c.label}</button>`,
+        `<button class="mk-tab${i === 0 ? ' active' : ''}" role="tab" aria-selected="${i === 0}" ${i === 0 ? '' : 'tabindex="-1"'} data-cat="${c.key}">${c.label}</button>`,
     ).join('')}</div>
     <div class="mk-controls">
       <input id="sm-search" class="mk-search" type="search" inputmode="search"
@@ -192,6 +192,7 @@ export function renderStocksMarketPanel(container: HTMLElement): ViewHandle {
       const active = b === btn;
       b.classList.toggle('active', active);
       b.setAttribute('aria-selected', String(active));
+      b.tabIndex = active ? 0 : -1;
     });
     render();
   });

@@ -50,6 +50,18 @@ describe('Home view (DOM integration)', () => {
     // Markets strip fills from the demo source (does not depend on cloud state).
     await waitFor(() => container.querySelector('.market-card, #home-markets .empty') !== null);
     expect(container.querySelector('#home-markets')!.children.length).toBeGreaterThan(0);
+
+    // The hero balance and every market-card are plain <div>/<section>
+    // elements with a click-to-navigate handler — clickable by mouse/touch,
+    // but never reachable by Tab and inert on Enter/Space without these.
+    // role="button" opts each into the app's global keyboard-activation
+    // delegate (main.ts) — proven end-to-end in mainNav.test.ts.
+    const hero = container.querySelector<HTMLElement>('#home-sim-hero')!;
+    expect(hero.getAttribute('role')).toBe('button');
+    expect(hero.tabIndex).toBe(0);
+    const card = container.querySelector<HTMLElement>('.market-card')!;
+    expect(card.getAttribute('role')).toBe('button');
+    expect(card.tabIndex).toBe(0);
   });
 
   it('shows a real shimmering skeleton (not a blank gap) for the hero balance and the Markets strip before any data has loaded', async () => {
@@ -100,9 +112,20 @@ describe('Home view (DOM integration)', () => {
     losersTab.click();
     await waitFor(() => losersTab.classList.contains('active'));
     expect(losersTab.getAttribute('aria-selected')).toBe('true');
-    const loserRows = container.querySelectorAll('#home-movers .row');
+    // Roving tabindex: exactly one tab is a Tab stop at a time (the arrow-key
+    // handler in main.ts moves focus between the rest) — previously both
+    // were separate Tab stops with no aria-selected sync at all after mount.
+    expect(losersTab.tabIndex).toBe(0);
+    const gainersTab = Array.from(container.querySelectorAll<HTMLButtonElement>('.mk-tab')).find(
+      (b) => b.dataset['mover'] === 'gainers',
+    )!;
+    expect(gainersTab.tabIndex).toBe(-1);
+    const loserRows = container.querySelectorAll<HTMLElement>('#home-movers .row');
     for (const row of Array.from(loserRows)) {
       expect(row.querySelector('.chg')!.classList.contains('down')).toBe(true);
+      // Same keyboard-reachability gap as the hero/market-card above.
+      expect(row.getAttribute('role')).toBe('button');
+      expect(row.tabIndex).toBe(0);
     }
 
     // "See all" while on Losers must deep-link the Markets view straight

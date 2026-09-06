@@ -61,6 +61,14 @@ describe('Market Scan view (DOM integration)', () => {
       expect(badge).not.toBeNull();
       expect(badge!.className).toMatch(/badge-(hot|cold|neutral)/);
       expect(row.getAttribute('aria-expanded')).toBe('false');
+      // A <tr> is never in the Tab order and Enter/Space do nothing on it by
+      // default — this table's only interactive affordance (expand/collapse)
+      // was mouse/touch-only despite already carrying aria-expanded.
+      // role="button" opts each row into the app's global Enter/Space-
+      // activation delegate (main.ts); see mainNav.test.ts for that delegate
+      // itself, proven end-to-end against a real custom role="button".
+      expect(row.getAttribute('role')).toBe('button');
+      expect(row.tabIndex).toBe(0);
     }
   });
 

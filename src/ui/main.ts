@@ -137,8 +137,19 @@ async function bootstrap(): Promise<void> {
     document.querySelectorAll<HTMLElement>('.view').forEach((v) => {
       v.classList.toggle('active', v.id === `view-${name}`);
     });
+    // The bottom nav is a real role="tablist"/role="tab" widget (index.html)
+    // but this loop only ever toggled the VISUAL `.active` class — a screen
+    // reader had no way to tell which tab was selected, since `aria-selected`
+    // was never written after the very first (server-rendered) state. Also
+    // restores the roving-tabindex convention (exactly one tab in the Tab
+    // order at a time; the rest reachable via the arrow-key handler below) —
+    // previously all four were separate Tab stops, which isn't the native
+    // tablist pattern.
     document.querySelectorAll<HTMLButtonElement>('.nav-btn').forEach((b) => {
-      b.classList.toggle('active', b.dataset['nav'] === name);
+      const active = b.dataset['nav'] === name;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-selected', String(active));
+      b.tabIndex = active ? 0 : -1;
     });
     if (activeName && activeName !== name) primaryHandles.get(activeName)?.pause();
     const renderer = PRIMARY_VIEWS[name];
@@ -159,11 +170,38 @@ async function bootstrap(): Promise<void> {
     window.scrollTo({ top: 0 });
   }
 
+  // Remembers which tool card was last opened, purely so `resetTools` (the
+  // "← Back to Tools" button) can return focus to it — see the comment
+  // there for why this matters.
+  let lastOpenedTab: string | null = null;
+
+  // Plain DOM-state reset — shows the tool grid, hides the open tool. Used
+  // both by the "← Back to Tools" button (see `backToToolsMenu` below, which
+  // additionally manages focus for that specific action) and by
+  // `activateView('tools')` itself (switching to the Tools nav tab by any
+  // means — click, or the arrow-key tablist handler below — must show the
+  // grid without redirecting focus away from the nav tab the user just
+  // landed on).
   function resetTools(): void {
     const menu = document.getElementById('tools-menu');
     const detail = document.getElementById('tool-detail');
     if (menu) menu.hidden = false;
     if (detail) detail.hidden = true;
+  }
+
+  /** The "← Back to Tools" button's own handler: resets the tools DOM state
+   * AND returns focus to the tool card that was open — unlike a plain
+   * `activateView('tools')`, this action's own just-clicked control (inside
+   * `#tool-detail`) is what becomes `hidden`, so without this a keyboard
+   * user's focus silently drops to <body> with no visible indication of
+   * where it went. */
+  function backToToolsMenu(): void {
+    resetTools();
+    const menu = document.getElementById('tools-menu');
+    const reopenTarget = lastOpenedTab
+      ? document.querySelector<HTMLElement>(`[data-tab="${lastOpenedTab}"]`)
+      : null;
+    (reopenTarget ?? menu?.querySelector<HTMLElement>('[data-tab]'))?.focus();
   }
 
   function openTool(tab: string): void {
@@ -182,6 +220,14 @@ async function bootstrap(): Promise<void> {
         toolsMounted.add(tab);
       }
     }
+    lastOpenedTab = tab;
+    // Same focus-loss bug as `resetTools` above, the other direction: `menu`
+    // (which contains the just-clicked tool-card button) becomes `hidden`,
+    // so without this a keyboard user's focus silently vanishes to <body>
+    // the moment a tool opens. The "← Back to Tools" button is always the
+    // first real control in the newly-visible subtree, so it's a sensible,
+    // predictable landing spot regardless of which tool just mounted.
+    detail?.querySelector<HTMLElement>('[data-tool-back]')?.focus();
     window.scrollTo({ top: 0 });
   }
 
@@ -198,7 +244,56 @@ async function bootstrap(): Promise<void> {
       openTool(tool.dataset['tab']!);
       return;
     }
-    if (target.closest('[data-tool-back]')) resetTools();
+    if (target.closest('[data-tool-back]')) backToToolsMenu();
+  });
+
+  // Every "obviously clickable" custom control across the app (Home's hero
+  // balances, its Top-movers rows and Markets-strip cards, Stocks Overview's
+  // hero, the topbar BTC chip) is a plain <div>/<section> with a click
+  // handler and `role="button"` — real <button>s already get Enter/Space for
+  // free from the browser, but a non-native element never does on its own.
+  // Before this, every one of the above was reachable by mouse/touch only:
+  // not in the Tab order, and even a screen-reader user who navigated onto
+  // one by heading/landmark browsing had no key that did anything. One
+  // delegated handler covers all of them (present and future) instead of
+  // wiring a keydown listener per element.
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const target = (event.target as HTMLElement).closest<HTMLElement>('[role="button"]');
+    if (!target) return;
+    event.preventDefault(); // Space must not also scroll the page
+    target.click();
+  });
+
+  // Every role="tablist" in the app (bottom nav, Crypto/Stocks' Overview
+  // sub-tabs, the Markets category tabs on both Crypto and Stocks Market
+  // lists, Home's Gainers/Losers toggle) rendered `role="tab"` buttons with
+  // correct `aria-selected`, but arrow-key movement between them — the
+  // defining keyboard behaviour of the native ARIA tablist pattern, not an
+  // optional extra — didn't exist anywhere: Left/Right/Home/End did nothing.
+  // One delegated handler, keyed off the ARIA roles rather than any specific
+  // class name, covers every tablist in the app at once. Clicking the newly
+  // focused tab (not just focusing it) matches the "automatic activation"
+  // tablist convention every one of these widgets already uses (its own
+  // click handler is what actually switches the panel).
+  document.addEventListener('keydown', (event) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const tab = (event.target as HTMLElement).closest<HTMLElement>('[role="tab"]');
+    if (!tab) return;
+    const tablist = tab.closest<HTMLElement>('[role="tablist"]');
+    if (!tablist) return;
+    const tabs = Array.from(tablist.querySelectorAll<HTMLElement>(':scope > [role="tab"]'));
+    const currentIndex = tabs.indexOf(tab);
+    if (currentIndex === -1) return;
+    let nextIndex = currentIndex;
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = tabs.length - 1;
+    event.preventDefault();
+    const nextTab = tabs[nextIndex]!;
+    nextTab.focus();
+    nextTab.click();
   });
 
   // Set dark mode (always dark, no toggle)
@@ -219,6 +314,16 @@ async function mountTopbarBtc(data: ActiveDataSource): Promise<void> {
   // [data-nav] click listener in bootstrap() picks up any element anywhere
   // in the document, not just bottom-nav buttons.
   chip.dataset['nav'] = 'markets';
+  // A prior pass gave this chip a pointer cursor, hover tint, and a press
+  // state — but a plain <div> is never in the Tab order and Enter/Space do
+  // nothing on it regardless, so it was clickable by mouse/touch only.
+  // role="button" + tabindex picks it up for free in both of bootstrap()'s
+  // delegated keyboard handlers above (Enter/Space activation). Set only
+  // once a real BTC symbol exists to point at — before that this chip never
+  // becomes visible or clickable at all, so it must never be a keyboard
+  // stop that does nothing.
+  chip.setAttribute('role', 'button');
+  chip.tabIndex = 0;
   async function tick(): Promise<void> {
     const snap = await fetchSnapshot(data, symbol!, 'Bitcoin');
     if (!snap || !chip) return;

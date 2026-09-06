@@ -88,6 +88,24 @@ describe('renderAssetHub — optional Long-Term sub-tab', () => {
     expect(mounts).toBe(1);
   });
 
+  it('keeps roving tabindex in sync as hub tabs switch (only the active tab is a Tab stop)', () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, baseOpts);
+
+    const overviewTab = container.querySelector<HTMLButtonElement>('[data-hub="overview"]')!;
+    const historyTab = container.querySelector<HTMLButtonElement>('[data-hub="history"]')!;
+    // Initial markup: Overview is the default sub-tab, so it's the sole Tab
+    // stop — the arrow-key handler in main.ts (not exercised by this
+    // isolated-panel test; see mainNav.test.ts) moves focus to the rest.
+    expect(overviewTab.tabIndex).toBe(0);
+    expect(historyTab.tabIndex).toBe(-1);
+
+    historyTab.click();
+    expect(historyTab.tabIndex).toBe(0);
+    expect(overviewTab.tabIndex).toBe(-1);
+  });
+
   it('highlights the correct tab pill when a deep-link button elsewhere on the page (not itself a .hub-tab) switches tabs (real bug: matched by object identity, not tab value)', () => {
     const container = document.createElement('section');
     document.body.appendChild(container);

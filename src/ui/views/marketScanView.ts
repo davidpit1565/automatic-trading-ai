@@ -122,6 +122,17 @@ function renderScanTable(container: HTMLElement, scan: MarketScan, risk: RiskCon
     const row = document.createElement('tr');
     row.className = 'scan-row';
     row.setAttribute('aria-expanded', 'false');
+    // `aria-expanded` already correctly announced the disclosure state, but
+    // a <tr> is never in the Tab order and Enter/Space do nothing on it —
+    // this whole table's only interactive affordance was mouse/touch-only.
+    // role="button" opts it into the global Enter/Space-activation delegate
+    // in main.ts (the same one every other custom "obviously clickable"
+    // element in the app now relies on), and the existing .scan-row
+    // :focus-visible ring (styles.css, from an earlier shared-layer pass)
+    // was already written for exactly this — it just had nothing focusable
+    // to attach to until now.
+    row.setAttribute('role', 'button');
+    row.tabIndex = 0;
     row.innerHTML = `
       <td>${escapeHtml(result.symbol)}</td>
       <td>${formatPrice(result.snapshot.price)}</td>

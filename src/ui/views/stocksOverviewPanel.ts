@@ -23,7 +23,7 @@ export function renderStocksOverviewPanel(container: HTMLElement): ViewHandle {
          "history ›" affordance also match Home's hero exactly — Home's own
          hero jumps to its Value view the same way, but here it jumps to
          this same hub's own History sub-tab (see the click handler below). -->
-    <section class="hero hero-bare tappable">
+    <section class="hero hero-bare tappable" role="button" tabindex="0">
       <div class="hero-label">Portfolio value <span class="tag-sim">SIMULATED</span><span class="hero-more">history ›</span></div>
       <div class="hero-value" id="stocks-ov-equity">—</div>
       <div class="hero-change" id="stocks-ov-change"></div>

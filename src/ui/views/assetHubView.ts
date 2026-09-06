@@ -51,10 +51,10 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
     <p class="view-sub">${opts.subtitle}</p>
     <div class="hub-tabs" role="tablist">
       <button class="hub-tab active" data-hub="overview" role="tab" aria-selected="true">Overview</button>
-      <button class="hub-tab" data-hub="history" role="tab" aria-selected="false">History</button>
-      <button class="hub-tab" data-hub="market" role="tab" aria-selected="false">Market</button>
-      <button class="hub-tab" data-hub="profit" role="tab" aria-selected="false">Profit</button>
-      ${opts.renderLongTerm ? '<button class="hub-tab" data-hub="longterm" role="tab" aria-selected="false">Long-Term</button>' : ''}
+      <button class="hub-tab" data-hub="history" role="tab" aria-selected="false" tabindex="-1">History</button>
+      <button class="hub-tab" data-hub="market" role="tab" aria-selected="false" tabindex="-1">Market</button>
+      <button class="hub-tab" data-hub="profit" role="tab" aria-selected="false" tabindex="-1">Profit</button>
+      ${opts.renderLongTerm ? '<button class="hub-tab" data-hub="longterm" role="tab" aria-selected="false" tabindex="-1">Long-Term</button>' : ''}
     </div>
     <div class="hub-panel active" data-hub-panel="overview"></div>
     <div class="hub-panel" data-hub-panel="history">
@@ -359,6 +359,7 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
       const active = b.dataset['hub'] === tab;
       b.classList.toggle('active', active);
       b.setAttribute('aria-selected', String(active));
+      b.tabIndex = active ? 0 : -1;
     });
     container.querySelectorAll<HTMLElement>('[data-hub-panel]').forEach((p) => {
       p.classList.toggle('active', p.dataset['hubPanel'] === tab);
