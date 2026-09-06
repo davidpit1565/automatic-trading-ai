@@ -103,6 +103,18 @@ export class MonitoringEngine {
   private lastResult: MonitorScanResult | null = null;
   /** Symbols qualified in the previous scan, for disappearance tracking. */
   private previouslyQualified = new Set<string>();
+  /**
+   * Guards against overlapping scans. A scan can legitimately outlast the
+   * scheduler's own interval (e.g. a market-wide exchange slowdown that
+   * exhausts every symbol's retry budget), and `IntervalScheduler` does not
+   * wait for the previous firing before starting the next one. Two truly
+   * concurrent `runScanOnce` calls would race on `previouslyQualified` —
+   * whichever finishes last silently clobbers the other's newer snapshot,
+   * corrupting future disappearance tracking — so an overlapping call is
+   * coalesced onto the scan already in flight instead of starting a second,
+   * independent one.
+   */
+  private inFlightScan: Promise<MonitorScanResult> | null = null;
 
   constructor(private readonly options: MonitoringEngineOptions) {
     this.clock = options.clock ?? (() => Date.now());
@@ -157,8 +169,23 @@ export class MonitoringEngine {
     return scan.ok ? scan.value : null;
   }
 
-  /** One full monitoring pass. Called by the scheduler; callable manually. */
+  /**
+   * One full monitoring pass. Called by the scheduler; callable manually.
+   * A call that arrives while a previous one is still running returns that
+   * same in-flight result rather than starting a second, overlapping scan.
+   */
   async runScanOnce(timestamp: number): Promise<MonitorScanResult> {
+    if (this.inFlightScan) return this.inFlightScan;
+    const scan = this.runScanOnceExclusive(timestamp);
+    this.inFlightScan = scan;
+    try {
+      return await scan;
+    } finally {
+      this.inFlightScan = null;
+    }
+  }
+
+  private async runScanOnceExclusive(timestamp: number): Promise<MonitorScanResult> {
     const { source, symbols, timeframe } = this.options;
     const scan = await scanMarket(source, symbols, timeframe, SCAN_CANDLES);
     const portfolio = this.options.getPortfolio();
