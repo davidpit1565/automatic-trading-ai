@@ -59,7 +59,7 @@
       "takeProfit": 0.734718443045925,
       "feesPaid": 6.165341695878323,
       "realizedPnl": 0,
-      "highestPrice": 0.722,
+      "highestPrice": 0.728,
       "lowestPrice": 0.701,
       "confidence": 48.76963224045984,
       "validationVerdict": null,
@@ -78,7 +78,7 @@
       "takeProfit": 0.17326100926782975,
       "feesPaid": 6.111093177486622,
       "realizedPnl": 0,
-      "highestPrice": 0.167656,
+      "highestPrice": 0.167684,
       "lowestPrice": 0.164258,
       "confidence": 52.274676137058364,
       "validationVerdict": null,
@@ -1837,10 +1837,17 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry XLMEUR: 12337.118955159509 @ 0.165114 (stop 0.16104049536608514, target 0.17326100926782975, confidence 52)"
+    },
+    {
+      "timestamp": 1788785369138,
+      "intentId": "UNIEUR:1788785369138",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused UNIEUR: no exposure headroom: 8317.47 already deployed of the 80% total-exposure limit"
     }
   ],
   "autopilot-last-run": {
-    "at": 1788785033098,
+    "at": 1788785369138,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -46224,7 +46231,7 @@
     "engaged": false,
     "reason": null
   },
-  "live:live-external-btc-qty": 0,
+  "live:live-external-btc-qty": 0.00000201999999999993,
   "live:live-equity-history": [
     {
       "at": 1788441816037,
@@ -48913,6 +48920,10 @@
     {
       "at": 1788785033098,
       "equity": 104.21
+    },
+    {
+      "at": 1788785369138,
+      "equity": 104.43
     }
   ],
   "live:revolut-x-order-map": {
@@ -49046,6 +49057,33 @@
         "positionSize": 0.00008525999999999998,
         "positionValue": 5.855051453999998,
         "riskAmount": 0.0878257718100002,
+        "riskPercentage": 0,
+        "rewardRiskRatio": 2,
+        "portfolioExposure": 0,
+        "reasons": [],
+        "warnings": [
+          "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
+        ]
+      }
+    },
+    "external-reconcile:XBTEUR:1788785369138": {
+      "id": "external-reconcile:XBTEUR:1788785369138",
+      "symbol": "BTC/EUR",
+      "quantity": 0.00000201999999999993,
+      "entryPrice": 68416,
+      "stopLoss": 67389.76,
+      "takeProfit": 70468.48,
+      "highestPrice": 68416,
+      "openedAt": 1788785369138,
+      "entryAssessment": {
+        "approved": true,
+        "asset": "XBTEUR",
+        "entry": 68416,
+        "stopLoss": 67389.76,
+        "takeProfit": 70468.48,
+        "positionSize": 0.00000201999999999993,
+        "positionValue": 0.1382003199999952,
+        "riskAmount": 0.0020730047999999385,
         "riskPercentage": 0,
         "rewardRiskRatio": 2,
         "portfolioExposure": 0,
