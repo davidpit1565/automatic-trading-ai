@@ -7844,3 +7844,70 @@ Gate: `tsc --noEmit` clean (both `tsconfig.json` and `tsconfig.app.json`),
 `server/liveEntryMirror.mts`, `server/liveManualTradeSync.mts`, and their
 two test files — nothing under `src/ui/**` or any other `server/**` file
 touched.
+
+## Prop-firm audit + measurement-only constraint replay tool (2026-09-07)
+
+David asked (via a detailed pasted research prompt) whether adding "Prop
+Firm / Funded Trader Mode" is worth pursuing. Ran a full audit first
+(external research on FTMO/The5ers/Topstep/Apex/FundedNext/Kraken
+Prop-Breakout/HyroTrader's current official rules, cited inline,
+FACT/ASSUMPTION/ESTIMATE/UNKNOWN labeled throughout) before writing any
+code — verdict: **do not build prop integration** — of the firms
+researched, only HyroTrader permits a custom bot over a real API on
+crypto, and it requires leveraged perpetuals with a short side this
+system's `signalEngine.ts` explicitly refuses (long-only). The deeper
+mismatch: every firm measures daily loss on **floating equity** (including
+open positions) from a **static** initial-balance drawdown anchor, while
+this system's own `dailyLoss.ts`/`drawdownBreaker.ts` track **realized**
+loss and a **trailing** peak — different constraints entirely. Also:
+`whaleFlow`/`aiJudgment`/`copyTrade` (this account's most promising
+research directions) are explicitly banned as "third-party idea
+copying"/"AI trading" at every firm checked.
+
+The audit's own recommendation — verify this cheaply before spending
+weeks on an integration — was itself built: a **measurement-only** tool,
+zero real money, zero live-order path, zero new dependency.
+
+**New files (additive only, nothing existing modified):**
+- `src/core/risk/propRiskKernel.ts` — pure kernel (`evaluatePropRun`):
+  static drawdown floor from the ORIGINAL balance (never trailing, unlike
+  `drawdownBreaker.ts`), daily-loss floor recomputed at a configurable UTC
+  reset hour (00:30 for Breakout, 00:00 for HyroTrader), breach-cause
+  tie-break by whichever floor a falling equity would cross first, fees
+  counted toward both limits. 13 hand-verified tests
+  (`tests/risk/propRiskKernel.test.ts`).
+- `scripts/lib/fetchExtendedHistory.mts` — backward-paginated Kraken
+  history fetch with local `.cache/prop-replay/` caching (gitignored).
+- `scripts/lib/propReplayHarness.mts` — extends `validateAutopilot.mts`'s
+  faithful `PaperAutoPilot` replay pattern (that file itself untouched) to
+  additionally mark-to-market at each candle's HIGH/LOW (not just close),
+  so the prop kernel sees the true intrabar floating-equity extremes a
+  close-only read would hide.
+- `scripts/propConstraintReplay.mts` — CLI: runs the real production
+  strategy across a 60%/40%/20% exposure × 5/3/2 max-open-positions grid,
+  against both the Breakout and HyroTrader rulesets, and reports
+  P(pass)/P(breach)/breach-cause split/median-bars-to-outcome/worst daily
+  drawdown/fee drag.
+
+**Honest finding, verified independently (not just trusted from the
+build): Kraken's public `/OHLC` endpoint always serves only its own
+~721-most-recent-candles cap, regardless of `since`** — confirmed by a
+direct probe with a `since` far in the past returning the identical most-
+recent window. So real usable history per symbol is ~30 days (720 1h
+bars), not the 12-24 months originally targeted — reported prominently in
+the script's own output, not hidden or padded.
+
+**Actual real-data result** (20 `CURATED_INSTRUMENTS`, 4 rolling weekly
+starts per config — thin, n=4, a first noisy signal, not conclusive):
+best configuration for both rulesets is **60% exposure / 2 max open
+positions**: P(pass) 50%, P(breach) 0%. The default production
+configuration (5 positions, 60% exposure) breaches 75% of the time, 100%
+of those on the DAILY floor — confirming the audit's predicted failure
+mode exactly. Verdict per the pre-committed decision rule: **30-50%, "viable
+only de-risked"** for both Breakout and HyroTrader — not a kill, not a
+green light.
+
+Gate: `tsc --noEmit` clean, `vitest run` 1321/1321 (up from 1308 — 13
+new), `npm run build` clean. Not committed to the real trading
+configuration in any way — this is a standalone measurement tool; the
+production `riskLimits` defaults are untouched.
