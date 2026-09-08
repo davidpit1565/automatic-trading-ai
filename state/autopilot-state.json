@@ -1884,7 +1884,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788853262364,
+    "at": 1788853654551,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1900,10 +1900,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1786925038523,
-      "equity": 9568.52
-    },
     {
       "at": 1786925346259,
       "equity": 9568.52
@@ -21899,6 +21895,10 @@
     {
       "at": 1788853262364,
       "equity": 10286.82
+    },
+    {
+      "at": 1788853654551,
+      "equity": 10258.66
     }
   ],
   "trade-journal": [
@@ -23429,7 +23429,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -16.97% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -16.92% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23527,13 +23527,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1788853262364,
+    "at": 1788853654551,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)",
-        "equity": 10905.672829151164,
-        "returnPct": 9.056728291511645,
+        "equity": 10879.505414085488,
+        "returnPct": 8.795054140854882,
         "trades": 37,
         "winRatePct": 59.45945945945946,
         "profitFactor": 2.127197213939436,
@@ -23543,8 +23543,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10905.672829151164,
-        "returnPct": 9.056728291511645,
+        "equity": 10879.505414085488,
+        "returnPct": 8.795054140854882,
         "trades": 37,
         "winRatePct": 59.45945945945946,
         "profitFactor": 2.127197213939436,
@@ -23554,8 +23554,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10778.753292551042,
-        "returnPct": 7.787532925510423,
+        "equity": 10752.78218928561,
+        "returnPct": 7.5278218928561,
         "trades": 37,
         "winRatePct": 56.75675675675676,
         "profitFactor": 1.9035391698875395,
@@ -23576,8 +23576,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9441.492729752405,
-        "returnPct": -5.585072702475954,
+        "equity": 9435.330282249808,
+        "returnPct": -5.6466971775019195,
         "trades": 71,
         "winRatePct": 42.25352112676056,
         "profitFactor": 0.7584764900107168,
@@ -23587,8 +23587,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9930.362227371937,
-        "returnPct": -0.6963777262806252,
+        "equity": 9930.352346802782,
+        "returnPct": -0.6964765319721846,
         "trades": 175,
         "winRatePct": 41.714285714285715,
         "profitFactor": 1.2359949795450533,
@@ -23598,8 +23598,8 @@
       {
         "key": "whale-flow",
         "label": "Refuses entries during heavy net selling by large traders",
-        "equity": 11189.460969758627,
-        "returnPct": 11.894609697586276,
+        "equity": 11162.590529516792,
+        "returnPct": 11.625905295167922,
         "trades": 26,
         "winRatePct": 69.23076923076923,
         "profitFactor": 3.251742445984118,
@@ -23620,8 +23620,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10708.284228644014,
-        "returnPct": 7.082842286440136,
+        "equity": 10682.590434006865,
+        "returnPct": 6.8259043400686465,
         "trades": 25,
         "winRatePct": 60,
         "profitFactor": 2.1399150506676965,
@@ -23680,7 +23680,7 @@
       "takeProfit": 0.5299191662156723,
       "feesPaid": 5.964508526163781,
       "realizedPnl": 0,
-      "highestPrice": 0.501,
+      "highestPrice": 0.5121,
       "lowestPrice": 0.4978,
       "confidence": 70,
       "validationVerdict": null,
@@ -47754,6 +47754,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1788853695626,
+      "intentId": "external-reconcile:XBTEUR:1788672047315:exit:1788853654551",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -51089,6 +51096,10 @@
     {
       "at": 1788853262364,
       "equity": 103.66
+    },
+    {
+      "at": 1788853654551,
+      "equity": 103.33
     }
   ],
   "live:revolut-x-order-map": {
@@ -51424,6 +51435,10 @@
     "external-reconcile:XBTEUR:1788641205858": {
       "reason": "stop-loss",
       "queuedAt": 1788853262364
+    },
+    "external-reconcile:XBTEUR:1788672047315": {
+      "reason": "stop-loss",
+      "queuedAt": 1788853654551
     }
   },
   "live:confirmation-gate-pending": {
@@ -51441,6 +51456,11 @@
       "sentAt": 1788853286693,
       "messageId": 580,
       "token": "mtsd25ut.1gtfi2c"
+    },
+    "external-reconcile:XBTEUR:1788672047315:exit:1788853654551": {
+      "sentAt": 1788853695461,
+      "messageId": 581,
+      "token": "mtsdax9h.s1j433"
     }
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
@@ -51455,13 +51475,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1788853262364,
+    "at": 1788853654551,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "13 new candidates, production defaults (forward test only — not real trading)",
-        "equity": 9906.973502550372,
-        "returnPct": -0.9302649744962764,
+        "equity": 9896.03023369426,
+        "returnPct": -1.0396976630573955,
         "trades": 4,
         "winRatePct": 50,
         "profitFactor": 1.3128651838340866,
