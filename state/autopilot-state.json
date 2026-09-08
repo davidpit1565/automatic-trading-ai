@@ -22,7 +22,7 @@
       "feesPaid": 6.173604733245792,
       "realizedPnl": 0,
       "highestPrice": 11.74856,
-      "lowestPrice": 10.89737,
+      "lowestPrice": 10.88313,
       "confidence": 49.532225188760066,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -79,7 +79,7 @@
       "feesPaid": 6.220658148314261,
       "realizedPnl": 0,
       "highestPrice": 0.731,
-      "lowestPrice": 0.721,
+      "lowestPrice": 0.72,
       "confidence": 48.072408387685876,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -1896,7 +1896,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788843298483,
+    "at": 1788843658396,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -46849,7 +46849,7 @@
     ]
   },
   "longterm-shadow-last-run-day": "2026-09-08",
-  "live:live-cash-eur": 8.77,
+  "live:live-cash-eur": 9.739999429,
   "live:telegram-shared-update-offset": 447904572,
   "live:telegram-unclaimed-messages": [
     {
@@ -47382,6 +47382,41 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1788843683507,
+      "intentId": "external-reconcile:XBTEUR:1788641205858:exit:1788843658396",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1788843707142,
+      "intentId": "external-reconcile:XBTEUR:1788672047315:exit:1788843298483",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "rejected via Telegram"
+    },
+    {
+      "timestamp": 1788843708189,
+      "intentId": "external-reconcile:XBTEUR:1788717041043:exit:1788843658396",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1788843721572,
+      "intentId": "external-reconcile:XBTEUR:1788717041043:exit:1788843658396",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram"
+    },
+    {
+      "timestamp": 1788843722292,
+      "intentId": "external-reconcile:XBTEUR:1788717041043:exit:1788843658396",
+      "event": "filled",
+      "mode": "live",
+      "detail": "Revolut X order 0ea1d2b4-410b-4034-a9d5-2a9f20fc0a5b: filled"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -50613,11 +50648,16 @@
     {
       "at": 1788843298483,
       "equity": 112.54
+    },
+    {
+      "at": 1788843658396,
+      "equity": 112.43
     }
   ],
   "live:revolut-x-order-map": {
     "live-entry:XBTEUR:1788446384199": "3572a080-9e2a-4dbf-9802-b259845a4675",
-    "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788534303316": "d41aa328-3331-4f59-99c0-809317e2da9f"
+    "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788534303316": "d41aa328-3331-4f59-99c0-809317e2da9f",
+    "external-reconcile:XBTEUR:1788717041043:exit:1788843658396": "0ea1d2b4-410b-4034-a9d5-2a9f20fc0a5b"
   },
   "live:live-open-positions": {
     "external-reconcile:XBTEUR:1788641205858": {
@@ -50692,33 +50732,6 @@
         "positionSize": 0.00021829999999999983,
         "positionValue": 14.973306149999988,
         "riskAmount": 0.22459959224999945,
-        "riskPercentage": 0,
-        "rewardRiskRatio": 2,
-        "portfolioExposure": 0,
-        "reasons": [],
-        "warnings": [
-          "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
-        ]
-      }
-    },
-    "external-reconcile:XBTEUR:1788717041043": {
-      "id": "external-reconcile:XBTEUR:1788717041043",
-      "symbol": "BTC/EUR",
-      "quantity": 0.000014370000000000095,
-      "entryPrice": 68692.6,
-      "stopLoss": 67662.21100000001,
-      "takeProfit": 70753.37800000001,
-      "highestPrice": 69352.1,
-      "openedAt": 1788717041043,
-      "entryAssessment": {
-        "approved": true,
-        "asset": "XBTEUR",
-        "entry": 68692.6,
-        "stopLoss": 67662.21100000001,
-        "takeProfit": 70753.37800000001,
-        "positionSize": 0.000014370000000000095,
-        "positionValue": 0.9871126620000066,
-        "riskAmount": 0.014806689930000033,
         "riskPercentage": 0,
         "rewardRiskRatio": 2,
         "portfolioExposure": 0,
@@ -50858,6 +50871,14 @@
     {
       "id": "7383943995036902705",
       "data": "confirm:reject:mtn35nb9.131wn6w"
+    },
+    {
+      "id": "7383943997830738241",
+      "data": "confirm:reject:mts7cbuv.pvjjzd"
+    },
+    {
+      "id": "7383943995531643410",
+      "data": "confirm:reject:mts7cbuv.pvjjzd"
     }
   ],
   "live:blackout-windows-cache": {
@@ -50956,19 +50977,19 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904723,
+  "telegram-shared-update-offset": 447904738,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {
-    "external-reconcile:XBTEUR:1788672047315": {
+    "external-reconcile:XBTEUR:1788641205858": {
       "reason": "stop-loss",
-      "queuedAt": 1788843298483
+      "queuedAt": 1788843658396
     }
   },
   "live:confirmation-gate-pending": {
-    "external-reconcile:XBTEUR:1788672047315:exit:1788843298483": {
-      "sentAt": 1788843323792,
-      "messageId": 560,
-      "token": "mts74mfk.1wf3x2q"
+    "external-reconcile:XBTEUR:1788641205858:exit:1788843658396": {
+      "sentAt": 1788843683335,
+      "messageId": 561,
+      "token": "mts7cbuv.pvjjzd"
     }
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
@@ -51130,8 +51151,8 @@
   },
   "live:live-blackout-queue": {},
   "live:daily-loss": {
-    "day": "2026-09-05",
-    "loss": 0.05020236219999912
+    "day": "2026-09-08",
+    "loss": 0.017113233000000123
   },
   "shadow:candidate-watch:trade-journal": [
     {
