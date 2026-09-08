@@ -1884,7 +1884,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788871446279,
+    "at": 1788871825924,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -48069,6 +48069,20 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1788871869258,
+      "intentId": "external-reconcile:XBTEUR:1788757321243:exit:1788871085331",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram"
+    },
+    {
+      "timestamp": 1788871870008,
+      "intentId": "external-reconcile:XBTEUR:1788757321243:exit:1788871085331",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "Revolut X order 3f331b6f-28c4-4ca4-a1dd-344f844cb80e: new"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -51516,6 +51530,10 @@
     {
       "at": 1788871446279,
       "equity": 103.42
+    },
+    {
+      "at": 1788871825924,
+      "equity": 103.44
     }
   ],
   "live:revolut-x-order-map": {
@@ -51523,7 +51541,8 @@
     "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788534303316": "d41aa328-3331-4f59-99c0-809317e2da9f",
     "external-reconcile:XBTEUR:1788717041043:exit:1788843658396": "0ea1d2b4-410b-4034-a9d5-2a9f20fc0a5b",
     "external-reconcile:XBTEUR:1788672047315:exit:1788866920649": "58abc4e9-c20a-42f6-bb6f-b9754cea46cc",
-    "external-reconcile:XBTEUR:1788641205858:exit:1788866920649": "63ce9aad-0a9e-48e8-b39b-6dd32a0c89f3"
+    "external-reconcile:XBTEUR:1788641205858:exit:1788866920649": "63ce9aad-0a9e-48e8-b39b-6dd32a0c89f3",
+    "external-reconcile:XBTEUR:1788757321243:exit:1788871085331": "3f331b6f-28c4-4ca4-a1dd-344f844cb80e"
   },
   "live:live-open-positions": {
     "external-reconcile:XBTEUR:1788672047315": {
@@ -51606,7 +51625,8 @@
         "warnings": [
           "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
         ]
-      }
+      },
+      "outstandingExitSubmittedAt": 1788871825924
     },
     "external-reconcile:XBTEUR:1788785369138": {
       "id": "external-reconcile:XBTEUR:1788785369138",
@@ -51813,24 +51833,15 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904757,
+  "telegram-shared-update-offset": 447904768,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {
-    "external-reconcile:XBTEUR:1788757321243": {
-      "reason": "stop-loss",
-      "queuedAt": 1788871085331
-    },
     "external-reconcile:XBTEUR:1788714682711": {
       "reason": "stop-loss",
       "queuedAt": 1788871446279
     }
   },
   "live:confirmation-gate-pending": {
-    "external-reconcile:XBTEUR:1788757321243:exit:1788871085331": {
-      "sentAt": 1788871111109,
-      "messageId": 607,
-      "token": "mtsno79h.1uj3pm8"
-    },
     "external-reconcile:XBTEUR:1788714682711:exit:1788871446279": {
       "sentAt": 1788871473521,
       "messageId": 608,
