@@ -47941,6 +47941,34 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1788867332399,
+      "intentId": "external-reconcile:XBTEUR:1788641205858:exit:1788866920649",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram"
+    },
+    {
+      "timestamp": 1788867333274,
+      "intentId": "external-reconcile:XBTEUR:1788641205858:exit:1788866920649",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "Revolut X order 63ce9aad-0a9e-48e8-b39b-6dd32a0c89f3: new"
+    },
+    {
+      "timestamp": 1788867333992,
+      "intentId": "external-reconcile:XBTEUR:1788714682711:exit:1788865726475",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1788867335008,
+      "intentId": "external-reconcile:XBTEUR:1788757321243:exit:1788867300623",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -51350,7 +51378,8 @@
     "live-entry:XBTEUR:1788446384199": "3572a080-9e2a-4dbf-9802-b259845a4675",
     "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788534303316": "d41aa328-3331-4f59-99c0-809317e2da9f",
     "external-reconcile:XBTEUR:1788717041043:exit:1788843658396": "0ea1d2b4-410b-4034-a9d5-2a9f20fc0a5b",
-    "external-reconcile:XBTEUR:1788672047315:exit:1788866920649": "58abc4e9-c20a-42f6-bb6f-b9754cea46cc"
+    "external-reconcile:XBTEUR:1788672047315:exit:1788866920649": "58abc4e9-c20a-42f6-bb6f-b9754cea46cc",
+    "external-reconcile:XBTEUR:1788641205858:exit:1788866920649": "63ce9aad-0a9e-48e8-b39b-6dd32a0c89f3"
   },
   "live:live-open-positions": {
     "external-reconcile:XBTEUR:1788641205858": {
@@ -51378,7 +51407,8 @@
         "warnings": [
           "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
         ]
-      }
+      },
+      "outstandingExitSubmittedAt": 1788867300623
     },
     "external-reconcile:XBTEUR:1788672047315": {
       "id": "external-reconcile:XBTEUR:1788672047315",
@@ -51569,10 +51599,6 @@
     {
       "id": "7383943995531643410",
       "data": "confirm:reject:mts7cbuv.pvjjzd"
-    },
-    {
-      "id": "7383943995374008554",
-      "data": "confirm:approve:mtsl6wwv.1lw7qev"
     }
   ],
   "live:blackout-windows-cache": {
@@ -51674,25 +51700,16 @@
   "telegram-shared-update-offset": 447904757,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {
-    "external-reconcile:XBTEUR:1788714682711": {
+    "external-reconcile:XBTEUR:1788757321243": {
       "reason": "stop-loss",
-      "queuedAt": 1788865726475
-    },
-    "external-reconcile:XBTEUR:1788641205858": {
-      "reason": "stop-loss",
-      "queuedAt": 1788866920649
+      "queuedAt": 1788867300623
     }
   },
   "live:confirmation-gate-pending": {
-    "external-reconcile:XBTEUR:1788714682711:exit:1788865726475": {
-      "sentAt": 1788865782939,
-      "messageId": 598,
-      "token": "mtski00r.1rzxfnj"
-    },
-    "external-reconcile:XBTEUR:1788641205858:exit:1788866920649": {
-      "sentAt": 1788866945311,
-      "messageId": 599,
-      "token": "mtsl6wwv.1lw7qev"
+    "external-reconcile:XBTEUR:1788757321243:exit:1788867300623": {
+      "sentAt": 1788867334821,
+      "messageId": 601,
+      "token": "mtslf9gl.1k1e9mf"
     }
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
