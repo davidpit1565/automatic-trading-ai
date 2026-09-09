@@ -82,6 +82,15 @@ export interface ShadowCandidate {
    * trading variant. Omit for the default fixed take-profit.
    */
   readonly trendExit?: { readonly emaPeriod: number };
+  /**
+   * Opts into `riskEngine.ts`'s correlated-cluster exposure cap
+   * (`RiskLimits.correlationThreshold`/`maxCorrelatedExposurePct`) for this
+   * candidate only — built and unit-tested since before this shadow existed,
+   * but never wired into production (`DEFAULT_RISK_LIMITS` sets neither
+   * field). Requires `ShadowRunOptions.correlationBetween`; a no-op (behaves
+   * exactly like `live-mirror`) when that's unavailable.
+   */
+  readonly correlationCap?: { readonly threshold: number; readonly maxExposurePct: number };
 }
 
 export interface ShadowStanding {
@@ -135,6 +144,12 @@ export interface ShadowRunOptions {
    * key is configured — this stays a no-op (always allows) until then.
    */
   readonly aiJudgmentCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+  /**
+   * Return-correlation lookup (see `risk/correlation.ts`'s
+   * `buildCorrelationMatrix`). Only candidates with `correlationCap` set get
+   * it wired in. Omit when unavailable (e.g. insufficient candle history).
+   */
+  readonly correlationBetween?: (a: string, b: string) => number;
   /** Defaults to 'EUR' (crypto's own currency). Stocks callers pass 'USD'. */
   readonly baseCurrency?: 'EUR' | 'USD';
 }
@@ -221,7 +236,16 @@ async function runOne(
     ...(candidate.useAiJudgmentCheck && options.aiJudgmentCheck
       ? { aiJudgmentCheck: options.aiJudgmentCheck }
       : {}),
-    riskLimits: DEFAULT_RISK_LIMITS,
+    ...(candidate.correlationCap && options.correlationBetween
+      ? { correlationBetween: options.correlationBetween }
+      : {}),
+    riskLimits: candidate.correlationCap
+      ? {
+          ...DEFAULT_RISK_LIMITS,
+          correlationThreshold: candidate.correlationCap.threshold,
+          maxCorrelatedExposurePct: candidate.correlationCap.maxExposurePct,
+        }
+      : DEFAULT_RISK_LIMITS,
   });
 
   await pilot.runCycleOnce(options.now);
@@ -339,5 +363,19 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     trailing: { activateR: 1.5, trailR: 1.5 },
     confirmationTimeframe: '4h',
     useAiJudgmentCheck: true,
+  },
+  // Otherwise identical to live-mirror — isolates what capping exposure to a
+  // correlated cluster of open positions contributes (see riskEngine.ts's
+  // correlationThreshold/maxCorrelatedExposurePct: built and unit-tested, but
+  // never turned on in production). First-guess threshold/cap, unmeasured —
+  // this candidate exists to measure them, not because they're known good.
+  {
+    key: 'correlation-capped',
+    label: 'Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)',
+    minConfidence: 40,
+    maxRsiForLong: 65,
+    trailing: { activateR: 1.5, trailR: 1.5 },
+    confirmationTimeframe: '4h',
+    correlationCap: { threshold: 0.7, maxExposurePct: 30 },
   },
 ];

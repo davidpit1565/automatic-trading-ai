@@ -14,6 +14,7 @@ import { PositionEngine } from '../../src/core/position/positionEngine';
 import { PortfolioEngine } from '../../src/core/position/portfolioEngine';
 import { TradeJournal } from '../../src/core/position/tradeJournal';
 import { PersistedKillSwitch } from '../../src/core/autopilot/killSwitch';
+import { PrefixedStore } from '../../src/core/data/prefixedStore';
 import {
   runShadowCycle,
   SHADOW_CANDIDATES,
@@ -204,6 +205,98 @@ describe('trendExit and baseCurrency (long-term investing wallet support)', () =
     await runShadowCycle(TWO, { ...baseOptions(store, source), baseCurrency: 'USD' });
     const portfolioState = store.get<{ baseCurrency: string }>('shadow:a:portfolio-engine');
     expect(portfolioState?.baseCurrency).toBe('USD');
+  });
+});
+
+describe('correlationCap (correlated-cluster exposure cap wiring)', () => {
+  // Two symbols with IDENTICAL synthetic price paths (same seed/drift/
+  // volatility) — perfectly correlated by construction, and both trend
+  // strongly enough for a minConfidence: 0 candidate to want to enter both.
+  const CORR_SYMBOLS = ['AAA/EUR', 'BBB/EUR'];
+  function makeCorrelatedSource(): CachingSource {
+    const inner: MarketDataSource = {
+      name: 'stub',
+      getInstruments: async () =>
+        ok(CORR_SYMBOLS.map((s) => ({ symbol: s, base: s, quote: 'EUR' }))),
+      getCandles: async () =>
+        ok(
+          generateSyntheticCandles({
+            seed: 1,
+            startPrice: 100,
+            count: 150,
+            timeframe: '1h',
+            startTimestamp: T - 150 * 3_600_000,
+            drift: 0.002,
+            volatility: 0.004,
+          }),
+        ),
+    };
+    return new CachingSource(inner);
+  }
+  const alwaysCorrelated = () => 1;
+
+  it('refuses a second correlated entry once the cluster cap is already used up by the first', async () => {
+    const capped: ShadowCandidate = {
+      key: 'capped',
+      label: 'capped',
+      minConfidence: 0,
+      maxRsiForLong: 100,
+      // A tiny 5% cap — comfortably below what the first (uncapped-by-cluster)
+      // entry alone already uses, so the SECOND correlated symbol must be
+      // refused entirely rather than merely resized.
+      correlationCap: { threshold: 0.5, maxExposurePct: 5 },
+    };
+    const uncapped: ShadowCandidate = { ...capped, key: 'uncapped', correlationCap: undefined };
+
+    const store = new MemoryStore();
+    const source = makeCorrelatedSource();
+    await runShadowCycle([capped, uncapped], {
+      ...baseOptions(store, source),
+      symbols: CORR_SYMBOLS,
+      correlationBetween: alwaysCorrelated,
+    });
+
+    const cappedPositions = new PrefixedStore(store, 'shadow:capped').get<
+      Array<{ symbol: string; quantity: number; entryPrice: number }>
+    >('open-positions') ?? [];
+    const uncappedPositions = new PrefixedStore(store, 'shadow:uncapped').get<
+      Array<{ symbol: string; quantity: number; entryPrice: number }>
+    >('open-positions') ?? [];
+    // Without the cap, both correlated symbols open. With it, only the first
+    // does — the second is refused outright because the cluster is already
+    // over its 5% cap the moment the first position exists.
+    expect(uncappedPositions.length).toBe(2);
+    expect(cappedPositions.length).toBe(1);
+  });
+
+  it('is a no-op (behaves like live-mirror) when correlationBetween is not provided', async () => {
+    const store = new MemoryStore();
+    const source = makeCorrelatedSource();
+    const capped: ShadowCandidate = {
+      key: 'capped',
+      label: 'capped',
+      minConfidence: 0,
+      maxRsiForLong: 100,
+      correlationCap: { threshold: 0.5, maxExposurePct: 5 },
+    };
+    const uncapped: ShadowCandidate = {
+      key: 'uncapped',
+      label: 'uncapped',
+      minConfidence: 0,
+      maxRsiForLong: 100,
+    };
+    // Deliberately omits `correlationBetween` from the options.
+    await runShadowCycle([capped, uncapped], { ...baseOptions(store, source), symbols: CORR_SYMBOLS });
+
+    const cappedPositions = new PrefixedStore(store, 'shadow:capped').get<
+      Array<{ symbol: string; quantity: number; entryPrice: number }>
+    >('open-positions') ?? [];
+    const uncappedPositions = new PrefixedStore(store, 'shadow:uncapped').get<
+      Array<{ symbol: string; quantity: number; entryPrice: number }>
+    >('open-positions') ?? [];
+    const notionalOf = (list: typeof cappedPositions) =>
+      list.reduce((sum, p) => sum + p.quantity * p.entryPrice, 0);
+    expect(notionalOf(cappedPositions)).toBeCloseTo(notionalOf(uncappedPositions), 6);
   });
 });
 

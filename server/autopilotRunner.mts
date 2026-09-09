@@ -38,7 +38,8 @@ import { getTopTraderPositionRatio, toOkxSwapInstId } from '../src/core/data/okx
 import { isAiJudgmentBearish, type AiJudgmentInput } from '../src/core/signal/aiJudgment';
 import { scanCandles } from '../src/core/scan/marketScanner';
 import { MAX_CONFIDENCE } from '../src/core/signal/signalEngine';
-import type { Instrument, Timeframe } from '../src/core/types';
+import type { Candle, Instrument, Timeframe } from '../src/core/types';
+import { buildCorrelationMatrix } from '../src/core/risk/correlation';
 import type { RecentTrade } from '../src/core/data/krakenPublic';
 import type { Result } from '../src/core/types';
 import type { KeyValueStore } from '../src/core/data/storage';
@@ -557,6 +558,28 @@ function buildAiJudgmentCheck(
     };
     return !(await isAiJudgmentBearish(input, callModel));
   };
+}
+
+/**
+ * Builds the return-correlation lookup for the 'correlation-capped' shadow
+ * candidate ONLY (see riskEngine.ts's correlationThreshold/
+ * maxCorrelatedExposurePct — built and unit-tested, but never wired into
+ * production). Fetches the same 150-candle window (paperAutoPilot.ts's
+ * SCAN_CANDLES) the entry scanner itself already requests through this same
+ * caching source, so — like the other shadow-only checks above — this costs
+ * nothing extra in requests.
+ */
+async function buildCorrelationBetween(
+  source: MarketDataSource,
+  timeframe: Timeframe,
+  symbols: readonly string[],
+): Promise<(a: string, b: string) => number> {
+  const seriesBySymbol = new Map<string, readonly Candle[]>();
+  for (const symbol of symbols) {
+    const candles = await source.getCandles(symbol, timeframe, 150);
+    if (candles.ok) seriesBySymbol.set(symbol, candles.value);
+  }
+  return buildCorrelationMatrix(seriesBySymbol);
 }
 
 /** Latest close per symbol, for an accurate portfolio snapshot. */
@@ -1274,6 +1297,7 @@ async function runShadows(
     // Reads through the shared CachingSource — the AI check's candle fetch
     // costs nothing extra beyond what the other shadow candidates already do.
     const aiJudgmentCheck = buildAiJudgmentCheck(caching, ENTRY_TF) ?? undefined;
+    const correlationBetween = await buildCorrelationBetween(caching, ENTRY_TF, symbols);
     const { standings, failures } = await runShadowCycle(SHADOW_CANDIDATES, {
       source: caching,
       symbols,
@@ -1286,6 +1310,7 @@ async function runShadows(
       whaleFlowCheck,
       topTraderCheck,
       aiJudgmentCheck,
+      correlationBetween,
     });
     store.set(SHADOW_STANDINGS_KEY, { at: now, standings });
     for (const failure of failures) {
