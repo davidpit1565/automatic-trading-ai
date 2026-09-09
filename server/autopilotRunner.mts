@@ -147,7 +147,7 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
  * verification, human confirmation via Telegram) regardless of this flag —
  * it only controls whether that chain is ever reached at all.
  */
-// Read fresh on every call (not a frozen module-level const), same rationale
+// Read fresh on every call (not a frozen module-level default), same rationale
 // as getSummaryTimezone()/getStocksStatePath() below — so a test can flip
 // this via process.env regardless of what it was at module-import time.
 function realMoneyEnabled(): boolean {
@@ -462,12 +462,15 @@ async function buildMarketRegimeCheck(
 }
 
 /**
- * Builds the whale-flow gate for shadow evaluation ONLY (see `whaleFlow.ts`'s
- * doc comment for why this has no historical validation and must not reach
- * production). Feature-detects `getRecentTrades` on the real source — absent
- * on sources without a real trade tape (e.g. a future non-Kraken fallback) —
- * and fetches fresh on every check since recent trades change fast, unlike a
- * daily regime. Fails OPEN (allows the entry) on any fetch failure.
+ * Builds the whale-flow gate — used by the 'whale-flow' shadow candidate AND,
+ * since 2026-09-09, wired into the production `PaperAutoPilot` itself (see
+ * `main()`'s doc comment there for the measured record that earned this).
+ * See `whaleFlow.ts`'s own doc comment for why this idea has no historical
+ * backtest to validate against instead. Feature-detects `getRecentTrades` on
+ * the real source — absent on sources without a real trade tape (e.g. a
+ * future non-Kraken fallback) — and fetches fresh on every check since recent
+ * trades change fast, unlike a daily regime. Fails OPEN (allows the entry) on
+ * any fetch failure.
  */
 function buildWhaleFlowCheck(
   source: MarketDataSource,
@@ -724,6 +727,15 @@ async function main(): Promise<void> {
     // Portfolio circuit-breaker: pause new buying while equity is more than
     // DD_BREAKER_PCT below its peak. Exits/stops keep protecting open trades.
     haltNewEntries: () => breakerEngaged(store),
+    // Promoted to production 2026-09-09 — the 'whale-flow' shadow candidate
+    // (identical settings otherwise) cleared SHADOW_MEANINGFUL_TRADES with a
+    // real forward record consistently ahead of 'live-mirror' on every
+    // metric (return, profit factor, win rate), the only kind of evidence
+    // this specific idea can ever earn — see whaleFlow.ts's own doc comment
+    // for why it has no historical backtest to validate against instead.
+    // Fails OPEN on a fetch failure (buildWhaleFlowCheck), so an outage never
+    // silently blocks every entry.
+    whaleFlowCheck: buildWhaleFlowCheck(source) ?? undefined,
   });
 
   const telegram = {
