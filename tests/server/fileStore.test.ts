@@ -66,4 +66,17 @@ describe('FileStore', () => {
     store.set('a', 3); // re-setting an already-dirty key doesn't duplicate it
     expect(store.dirtyKeys().sort()).toEqual(['a', 'b', 'untouched']);
   });
+
+  it('originalValue stays fixed at this instance\'s construction-time baseline, even after this instance itself writes the key', () => {
+    new FileStore(path).set('cash', 100);
+    const store = new FileStore(path);
+    expect(store.originalValue('cash')).toBe(100);
+    expect(store.originalValue('missing')).toBeUndefined();
+    store.set('cash', 999);
+    // Still the baseline this run started with, not what this run just wrote —
+    // it exists specifically to detect a race against ANOTHER run, so it must
+    // never move just because this run changed the key itself.
+    expect(store.originalValue('cash')).toBe(100);
+    expect(store.get('cash')).toBe(999);
+  });
 });

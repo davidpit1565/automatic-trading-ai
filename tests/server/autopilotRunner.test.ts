@@ -26,6 +26,7 @@ import {
   maybeSendMoveAlerts,
   maybeSendPeriodicReports,
   maybeSendSummaries,
+  mergeDirtyKeysDetectingCollisions,
   readLiveSummary,
   readStocksSummary,
   runLiveMirror,
@@ -99,6 +100,60 @@ describe('breakerEngaged', () => {
     store.set('equity-peak', 10_000);
     store.set('equity-history', [{ at: 0, equity: 10_000 }, { at: 1, equity: 9_800 }]); // -2%
     expect(breakerEngaged(store)).toBe(false);
+  });
+});
+
+describe('mergeDirtyKeysDetectingCollisions (visibility for a genuine same-KEY concurrent-write race)', () => {
+  /** A store whose baseline (originalValue) already has `cash: 100` — as if
+   * loaded from a file that already had it — so a test can then change it
+   * and compare against an `origin` that either did or didn't also move. */
+  function seededStore(): FileStore {
+    const path = join(dir, 'seeded.json');
+    new FileStore(path).set('cash', 100);
+    return new FileStore(path);
+  }
+
+  it('reports no collision when only this run touched the key', () => {
+    const seeded = seededStore();
+    seeded.set('cash', 150); // this run's own change
+    const origin: Record<string, unknown> = { cash: 100 }; // unchanged since this run's baseline
+    const collisions = mergeDirtyKeysDetectingCollisions(seeded, origin, 'test', 123);
+    expect(collisions).toEqual([]);
+    expect(origin['cash']).toBe(150);
+  });
+
+  it('detects a collision when another run ALSO changed the same key since this run started', () => {
+    const seeded = seededStore();
+    seeded.set('cash', 150); // this run's own change
+    // origin/main has since moved to a THIRD value, different from both this
+    // run's baseline (100) and its new value (150) — another run wrote it too.
+    const origin: Record<string, unknown> = { cash: 250 };
+    const collisions = mergeDirtyKeysDetectingCollisions(seeded, origin, 'test', 123);
+    expect(collisions).toEqual([{ key: 'cash', at: 123, label: 'test' }]);
+    // This run's own value still wins — a behavior change is a separate,
+    // deliberate decision, not bundled with this visibility fix.
+    expect(origin['cash']).toBe(150);
+  });
+
+  it('leaves a key this run never dirtied untouched, even if present in origin', () => {
+    // `store` (fresh from beforeEach) has nothing set — dirtyKeys() is empty.
+    const origin: Record<string, unknown> = { other: 'anything, never dirtied' };
+    const collisions = mergeDirtyKeysDetectingCollisions(store, origin, 'test', 123);
+    expect(collisions).toEqual([]);
+    expect(origin['other']).toBe('anything, never dirtied');
+  });
+
+  it('caps and appends to the persisted collision log', () => {
+    store.set('cash', 100); // fresh store: baseline for 'cash' is undefined (didn't exist before)
+    const origin: Record<string, unknown> = {
+      cash: 999, // origin already has a value for a key this run only just created — a real collision
+      'state-merge-collisions': [{ key: 'old', at: 1, label: 'earlier' }],
+    };
+    mergeDirtyKeysDetectingCollisions(store, origin, 'test', 456);
+    expect(origin['state-merge-collisions']).toEqual([
+      { key: 'old', at: 1, label: 'earlier' },
+      { key: 'cash', at: 456, label: 'test' },
+    ]);
   });
 });
 
