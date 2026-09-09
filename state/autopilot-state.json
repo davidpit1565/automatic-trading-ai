@@ -1,35 +1,15 @@
 {
   "portfolio-engine": {
-    "cash": 8864.578347512916,
+    "cash": 10261.562625793318,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 649.6813585443497,
+    "closedRealizedPnl": 584.0137033074626,
     "dayAnchor": {
       "day": "2026-09-09",
       "equity": 10383.05425789933
     }
   },
-  "open-positions": [
-    {
-      "id": "ATOMEUR:1788952662543:0",
-      "symbol": "ATOMEUR",
-      "openedAt": 1788952662543,
-      "entryPrice": 1.6634,
-      "quantity": 879.3146167592216,
-      "initialQuantity": 879.3146167592216,
-      "stopLoss": 1.5948076464717007,
-      "takeProfit": 1.8005847070565983,
-      "feesPaid": 4.387955800551868,
-      "realizedPnl": 0,
-      "highestPrice": 1.6816,
-      "lowestPrice": 1.5949,
-      "confidence": 48.37832725984565,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "open-positions": [],
   "audit-log": [
     {
       "timestamp": 1784042069348,
@@ -1871,13 +1851,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ATOMEUR: 879.3146167592216 @ 1.6634 (stop 1.5948076464717007, target 1.8005847070565983, confidence 48)"
+    },
+    {
+      "timestamp": 1788988794547,
+      "intentId": "ATOMEUR:1788952662543:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ATOMEUR: 879.3146167592216 @ 1.5935 (stop-loss)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1788988461428,
+    "at": 1788988794547,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "daily-summary-last-day": "2026-07-14",
@@ -1890,10 +1877,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787030668911,
-      "equity": 9568.52
-    },
     {
       "at": 1787030980655,
       "equity": 9568.52
@@ -21889,6 +21872,10 @@
     {
       "at": 1788988461428,
       "equity": 10269.37
+    },
+    {
+      "at": 1788988794547,
+      "equity": 10261.56
     }
   ],
   "trade-journal": [
@@ -23363,6 +23350,29 @@
       "validationVerdict": null,
       "confidence": 48.072408387685876,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "ATOMEUR:1788952662543:0",
+      "symbol": "ATOMEUR",
+      "entryTimestamp": 1788952662543,
+      "exitTimestamp": 1788988794547,
+      "entryPrice": 1.6634,
+      "exitPrice": 1.5935,
+      "positionSize": 879.3146167592216,
+      "stopLoss": 1.5948076464717007,
+      "takeProfit": 1.8005847070565983,
+      "exitReason": "stop-loss",
+      "fees": 8.591519325969326,
+      "slippage": 0,
+      "holdingDurationMs": 36132004,
+      "mfePct": 1.0941445232656002,
+      "maePct": 4.202236383311295,
+      "realizedPnl": -65.66765523688711,
+      "returnPct": -4.48962967416136,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 48.37832725984565,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "alerted-trade-ids": [
@@ -23473,7 +23483,7 @@
       {
         "key": "trades",
         "ok": true,
-        "detail": "64 / 20 closed trades"
+        "detail": "65 / 20 closed trades"
       },
       {
         "key": "days",
@@ -23483,12 +23493,12 @@
       {
         "key": "profitable",
         "ok": true,
-        "detail": "after-fee return +6.50%"
+        "detail": "after-fee return +5.84%"
       },
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -16.51% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -16.49% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23498,7 +23508,7 @@
       {
         "key": "consistency",
         "ok": true,
-        "detail": "profit factor 1.42 (needs ≥ 1.2)"
+        "detail": "profit factor 1.36 (needs ≥ 1.2)"
       }
     ],
     "summary": "READY — the paper record clears every safety threshold (not a profit guarantee).",
@@ -23517,7 +23527,7 @@
   "monthly-report-last": "2026-08-19",
   "daily-loss": {
     "day": "2026-09-09",
-    "loss": 62.782410759981595
+    "loss": 128.45006599686872
   },
   "shadow:live-mirror:shadow-started-at": 1785254092443,
   "shadow:live-mirror:portfolio-engine": {
@@ -23586,7 +23596,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1788988461428,
+    "at": 1788988794547,
     "standings": [
       {
         "key": "live-mirror",
@@ -23635,8 +23645,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9366.284455876334,
-        "returnPct": -6.337155441236664,
+        "equity": 9356.41154637682,
+        "returnPct": -6.435884536231806,
         "trades": 73,
         "winRatePct": 42.465753424657535,
         "profitFactor": 0.7738644954461839,
@@ -23646,8 +23656,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9803.853572159633,
-        "returnPct": -1.9614642784036733,
+        "equity": 9803.850802384157,
+        "returnPct": -1.9614919761584315,
         "trades": 191,
         "winRatePct": 40.31413612565445,
         "profitFactor": 1.1842428775383536,
@@ -23657,8 +23667,8 @@
       {
         "key": "whale-flow",
         "label": "Refuses entries during heavy net selling by large traders",
-        "equity": 11256.946801841119,
-        "returnPct": 12.56946801841119,
+        "equity": 11251.324525080525,
+        "returnPct": 12.51324525080525,
         "trades": 28,
         "winRatePct": 67.85714285714286,
         "profitFactor": 3.250719415326908,
@@ -35131,7 +35141,7 @@
       "feesPaid": 5.661897886566108,
       "realizedPnl": 0,
       "highestPrice": 10.49635,
-      "lowestPrice": 10.11372,
+      "lowestPrice": 10.10937,
       "confidence": 32.19856962169939,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -35169,7 +35179,7 @@
       "feesPaid": 5.634220626570542,
       "realizedPnl": 0,
       "highestPrice": 5.5373,
-      "lowestPrice": 5.4688,
+      "lowestPrice": 5.4539,
       "confidence": 30.28749402483615,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -45804,7 +45814,7 @@
       "feesPaid": 6.804737553437742,
       "realizedPnl": 0,
       "highestPrice": 1.6816,
-      "lowestPrice": 1.5949,
+      "lowestPrice": 1.5935,
       "confidence": 48.19704509228782,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -49213,6 +49223,13 @@
       "event": "filled",
       "mode": "live",
       "detail": "Revolut X order 340c303d-cc83-4669-a0ca-476269102779: filled"
+    },
+    {
+      "timestamp": 1788988814405,
+      "intentId": "live-entry:ATOMEUR:1788952662543:exit:1788988794547",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -53810,6 +53827,10 @@
     {
       "at": 1788988461428,
       "equity": 80.4
+    },
+    {
+      "at": 1788988794547,
+      "equity": 80.36
     }
   ],
   "live:revolut-x-order-map": {
@@ -54125,8 +54146,19 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447904805,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:live-exit-pending": {
+    "live-entry:ATOMEUR:1788952662543": {
+      "reason": "stop-loss",
+      "queuedAt": 1788988794547
+    }
+  },
+  "live:confirmation-gate-pending": {
+    "live-entry:ATOMEUR:1788952662543:exit:1788988794547": {
+      "sentAt": 1788988814269,
+      "messageId": 646,
+      "token": "mtulqzlp.1q2r8if"
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 6694.184706680943,
@@ -54139,13 +54171,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1788988461428,
+    "at": 1788988794547,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "13 new candidates, production defaults (forward test only — not real trading)",
-        "equity": 9765.79760138839,
-        "returnPct": -2.3420239861160916,
+        "equity": 9760.8736525106,
+        "returnPct": -2.3912634748940036,
         "trades": 8,
         "winRatePct": 37.5,
         "profitFactor": 0.6296790312702925,
@@ -54543,12 +54575,6 @@
       "detail": "paper entry DOGEEUR: 11657.39987036754 @ 0.0783875 (stop 0.06980925775798903, target 0.09554398448402193, confidence 46)"
     }
   ],
-  "move-alert-buckets": {
-    "ATOMEUR:1788952662543:0": {
-      "neg": 0,
-      "pos": 0
-    }
-  },
   "shadow:correlation-capped:shadow-started-at": 1788970622093,
   "shadow:correlation-capped:portfolio-engine": {
     "cash": 10000,
