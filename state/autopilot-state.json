@@ -22,7 +22,7 @@
       "feesPaid": 4.387955800551868,
       "realizedPnl": 0,
       "highestPrice": 1.6634,
-      "lowestPrice": 1.6634,
+      "lowestPrice": 1.6595,
       "confidence": 48.37832725984565,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -1874,9 +1874,9 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1788952662543,
+    "at": 1788953020039,
     "source": "Kraken public market data (read-only)",
-    "opened": 1,
+    "opened": 0,
     "closed": 0,
     "halted": false
   },
@@ -47525,7 +47525,7 @@
     ]
   },
   "longterm-shadow-last-run-day": "2026-09-09",
-  "live:live-cash-eur": 79.72,
+  "live:live-cash-eur": 68.45029771,
   "live:telegram-shared-update-offset": 447904572,
   "live:telegram-unclaimed-messages": [
     {
@@ -47542,46 +47542,7 @@
     }
   ],
   "live:telegram-unclaimed-callbacks": [],
-  "live:live-entry-pending": {
-    "ATOMEUR": {
-      "opportunity": {
-        "symbol": "ATOMEUR",
-        "timeframe": "1h",
-        "direction": "long",
-        "levels": {
-          "entry": 1.6634,
-          "stopLoss": 1.5948076464717007,
-          "takeProfit": 1.8005847070565983,
-          "riskReward": 2
-        },
-        "confidence": 48.37832725984565,
-        "confidenceComponents": [
-          {
-            "label": "Scanner evidence",
-            "detail": "composite score 42 of 100",
-            "effect": 25.378327259845644
-          },
-          {
-            "label": "Trend strength",
-            "detail": "ADX 57.9",
-            "effect": 15
-          },
-          {
-            "label": "Higher timeframe confirmation (4h)",
-            "detail": "score 74 on the 4h chart",
-            "effect": 8
-          }
-        ],
-        "explanation": "ATOMEUR on the 1h timeframe shows bullish technical evidence (score 42/100 over 150 candles), driven mainly by Trend (EMA 20/50 + ADX) (EMA20 1.60 vs EMA50 1.52, ADX 57.9), Momentum (RSI 14) (RSI 64.9), MACD histogram (histogram 0.00676 (ATR-normalised 0.20)). Suggested plan: enter near 1.66, stop loss at 1.59 (2× ATR below entry), take profit at 1.80 (4× ATR above), risk/reward 2.0. Confidence 40/90 reflects the strength of current evidence only — it is not a guarantee, and any position should be sized so its loss at the stop is acceptable. The larger 4h trend confirms this setup (score 74).",
-        "warnings": [],
-        "basedOn": {
-          "score": 42.297212099742744,
-          "candleCount": 150
-        }
-      },
-      "queuedAt": 1788952662543
-    }
-  },
+  "live:live-entry-pending": {},
   "live:manual-buy-pending-symbols": [
     "SYMBOL",
     "EURXBTEUR"
@@ -48888,9 +48849,25 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1788953038882,
+      "intentId": "live-entry:ATOMEUR:1788952662543",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram"
+    },
+    {
+      "timestamp": 1788953039580,
+      "intentId": "live-entry:ATOMEUR:1788952662543",
+      "event": "filled",
+      "mode": "live",
+      "detail": "Revolut X order 340c303d-cc83-4669-a0ca-476269102779: filled"
     }
   ],
-  "live:live-entry-outstanding-symbols": [],
+  "live:live-entry-outstanding-symbols": [
+    "ATOMEUR"
+  ],
   "live:kill-switch-keyboard-sent": true,
   "education-tip-last-sent-at": 1788939969312,
   "education-tip-index": 4,
@@ -53147,6 +53124,10 @@
     {
       "at": 1788952662543,
       "equity": 79.72
+    },
+    {
+      "at": 1788953020039,
+      "equity": 79.72
     }
   ],
   "live:revolut-x-order-map": {
@@ -53156,9 +53137,38 @@
     "external-reconcile:XBTEUR:1788672047315:exit:1788866920649": "58abc4e9-c20a-42f6-bb6f-b9754cea46cc",
     "external-reconcile:XBTEUR:1788641205858:exit:1788866920649": "63ce9aad-0a9e-48e8-b39b-6dd32a0c89f3",
     "external-reconcile:XBTEUR:1788757321243:exit:1788871085331": "3f331b6f-28c4-4ca4-a1dd-344f844cb80e",
-    "external-reconcile:XBTEUR:1788714682711:exit:1788897725664": "3ad471f2-15cd-4f4f-8cad-f9e236749b81"
+    "external-reconcile:XBTEUR:1788714682711:exit:1788897725664": "3ad471f2-15cd-4f4f-8cad-f9e236749b81",
+    "live-entry:ATOMEUR:1788952662543": "340c303d-cc83-4669-a0ca-476269102779"
   },
-  "live:live-open-positions": {},
+  "live:live-open-positions": {
+    "live-entry:ATOMEUR:1788952662543": {
+      "id": "live-entry:ATOMEUR:1788952662543",
+      "symbol": "ATOM/EUR",
+      "quantity": 6.78489,
+      "entryPrice": 1.661,
+      "stopLoss": 1.5948076464717007,
+      "takeProfit": 1.8005847070565983,
+      "highestPrice": 1.661,
+      "openedAt": 1788953020039,
+      "entryAssessment": {
+        "approved": true,
+        "asset": "ATOMEUR",
+        "entry": 1.661,
+        "stopLoss": 1.5948076464717007,
+        "takeProfit": 1.8005847070565983,
+        "positionSize": 6.784896580687842,
+        "positionValue": 11.285996972316156,
+        "riskAmount": 0.4653920249154894,
+        "riskPercentage": 0.5837832725984563,
+        "rewardRiskRatio": 1.9999999999999967,
+        "portfolioExposure": 14.157045875961058,
+        "reasons": [
+          "risking 0.47 (0.58% of equity) for a 2.0:1 reward/risk — within every configured limit"
+        ],
+        "warnings": []
+      }
+    }
+  },
   "telegram-unclaimed-messages": [],
   "telegram-unclaimed-callbacks": [
     {
@@ -53204,6 +53214,54 @@
     {
       "id": "7383943996781484785",
       "data": "confirm:reject:mtt344xe.yg3sm7"
+    },
+    {
+      "id": "7383943996550238967",
+      "data": "confirm:approve:mtu08mg7.1ws3hc0"
+    },
+    {
+      "id": "7383943995242322079",
+      "data": "confirm:approve:mtu08mg7.1ws3hc0"
+    },
+    {
+      "id": "7383943998119213801",
+      "data": "confirm:approve:mtu08mg7.1ws3hc0"
+    },
+    {
+      "id": "7383943996994251224",
+      "data": "confirm:approve:mtu08mg7.1ws3hc0"
+    },
+    {
+      "id": "7383943998696961877",
+      "data": "confirm:approve:mtu08mg7.1ws3hc0"
+    },
+    {
+      "id": "7383943995983407464",
+      "data": "confirm:approve:mtu08mg7.1ws3hc0"
+    },
+    {
+      "id": "7383943996897994436",
+      "data": "confirm:approve:mtu08mg7.1ws3hc0"
+    },
+    {
+      "id": "7383943996788959684",
+      "data": "confirm:approve:mtu08mg7.1ws3hc0"
+    },
+    {
+      "id": "7383943998506311060",
+      "data": "confirm:approve:mtu08mg7.1ws3hc0"
+    },
+    {
+      "id": "7383943996149379904",
+      "data": "confirm:approve:mtu08mg7.1ws3hc0"
+    },
+    {
+      "id": "7383943997050050122",
+      "data": "confirm:approve:mtu08mg7.1ws3hc0"
+    },
+    {
+      "id": "7383943995713936741",
+      "data": "confirm:approve:mtu08mg7.1ws3hc0"
     }
   ],
   "live:blackout-windows-cache": {
@@ -53302,16 +53360,10 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904787,
+  "telegram-shared-update-offset": 447904805,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {
-    "live-entry:ATOMEUR:1788952662543": {
-      "sentAt": 1788952685479,
-      "messageId": 635,
-      "token": "mtu08mg7.1ws3hc0"
-    }
-  },
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 8757.589862664383,
