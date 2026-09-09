@@ -206,6 +206,52 @@ function hasSubmittedOrder(outcomes: readonly { readonly outcome: string }[]): b
   return outcomes.some((o) => o.outcome === 'submitted');
 }
 
+/** Persisted, capped record of a genuine same-KEY concurrent-write race
+ * (see `persistStateToGit`'s merge loop) — the one case the dirty-key merge
+ * still resolves silently: another run wrote the SAME key this run is also
+ * about to overwrite, in the same race window. This run's value always wins
+ * either way (unchanged behavior — a real behavior change here needs its own
+ * decision, not bundled with a visibility fix); this key exists only so that
+ * a previously invisible collision is now visible on the next look. */
+const STATE_MERGE_COLLISIONS_KEY = 'state-merge-collisions';
+const STATE_MERGE_COLLISIONS_CAP = 100;
+
+export interface StateMergeCollision {
+  readonly key: string;
+  readonly at: number;
+  readonly label: string;
+}
+
+/**
+ * Overlays this run's dirty keys onto a freshly-fetched `origin` state blob
+ * (mutates `origin` in place, same as the inline loop this replaces used to),
+ * additionally detecting — never preventing — a genuine same-KEY race: some
+ * OTHER run also wrote this exact key since this run started, not just the
+ * same file. Pure and independent of git/execSync so it's directly testable;
+ * `persistStateToGit` is the only real caller.
+ */
+export function mergeDirtyKeysDetectingCollisions(
+  store: Pick<FileStore, 'dirtyKeys' | 'get' | 'originalValue'>,
+  origin: Record<string, unknown>,
+  label: string,
+  now: number,
+): StateMergeCollision[] {
+  const collisions: StateMergeCollision[] = [];
+  for (const key of store.dirtyKeys()) {
+    const originNow = key in origin ? origin[key] : undefined;
+    if (JSON.stringify(originNow) !== JSON.stringify(store.originalValue(key))) {
+      collisions.push({ key, at: now, label });
+    }
+    origin[key] = store.get(key);
+  }
+  if (collisions.length > 0) {
+    const existingLog =
+      (origin[STATE_MERGE_COLLISIONS_KEY] as StateMergeCollision[] | undefined) ?? [];
+    origin[STATE_MERGE_COLLISIONS_KEY] = [...existingLog, ...collisions].slice(-STATE_MERGE_COLLISIONS_CAP);
+  }
+  return collisions;
+}
+
 /** Blocking sleep with no subprocess spawn (Atomics.wait on a throwaway
  * SharedArrayBuffer) — see persistStateToGit's retry loop for why. */
 function sleepSyncMs(ms: number): void {
@@ -276,7 +322,13 @@ function persistStateToGit(store: FileStore, label: string): void {
           run(`git show origin/main:${STATE_PATH} > ${originTmpPath}`);
           const origin = JSON.parse(readFileSync(originTmpPath, 'utf8')) as Record<string, unknown>;
           rmSync(originTmpPath, { force: true });
-          for (const key of store.dirtyKeys()) origin[key] = store.get(key);
+          const collisions = mergeDirtyKeysDetectingCollisions(store, origin, label, Date.now());
+          if (collisions.length > 0) {
+            console.error(
+              `State merge: ${collisions.length} key(s) were ALSO changed elsewhere since this run started ` +
+                `(this run's value still wins): ${collisions.map((c) => c.key).join(', ')}`,
+            );
+          }
           // Fully sync EVERYTHING to origin/main FIRST — a real incident,
           // 2026-09-03: `git reset --soft origin/main` alone moves HEAD but
           // leaves the index/working tree exactly as they were, so every

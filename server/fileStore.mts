@@ -22,6 +22,14 @@ export class FileStore implements KeyValueStore {
    * changes wholesale (found 2026-09-03: a cancelled-but-still-executing
    * run and its freshly-dispatched replacement both wrote this same file). */
   private dirty: Set<string>;
+  /** Snapshot of every key's raw value at CONSTRUCTION time, never touched
+   * afterward — this run's own baseline. Lets `persistStateToGit` detect
+   * whether a key it's about to overlay onto a fresher origin/main was ALSO
+   * changed by another run in the same window (both runs racing the exact
+   * same key, not just the same file) — previously invisible; the dirty-key
+   * merge alone silently let this run's value win either way. See
+   * `originalValue`. */
+  private readonly initial: Map<string, string>;
 
   constructor(private readonly path: string) {
     this.map = new Map();
@@ -43,6 +51,7 @@ export class FileStore implements KeyValueStore {
         this.map = new Map();
       }
     }
+    this.initial = new Map(this.map);
   }
 
   get<T>(key: string): T | undefined {
@@ -70,6 +79,16 @@ export class FileStore implements KeyValueStore {
   /** Keys set/removed by this instance so far — see the `dirty` field doc. */
   dirtyKeys(): string[] {
     return [...this.dirty];
+  }
+
+  /**
+   * This key's value as it was when THIS instance was constructed — a fixed
+   * baseline, unaffected by anything this run itself has since set/removed.
+   * See the `initial` field doc for why this exists.
+   */
+  originalValue<T>(key: string): T | undefined {
+    const raw = this.initial.get(key);
+    return raw === undefined ? undefined : (JSON.parse(raw) as T);
   }
 
   private flush(): void {
