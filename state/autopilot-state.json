@@ -1861,7 +1861,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1789070046996,
+    "at": 1789070404476,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -49942,6 +49942,20 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1789070426319,
+      "intentId": "external-reconcile:XBTEUR:1788970622093:exit:1789070046996",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram"
+    },
+    {
+      "timestamp": 1789070426675,
+      "intentId": "external-reconcile:XBTEUR:1788970622093:exit:1789070046996",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "Revolut X rejected the order: HTTP 422 — {\"message\":\"Insufficient balance of ₿0.00027387; required ₿0.00027733 (extra ₿0.00000346 is required)\",\"error_id\":\"57616ce7-14ad-4285-8c68-4b638851e400\",\"timestamp\":1789070426611}"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -55261,6 +55275,10 @@
     {
       "at": 1789070046996,
       "equity": 53.76
+    },
+    {
+      "at": 1789070404476,
+      "equity": 53.78
     }
   ],
   "live:revolut-x-order-map": {
@@ -55514,6 +55532,10 @@
     {
       "id": "7383943997049261046",
       "data": "confirm:approve:mtvxx0cv.1owoute"
+    },
+    {
+      "id": "7383943997153025999",
+      "data": "confirm:approve:mtvy4k3r.prc0d4"
     }
   ],
   "live:blackout-windows-cache": {
@@ -55612,21 +55634,10 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904841,
+  "telegram-shared-update-offset": 447904847,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "external-reconcile:XBTEUR:1788970622093": {
-      "reason": "stop-loss",
-      "queuedAt": 1789070046996
-    }
-  },
-  "live:confirmation-gate-pending": {
-    "external-reconcile:XBTEUR:1788970622093:exit:1789070046996": {
-      "sentAt": 1789070068935,
-      "messageId": 693,
-      "token": "mtvy4k3r.prc0d4"
-    }
-  },
+  "live:live-exit-pending": {},
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 7719.051605444327,
@@ -56067,106 +56078,6 @@
   },
   "state-merge-collisions": [
     {
-      "key": "live:live-equity-history",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "shadow:mean-reversion:open-positions",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "shadow-standings",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "shadow:candidate-watch:open-positions",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "candidate-watch-standings",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "equity-history",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "real-money-readiness",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "live:live-open-positions",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "live:live-exit-pending",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "live:audit-log",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "live:confirmation-gate-pending",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "telegram-shared-update-offset",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "live:revolut-x-order-map",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "shadow:mean-reversion:trade-journal",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "shadow:mean-reversion:portfolio-engine",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "shadow:mean-reversion:audit-log",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "live:daily-loss",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "daily-summary",
-      "at": 1789050754457,
-      "label": "cycle 47/70"
-    },
-    {
-      "key": "telegram-unclaimed-callbacks",
-      "at": 1789051132182,
-      "label": "cycle 48/70"
-    },
-    {
-      "key": "autopilot-last-run",
-      "at": 1789051132182,
-      "label": "cycle 48/70"
-    },
-    {
       "key": "live:live-cash-eur",
       "at": 1789051132182,
       "label": "cycle 48/70"
@@ -56565,6 +56476,106 @@
       "key": "live:daily-loss",
       "at": 1789070102824,
       "label": "cycle 40/70"
+    },
+    {
+      "key": "telegram-unclaimed-messages",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "telegram-unclaimed-callbacks",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "autopilot-last-run",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:live-cash-eur",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:live-equity-history",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:confirmation-gate-pending",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:audit-log",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:live-exit-pending",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow-standings",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "candidate-watch-standings",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "equity-history",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "real-money-readiness",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "telegram-shared-update-offset",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow:mean-reversion:open-positions",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow:mean-reversion:trade-journal",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow:mean-reversion:portfolio-engine",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow:mean-reversion:audit-log",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:live-open-positions",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:revolut-x-order-map",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:daily-loss",
+      "at": 1789070431088,
+      "label": "live-mirror: after automatic exits"
     }
   ]
 }
