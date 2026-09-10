@@ -1878,10 +1878,6 @@
   "allclear-last-at": 1787766347623,
   "equity-history": [
     {
-      "at": 1787069699795,
-      "equity": 9568.52
-    },
-    {
       "at": 1787070010983,
       "equity": 9568.52
     },
@@ -21876,6 +21872,10 @@
     {
       "at": 1789044439080,
       "equity": 10260.77
+    },
+    {
+      "at": 1789044817091,
+      "equity": 10260.77
     }
   ],
   "trade-journal": [
@@ -23498,7 +23498,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -14.94% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -14.83% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23575,10 +23575,10 @@
   },
   "shadow:mean-reversion:shadow-started-at": 1785254092443,
   "shadow:mean-reversion:portfolio-engine": {
-    "cash": 5435.467767053193,
+    "cash": 5439.202553145961,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -531.9763268862567,
+    "closedRealizedPnl": -532.0674000761334,
     "dayAnchor": {
       "day": "2026-09-10",
       "equity": 9272.156039730015
@@ -23596,7 +23596,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1789044439080,
+    "at": 1789044817091,
     "standings": [
       {
         "key": "live-mirror",
@@ -23645,12 +23645,12 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9083.754307356625,
-        "returnPct": -9.162456926433752,
-        "trades": 79,
-        "winRatePct": 39.24050632911392,
-        "profitFactor": 0.5836738104096296,
-        "openPositions": 3,
+        "equity": 9085.289267224367,
+        "returnPct": -9.14710732775633,
+        "trades": 80,
+        "winRatePct": 38.75,
+        "profitFactor": 0.5836322125267948,
+        "openPositions": 2,
         "startedAt": 1785254092443
       },
       {
@@ -35133,25 +35133,6 @@
   ],
   "shadow:mean-reversion:open-positions": [
     {
-      "id": "XLMEUR:1788993306000:4",
-      "symbol": "XLMEUR",
-      "openedAt": 1788993306000,
-      "entryPrice": 0.155459,
-      "quantity": 24.61008550579297,
-      "initialQuantity": 24.61008550579297,
-      "stopLoss": 0.15225929594084867,
-      "takeProfit": 0.16185840811830274,
-      "feesPaid": 0.011477577847935209,
-      "realizedPnl": 0,
-      "highestPrice": 0.155811,
-      "lowestPrice": 0.152444,
-      "confidence": 30.205600971641957,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
       "id": "HNTEUR:1789026762658:3",
       "symbol": "HNTEUR",
       "openedAt": 1789026762658,
@@ -35182,7 +35163,7 @@
       "feesPaid": 5.455339405330685,
       "realizedPnl": 0,
       "highestPrice": 2089.37,
-      "lowestPrice": 2089.37,
+      "lowestPrice": 2085.94,
       "confidence": 32.053449877828314,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -37255,6 +37236,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ETHEUR: 0.8703324296048864 @ 2089.37 (stop 2061.5899905438114, target 2144.930018912377, confidence 32)"
+    },
+    {
+      "timestamp": 1789044817091,
+      "intentId": "XLMEUR:1788993306000:4",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit XLMEUR: 24.61008550579297 @ 0.152215 (stop-loss)"
     }
   ],
   "shadow:live-mirror:open-positions": [],
@@ -44081,6 +44069,29 @@
       "validationVerdict": null,
       "confidence": 30.90877466507237,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "XLMEUR:1788993306000:4",
+      "symbol": "XLMEUR",
+      "entryTimestamp": 1788993306000,
+      "exitTimestamp": 1789044817091,
+      "entryPrice": 0.155459,
+      "exitPrice": 0.152215,
+      "positionSize": 24.61008550579297,
+      "stopLoss": 0.15225929594084867,
+      "takeProfit": 0.16185840811830274,
+      "exitReason": "stop-loss",
+      "fees": 0.02271565034372804,
+      "slippage": 0,
+      "holdingDurationMs": 51511091,
+      "mfePct": 0.22642626030013774,
+      "maePct": 2.086723830720656,
+      "realizedPnl": -0.09107318987658583,
+      "returnPct": -2.3804636592284942,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 30.205600971641957,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "shadow:whale-flow:shadow-started-at": 1786561343790,
@@ -49530,6 +49541,20 @@
       "event": "submitted",
       "mode": "live",
       "detail": "Revolut X order f7d2a8de-9ead-4e32-a931-02e963b03150: new"
+    },
+    {
+      "timestamp": 1789044842484,
+      "intentId": "external-reconcile:XBTEUR:1788970622093:exit:1789044817091",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1789044855876,
+      "intentId": "external-reconcile:XBTEUR:1788970622093:exit:1789044817091",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "rejected via Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -54831,6 +54856,10 @@
     {
       "id": "7383943995713936741",
       "data": "confirm:approve:mtu08mg7.1ws3hc0"
+    },
+    {
+      "id": "7383943995524313875",
+      "data": "confirm:reject:mtvj3v1z.1qrrr9"
     }
   ],
   "live:blackout-windows-cache": {
@@ -54929,7 +54958,7 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904824,
+  "telegram-shared-update-offset": 447904827,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {
     "external-reconcile:XBTEUR:1788978020562": {
@@ -54956,7 +54985,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1789044439080,
+    "at": 1789044817091,
     "standings": [
       {
         "key": "candidate-watch",
