@@ -1861,7 +1861,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1789077608463,
+    "at": 1789077976202,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -49998,6 +49998,20 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1789078001519,
+      "intentId": "external-reconcile:XBTEUR:1788970622093:exit:1789077608463",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram"
+    },
+    {
+      "timestamp": 1789078001974,
+      "intentId": "external-reconcile:XBTEUR:1788970622093:exit:1789077608463",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "Revolut X rejected the order: HTTP 422 — {\"message\":\"Insufficient balance of ₿0; required ₿0.00000346 (extra ₿0.00000346 is required)\",\"error_id\":\"2783d843-a290-48b9-b364-49d37826b540\",\"timestamp\":1789078001906}"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -55373,6 +55387,10 @@
     {
       "at": 1789077608463,
       "equity": 53.37
+    },
+    {
+      "at": 1789077976202,
+      "equity": 53.37
     }
   ],
   "live:revolut-x-order-map": {
@@ -55634,6 +55652,18 @@
     {
       "id": "7383943995306246501",
       "data": "confirm:reject:mtvyjkbr.t2nwz8"
+    },
+    {
+      "id": "7383943995269486025",
+      "data": "confirm:approve:mtw2mmwo.1o93o4u"
+    },
+    {
+      "id": "7383943998833544477",
+      "data": "confirm:approve:mtw2mmwo.1o93o4u"
+    },
+    {
+      "id": "7383943996155719252",
+      "data": "confirm:approve:mtw2mmwo.1o93o4u"
     }
   ],
   "live:blackout-windows-cache": {
@@ -55732,21 +55762,10 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904863,
+  "telegram-shared-update-offset": 447904867,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "external-reconcile:XBTEUR:1788970622093": {
-      "reason": "stop-loss",
-      "queuedAt": 1789077608463
-    }
-  },
-  "live:confirmation-gate-pending": {
-    "external-reconcile:XBTEUR:1788970622093:exit:1789077608463": {
-      "sentAt": 1789077630840,
-      "messageId": 704,
-      "token": "mtw2mmwo.1o93o4u"
-    }
-  },
+  "live:live-exit-pending": {},
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 7719.051605444327,
