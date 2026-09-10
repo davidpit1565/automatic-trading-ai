@@ -179,6 +179,52 @@ export async function proposeLiveExit(
           params.onRealizedPnl?.((fillPrice - position.entryPrice) * result.report.filledQuantity, now);
           reduceLivePositionQuantity(store, position.id, result.report.filledQuantity);
         }
+      } else if (result.report.state === 'rejected' && /insufficient balance/i.test(result.report.detail)) {
+        // Real incident, 2026-09-10: a position this bot tracks can stop
+        // matching reality (a manual sell David makes directly in Revolut X
+        // — the very thing `liveManualTradeSync.mts`'s broker-balance
+        // reconciliation exists to catch every cycle — or a rounding/timing
+        // gap between that reconciliation and this exit check). Before this
+        // fix, a broker rejection here left the position tracked exactly as
+        // it was, so the NEXT cycle's stop/target check just proposed the
+        // same doomed sell again — an infinite confirm-and-fail loop David
+        // hit repeatedly (8+ times for one dust-sized BTC position) with no
+        // way out except waiting for a different reconciliation pass to
+        // eventually notice. Revolut X's own rejection is fresher, more
+        // direct evidence than waiting on that separate pass: it just told
+        // us, authoritatively, that this exact quantity isn't really held.
+        // Reconcile down to what the broker actually reports for this asset
+        // right now, so the SAME doomed sell is never proposed again.
+        const base = position.symbol.split(/[/-]/)[0];
+        try {
+          const brokerPositions = await params.flowParams.brokerAdapter.fetchPositions();
+          const realQty = brokerPositions.find((p) => p.symbol === base)?.quantity ?? 0;
+          if (realQty < position.quantity) {
+            if (realQty <= 0) {
+              forgetLivePosition(store, position.id);
+              clearOutstandingEntry(store, position.entryAssessment.asset);
+            } else {
+              reduceLivePositionQuantity(store, position.id, position.quantity - realQty);
+            }
+            params.flowParams.audit.append({
+              timestamp: now,
+              intentId: position.id,
+              event: 'rejected',
+              mode: 'live',
+              detail:
+                `broker confirmed insufficient balance for ${base} — reconciled tracked quantity from ` +
+                `${position.quantity} down to ${Math.max(0, realQty)} instead of retrying the same doomed sell`,
+            });
+          }
+        } catch (fetchCause) {
+          // Broker balance unreachable right now — leave the position
+          // tracked as-is; the next rejected attempt (or the next regular
+          // broker-balance reconciliation cycle) gets another chance.
+          console.error(
+            `proposeLiveExit: could not verify real ${base} balance after an insufficient-balance rejection:`,
+            fetchCause instanceof Error ? fetchCause.message : fetchCause,
+          );
+        }
       }
     } catch (cause) {
       console.error(

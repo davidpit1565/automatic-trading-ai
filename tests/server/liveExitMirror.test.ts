@@ -339,6 +339,171 @@ describe('checkAutomaticExits', () => {
     expect(openLivePositions(store)).toEqual([]);
   });
 
+  it("reconciles a position fully away when the broker rejects an exit for insufficient balance and now reports ZERO real holdings (real incident, 2026-09-10: David sold the real coin directly in Revolut X; the SAME doomed sell was proposed again and again — 8+ times in the real incident — since a plain rejection alone never corrected the tracked quantity)", async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 }); // tracked quantity 0.01
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const rejectedReport: OrderStatusReport = {
+      intentId: 'entry-1:exit:2000',
+      state: 'rejected',
+      filledQuantity: 0,
+      avgFillPrice: null,
+      detail: 'Revolut X rejected the order: HTTP 422 — {"message":"Insufficient balance of ₿0; required ₿0.01"}',
+    };
+    const broker: BrokerAdapter = {
+      name: 'fake-broker',
+      mode: 'live',
+      async submit() {
+        return rejectedReport;
+      },
+      async cancel(): Promise<OrderStatusReport> {
+        throw new Error('not used');
+      },
+      async fetchPositions(): Promise<BrokerPosition[]> {
+        return []; // broker genuinely holds none of this asset now
+      },
+    };
+
+    const outcomes = await checkAutomaticExits(
+      store,
+      fakeSource(ok([candle(94)])), // triggers a stop-loss exit
+      '1h',
+      {},
+      { confirmationGate: fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' }), brokerAdapter: broker, killSwitch, audit, verifySymbolExists: async () => true },
+      2000,
+    );
+    expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: rejectedReport }]);
+    // Reconciled away — no phantom position left to retry the same doomed sell.
+    expect(openLivePositions(store)).toEqual([]);
+  });
+
+  it('shrinks (not forgets) a position when the broker rejects an exit for insufficient balance but still reports SOME real holdings', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 }); // tracked quantity 0.01
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const rejectedReport: OrderStatusReport = {
+      intentId: 'entry-1:exit:2000',
+      state: 'rejected',
+      filledQuantity: 0,
+      avgFillPrice: null,
+      detail: 'Revolut X rejected the order: HTTP 422 — {"message":"Insufficient balance of ₿0.004; required ₿0.01"}',
+    };
+    const broker: BrokerAdapter = {
+      name: 'fake-broker',
+      mode: 'live',
+      async submit() {
+        return rejectedReport;
+      },
+      async cancel(): Promise<OrderStatusReport> {
+        throw new Error('not used');
+      },
+      async fetchPositions(): Promise<BrokerPosition[]> {
+        return [{ symbol: 'XBTEUR', quantity: 0.004, avgCost: 0 }];
+      },
+    };
+
+    const outcomes = await checkAutomaticExits(
+      store,
+      fakeSource(ok([candle(94)])),
+      '1h',
+      {},
+      { confirmationGate: fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' }), brokerAdapter: broker, killSwitch, audit, verifySymbolExists: async () => true },
+      2000,
+    );
+    expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: rejectedReport }]);
+    const positions = openLivePositions(store);
+    expect(positions).toHaveLength(1);
+    expect(positions[0]!.quantity).toBeCloseTo(0.004, 10);
+  });
+
+  it('does NOT reconcile away a position on a rejection for a DIFFERENT reason (not insufficient balance) — a generic rejection still just retries later, unchanged from existing behavior', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    let fetchPositionsCalled = false;
+    const rejectedReport: OrderStatusReport = {
+      intentId: 'entry-1:exit:2000',
+      state: 'rejected',
+      filledQuantity: 0,
+      avgFillPrice: null,
+      detail: 'Revolut X rejected the order: HTTP 400 — bad price precision',
+    };
+    const broker: BrokerAdapter = {
+      name: 'fake-broker',
+      mode: 'live',
+      async submit() {
+        return rejectedReport;
+      },
+      async cancel(): Promise<OrderStatusReport> {
+        throw new Error('not used');
+      },
+      async fetchPositions(): Promise<BrokerPosition[]> {
+        fetchPositionsCalled = true;
+        return [];
+      },
+    };
+
+    await checkAutomaticExits(
+      store,
+      fakeSource(ok([candle(94)])),
+      '1h',
+      {},
+      { confirmationGate: fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' }), brokerAdapter: broker, killSwitch, audit, verifySymbolExists: async () => true },
+      2000,
+    );
+    // The self-heal path is scoped ONLY to an insufficient-balance rejection —
+    // any other rejection reason must behave exactly as before this fix.
+    expect(fetchPositionsCalled).toBe(false);
+    expect(openLivePositions(store)).toHaveLength(1);
+    expect(openLivePositions(store)[0]!.quantity).toBeCloseTo(0.01, 10);
+  });
+
+  it('leaves the position tracked (retries later) when the broker balance check itself fails after an insufficient-balance rejection', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const rejectedReport: OrderStatusReport = {
+      intentId: 'entry-1:exit:2000',
+      state: 'rejected',
+      filledQuantity: 0,
+      avgFillPrice: null,
+      detail: 'Revolut X rejected the order: HTTP 422 — {"message":"Insufficient balance of ₿0; required ₿0.01"}',
+    };
+    const broker: BrokerAdapter = {
+      name: 'fake-broker',
+      mode: 'live',
+      async submit() {
+        return rejectedReport;
+      },
+      async cancel(): Promise<OrderStatusReport> {
+        throw new Error('not used');
+      },
+      async fetchPositions(): Promise<BrokerPosition[]> {
+        throw new Error('network error');
+      },
+    };
+
+    const outcomes = await checkAutomaticExits(
+      store,
+      fakeSource(ok([candle(94)])),
+      '1h',
+      {},
+      { confirmationGate: fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' }), brokerAdapter: broker, killSwitch, audit, verifySymbolExists: async () => true },
+      2000,
+    );
+    expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: rejectedReport }]);
+    expect(openLivePositions(store)).toHaveLength(1);
+    expect(openLivePositions(store)[0]!.quantity).toBeCloseTo(0.01, 10);
+  });
+
   it('keeps checking OTHER open positions when one throws mid-cycle (found in review, 2026-09-03: an unhandled exception for one position used to abort checking every other position that cycle)', async () => {
     const store = new MemoryStore();
     initLiveCash(store, 100);
