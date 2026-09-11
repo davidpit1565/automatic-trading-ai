@@ -1861,7 +1861,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1789130015007,
+    "at": 1789130352908,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1877,10 +1877,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787130591795,
-      "equity": 9568.52
-    },
     {
       "at": 1787130903123,
       "equity": 9568.52
@@ -21876,6 +21872,10 @@
     {
       "at": 1789130015007,
       "equity": 10260.77
+    },
+    {
+      "at": 1789130352908,
+      "equity": 10260.77
     }
   ],
   "trade-journal": [
@@ -23498,7 +23498,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -15.41% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -16.00% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23575,10 +23575,10 @@
   },
   "shadow:mean-reversion:shadow-started-at": 1785254092443,
   "shadow:mean-reversion:portfolio-engine": {
-    "cash": 5468.219951050019,
+    "cash": 7338.69762497919,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -482.6836115509996,
+    "closedRealizedPnl": -430.65240606539055,
     "dayAnchor": {
       "day": "2026-09-11",
       "equity": 8927.347405923934
@@ -23586,7 +23586,7 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 7837.0591745154325,
+    "cash": 3918.419342340116,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 725.6768585862108,
@@ -23596,7 +23596,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1789130015007,
+    "at": 1789130352908,
     "standings": [
       {
         "key": "live-mirror",
@@ -23645,23 +23645,23 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9189.816758970213,
-        "returnPct": -8.101832410297865,
-        "trades": 83,
-        "winRatePct": 38.55421686746988,
-        "profitFactor": 0.6542072174192561,
-        "openPositions": 2,
+        "equity": 9215.219794578345,
+        "returnPct": -7.8478020542165545,
+        "trades": 84,
+        "winRatePct": 39.285714285714285,
+        "profitFactor": 0.6914821836607777,
+        "openPositions": 1,
         "startedAt": 1785254092443
       },
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9797.978057549348,
-        "returnPct": -2.020219424506522,
+        "equity": 9803.850978777305,
+        "returnPct": -1.961490212226945,
         "trades": 192,
         "winRatePct": 40.10416666666667,
         "profitFactor": 1.1842066457573903,
-        "openPositions": 1,
+        "openPositions": 3,
         "startedAt": 1785254092443
       },
       {
@@ -23722,9 +23722,47 @@
       "takeProfit": 110.32705525242301,
       "feesPaid": 5.882206035413135,
       "realizedPnl": 0,
-      "highestPrice": 106.83,
+      "highestPrice": 107.85,
       "lowestPrice": 106.83,
       "confidence": 59.16793881152482,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "ETHEUR:1789130352908:1",
+      "symbol": "ETHEUR",
+      "openedAt": 1789130352908,
+      "entryPrice": 2155.62,
+      "quantity": 0.9107834762217702,
+      "initialQuantity": 0.9107834762217702,
+      "stopLoss": 2123.5193443279018,
+      "takeProfit": 2219.8213113441966,
+      "feesPaid": 5.889909231039517,
+      "realizedPnl": 0,
+      "highestPrice": 2155.62,
+      "lowestPrice": 2155.62,
+      "confidence": 70,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "XBTEUR:1789130352908:2",
+      "symbol": "XBTEUR",
+      "openedAt": 1789130352908,
+      "entryPrice": 66899.2,
+      "quantity": 0.0290529034418542,
+      "initialQuantity": 0.0290529034418542,
+      "stopLoss": 66221.15190122204,
+      "takeProfit": 68255.29619755593,
+      "feesPaid": 5.830847993811878,
+      "realizedPnl": 0,
+      "highestPrice": 66899.2,
+      "lowestPrice": 66899.2,
+      "confidence": 70,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -23732,62 +23770,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1786107048382,
-      "intentId": "XBTEUR:1786107048382",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused XBTEUR: maximum open positions reached (5/5)"
-    },
-    {
-      "timestamp": 1786107048382,
-      "intentId": "DOGEEUR:1786107048382",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused DOGEEUR: maximum open positions reached (5/5)"
-    },
-    {
-      "timestamp": 1786107048382,
-      "intentId": "SOLEUR:1786107048382",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused SOLEUR: maximum open positions reached (5/5)"
-    },
-    {
-      "timestamp": 1786107357201,
-      "intentId": "XBTEUR:1786107357201",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused XBTEUR: maximum open positions reached (5/5)"
-    },
-    {
-      "timestamp": 1786107357201,
-      "intentId": "SOLEUR:1786107357201",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused SOLEUR: maximum open positions reached (5/5)"
-    },
-    {
-      "timestamp": 1786107357201,
-      "intentId": "DOGEEUR:1786107357201",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused DOGEEUR: maximum open positions reached (5/5)"
-    },
-    {
-      "timestamp": 1786110756759,
-      "intentId": "SOLEUR:1786110756759",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused SOLEUR: maximum open positions reached (5/5)"
-    },
-    {
-      "timestamp": 1786111065733,
-      "intentId": "SOLEUR:1786111065733",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused SOLEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1786112923641,
       "intentId": "SOLEUR:1786112923641",
@@ -30731,6 +30713,62 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry AAVEEUR: 18.353789620309946 @ 106.83 (stop 105.0814723737885, target 110.32705525242301, confidence 59)"
+    },
+    {
+      "timestamp": 1789130352908,
+      "intentId": "ETHEUR:1789130352908:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry ETHEUR: 0.9107834762217702 @ 2155.62 (stop 2123.5193443279018, target 2219.8213113441966, confidence 70)"
+    },
+    {
+      "timestamp": 1789130352908,
+      "intentId": "XBTEUR:1789130352908:2",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry XBTEUR: 0.0290529034418542 @ 66899.2 (stop 66221.15190122204, target 68255.29619755593, confidence 70)"
+    },
+    {
+      "timestamp": 1789130352908,
+      "intentId": "LTCEUR:1789130352908",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LTCEUR: no exposure headroom: 5886.38 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1789130352908,
+      "intentId": "SOLEUR:1789130352908",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused SOLEUR: no exposure headroom: 5886.38 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1789130352908,
+      "intentId": "DOGEEUR:1789130352908",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused DOGEEUR: no exposure headroom: 5886.38 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1789130352908,
+      "intentId": "XRPEUR:1789130352908",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused XRPEUR: no exposure headroom: 5886.38 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1789130352908,
+      "intentId": "XLMEUR:1789130352908",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused XLMEUR: no exposure headroom: 5886.38 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1789130352908,
+      "intentId": "ENAEUR:1789130352908",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ENAEUR: no exposure headroom: 5886.38 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -35153,25 +35191,6 @@
   ],
   "shadow:mean-reversion:open-positions": [
     {
-      "id": "ETHEUR:1789044439080:2",
-      "symbol": "ETHEUR",
-      "openedAt": 1789044439080,
-      "entryPrice": 2089.37,
-      "quantity": 0.8703324296048864,
-      "initialQuantity": 0.8703324296048864,
-      "stopLoss": 2061.5899905438114,
-      "takeProfit": 2144.930018912377,
-      "feesPaid": 5.455339405330685,
-      "realizedPnl": 0,
-      "highestPrice": 2133,
-      "lowestPrice": 2077.32,
-      "confidence": 32.053449877828314,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
       "id": "ATOMEUR:1789129676918:1",
       "symbol": "ATOMEUR",
       "openedAt": 1789129676918,
@@ -35182,7 +35201,7 @@
       "takeProfit": 1.5549883208767883,
       "feesPaid": 5.4895480294272305,
       "realizedPnl": 0,
-      "highestPrice": 1.495,
+      "highestPrice": 1.5037,
       "lowestPrice": 1.4663,
       "confidence": 31.133567138497796,
       "validationVerdict": null,
@@ -37305,6 +37324,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ATOMEUR: 1247.9365362766216 @ 1.4663 (stop 1.4219558395616059, target 1.5549883208767883, confidence 31)"
+    },
+    {
+      "timestamp": 1789130352908,
+      "intentId": "ETHEUR:1789044439080:2",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ETHEUR: 0.8703324296048864 @ 2155.62 (take-profit)"
     }
   ],
   "shadow:live-mirror:open-positions": [],
@@ -44222,6 +44248,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 30.456833763201217,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "ETHEUR:1789044439080:2",
+      "symbol": "ETHEUR",
+      "entryTimestamp": 1789044439080,
+      "exitTimestamp": 1789130352908,
+      "entryPrice": 2089.37,
+      "exitPrice": 2155.62,
+      "positionSize": 0.8703324296048864,
+      "stopLoss": 2061.5899905438114,
+      "takeProfit": 2144.930018912377,
+      "exitReason": "take-profit",
+      "fees": 11.083657381045342,
+      "slippage": 0,
+      "holdingDurationMs": 85913828,
+      "mfePct": 3.1708122544116173,
+      "maePct": 0.5767288704250433,
+      "realizedPnl": 52.03120548560907,
+      "returnPct": 2.861299817648382,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 32.053449877828314,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
@@ -56067,6 +56116,10 @@
     {
       "at": 1789130015007,
       "equity": 51.28
+    },
+    {
+      "at": 1789130352908,
+      "equity": 51.28
     }
   ],
   "live:revolut-x-order-map": {
@@ -56370,7 +56423,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1789130015007,
+    "at": 1789130352908,
     "standings": [
       {
         "key": "candidate-watch",
