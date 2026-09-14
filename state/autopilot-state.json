@@ -1861,7 +1861,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1789394412156,
+    "at": 1789394747402,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1877,10 +1877,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787337342925,
-      "equity": 10237.42
-    },
     {
       "at": 1787337656127,
       "equity": 10220.28
@@ -21876,6 +21872,10 @@
     {
       "at": 1789394412156,
       "equity": 10260.77
+    },
+    {
+      "at": 1789394747402,
+      "equity": 10260.77
     }
   ],
   "trade-journal": [
@@ -23498,7 +23498,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -17.75% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -17.81% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23596,7 +23596,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1789394412156,
+    "at": 1789394747402,
     "standings": [
       {
         "key": "live-mirror",
@@ -23645,8 +23645,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9077.73531908316,
-        "returnPct": -9.222646809168399,
+        "equity": 9076.824769074716,
+        "returnPct": -9.231752309252842,
         "trades": 92,
         "winRatePct": 39.130434782608695,
         "profitFactor": 0.677041757913735,
@@ -23656,8 +23656,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9727.829735162344,
-        "returnPct": -2.7217026483765583,
+        "equity": 9735.089028424816,
+        "returnPct": -2.649109715751838,
         "trades": 210,
         "winRatePct": 39.523809523809526,
         "profitFactor": 1.1536700578503498,
@@ -59701,6 +59701,10 @@
     {
       "at": 1789394412156,
       "equity": 51.28
+    },
+    {
+      "at": 1789394747402,
+      "equity": 51.28
     }
   ],
   "live:revolut-x-order-map": {
@@ -59994,7 +59998,7 @@
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
-    "cash": 9825.206629028002,
+    "cash": 7854.270179244984,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -116.8095101319279,
@@ -60004,22 +60008,42 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1789394412156,
+    "at": 1789394747402,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "13 new candidates, production defaults (forward test only — not real trading)",
-        "equity": 9825.206629028002,
-        "returnPct": -1.7479337097199823,
+        "equity": 9819.311505050584,
+        "returnPct": -1.8068849494941606,
         "trades": 11,
         "winRatePct": 36.36363636363637,
         "profitFactor": 0.8219942366539637,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1788551468687
       }
     ]
   },
-  "shadow:candidate-watch:open-positions": [],
+  "shadow:candidate-watch:open-positions": [
+    {
+      "id": "PENDLEEUR:1789394747402:0",
+      "symbol": "PENDLEEUR",
+      "openedAt": 1789394747402,
+      "entryPrice": 1.985,
+      "quantity": 989.9452522950128,
+      "initialQuantity": 989.9452522950128,
+      "stopLoss": 1.9357018732224016,
+      "takeProfit": 2.0835962535551973,
+      "feesPaid": 5.895123977416802,
+      "realizedPnl": 0,
+      "highestPrice": 1.985,
+      "lowestPrice": 1.985,
+      "confidence": 62.439495955286844,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:candidate-watch:audit-log": [
     {
       "timestamp": 1788598183187,
@@ -60174,6 +60198,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit MINAEUR: 13746.969320899809 @ 0.086 (stop-loss)"
+    },
+    {
+      "timestamp": 1789394747402,
+      "intentId": "PENDLEEUR:1789394747402:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry PENDLEEUR: 989.9452522950128 @ 1.985 (stop 1.9357018732224016, target 2.0835962535551973, confidence 62)"
     }
   ],
   "live:live-blackout-queue": {},
