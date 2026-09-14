@@ -571,14 +571,14 @@ describe('transient failure handling', () => {
 });
 
 describe('CANDIDATE_INSTRUMENTS (forward-test-only, never real trading)', () => {
-  it('lists exactly the 13 measured candidates, each a valid EUR pair', () => {
-    expect(CANDIDATE_INSTRUMENTS).toHaveLength(13);
+  it('lists exactly the 15 measured candidates, each a valid EUR pair', () => {
+    expect(CANDIDATE_INSTRUMENTS).toHaveLength(15);
     for (const i of CANDIDATE_INSTRUMENTS) {
       expect(i.quote).toBe('EUR');
       expect(i.symbol).toBe(`${i.base}EUR`); // no Kraken alias needed for any of these
     }
     expect(CANDIDATE_INSTRUMENTS.map((i) => i.base)).toEqual([
-      'PUMP', 'XMR', 'SPX', 'CRV', 'DASH', 'ZRO', 'BONK', 'OP', 'SYRUP', 'MINA', 'TIA', 'CHIP', 'PENDLE',
+      'PUMP', 'XMR', 'SPX', 'CRV', 'DASH', 'ZRO', 'BONK', 'OP', 'SYRUP', 'MINA', 'TIA', 'CHIP', 'PENDLE', 'NPC', 'ARB',
     ]);
   });
 

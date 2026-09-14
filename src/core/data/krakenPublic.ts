@@ -128,6 +128,12 @@ export const CANDIDATE_INSTRUMENTS: Instrument[] = [
   { symbol: 'TIAEUR', base: 'TIA', quote: 'EUR' },
   { symbol: 'CHIPEUR', base: 'CHIP', quote: 'EUR' },
   { symbol: 'PENDLEEUR', base: 'PENDLE', quote: 'EUR' },
+  // Added 2026-09-14 from that week's market-scan measurement (real Kraken
+  // history): NPC +12.16%/PF 3.77/13 trades/69.2% win, ARB +6.23%/PF
+  // 3.71/7 trades/71.4% win — David approved both. Verified `online` on
+  // Kraken's live AssetPairs the same day; altname equals base+EUR for both.
+  { symbol: 'NPCEUR', base: 'NPC', quote: 'EUR' },
+  { symbol: 'ARBEUR', base: 'ARB', quote: 'EUR' },
 ];
 
 /** Base asset codes (BTC, ETH, …) actually traded by the agent — for the UI's
