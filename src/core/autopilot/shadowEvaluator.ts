@@ -274,13 +274,19 @@ async function runOne(
  * like-for-like baseline running on the same bars.
  */
 export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
+  // Whale-flow was promoted into REAL production 2026-09-09 (see
+  // autopilotRunner.mts's main() — this candidate's own forward record
+  // earned it). This candidate must include the same check, or its name
+  // would be a lie: a 'live-mirror' that quietly omits a gate production
+  // actually applies is measuring the wrong thing.
   {
     key: 'live-mirror',
-    label: 'Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate)',
+    label: 'Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate / whale-flow)',
     minConfidence: 40,
     maxRsiForLong: 65,
     trailing: { activateR: 1.5, trailR: 1.5 },
     confirmationTimeframe: '4h',
+    useWhaleFlowCheck: true,
   },
   {
     key: 'no-confirm',
@@ -322,19 +328,6 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     maxRsiForLong: 100,
     trailing: { activateR: 1.5, trailR: 1.5 },
     evaluate: breakoutSignal,
-  },
-  // Otherwise identical to live-mirror — isolates exactly what refusing to
-  // buy into heavy net selling among large trades contributes. No historical
-  // validation exists for this idea (see whaleFlow.ts); it earns production
-  // only by accumulating SHADOW_MEANINGFUL_TRADES+ of real forward record.
-  {
-    key: 'whale-flow',
-    label: 'Refuses entries during heavy net selling by large traders',
-    minConfidence: 40,
-    maxRsiForLong: 65,
-    trailing: { activateR: 1.5, trailR: 1.5 },
-    confirmationTimeframe: '4h',
-    useWhaleFlowCheck: true,
   },
   // Otherwise identical to live-mirror — isolates what refusing to buy while
   // OKX's own top traders are net-short contributes. Real history DOES

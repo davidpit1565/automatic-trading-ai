@@ -462,15 +462,16 @@ async function buildMarketRegimeCheck(
 }
 
 /**
- * Builds the whale-flow gate — used by the 'whale-flow' shadow candidate AND,
- * since 2026-09-09, wired into the production `PaperAutoPilot` itself (see
- * `main()`'s doc comment there for the measured record that earned this).
- * See `whaleFlow.ts`'s own doc comment for why this idea has no historical
- * backtest to validate against instead. Feature-detects `getRecentTrades` on
- * the real source — absent on sources without a real trade tape (e.g. a
- * future non-Kraken fallback) — and fetches fresh on every check since recent
- * trades change fast, unlike a daily regime. Fails OPEN (allows the entry) on
- * any fetch failure.
+ * Builds the whale-flow gate — wired into the production `PaperAutoPilot`
+ * itself since 2026-09-09 (see `main()`'s doc comment there for the measured
+ * record that earned this) and into the 'live-mirror' shadow candidate,
+ * which must include it too or its name would be a lie (see
+ * `SHADOW_CANDIDATES`'s own comment). See `whaleFlow.ts`'s own doc comment
+ * for why this idea has no historical backtest to validate against instead.
+ * Feature-detects `getRecentTrades` on the real source — absent on sources
+ * without a real trade tape (e.g. a future non-Kraken fallback) — and
+ * fetches fresh on every check since recent trades change fast, unlike a
+ * daily regime. Fails OPEN (allows the entry) on any fetch failure.
  */
 function buildWhaleFlowCheck(
   source: MarketDataSource,
@@ -1354,8 +1355,9 @@ async function runShadows(
   try {
     const caching = new CachingSource(source);
     // Built from the REAL source (not the caching wrapper — CachingSource
-    // only proxies candles/instruments), so only the 'whale-flow' candidate
-    // ever calls it.
+    // only proxies candles/instruments). Passed to every candidate with
+    // `useWhaleFlowCheck: true` — currently just 'live-mirror', matching
+    // what real production now does (see this file's `main()`).
     const whaleFlowCheck = buildWhaleFlowCheck(source) ?? undefined;
     const topTraderCheck = await buildTopTraderCheck(symbols);
     // Reads through the shared CachingSource — the AI check's candle fetch
