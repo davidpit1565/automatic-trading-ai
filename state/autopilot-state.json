@@ -1858,10 +1858,17 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ATOMEUR: 879.3146167592216 @ 1.5926 (stop-loss)"
+    },
+    {
+      "timestamp": 1789420174501,
+      "intentId": "XLMEUR:1789420174501",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "daily regime filter refused XLMEUR: larger trend is down"
     }
   ],
   "autopilot-last-run": {
-    "at": 1789419838931,
+    "at": 1789420174501,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -1877,10 +1884,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787352371648,
-      "equity": 10373.53
-    },
     {
       "at": 1787352682610,
       "equity": 10373.53
@@ -21876,6 +21879,10 @@
     {
       "at": 1789419838931,
       "equity": 10260.77
+    },
+    {
+      "at": 1789420174501,
+      "equity": 10260.77
     }
   ],
   "trade-journal": [
@@ -23498,7 +23505,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -18.40% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -18.53% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23542,7 +23549,7 @@
   },
   "shadow:no-confirm:shadow-started-at": 1785254092443,
   "shadow:no-confirm:portfolio-engine": {
-    "cash": 10937.44451061218,
+    "cash": 8743.393141783377,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 1182.4292493530068,
@@ -23553,7 +23560,7 @@
   },
   "shadow:fixed-stop:shadow-started-at": 1785254092443,
   "shadow:fixed-stop:portfolio-engine": {
-    "cash": 10810.87076392555,
+    "cash": 8642.210088682084,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 1055.5639515249627,
@@ -23586,7 +23593,7 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 5879.835346830215,
+    "cash": 3919.0273650962026,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 885.7132225545181,
@@ -23596,7 +23603,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1789419838931,
+    "at": 1789420174501,
     "standings": [
       {
         "key": "live-mirror",
@@ -23612,23 +23619,23 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10937.44451061218,
-        "returnPct": 9.374445106121803,
+        "equity": 10929.95490390181,
+        "returnPct": 9.299549039018093,
         "trades": 41,
         "winRatePct": 56.09756097560976,
         "profitFactor": 1.9891397447105197,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1785254092443
       },
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10810.87076392555,
-        "returnPct": 8.108707639255499,
+        "equity": 10803.467830805304,
+        "returnPct": 8.034678308053044,
         "trades": 41,
         "winRatePct": 53.65853658536586,
         "profitFactor": 1.8086063735003743,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1785254092443
       },
       {
@@ -23645,8 +23652,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9151.365257940242,
-        "returnPct": -8.486347420597577,
+        "equity": 9153.643553583363,
+        "returnPct": -8.463564464166375,
         "trades": 93,
         "winRatePct": 39.784946236559136,
         "profitFactor": 0.7309300463534827,
@@ -23656,12 +23663,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9776.775290216852,
-        "returnPct": -2.2322470978314777,
+        "equity": 9768.092058301034,
+        "returnPct": -2.319079416989662,
         "trades": 216,
         "winRatePct": 40.74074074074074,
         "profitFactor": 1.202240926117112,
-        "openPositions": 4,
+        "openPositions": 5,
         "startedAt": 1785254092443
       },
       {
@@ -23678,23 +23685,23 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10739.480854550218,
-        "returnPct": 7.394808545502182,
+        "equity": 10732.126806920893,
+        "returnPct": 7.321268069208927,
         "trades": 29,
         "winRatePct": 55.172413793103445,
         "profitFactor": 1.965554893816263,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1787242347381
       },
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10000,
-        "returnPct": 0,
+        "equity": 9993.152324838673,
+        "returnPct": -0.0684767516132706,
         "trades": 0,
         "winRatePct": null,
         "profitFactor": null,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1788970622093
       }
     ]
@@ -23712,7 +23719,7 @@
       "feesPaid": 5.8333186961890595,
       "realizedPnl": 0,
       "highestPrice": 0.170054,
-      "lowestPrice": 0.167547,
+      "lowestPrice": 0.167517,
       "confidence": 61.01782524355932,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -23731,7 +23738,7 @@
       "feesPaid": 5.927017612811214,
       "realizedPnl": 0,
       "highestPrice": 5.8698,
-      "lowestPrice": 5.7601,
+      "lowestPrice": 5.7516,
       "confidence": 60.154162658755624,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -23775,16 +23782,28 @@
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
       "exits": []
+    },
+    {
+      "id": "ETHEUR:1789420174501:4",
+      "symbol": "ETHEUR",
+      "openedAt": 1789420174501,
+      "entryPrice": 2214.9,
+      "quantity": 0.8826326932489865,
+      "initialQuantity": 0.8826326932489865,
+      "stopLoss": 2178.437791976428,
+      "takeProfit": 2287.824416047144,
+      "feesPaid": 5.864829456831541,
+      "realizedPnl": 0,
+      "highestPrice": 2214.9,
+      "lowestPrice": 2214.9,
+      "confidence": 55.808705538384004,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1787129657668,
-      "intentId": "LTCEUR:1787129657668",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused LTCEUR: no exposure headroom: 5544.90 already deployed of the 60% total-exposure limit"
-    },
     {
       "timestamp": 1787129657668,
       "intentId": "XRPEUR:1787129657668",
@@ -30777,6 +30796,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit AAVEEUR: 17.1661918443506 @ 112.9 (stop-loss)"
+    },
+    {
+      "timestamp": 1789420174501,
+      "intentId": "ETHEUR:1789420174501:4",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry ETHEUR: 0.8826326932489865 @ 2214.9 (stop 2178.437791976428, target 2287.824416047144, confidence 56)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -39126,9 +39152,36 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ATOMEUR: 1320.0887411437352 @ 1.5968 (stop-loss)"
+    },
+    {
+      "timestamp": 1789420174501,
+      "intentId": "XLMEUR:1789420174501",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused XLMEUR: large trades show heavy net selling"
     }
   ],
-  "shadow:no-confirm:open-positions": [],
+  "shadow:no-confirm:open-positions": [
+    {
+      "id": "XLMEUR:1789420174501:0",
+      "symbol": "XLMEUR",
+      "openedAt": 1789420174501,
+      "entryPrice": 0.167517,
+      "quantity": 13058.309915545504,
+      "initialQuantity": 13058.309915545504,
+      "stopLoss": 0.1631580651036268,
+      "takeProfit": 0.17623486979274638,
+      "feesPaid": 6.562466706367309,
+      "realizedPnl": 0,
+      "highestPrice": 0.167517,
+      "lowestPrice": 0.167517,
+      "confidence": 42.19045933930659,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:no-confirm:audit-log": [
     {
       "timestamp": 1785347897947,
@@ -39850,9 +39903,36 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ATOMEUR: 1320.0887411437352 @ 1.5968 (stop-loss)"
+    },
+    {
+      "timestamp": 1789420174501,
+      "intentId": "XLMEUR:1789420174501:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry XLMEUR: 13058.309915545504 @ 0.167517 (stop 0.1631580651036268, target 0.17623486979274638, confidence 42)"
     }
   ],
-  "shadow:fixed-stop:open-positions": [],
+  "shadow:fixed-stop:open-positions": [
+    {
+      "id": "XLMEUR:1789420174501:0",
+      "symbol": "XLMEUR",
+      "openedAt": 1789420174501,
+      "entryPrice": 0.167517,
+      "quantity": 12907.192420978827,
+      "initialQuantity": 12907.192420978827,
+      "stopLoss": 0.1631580651036268,
+      "takeProfit": 0.17623486979274638,
+      "feesPaid": 6.4865224583553305,
+      "realizedPnl": 0,
+      "highestPrice": 0.167517,
+      "lowestPrice": 0.167517,
+      "confidence": 50.19045933930659,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:fixed-stop:audit-log": [
     {
       "timestamp": 1785347897947,
@@ -40574,6 +40654,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ATOMEUR: 1304.8119936582252 @ 1.5968 (stop-loss)"
+    },
+    {
+      "timestamp": 1789420174501,
+      "intentId": "XLMEUR:1789420174501:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry XLMEUR: 12907.192420978827 @ 0.167517 (stop 0.1631580651036268, target 0.17623486979274638, confidence 50)"
     }
   ],
   "shadow:live-mirror:trade-journal": [
@@ -47509,6 +47596,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ATOMEUR: 1185.2721060634397 @ 1.5968 (stop-loss)"
+    },
+    {
+      "timestamp": 1789420174501,
+      "intentId": "XLMEUR:1789420174501",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused XLMEUR: OKX top traders are net-short"
     }
   ],
   "shadow:whale-flow:open-positions": [],
@@ -48300,7 +48394,7 @@
   ],
   "shadow:ai-judgment:shadow-started-at": 1787242347381,
   "shadow:ai-judgment:portfolio-engine": {
-    "cash": 10739.480854550218,
+    "cash": 8585.140995127444,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 909.4899803033858,
@@ -48309,7 +48403,27 @@
       "equity": 10739.480854550218
     }
   },
-  "shadow:ai-judgment:open-positions": [],
+  "shadow:ai-judgment:open-positions": [
+    {
+      "id": "XLMEUR:1789420174501:0",
+      "symbol": "XLMEUR",
+      "openedAt": 1789420174501,
+      "entryPrice": 0.167517,
+      "quantity": 12821.959388659321,
+      "initialQuantity": 12821.959388659321,
+      "stopLoss": 0.1631580651036268,
+      "takeProfit": 0.17623486979274638,
+      "feesPaid": 6.443688512730131,
+      "realizedPnl": 0,
+      "highestPrice": 0.167517,
+      "lowestPrice": 0.167517,
+      "confidence": 50.19045933930659,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:ai-judgment:audit-log": [
     {
       "timestamp": 1787242970406,
@@ -48898,6 +49012,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ATOMEUR: 1296.1956285186163 @ 1.5968 (stop-loss)"
+    },
+    {
+      "timestamp": 1789420174501,
+      "intentId": "XLMEUR:1789420174501:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry XLMEUR: 12821.959388659321 @ 0.167517 (stop 0.1631580651036268, target 0.17623486979274638, confidence 50)"
     }
   ],
   "shadow:ai-judgment:trade-journal": [
@@ -60034,6 +60155,10 @@
     {
       "at": 1789419838931,
       "equity": 51.28
+    },
+    {
+      "at": 1789420174501,
+      "equity": 51.28
     }
   ],
   "live:revolut-x-order-map": {
@@ -60337,7 +60462,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1789419838931,
+    "at": 1789420174501,
     "standings": [
       {
         "key": "candidate-watch",
@@ -60905,7 +61030,7 @@
   ],
   "shadow:correlation-capped:shadow-started-at": 1788970622093,
   "shadow:correlation-capped:portfolio-engine": {
-    "cash": 10000,
+    "cash": 7994,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 0,
@@ -61414,6 +61539,36 @@
       "key": "shadow:mean-reversion:audit-log",
       "at": 1789412393789,
       "label": "cycle 43/70"
+    }
+  ],
+  "shadow:correlation-capped:open-positions": [
+    {
+      "id": "XLMEUR:1789420174501:0",
+      "symbol": "XLMEUR",
+      "openedAt": 1789420174501,
+      "entryPrice": 0.167517,
+      "quantity": 11939.086779252255,
+      "initialQuantity": 11939.086779252255,
+      "stopLoss": 0.1631580651036268,
+      "takeProfit": 0.17623486979274638,
+      "feesPaid": 6,
+      "realizedPnl": 0,
+      "highestPrice": 0.167517,
+      "lowestPrice": 0.167517,
+      "confidence": 50.19045933930659,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
+  "shadow:correlation-capped:audit-log": [
+    {
+      "timestamp": 1789420174501,
+      "intentId": "XLMEUR:1789420174501:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry XLMEUR: 11939.086779252255 @ 0.167517 (stop 0.1631580651036268, target 0.17623486979274638, confidence 50)"
     }
   ]
 }
