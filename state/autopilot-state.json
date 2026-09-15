@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 10260.7736167877,
+    "cash": 8202.462429260087,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 583.2246943018446,
@@ -9,7 +9,27 @@
       "equity": 10260.7736167877
     }
   },
-  "open-positions": [],
+  "open-positions": [
+    {
+      "id": "XLMEUR:1789467470169:0",
+      "symbol": "XLMEUR",
+      "openedAt": 1789467470169,
+      "entryPrice": 0.169126,
+      "quantity": 12133.880795132267,
+      "initialQuantity": 12133.880795132267,
+      "stopLoss": 0.164441414927449,
+      "takeProfit": 0.17849517014510202,
+      "feesPaid": 6.15646417007262,
+      "realizedPnl": 0,
+      "highestPrice": 0.169126,
+      "lowestPrice": 0.169126,
+      "confidence": 48.84780958658804,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "audit-log": [
     {
       "timestamp": 1784042069348,
@@ -1907,12 +1927,19 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "daily regime filter refused XLMEUR: larger trend is down"
+    },
+    {
+      "timestamp": 1789467470169,
+      "intentId": "XLMEUR:1789467470169:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry XLMEUR: 12133.880795132267 @ 0.169126 (stop 0.164441414927449, target 0.17849517014510202, confidence 49)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1789467137546,
+    "at": 1789467470169,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -1926,10 +1953,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787384918492,
-      "equity": 10475.78
-    },
     {
       "at": 1787385230736,
       "equity": 10465.25
@@ -21925,6 +21948,10 @@
     {
       "at": 1789467137546,
       "equity": 10260.77
+    },
+    {
+      "at": 1789467470169,
+      "equity": 10254.62
     }
   ],
   "trade-journal": [
@@ -23547,7 +23574,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -15.73% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -15.75% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23645,13 +23672,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1789467137546,
+    "at": 1789467470169,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate / whale-flow)",
-        "equity": 10945.43039070353,
-        "returnPct": 9.454303907035301,
+        "equity": 10952.103824468013,
+        "returnPct": 9.52103824468013,
         "trades": 41,
         "winRatePct": 56.09756097560976,
         "profitFactor": 1.9891397447105197,
@@ -23661,8 +23688,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10945.220068193083,
-        "returnPct": 9.452200681930826,
+        "equity": 10951.892864559926,
+        "returnPct": 9.518928645599264,
         "trades": 41,
         "winRatePct": 56.09756097560976,
         "profitFactor": 1.9891397447105197,
@@ -23672,8 +23699,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10818.55633874543,
-        "returnPct": 8.185563387454295,
+        "equity": 10825.15191407255,
+        "returnPct": 8.251519140725504,
         "trades": 41,
         "winRatePct": 53.65853658536586,
         "profitFactor": 1.8086063735003743,
@@ -23727,8 +23754,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10747.115677446234,
-        "returnPct": 7.471156774462343,
+        "equity": 10753.66769869384,
+        "returnPct": 7.536676986938401,
         "trades": 29,
         "winRatePct": 55.172413793103445,
         "profitFactor": 1.965554893816263,
@@ -23738,8 +23765,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10007.109117283619,
-        "returnPct": 0.07109117283618617,
+        "equity": 10013.209990627816,
+        "returnPct": 0.13209990627816298,
         "trades": 0,
         "winRatePct": null,
         "profitFactor": null,
@@ -47800,6 +47827,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused XLMEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1789467470169,
+      "intentId": "XLMEUR:1789467470169",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused XLMEUR: OKX top traders are net-short"
     }
   ],
   "shadow:whale-flow:open-positions": [],
@@ -49933,7 +49967,51 @@
     }
   ],
   "live:telegram-unclaimed-callbacks": [],
-  "live:live-entry-pending": {},
+  "live:live-entry-pending": {
+    "XLMEUR": {
+      "opportunity": {
+        "symbol": "XLMEUR",
+        "timeframe": "1h",
+        "direction": "long",
+        "levels": {
+          "entry": 0.169126,
+          "stopLoss": 0.164441414927449,
+          "takeProfit": 0.17849517014510202,
+          "riskReward": 2
+        },
+        "confidence": 48.84780958658804,
+        "confidenceComponents": [
+          {
+            "label": "Scanner evidence",
+            "detail": "composite score 47 of 100",
+            "effect": 27.928806034743932
+          },
+          {
+            "label": "Trend strength",
+            "detail": "ADX 33.6",
+            "effect": 6.7801268196786175
+          },
+          {
+            "label": "Volume participation",
+            "detail": "1.61× average volume",
+            "effect": 6.1388767321654925
+          },
+          {
+            "label": "Higher timeframe confirmation (4h)",
+            "detail": "score 62 on the 4h chart",
+            "effect": 8
+          }
+        ],
+        "explanation": "XLMEUR on the 1h timeframe shows bullish technical evidence (score 47/100 over 150 candles), driven mainly by Trend (EMA 20/50 + ADX) (EMA20 0.167 vs EMA50 0.163, ADX 33.6), Volume (vs 20-bar average) (relative volume 1.61×), Stochastic %K 14 (%K 71.8). Suggested plan: enter near 0.1691, stop loss at 0.1644 (2× ATR below entry), take profit at 0.1785 (4× ATR above), risk/reward 2.0. Confidence 41/90 reflects the strength of current evidence only — it is not a guarantee, and any position should be sized so its loss at the stop is acceptable. The larger 4h trend confirms this setup (score 62).",
+        "warnings": [],
+        "basedOn": {
+          "score": 46.54801005790655,
+          "candleCount": 150
+        }
+      },
+      "queuedAt": 1789467470169
+    }
+  },
   "live:manual-buy-pending-symbols": [
     "SYMBOL",
     "EURXBTEUR"
@@ -51874,6 +51952,13 @@
     {
       "timestamp": 1789088940969,
       "intentId": "external-reconcile:XBTEUR:1788970622093:exit:1789088917490",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1789467489648,
+      "intentId": "live-entry:XLMEUR:1789467470169",
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
@@ -60768,6 +60853,10 @@
     {
       "at": 1789467137546,
       "equity": 51.28
+    },
+    {
+      "at": 1789467470169,
+      "equity": 51.28
     }
   ],
   "live:revolut-x-order-map": {
@@ -61057,6 +61146,11 @@
       "sentAt": 1789088940805,
       "messageId": 715,
       "token": "mtw9d1qd.y5oeav"
+    },
+    "live-entry:XLMEUR:1789467470169": {
+      "sentAt": 1789467489427,
+      "messageId": 743,
+      "token": "mu2iqnpv.1nmkc8d"
     }
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
@@ -61071,7 +61165,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1789467137546,
+    "at": 1789467470169,
     "standings": [
       {
         "key": "candidate-watch",
@@ -62223,5 +62317,11 @@
       "mode": "paper",
       "detail": "paper entry XLMEUR: 11939.086779252255 @ 0.167517 (stop 0.1631580651036268, target 0.17623486979274638, confidence 50)"
     }
-  ]
+  ],
+  "move-alert-buckets": {
+    "XLMEUR:1789467470169:0": {
+      "neg": 0,
+      "pos": 0
+    }
+  }
 }
