@@ -1,0 +1,36 @@
+# Daily strategy research agent: runs the existing sweep + validation
+# scripts against real Kraken history and reports the results over Telegram.
+#
+# Read-only and side-effect-free, same philosophy as discover-crypto-
+# candidates.yml and measure-stocks.yml: this only measures and reports. It
+# NEVER edits strategy config, commits, opens a PR, or changes what the live
+# autopilot trades — adopting a measured improvement stays a deliberate,
+# reviewed decision David makes himself.
+
+name: Daily strategy sweep (research agent)
+
+on:
+  schedule:
+    # 06:00 UTC daily — ahead of the 08:00 Telegram digest.
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sweep-and-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Sweep, validate against real Kraken history, and report via Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: npx tsx scripts/reportStrategySweep.mts
