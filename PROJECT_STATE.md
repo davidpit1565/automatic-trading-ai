@@ -1,5 +1,26 @@
 # PROJECT_STATE
 
+## New automation: daily strategy sweep research agent (2026-09-16)
+Added `.github/workflows/daily-strategy-sweep.yml` (daily cron, 06:00 UTC,
+also `workflow_dispatch`) + `scripts/reportStrategySweep.mts`. Runs the
+EXISTING `scripts/sweepStrategy.mts` and `scripts/validateStrategy.mts`
+as-is (as subprocesses, no reimplemented logic) against real Kraken
+history, parses their printed tables, and sends ONE Telegram summary
+(Hebrew) via the same `sendTelegramMessage` mechanism
+`discoverCryptoCandidates.mts` already uses: current PROD baseline PF/OOS-PF,
+the best config measured that day, whether it's a "measured" improvement
+(must beat baseline on BOTH in-sample PF and out-of-sample PF, not just
+in-sample — guards against the exact overfitting `sweepStrategy.mts`'s own
+OOS column exists to catch), plus a `validateStrategy.mts` aggregate line
+for context. Purely a reporting/research agent — it NEVER edits strategy
+config, commits, opens a PR, or auto-adopts anything; David decides.
+Read-only permissions (`contents: read`), no new secrets (reuses
+`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`), does not touch the live-order
+path or the real-money readiness/approval gate. Verified end-to-end
+locally against real Kraken data (parser correctly handled all 20 sweep
+rows + the validate AGGREGATE row); full gate (tsc → vitest 1332 tests →
+build) green.
+
 ## Revolut X comparison pass — Market Scan, Monitoring, Portfolio (2026-09-06)
 Part of a 200-improvement push (split across parallel agents by screen area,
 David's request); this agent's share was Market Scan/Monitoring/Portfolio
