@@ -298,6 +298,51 @@ describe('RevolutXBrokerAdapter', () => {
     expect(report.detail).toContain('400');
   });
 
+  it('truncates the quantity to the decimal precision Revolut X states and retries once (real incidents, 2026-09-17: ENA rejected at 4 decimals, DOT at 5 — our fixed 8-decimal formatting exceeded both, wasting an already-approved trade)', async () => {
+    const { fetchFn, calls } = fakeFetch([
+      { status: 400, body: { message: 'base_size precision must not exceed 4 decimal places' } },
+      { status: 200, body: { data: [{ venue_order_id: 'venue-precision', client_order_id: 'x', state: 'new' }] } },
+      { status: 200, body: { data: { status: 'new' } } },
+    ]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    const report = await adapter.submit(intent({ quantity: 1.23456789 }));
+
+    expect(report.state).toBe('submitted');
+    expect(calls).toHaveLength(3);
+    expect(JSON.parse(calls[1]!.body!).order_configuration.limit.base_size).toBe('1.2345');
+    // Same client_order_id on the retry — the first attempt was a clean HTTP
+    // 400, no order was ever created, so reusing it is safe.
+    expect(JSON.parse(calls[1]!.body!).client_order_id).toBe(JSON.parse(calls[0]!.body!).client_order_id);
+  });
+
+  it('reports rejected (no infinite retry) when the truncated quantity is rejected again', async () => {
+    const { fetchFn, calls } = fakeFetch([
+      { status: 400, body: { message: 'base_size precision must not exceed 4 decimal places' } },
+      { status: 400, body: { message: 'insufficient funds' } },
+    ]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    const report = await adapter.submit(intent({ quantity: 1.23456789 }));
+
+    expect(report.state).toBe('rejected');
+    expect(report.detail).toContain('insufficient funds');
+    expect(calls).toHaveLength(2); // exactly one retry, never looped further
+  });
+
+  it('does not retry when the stated precision would not actually change the quantity (falls through to the plain rejection)', async () => {
+    const { fetchFn, calls } = fakeFetch([
+      { status: 400, body: { message: 'base_size precision must not exceed 4 decimal places' } },
+    ]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    const report = await adapter.submit(intent({ quantity: 2 })); // already exact at 4 decimals
+
+    expect(report.state).toBe('rejected');
+    expect(report.detail).toContain('precision');
+    expect(calls).toHaveLength(1); // no pointless retry
+  });
+
   it('never sends the order at all when the kill switch is engaged', async () => {
     killSwitch.engage('testing');
     const { fetchFn, calls } = fakeFetch([{ status: 200, body: {} }]);

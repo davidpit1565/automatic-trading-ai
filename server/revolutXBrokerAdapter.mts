@@ -281,17 +281,18 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
       return this.reportAndAudit(intent.id, 'rejected', 'RevolutXBrokerAdapter only accepts live-mode orders');
     }
 
-    const body = {
+    const buildBody = (quantity: number) => ({
       client_order_id: deterministicClientOrderId(intent.id),
       symbol: intent.symbol,
       side: intent.side,
       order_configuration: {
         limit: {
-          base_size: safeDecimalString(intent.quantity),
+          base_size: safeDecimalString(quantity),
           price: safeDecimalString(intent.limitPrice),
         },
       },
-    };
+    });
+    const body = buildBody(intent.quantity);
 
     let placed: RawResponse;
     try {
@@ -345,6 +346,36 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
           `Revolut X: order already placed under this id (${rawBody}) — kill switch engaged automatically, verify manually before resuming`,
         );
       }
+      // Found 2026-09-17: Revolut X enforces a per-asset base_size decimal
+      // limit (differs by asset — e.g. 4 for ENA, 5 for DOT) that our fixed
+      // 8-decimal formatting exceeds, rejecting orders David had already
+      // approved in Telegram. Same self-heal shape as the insufficient-
+      // balance fix in liveExitMirror.mts: react to the rejection's own
+      // stated limit rather than guessing a schema field. Truncate (never
+      // round up, so the retried quantity never exceeds what was approved)
+      // and retry exactly once, reusing the same client_order_id (safe: the
+      // first attempt was a clean HTTP 400, no order was ever created).
+      const precisionMatch = /base_size precision must not exceed (\d+) decimal places?/i.exec(rawBody);
+      if (precisionMatch) {
+        const decimals = Number(precisionMatch[1]);
+        const factor = 10 ** decimals;
+        const truncatedQuantity = Math.floor(intent.quantity * factor) / factor;
+        if (truncatedQuantity > 0 && truncatedQuantity !== intent.quantity) {
+          try {
+            placed = await this.request('POST', '/orders', buildBody(truncatedQuantity));
+          } catch (cause) {
+            const message = cause instanceof Error ? cause.message : String(cause);
+            return this.reportAndAudit(
+              intent.id,
+              'rejected',
+              `Revolut X rejected the order for base_size precision (${rawBody}); retry at ${decimals} decimals failed before a response was received (${message})`,
+            );
+          }
+        }
+      }
+    }
+    if (!placed.ok) {
+      const rawBody = JSON.stringify(placed.json).slice(0, 500);
       // Same class of bug as listTradablePairs() (found 2026-09-03): the
       // HTTP status alone tells a human nothing about WHY Revolut X
       // rejected the order (bad price precision, size below minimum,
