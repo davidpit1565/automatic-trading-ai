@@ -40,7 +40,7 @@
       "takeProfit": 0.9808843281604912,
       "feesPaid": 5.109330689507763,
       "realizedPnl": 0,
-      "highestPrice": 0.9334,
+      "highestPrice": 0.9352,
       "lowestPrice": 0.9256,
       "confidence": 40.10230485759701,
       "validationVerdict": null,
@@ -2030,10 +2030,17 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry DOTEUR: 1840.0067305919629 @ 0.9256 (stop 0.8979578359197544, target 0.9808843281604912, confidence 40)"
+    },
+    {
+      "timestamp": 1789685630482,
+      "intentId": "AEROEUR:1789685630482",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused AEROEUR: large trades show heavy net selling"
     }
   ],
   "autopilot-last-run": {
-    "at": 1789685293309,
+    "at": 1789685630482,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2049,10 +2056,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787570208152,
-      "equity": 10361.62
-    },
     {
       "at": 1787570518814,
       "equity": 10366.48
@@ -22048,6 +22051,10 @@
     {
       "at": 1789685293309,
       "equity": 10171.59
+    },
+    {
+      "at": 1789685630482,
+      "equity": 10171.31
     }
   ],
   "trade-journal": [
@@ -23739,7 +23746,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -16.24% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -16.14% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23837,13 +23844,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1789685293309,
+    "at": 1789685630482,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate / whale-flow)",
-        "equity": 10811.79108920943,
-        "returnPct": 8.117910892094296,
+        "equity": 10811.129919218869,
+        "returnPct": 8.111299192188689,
         "trades": 44,
         "winRatePct": 54.54545454545454,
         "profitFactor": 1.729509276474792,
@@ -23853,8 +23860,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10719.535051368744,
-        "returnPct": 7.195350513687444,
+        "equity": 10723.28676739529,
+        "returnPct": 7.232867673952896,
         "trades": 44,
         "winRatePct": 54.54545454545454,
         "profitFactor": 1.729272447001244,
@@ -23864,8 +23871,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10595.483065287906,
-        "returnPct": 5.954830652879064,
+        "equity": 10599.191364522392,
+        "returnPct": 5.991913645223922,
         "trades": 44,
         "winRatePct": 52.27272727272727,
         "profitFactor": 1.598447821264608,
@@ -23886,8 +23893,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9052.001811900132,
-        "returnPct": -9.479981880998675,
+        "equity": 9048.567448659716,
+        "returnPct": -9.514325513402836,
         "trades": 104,
         "winRatePct": 38.46153846153847,
         "profitFactor": 0.7249874679337521,
@@ -23897,8 +23904,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9622.740524958408,
-        "returnPct": -3.7725947504159194,
+        "equity": 9615.538424286391,
+        "returnPct": -3.844615757136089,
         "trades": 230,
         "winRatePct": 40.43478260869565,
         "profitFactor": 1.142015916009485,
@@ -23919,8 +23926,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10525.515475041357,
-        "returnPct": 5.255154750413567,
+        "equity": 10529.199286410614,
+        "returnPct": 5.291992864106142,
         "trades": 32,
         "winRatePct": 53.125,
         "profitFactor": 1.659994012399315,
@@ -23930,8 +23937,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 9800.767483636595,
-        "returnPct": -1.99232516363405,
+        "equity": 9804.197641405995,
+        "returnPct": -1.9580235859400454,
         "trades": 3,
         "winRatePct": 33.33333333333333,
         "profitFactor": 0.5012056046824817,
@@ -40287,7 +40294,7 @@
       "takeProfit": 0.9808843281604912,
       "feesPaid": 6.471309837797333,
       "realizedPnl": 0,
-      "highestPrice": 0.9334,
+      "highestPrice": 0.9352,
       "lowestPrice": 0.9256,
       "confidence": 40.10230485759701,
       "validationVerdict": null,
@@ -41143,6 +41150,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused AEROEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1789685630482,
+      "intentId": "AEROEUR:1789685630482",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused AEROEUR: large trades show heavy net selling"
     }
   ],
   "shadow:no-confirm:open-positions": [
@@ -41195,7 +41209,7 @@
       "takeProfit": 0.9836722210573167,
       "feesPaid": 6.4118950176024505,
       "realizedPnl": 0,
-      "highestPrice": 0.9334,
+      "highestPrice": 0.9352,
       "lowestPrice": 0.9199,
       "confidence": 41.218943362262365,
       "validationVerdict": null,
@@ -42066,7 +42080,7 @@
       "takeProfit": 0.9836722210573167,
       "feesPaid": 6.337693262800236,
       "realizedPnl": 0,
-      "highestPrice": 0.9334,
+      "highestPrice": 0.9352,
       "lowestPrice": 0.9199,
       "confidence": 49.218943362262365,
       "validationVerdict": null,
@@ -50538,6 +50552,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused AEROEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1789685630482,
+      "intentId": "AEROEUR:1789685630482",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused AEROEUR: OKX top traders are net-short"
     }
   ],
   "shadow:whale-flow:open-positions": [],
@@ -51411,7 +51432,7 @@
       "takeProfit": 0.9836722210573167,
       "feesPaid": 6.2958421152322055,
       "realizedPnl": 0,
-      "highestPrice": 0.9334,
+      "highestPrice": 0.9352,
       "lowestPrice": 0.9199,
       "confidence": 49.218943362262365,
       "validationVerdict": null,
@@ -66048,6 +66069,10 @@
     {
       "at": 1789685293309,
       "equity": 45.26
+    },
+    {
+      "at": 1789685630482,
+      "equity": 45.26
     }
   ],
   "live:revolut-x-order-map": {
@@ -66371,13 +66396,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1789685293309,
+    "at": 1789685630482,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "13 new candidates, production defaults (forward test only — not real trading)",
-        "equity": 10449.909946388567,
-        "returnPct": 4.499099463885668,
+        "equity": 10447.743573910058,
+        "returnPct": 4.477435739100583,
         "trades": 15,
         "winRatePct": 46.666666666666664,
         "profitFactor": 1.5067789953021131,
@@ -67710,7 +67735,7 @@
       "takeProfit": 0.9836722210573167,
       "feesPaid": 5.862333757562138,
       "realizedPnl": 0,
-      "highestPrice": 0.9334,
+      "highestPrice": 0.9352,
       "lowestPrice": 0.9199,
       "confidence": 49.218943362262365,
       "validationVerdict": null,
