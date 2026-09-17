@@ -13,8 +13,8 @@ import type { Candle, Result } from '../../src/core/types';
 import { ok, err } from '../../src/core/types';
 import type { MarketDataSource } from '../../src/core/data/revolutClient';
 import { initLiveCash, liveCash } from '../../server/liveLedger.mts';
-import { markExitSubmitted, openLivePositions, recordLiveEntryFill } from '../../server/liveExitFlow.mts';
-import { checkAutomaticExits } from '../../server/liveExitMirror.mts';
+import { forgetLivePosition, markExitSubmitted, openLivePositions, recordLiveEntryFill } from '../../server/liveExitFlow.mts';
+import { checkAutomaticExits, reapOrphanedExitConfirmations } from '../../server/liveExitMirror.mts';
 import { checkManualSellRequests } from '../../server/manualSellCommand.mts';
 import { ConfirmationPendingError } from '../../server/telegramConfirmationGate.mts';
 
@@ -591,5 +591,46 @@ describe('shared exit queue (an automatic exit and a manual /sell for the SAME p
     expect(manual).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: { intentId: 'entry-1:exit:2000', state: 'filled', filledQuantity: 0.01, avgFillPrice: 94, detail: 'ok' } }]);
     expect(captured).toEqual(['entry-1:exit:2000']); // the ORIGINAL queued id, not a fresh manual-sell one
     expect(openLivePositions(store)).toEqual([]); // filled — forgotten, not left double-tracked
+  });
+});
+
+describe('reapOrphanedExitConfirmations', () => {
+  // Raw keys mirror the modules' own internal storage shape (live-exit-pending
+  // in liveExitMirror.mts, confirmation-gate-pending in
+  // telegramConfirmationGate.mts) — same direct-key-inspection style already
+  // used elsewhere (e.g. tests/server/fileStore.test.ts).
+
+  it('leaves a queued exit alone while its position is still open', () => {
+    const store = new MemoryStore();
+    openPosition(store, 'pos-1', 'XBTEUR', { stopLoss: 90, takeProfit: 120 });
+    store.set('live-exit-pending', { 'pos-1': { reason: 'stop-loss', queuedAt: 1000 } });
+    store.set('confirmation-gate-pending', { 'pos-1:exit:1000': { sentAt: 1000, messageId: 1, token: 'abc' } });
+
+    reapOrphanedExitConfirmations(store);
+
+    expect(store.get('live-exit-pending')).toEqual({ 'pos-1': { reason: 'stop-loss', queuedAt: 1000 } });
+    expect(store.get('confirmation-gate-pending')).toEqual({ 'pos-1:exit:1000': { sentAt: 1000, messageId: 1, token: 'abc' } });
+  });
+
+  it('clears a queued exit and its Telegram confirmation once the position is gone — e.g. David sold it manually before tapping approve/reject (real incident, 2026-09-11: a BTC stop-loss confirmation sat unanswered for 6 days)', () => {
+    const store = new MemoryStore();
+    openPosition(store, 'pos-1', 'XBTEUR', { stopLoss: 90, takeProfit: 120 });
+    openPosition(store, 'pos-2', 'ETHEUR', { stopLoss: 90, takeProfit: 120 }); // stays open — must survive the reap
+    store.set('live-exit-pending', {
+      'pos-1': { reason: 'stop-loss', queuedAt: 1000 },
+      'pos-2': { reason: 'take-profit', queuedAt: 2000 },
+    });
+    store.set('confirmation-gate-pending', {
+      'pos-1:exit:1000': { sentAt: 1000, messageId: 1, token: 'abc' },
+      'unrelated-intent': { sentAt: 500, messageId: 2, token: 'xyz' },
+    });
+    forgetLivePosition(store, 'pos-1'); // closed through a different path (manual sell)
+
+    reapOrphanedExitConfirmations(store);
+
+    // pos-1's own entries are gone; pos-2 (still nowhere close to open, but
+    // a DIFFERENT id never touched here) and the unrelated confirmation stay.
+    expect(store.get('live-exit-pending')).toEqual({ 'pos-2': { reason: 'take-profit', queuedAt: 2000 } });
+    expect(store.get('confirmation-gate-pending')).toEqual({ 'unrelated-intent': { sentAt: 500, messageId: 2, token: 'xyz' } });
   });
 });

@@ -3,7 +3,7 @@ import { MemoryStore } from '../../src/core/data/storage';
 import { PersistedAuditLog } from '../../src/core/autopilot/auditLog';
 import type { OrderIntent } from '../../src/core/execution/types';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
-import { ConfirmationPendingError, confirmationToken, TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
+import { clearPendingConfirmation, ConfirmationPendingError, confirmationToken, TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
 import { getSummaryTimezone, pollAllTelegramUpdates, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
 import { initLiveCash } from '../../server/liveLedger.mts';
 
@@ -544,5 +544,40 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     await assertion;
     expect(sent).toHaveLength(1);
     expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation']);
+  });
+});
+
+describe('clearPendingConfirmation', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("removes a pending record without deciding it — for when whatever it was for no longer exists (e.g. reapOrphanedExitConfirmations)", async () => {
+    const empty = Array.from({ length: 5 }, () => [] as never[]);
+    const { fetchFn, sent } = fakeTelegram(empty);
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+    const promise = gate.requestConfirmation(intent('to-clear'));
+    const assertion = expect(promise).rejects.toThrow(ConfirmationPendingError);
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(sent).toHaveLength(1); // genuinely pending before clearing
+
+    clearPendingConfirmation(store, 'to-clear');
+
+    expect(store.get<Record<string, unknown>>('confirmation-gate-pending')).toEqual({});
+  });
+
+  it('is a no-op when nothing is pending for that id', () => {
+    const store = new MemoryStore();
+    store.set('confirmation-gate-pending', { other: { sentAt: 1 } });
+
+    clearPendingConfirmation(store, 'never-pending');
+
+    expect(store.get('confirmation-gate-pending')).toEqual({ other: { sentAt: 1 } });
   });
 });

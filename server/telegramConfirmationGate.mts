@@ -208,6 +208,26 @@ function buildExitConfirmationMessage(intent: OrderIntent, deadlineMs: number): 
   );
 }
 
+/**
+ * Removes any in-flight confirmation record for `intentId` without deciding
+ * it either way — for when whatever the confirmation was FOR no longer
+ * exists (e.g. a stop-loss exit still awaiting a tap for a position David
+ * already sold manually in the Revolut X app — see
+ * `liveExitMirror.mts`'s `reapOrphanedExitConfirmations`). Without this, the
+ * record sits here forever: `requestConfirmation`'s own 20-minute
+ * auto-expiry only re-evaluates on the NEXT call for that exact intent, and
+ * nothing calls it again once the position it was for is gone (real
+ * incident, 2026-09-11: exactly this happened and stayed "awaiting
+ * confirmation" for 6 days). A no-op if there was nothing pending.
+ */
+export function clearPendingConfirmation(store: KeyValueStore, intentId: string): void {
+  const pendingAll = store.get<Record<string, PendingRecord>>(STORAGE_KEY) ?? {};
+  if (intentId in pendingAll) {
+    delete pendingAll[intentId];
+    store.set(STORAGE_KEY, pendingAll);
+  }
+}
+
 /** Real, network-backed ConfirmationGate. Every order still waits for an
  * explicit human tap; there is no code path in this class that can resolve
  * `approved: true` on its own. */
