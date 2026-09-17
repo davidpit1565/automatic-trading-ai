@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 10043.3757406591,
+    "cash": 8090.336232123731,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 377.99038380397235,
@@ -9,7 +9,27 @@
       "equity": 10043.3757406591
     }
   },
-  "open-positions": [],
+  "open-positions": [
+    {
+      "id": "DOTEUR:1789615890121:0",
+      "symbol": "DOTEUR",
+      "openedAt": 1789615890121,
+      "entryPrice": 0.8886,
+      "quantity": 2191.3098298345667,
+      "initialQuantity": 2191.3098298345667,
+      "stopLoss": 0.8622149557644948,
+      "takeProfit": 0.9413700884710102,
+      "feesPaid": 5.841593744372988,
+      "realizedPnl": 0,
+      "highestPrice": 0.8886,
+      "lowestPrice": 0.8886,
+      "confidence": 47.5681008924276,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "audit-log": [
     {
       "timestamp": 1784042069348,
@@ -1935,12 +1955,19 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit XLMEUR: 12133.880795132267 @ 0.163968 (stop-loss)"
+    },
+    {
+      "timestamp": 1789615890121,
+      "intentId": "DOTEUR:1789615890121:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry DOTEUR: 2191.3098298345667 @ 0.8886 (stop 0.8622149557644948, target 0.9413700884710102, confidence 48)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1789615549015,
+    "at": 1789615890121,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -1954,10 +1981,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787507479235,
-      "equity": 10362.58
-    },
     {
       "at": 1787507789432,
       "equity": 10363.67
@@ -21953,6 +21976,10 @@
     {
       "at": 1789615549015,
       "equity": 10043.38
+    },
+    {
+      "at": 1789615890121,
+      "equity": 10037.53
     }
   ],
   "trade-journal": [
@@ -23621,12 +23648,12 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -17.79% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -17.84% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
         "ok": true,
-        "detail": "max drawdown 3.9% (limit 10%)"
+        "detail": "max drawdown 4.0% (limit 10%)"
       },
       {
         "key": "consistency",
@@ -23719,7 +23746,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1789615549015,
+    "at": 1789615890121,
     "standings": [
       {
         "key": "live-mirror",
@@ -23768,8 +23795,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9056.378828942854,
-        "returnPct": -9.43621171057146,
+        "equity": 9056.380755529619,
+        "returnPct": -9.436192444703812,
         "trades": 102,
         "winRatePct": 37.254901960784316,
         "profitFactor": 0.6795687572356377,
@@ -23779,8 +23806,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9497.0412538375,
-        "returnPct": -5.029587461624996,
+        "equity": 9495.14698714962,
+        "returnPct": -5.048530128503808,
         "trades": 226,
         "winRatePct": 39.38053097345133,
         "profitFactor": 1.0963609516423083,
@@ -23872,7 +23899,7 @@
       "takeProfit": 88.13252703701077,
       "feesPaid": 0.04552275140563871,
       "realizedPnl": 0,
-      "highestPrice": 86.93,
+      "highestPrice": 87.03,
       "lowestPrice": 84.29,
       "confidence": 58.18578148919527,
       "validationVerdict": null,
@@ -36171,7 +36198,7 @@
       "takeProfit": 87.82750813651093,
       "feesPaid": 5.3456804299713445,
       "realizedPnl": 0,
-      "highestPrice": 86.93,
+      "highestPrice": 87.03,
       "lowestPrice": 83.44,
       "confidence": 34.275698885646165,
       "validationVerdict": null,
@@ -51940,7 +51967,48 @@
     }
   ],
   "live:telegram-unclaimed-callbacks": [],
-  "live:live-entry-pending": {},
+  "live:live-entry-pending": {
+    "DOTEUR": {
+      "opportunity": {
+        "symbol": "DOTEUR",
+        "timeframe": "1h",
+        "direction": "long",
+        "levels": {
+          "entry": 0.8886,
+          "stopLoss": 0.8622149557644948,
+          "takeProfit": 0.9413700884710102,
+          "riskReward": 2
+        },
+        "confidence": 47.5681008924276,
+        "confidenceComponents": [
+          {
+            "label": "Scanner evidence",
+            "detail": "composite score 48 of 100",
+            "effect": 28.654866726910175
+          },
+          {
+            "label": "Trend strength",
+            "detail": "ADX 37.8",
+            "effect": 8.913234165517427
+          },
+          {
+            "label": "Volume participation",
+            "detail": "3.59× average volume",
+            "effect": 10
+          }
+        ],
+        "explanation": "DOTEUR on the 1h timeframe shows bullish technical evidence (score 48/100 over 150 candles), driven mainly by Volume (vs 20-bar average) (relative volume 3.59×), Trend (EMA 20/50 + ADX) (EMA20 0.866 vs EMA50 0.858, ADX 37.8), Stochastic %K 14 (%K 73.6). Suggested plan: enter near 0.8886, stop loss at 0.8622 (2× ATR below entry), take profit at 0.9414 (4× ATR above), risk/reward 2.0. Confidence 48/90 reflects the strength of current evidence only — it is not a guarantee, and any position should be sized so its loss at the stop is acceptable.",
+        "warnings": [
+          "higher timeframe (4h) is neutral (score -9) — no confirmation from the larger trend"
+        ],
+        "basedOn": {
+          "score": 47.75811121151696,
+          "candleCount": 150
+        }
+      },
+      "queuedAt": 1789615890121
+    }
+  },
   "live:manual-buy-pending-symbols": [
     "SYMBOL",
     "EURXBTEUR"
@@ -53954,6 +54022,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1789615914478,
+      "intentId": "live-entry:DOTEUR:1789615890121",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -64317,6 +64392,10 @@
     {
       "at": 1789615549015,
       "equity": 51.95
+    },
+    {
+      "at": 1789615890121,
+      "equity": 51.94
     }
   ],
   "live:revolut-x-order-map": {
@@ -64661,6 +64740,11 @@
       "sentAt": 1789088940805,
       "messageId": 715,
       "token": "mtw9d1qd.y5oeav"
+    },
+    "live-entry:DOTEUR:1789615890121": {
+      "sentAt": 1789615914298,
+      "messageId": 769,
+      "token": "mu4z3x2y.jad3ng"
     }
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
@@ -64675,13 +64759,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1789615549015,
+    "at": 1789615890121,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "13 new candidates, production defaults (forward test only — not real trading)",
-        "equity": 10147.99454252866,
-        "returnPct": 1.4799454252866053,
+        "equity": 10165.955330114943,
+        "returnPct": 1.6595533011494263,
         "trades": 14,
         "winRatePct": 42.857142857142854,
         "profitFactor": 1.2089994408407372,
@@ -66027,5 +66111,11 @@
       "confidence": 40.23622370232943,
       "notes": "opened autonomously by the paper autopilot"
     }
-  ]
+  ],
+  "move-alert-buckets": {
+    "DOTEUR:1789615890121:0": {
+      "neg": 0,
+      "pos": 0
+    }
+  }
 }
