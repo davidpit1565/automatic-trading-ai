@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 8570.632274160114,
+    "cash": 6862.412713634686,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 493.18315893871585,
@@ -24,6 +24,25 @@
       "highestPrice": 0.1379,
       "lowestPrice": 0.1309,
       "confidence": 45.73738753858995,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "DOTEUR:1789684603710:1",
+      "symbol": "DOTEUR",
+      "openedAt": 1789684603710,
+      "entryPrice": 0.9256,
+      "quantity": 1840.0067305919629,
+      "initialQuantity": 1840.0067305919629,
+      "stopLoss": 0.8979578359197544,
+      "takeProfit": 0.9808843281604912,
+      "feesPaid": 5.109330689507763,
+      "realizedPnl": 0,
+      "highestPrice": 0.9256,
+      "lowestPrice": 0.9256,
+      "confidence": 40.10230485759701,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -2004,12 +2023,19 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused DOTEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1789684603710,
+      "intentId": "DOTEUR:1789684603710:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry DOTEUR: 1840.0067305919629 @ 0.9256 (stop 0.8979578359197544, target 0.9808843281604912, confidence 40)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1789684267563,
+    "at": 1789684603710,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -54781,6 +54807,27 @@
       "event": "rejected",
       "mode": "live",
       "detail": "Revolut X rejected the order: HTTP 400 — {\"message\":\"base_size precision must not exceed 4 decimal places\",\"error_id\":\"7de6fa64-1cea-47e2-96fd-620b1d07dd02\",\"timestamp\":1789647517825}"
+    },
+    {
+      "timestamp": 1789684625918,
+      "intentId": "live-entry:DOTEUR:1789684603710",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1789684639097,
+      "intentId": "live-entry:DOTEUR:1789684603710",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram"
+    },
+    {
+      "timestamp": 1789684639588,
+      "intentId": "live-entry:DOTEUR:1789684603710",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "Revolut X rejected the order: HTTP 400 — {\"message\":\"base_size precision must not exceed 5 decimal places\",\"error_id\":\"5dcbf6e2-9202-4bef-8ed8-4d6e05ea0f0d\",\"timestamp\":1789684639530}"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -65864,6 +65911,10 @@
     {
       "at": 1789684267563,
       "equity": 45.26
+    },
+    {
+      "at": 1789684603710,
+      "equity": 45.26
     }
   ],
   "live:revolut-x-order-map": {
@@ -66160,7 +66211,7 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904923,
+  "telegram-shared-update-offset": 447904924,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {
     "external-reconcile:XBTEUR:1788970622093": {
@@ -67721,6 +67772,10 @@
   ],
   "move-alert-buckets": {
     "ENAEUR:1789647143679:1": {
+      "neg": 0,
+      "pos": 0
+    },
+    "DOTEUR:1789684603710:1": {
       "neg": 0,
       "pos": 0
     }
