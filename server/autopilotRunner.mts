@@ -70,7 +70,7 @@ import { checkManualBuyRequests } from './manualBuyCommand.mts';
 import { checkTipRequests } from './manualTipCommand.mts';
 import { checkDiscoverRequests } from './manualDiscoverCommand.mts';
 import { mirrorApprovedEntries, type LiveEntryOutcome } from './liveEntryMirror.mts';
-import { checkAutomaticExits } from './liveExitMirror.mts';
+import { checkAutomaticExits, reapOrphanedExitConfirmations } from './liveExitMirror.mts';
 import {
   hasLiveAccount,
   initLiveCash,
@@ -1081,6 +1081,10 @@ export async function runLiveMirror(
   // review, 2026-09-05 — same incident class as persistStateToGit's own
   // doc comment describes for manual /buy.
   if (reconciledManualTrade) persistStateToGit(store, 'live-mirror: after manual trade reconciliation');
+  // Right after the reconciliation above, which is the one path that can
+  // close a position out from under a still-pending exit confirmation —
+  // see `reapOrphanedExitConfirmations`'s own doc comment.
+  reapOrphanedExitConfirmations(liveStore);
   // Read AFTER syncManualTradesFromBroker, not before — an external sell it
   // just detected can itself add to today's realized loss (recordLiveRealizedPnl
   // above), and every entry sized below (manual /buy, mirrored) must see that

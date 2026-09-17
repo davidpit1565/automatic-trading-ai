@@ -36,6 +36,7 @@ import {
 import { clearOutstandingEntry } from './liveEntryMirror.mts';
 import { creditLiveCash } from './liveLedger.mts';
 import { runLiveOrderFlow, type LiveOrderFlowParams, type LiveOrderFlowResult } from './liveOrchestrator.mts';
+import { clearPendingConfirmation } from './telegramConfirmationGate.mts';
 
 export type LiveExitOutcome =
   | { readonly symbol: string; readonly outcome: 'outstanding-exit-already-pending' }
@@ -234,6 +235,33 @@ export async function proposeLiveExit(
     }
   }
   return result;
+}
+
+/**
+ * Clears a queued exit attempt (and its matching Telegram confirmation) for
+ * any position that no longer exists — e.g. David sold it directly in the
+ * Revolut X app (`liveManualTradeSync.mts`'s `reconcileExternalSell`) while
+ * an automatic stop-loss/take-profit exit for the SAME position was still
+ * awaiting his tap. `checkAutomaticExits` below only ever revisits a queued
+ * exit by iterating `openLivePositions` — once a position is gone from
+ * there, nothing calls `requestConfirmation` again for it, so its record
+ * never reaches its own 20-minute auto-expiry either (real incident,
+ * 2026-09-11: a BTC stop-loss exit confirmation sat "awaiting confirmation"
+ * for 6 days after David sold the position manually).
+ *
+ * Call once per cycle, alongside `checkAutomaticExits`.
+ */
+export function reapOrphanedExitConfirmations(store: KeyValueStore): void {
+  const openIds = new Set(openLivePositions(store).map((p) => p.id));
+  const pending = readPendingExits(store);
+  let changed = false;
+  for (const [positionId, queued] of Object.entries(pending)) {
+    if (openIds.has(positionId)) continue;
+    delete pending[positionId];
+    changed = true;
+    clearPendingConfirmation(store, `${positionId}:exit:${queued.queuedAt}`);
+  }
+  if (changed) store.set(EXIT_PENDING_KEY, pending);
 }
 
 /**
