@@ -40,7 +40,7 @@
       "takeProfit": 0.14126188598429315,
       "feesPaid": 4.73208768062619,
       "realizedPnl": 0,
-      "highestPrice": 0.1319,
+      "highestPrice": 0.132,
       "lowestPrice": 0.1319,
       "confidence": 45.73738753858995,
       "validationVerdict": null,
@@ -2012,9 +2012,9 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1789647143679,
+    "at": 1789647496307,
     "source": "Kraken public market data (read-only)",
-    "opened": 1,
+    "opened": 0,
     "closed": 0,
     "halted": false
   },
@@ -52386,48 +52386,7 @@
     }
   ],
   "live:telegram-unclaimed-callbacks": [],
-  "live:live-entry-pending": {
-    "ENAEUR": {
-      "opportunity": {
-        "symbol": "ENAEUR",
-        "timeframe": "1h",
-        "direction": "long",
-        "levels": {
-          "entry": 0.1319,
-          "stopLoss": 0.1272190570078534,
-          "takeProfit": 0.14126188598429315,
-          "riskReward": 2
-        },
-        "confidence": 45.73738753858995,
-        "confidenceComponents": [
-          {
-            "label": "Scanner evidence",
-            "detail": "composite score 51 of 100",
-            "effect": 30.48833114862176
-          },
-          {
-            "label": "Trend strength",
-            "detail": "ADX 30.5",
-            "effect": 5.249056389968187
-          },
-          {
-            "label": "Volume participation",
-            "detail": "2.06× average volume",
-            "effect": 10
-          }
-        ],
-        "explanation": "ENAEUR on the 1h timeframe shows bullish technical evidence (score 51/100 over 150 candles), driven mainly by Trend (EMA 20/50 + ADX) (EMA20 0.130 vs EMA50 0.127, ADX 30.5), Volume (vs 20-bar average) (relative volume 2.06×), Stochastic %K 14 (%K 62.8). Suggested plan: enter near 0.1319, stop loss at 0.1272 (2× ATR below entry), take profit at 0.1413 (4× ATR above), risk/reward 2.0. Confidence 46/90 reflects the strength of current evidence only — it is not a guarantee, and any position should be sized so its loss at the stop is acceptable.",
-        "warnings": [
-          "higher timeframe (4h) is neutral (score 14) — no confirmation from the larger trend"
-        ],
-        "basedOn": {
-          "score": 50.813885247702935,
-          "candleCount": 150
-        }
-      },
-      "queuedAt": 1789647143679
-    }
-  },
+  "live:live-entry-pending": {},
   "live:manual-buy-pending-symbols": [
     "SYMBOL",
     "EURXBTEUR"
@@ -54462,6 +54421,20 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1789647517604,
+      "intentId": "live-entry:ENAEUR:1789647143679",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram"
+    },
+    {
+      "timestamp": 1789647517879,
+      "intentId": "live-entry:ENAEUR:1789647143679",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "Revolut X rejected the order: HTTP 400 — {\"message\":\"base_size precision must not exceed 4 decimal places\",\"error_id\":\"7de6fa64-1cea-47e2-96fd-620b1d07dd02\",\"timestamp\":1789647517825}"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -65169,6 +65142,10 @@
     {
       "at": 1789647143679,
       "equity": 51.88
+    },
+    {
+      "at": 1789647496307,
+      "equity": 51.9
     }
   ],
   "live:revolut-x-order-map": {
@@ -65402,6 +65379,26 @@
     {
       "id": "7383943995348840764",
       "data": "confirm:reject:mtw206p8.196un0a"
+    },
+    {
+      "id": "7383943995902931928",
+      "data": "confirm:approve:mu5hpq2y.q1plg3"
+    },
+    {
+      "id": "7383943996592829108",
+      "data": "confirm:approve:mu5hpq2y.q1plg3"
+    },
+    {
+      "id": "7383943996993372852",
+      "data": "confirm:approve:mu5hpq2y.q1plg3"
+    },
+    {
+      "id": "7383943996089888948",
+      "data": "confirm:approve:mu5hpq2y.q1plg3"
+    },
+    {
+      "id": "7383943998742947104",
+      "data": "confirm:approve:mu5hpq2y.q1plg3"
     }
   ],
   "live:blackout-windows-cache": {
@@ -65500,7 +65497,7 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904908,
+  "telegram-shared-update-offset": 447904922,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {
     "external-reconcile:XBTEUR:1788970622093": {
@@ -65513,11 +65510,6 @@
       "sentAt": 1789088940805,
       "messageId": 715,
       "token": "mtw9d1qd.y5oeav"
-    },
-    "live-entry:ENAEUR:1789647143679": {
-      "sentAt": 1789647164746,
-      "messageId": 775,
-      "token": "mu5hpq2y.q1plg3"
     }
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
