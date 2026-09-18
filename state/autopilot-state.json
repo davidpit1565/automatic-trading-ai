@@ -40,7 +40,7 @@
       "takeProfit": 0.9808843281604912,
       "feesPaid": 5.109330689507763,
       "realizedPnl": 0,
-      "highestPrice": 0.9694,
+      "highestPrice": 0.9723,
       "lowestPrice": 0.9256,
       "confidence": 40.10230485759701,
       "validationVerdict": null,
@@ -2047,7 +2047,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1789697470864,
+    "at": 1789697807243,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2063,10 +2063,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787580490270,
-      "equity": 10358.34
-    },
     {
       "at": 1787580803744,
       "equity": 10364.32
@@ -22062,6 +22058,10 @@
     {
       "at": 1789697470864,
       "equity": 10310.96
+    },
+    {
+      "at": 1789697807243,
+      "equity": 10331.66
     }
   ],
   "trade-journal": [
@@ -23753,7 +23753,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -15.29% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -15.12% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23851,13 +23851,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1789697470864,
+    "at": 1789697807243,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate / whale-flow)",
-        "equity": 10994.869369117816,
-        "returnPct": 9.948693691178159,
+        "equity": 11022.229922142997,
+        "returnPct": 10.222299221429965,
         "trades": 44,
         "winRatePct": 54.54545454545454,
         "profitFactor": 1.729509276474792,
@@ -23867,8 +23867,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10920.247270856033,
-        "returnPct": 9.202472708560325,
+        "equity": 10947.247935116637,
+        "returnPct": 9.472479351166367,
         "trades": 44,
         "winRatePct": 54.54545454545454,
         "profitFactor": 1.729272447001244,
@@ -23878,8 +23878,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 10793.872539493912,
-        "returnPct": 7.938725394939119,
+        "equity": 10820.560738147473,
+        "returnPct": 8.20560738147473,
         "trades": 44,
         "winRatePct": 52.27272727272727,
         "profitFactor": 1.598447821264608,
@@ -23900,8 +23900,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9064.061927986564,
-        "returnPct": -9.359380720134357,
+        "equity": 9072.322465913747,
+        "returnPct": -9.276775340862532,
         "trades": 104,
         "winRatePct": 38.46153846153847,
         "profitFactor": 0.7249874679337521,
@@ -23911,8 +23911,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9678.435495829563,
-        "returnPct": -3.2156450417043745,
+        "equity": 9687.79805412184,
+        "returnPct": -3.122019458781597,
         "trades": 230,
         "winRatePct": 40.43478260869565,
         "profitFactor": 1.142015916009485,
@@ -23933,8 +23933,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 10722.594878403503,
-        "returnPct": 7.225948784035027,
+        "equity": 10749.106840736706,
+        "returnPct": 7.491068407367056,
         "trades": 32,
         "winRatePct": 53.125,
         "profitFactor": 1.659994012399315,
@@ -23944,8 +23944,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 9984.276729596695,
-        "returnPct": -0.15723270403304923,
+        "equity": 10008.96317644852,
+        "returnPct": 0.08963176448520244,
         "trades": 3,
         "winRatePct": 33.33333333333333,
         "profitFactor": 0.5012056046824817,
@@ -24052,13 +24052,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1787536946808,
-      "intentId": "XBTEUR:1787521051896:2",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper exit XBTEUR: 0.030610658409430634 @ 65809.8 (stop-loss)"
-    },
     {
       "timestamp": 1787563686175,
       "intentId": "LTCEUR:1787563686175:2",
@@ -31051,6 +31044,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ADAEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1789697807243,
+      "intentId": "FILEUR:1789697807243",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused FILEUR: maximum open positions reached (5/5)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -40301,7 +40301,7 @@
       "takeProfit": 0.9808843281604912,
       "feesPaid": 6.471309837797333,
       "realizedPnl": 0,
-      "highestPrice": 0.9706,
+      "highestPrice": 0.9729,
       "lowestPrice": 0.9256,
       "confidence": 40.10230485759701,
       "validationVerdict": null,
@@ -41223,7 +41223,7 @@
       "takeProfit": 0.9836722210573167,
       "feesPaid": 6.4118950176024505,
       "realizedPnl": 0,
-      "highestPrice": 0.9706,
+      "highestPrice": 0.9729,
       "lowestPrice": 0.9199,
       "confidence": 41.218943362262365,
       "validationVerdict": null,
@@ -42094,7 +42094,7 @@
       "takeProfit": 0.9836722210573167,
       "feesPaid": 6.337693262800236,
       "realizedPnl": 0,
-      "highestPrice": 0.9706,
+      "highestPrice": 0.9729,
       "lowestPrice": 0.9199,
       "confidence": 49.218943362262365,
       "validationVerdict": null,
@@ -51453,7 +51453,7 @@
       "takeProfit": 0.9836722210573167,
       "feesPaid": 6.2958421152322055,
       "realizedPnl": 0,
-      "highestPrice": 0.9706,
+      "highestPrice": 0.9729,
       "lowestPrice": 0.9199,
       "confidence": 49.218943362262365,
       "validationVerdict": null,
@@ -66245,6 +66245,10 @@
     {
       "at": 1789697470864,
       "equity": 45.26
+    },
+    {
+      "at": 1789697807243,
+      "equity": 45.27
     }
   ],
   "live:revolut-x-order-map": {
@@ -66269,7 +66273,7 @@
       "entryPrice": 66710.8,
       "stopLoss": 65653.1065,
       "takeProfit": 68652.487,
-      "highestPrice": 66784.3,
+      "highestPrice": 66811.2,
       "openedAt": 1789693052589,
       "entryAssessment": {
         "approved": true,
@@ -66588,13 +66592,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1789697470864,
+    "at": 1789697807243,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "13 new candidates, production defaults (forward test only — not real trading)",
-        "equity": 10557.614376439793,
-        "returnPct": 5.57614376439793,
+        "equity": 10558.310193467296,
+        "returnPct": 5.58310193467296,
         "trades": 15,
         "winRatePct": 46.666666666666664,
         "profitFactor": 1.5067789953021131,
@@ -67983,7 +67987,7 @@
       "takeProfit": 0.9836722210573167,
       "feesPaid": 5.862333757562138,
       "realizedPnl": 0,
-      "highestPrice": 0.9706,
+      "highestPrice": 0.9729,
       "lowestPrice": 0.9199,
       "confidence": 49.218943362262365,
       "validationVerdict": null,
