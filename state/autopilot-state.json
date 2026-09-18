@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 10347.300252408018,
+    "cash": 8271.631821774969,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 697.5979076673962,
@@ -9,7 +9,27 @@
       "equity": 10205.901804317204
     }
   },
-  "open-positions": [],
+  "open-positions": [
+    {
+      "id": "XLMEUR:1789716973869:0",
+      "symbol": "XLMEUR",
+      "openedAt": 1789716973869,
+      "entryPrice": 0.163955,
+      "quantity": 12622.12223159772,
+      "initialQuantity": 12622.12223159772,
+      "stopLoss": 0.16058983684186307,
+      "takeProfit": 0.17068532631627384,
+      "feesPaid": 6.208380151444812,
+      "realizedPnl": 0,
+      "highestPrice": 0.163955,
+      "lowestPrice": 0.163955,
+      "confidence": 40.32574627889947,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "audit-log": [
     {
       "timestamp": 1784042069348,
@@ -2019,12 +2039,19 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit DOTEUR: 1840.0067305919629 @ 0.9813 (take-profit)"
+    },
+    {
+      "timestamp": 1789716973869,
+      "intentId": "XLMEUR:1789716973869:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry XLMEUR: 12622.12223159772 @ 0.163955 (stop 0.16058983684186307, target 0.17068532631627384, confidence 40)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1789716637910,
+    "at": 1789716973869,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -2038,10 +2065,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787599059976,
-      "equity": 10346.7
-    },
     {
       "at": 1787599371825,
       "equity": 10337.49
@@ -22037,6 +22060,10 @@
     {
       "at": 1789716637910,
       "equity": 10347.3
+    },
+    {
+      "at": 1789716973869,
+      "equity": 10341.09
     }
   ],
   "trade-journal": [
@@ -23774,7 +23801,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -16.60% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -16.61% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23872,7 +23899,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1789716637910,
+    "at": 1789716973869,
     "standings": [
       {
         "key": "live-mirror",
@@ -23921,8 +23948,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9118.762908785791,
-        "returnPct": -8.812370912142086,
+        "equity": 9116.287598981538,
+        "returnPct": -8.837124010184617,
         "trades": 105,
         "winRatePct": 39.04761904761905,
         "profitFactor": 0.7567121891306209,
@@ -23932,8 +23959,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9812.75523372885,
-        "returnPct": -1.8724476627114925,
+        "equity": 9812.351400605261,
+        "returnPct": -1.87648599394739,
         "trades": 234,
         "winRatePct": 41.452991452991455,
         "profitFactor": 1.1710600068452448,
@@ -24073,13 +24100,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1787820461961,
-      "intentId": "DOGEEUR:1787820461961",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused DOGEEUR: no exposure headroom: 6222.21 already deployed of the 60% total-exposure limit"
-    },
     {
       "timestamp": 1787820461961,
       "intentId": "AVAXEUR:1787820461961",
@@ -31072,6 +31092,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused VELOEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1789716973869,
+      "intentId": "ETHEUR:1789716973869",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ETHEUR: maximum open positions reached (5/5)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -53169,7 +53196,48 @@
     }
   ],
   "live:telegram-unclaimed-callbacks": [],
-  "live:live-entry-pending": {},
+  "live:live-entry-pending": {
+    "XLMEUR": {
+      "opportunity": {
+        "symbol": "XLMEUR",
+        "timeframe": "1h",
+        "direction": "long",
+        "levels": {
+          "entry": 0.163955,
+          "stopLoss": 0.16058983684186307,
+          "takeProfit": 0.17068532631627384,
+          "riskReward": 2
+        },
+        "confidence": 40.32574627889947,
+        "confidenceComponents": [
+          {
+            "label": "Scanner evidence",
+            "detail": "composite score 45 of 100",
+            "effect": 27.29852208742128
+          },
+          {
+            "label": "Trend strength",
+            "detail": "ADX 26.1",
+            "effect": 3.0272241914781937
+          },
+          {
+            "label": "Volume participation",
+            "detail": "2.81× average volume",
+            "effect": 10
+          }
+        ],
+        "explanation": "XLMEUR on the 1h timeframe shows bullish technical evidence (score 45/100 over 150 candles), driven mainly by Volume (vs 20-bar average) (relative volume 2.81×), Trend (EMA 20/50 + ADX) (EMA20 0.161 vs EMA50 0.160, ADX 26.1), Stochastic %K 14 (%K 85.7). Suggested plan: enter near 0.1640, stop loss at 0.1606 (2× ATR below entry), take profit at 0.1707 (4× ATR above), risk/reward 2.0. Confidence 40/90 reflects the strength of current evidence only — it is not a guarantee, and any position should be sized so its loss at the stop is acceptable.",
+        "warnings": [
+          "higher timeframe (4h) is neutral (score 28) — no confirmation from the larger trend"
+        ],
+        "basedOn": {
+          "score": 45.4975368123688,
+          "candleCount": 150
+        }
+      },
+      "queuedAt": 1789716973869
+    }
+  },
   "live:manual-buy-pending-symbols": [
     "SYMBOL",
     "EURXBTEUR"
@@ -55260,6 +55328,13 @@
       "event": "filled",
       "mode": "live",
       "detail": "Revolut X order 1a055f84-f6f8-4ba7-9c12-1127df7b0b20: filled"
+    },
+    {
+      "timestamp": 1789716995452,
+      "intentId": "live-entry:XLMEUR:1789716973869",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -66717,6 +66792,10 @@
     {
       "at": 1789716637910,
       "equity": 45.4
+    },
+    {
+      "at": 1789716973869,
+      "equity": 45.4
     }
   ],
   "live:revolut-x-order-map": {
@@ -67047,7 +67126,13 @@
   "telegram-shared-update-offset": 447904926,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:confirmation-gate-pending": {
+    "live-entry:XLMEUR:1789716973869": {
+      "sentAt": 1789716995274,
+      "messageId": 791,
+      "token": "mu6nafnu.qmbydv"
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 4277.782348981849,
@@ -67060,13 +67145,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1789716637910,
+    "at": 1789716973869,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "13 new candidates, production defaults (forward test only — not real trading)",
-        "equity": 10697.95447979428,
-        "returnPct": 6.9795447979428,
+        "equity": 10698.298840635438,
+        "returnPct": 6.982988406354379,
         "trades": 17,
         "winRatePct": 52.94117647058824,
         "profitFactor": 1.8888780726138263,
@@ -68806,5 +68891,11 @@
       "confidence": 40.23622370232943,
       "notes": "opened autonomously by the paper autopilot"
     }
-  ]
+  ],
+  "move-alert-buckets": {
+    "XLMEUR:1789716973869:0": {
+      "neg": 0,
+      "pos": 0
+    }
+  }
 }
