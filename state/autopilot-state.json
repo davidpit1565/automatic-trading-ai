@@ -40,7 +40,7 @@
       "takeProfit": 0.9808843281604912,
       "feesPaid": 5.109330689507763,
       "realizedPnl": 0,
-      "highestPrice": 0.9487,
+      "highestPrice": 0.9567,
       "lowestPrice": 0.9256,
       "confidence": 40.10230485759701,
       "validationVerdict": null,
@@ -2047,7 +2047,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1789692715721,
+    "at": 1789693052589,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -52908,7 +52908,7 @@
     ]
   },
   "longterm-shadow-last-run-day": "2026-09-18",
-  "live:live-cash-eur": 45.26,
+  "live:live-cash-eur": 36.200006251999994,
   "live:telegram-shared-update-offset": 447904572,
   "live:telegram-unclaimed-messages": [
     {
@@ -54995,9 +54995,32 @@
       "event": "rejected",
       "mode": "live",
       "detail": "Revolut X rejected the order: HTTP 400 — {\"message\":\"base_size precision must not exceed 5 decimal places\",\"error_id\":\"5dcbf6e2-9202-4bef-8ed8-4d6e05ea0f0d\",\"timestamp\":1789684639530}"
+    },
+    {
+      "timestamp": 1789693071590,
+      "intentId": "live-entry:XBTEUR:1789693052589",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1789693104182,
+      "intentId": "live-entry:XBTEUR:1789693052589",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram"
+    },
+    {
+      "timestamp": 1789693104942,
+      "intentId": "live-entry:XBTEUR:1789693052589",
+      "event": "filled",
+      "mode": "live",
+      "detail": "Revolut X order 1a055f84-f6f8-4ba7-9c12-1127df7b0b20: filled"
     }
   ],
-  "live:live-entry-outstanding-symbols": [],
+  "live:live-entry-outstanding-symbols": [
+    "XBTEUR"
+  ],
   "live:kill-switch-keyboard-sent": true,
   "education-tip-last-sent-at": 1789634090743,
   "education-tip-index": 8,
@@ -66178,6 +66201,10 @@
     {
       "at": 1789692715721,
       "equity": 45.26
+    },
+    {
+      "at": 1789693052589,
+      "equity": 45.26
     }
   ],
   "live:revolut-x-order-map": {
@@ -66191,9 +66218,40 @@
     "live-entry:ATOMEUR:1788952662543": "340c303d-cc83-4669-a0ca-476269102779",
     "live-entry:ATOMEUR:1788952662543:exit:1788991945597": "ae70584a-6a1e-4dbd-9653-e471d46f04dd",
     "external-reconcile:XBTEUR:1788982757047:exit:1789044439080": "f7d2a8de-9ead-4e32-a931-02e963b03150",
-    "external-reconcile:XBTEUR:1788978020562:exit:1789068971220": "622d833b-b706-45b5-a895-5b57311a1e4c"
+    "external-reconcile:XBTEUR:1788978020562:exit:1789068971220": "622d833b-b706-45b5-a895-5b57311a1e4c",
+    "live-entry:XBTEUR:1789693052589": "1a055f84-f6f8-4ba7-9c12-1127df7b0b20"
   },
-  "live:live-open-positions": {},
+  "live:live-open-positions": {
+    "live-entry:XBTEUR:1789693052589": {
+      "id": "live-entry:XBTEUR:1789693052589",
+      "symbol": "BTC/EUR",
+      "quantity": 0.00013581,
+      "entryPrice": 66710.8,
+      "stopLoss": 65653.1065,
+      "takeProfit": 68652.487,
+      "highestPrice": 66710.8,
+      "openedAt": 1789693052589,
+      "entryAssessment": {
+        "approved": true,
+        "asset": "XBTEUR",
+        "entry": 66710.8,
+        "stopLoss": 65653.1065,
+        "takeProfit": 68652.487,
+        "positionSize": 0.0001358080443611606,
+        "positionValue": 9.052,
+        "riskAmount": 0.13577999999999998,
+        "riskPercentage": 0.3,
+        "rewardRiskRatio": 2,
+        "portfolioExposure": 20,
+        "reasons": [
+          "risking 0.14 (0.30% of equity) for a 2.0:1 reward/risk — within every configured limit"
+        ],
+        "warnings": [
+          "size capped by the 20% single-position limit"
+        ]
+      }
+    }
+  },
   "telegram-unclaimed-messages": [
     {
       "updateId": 447904831,
@@ -66474,7 +66532,7 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904924,
+  "telegram-shared-update-offset": 447904926,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {
     "external-reconcile:XBTEUR:1788970622093": {
