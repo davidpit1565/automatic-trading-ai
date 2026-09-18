@@ -53356,43 +53356,7 @@
     }
   ],
   "live:telegram-unclaimed-callbacks": [],
-  "live:live-entry-pending": {
-    "ADAEUR": {
-      "opportunity": {
-        "symbol": "ADAEUR",
-        "timeframe": "1h",
-        "direction": "long",
-        "levels": {
-          "entry": 0.185783,
-          "stopLoss": 0.1816063650466058,
-          "takeProfit": 0.19413626990678842,
-          "riskReward": 2
-        },
-        "confidence": 41.45106089625938,
-        "confidenceComponents": [
-          {
-            "label": "Scanner evidence",
-            "detail": "composite score 44 of 100",
-            "effect": 26.451060896259374
-          },
-          {
-            "label": "Trend strength",
-            "detail": "ADX 51.5",
-            "effect": 15
-          }
-        ],
-        "explanation": "ADAEUR on the 1h timeframe shows bullish technical evidence (score 44/100 over 150 candles), driven mainly by Trend (EMA 20/50 + ADX) (EMA20 0.183 vs EMA50 0.178, ADX 51.5), Stochastic %K 14 (%K 76.2), Momentum (RSI 14) (RSI 64.3). Suggested plan: enter near 0.1858, stop loss at 0.1816 (2× ATR below entry), take profit at 0.1941 (4× ATR above), risk/reward 2.0. Confidence 41/90 reflects the strength of current evidence only — it is not a guarantee, and any position should be sized so its loss at the stop is acceptable.",
-        "warnings": [
-          "higher timeframe (4h) is neutral (score 26) — no confirmation from the larger trend"
-        ],
-        "basedOn": {
-          "score": 44.08510149376563,
-          "candleCount": 150
-        }
-      },
-      "queuedAt": 1789733493666
-    }
-  },
+  "live:live-entry-pending": {},
   "live:manual-buy-pending-symbols": [
     "SYMBOL",
     "EURXBTEUR"
@@ -55490,9 +55454,25 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1789734222650,
+      "intentId": "live-entry:ADAEUR:1789733493666",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram"
+    },
+    {
+      "timestamp": 1789734223342,
+      "intentId": "live-entry:ADAEUR:1789733493666",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "Revolut X order bf2ff1ba-be13-41e3-b398-840796b409a6: new"
     }
   ],
-  "live:live-entry-outstanding-symbols": [],
+  "live:live-entry-outstanding-symbols": [
+    "ADAEUR"
+  ],
   "live:kill-switch-keyboard-sent": true,
   "education-tip-last-sent-at": 1789634090743,
   "education-tip-index": 8,
@@ -67115,7 +67095,8 @@
     "live-entry:ATOMEUR:1788952662543:exit:1788991945597": "ae70584a-6a1e-4dbd-9653-e471d46f04dd",
     "external-reconcile:XBTEUR:1788982757047:exit:1789044439080": "f7d2a8de-9ead-4e32-a931-02e963b03150",
     "external-reconcile:XBTEUR:1788978020562:exit:1789068971220": "622d833b-b706-45b5-a895-5b57311a1e4c",
-    "live-entry:XBTEUR:1789693052589": "1a055f84-f6f8-4ba7-9c12-1127df7b0b20"
+    "live-entry:XBTEUR:1789693052589": "1a055f84-f6f8-4ba7-9c12-1127df7b0b20",
+    "live-entry:ADAEUR:1789733493666": "bf2ff1ba-be13-41e3-b398-840796b409a6"
   },
   "live:live-open-positions": {},
   "telegram-unclaimed-messages": [
@@ -67426,16 +67407,10 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904933,
+  "telegram-shared-update-offset": 447904943,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {
-    "live-entry:ADAEUR:1789733493666": {
-      "sentAt": 1789733514668,
-      "messageId": 794,
-      "token": "mu6x4i3w.5sjgob"
-    }
-  },
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 4254.174161930414,
@@ -69288,6 +69263,38 @@
     "ADAEUR:1789733493666:0": {
       "neg": 0,
       "pos": 0
+    }
+  },
+  "live:live-resting-entry-intents": {
+    "ADAEUR": {
+      "id": "live-entry:ADAEUR:1789733493666",
+      "createdAt": 1789734197000,
+      "mode": "live",
+      "symbol": "ADA/EUR",
+      "side": "buy",
+      "quantity": 48.88498947697044,
+      "limitPrice": 0.185783,
+      "stopLoss": 0.1816063650466058,
+      "takeProfit": 0.19413626990678842,
+      "assessment": {
+        "approved": true,
+        "asset": "ADAEUR",
+        "entry": 0.185783,
+        "stopLoss": 0.1816063650466058,
+        "takeProfit": 0.19413626990678842,
+        "positionSize": 48.88498947697044,
+        "positionValue": 9.081999999999999,
+        "riskAmount": 0.20417475574582283,
+        "riskPercentage": 0.4496250952341397,
+        "rewardRiskRatio": 2,
+        "portfolioExposure": 20,
+        "reasons": [
+          "risking 0.20 (0.45% of equity) for a 2.0:1 reward/risk — within every configured limit"
+        ],
+        "warnings": [
+          "size capped by the 20% single-position limit"
+        ]
+      }
     }
   }
 }
