@@ -87,38 +87,29 @@ async function main(): Promise<void> {
 
   interface Row { name: string; retMean: number; ddMean: number; trades: number; winPct: number; pf: number; oosPf: number; }
   const rows: Row[] = [];
-  const pooledPf = (h1slice: (c: Candle[]) => Candle[]): ((cfg: Config) => { pf: number }) =>
-    (cfg) => {
-      let gp = 0, gl = 0;
-      for (const d of data) {
-        const res = runLivePipelineBacktest(h1slice(d.h1), {
-          symbol: d.symbol, timeframe: '1h', costRate: 0.003,
-          minConfidence: cfg.minConfidence, criteria: cfg.criteria,
-          higherCandles: cfg.confirmation ? d.h4 : undefined,
-          confirmationTimeframe: '4h', trailing: cfg.trailing,
-        });
-        for (const t of res.closedTrades as LivePipelineTrade[]) {
-          if (t.pnl > 0) gp += t.pnl; else gl += -t.pnl;
-        }
-      }
-      return { pf: gl > 0 ? gp / gl : gp > 0 ? Infinity : 0 };
-    };
-  // Out-of-sample = the second half of each series (not the window configs were
-  // eyeballed on) — a fake "improvement" that only fits the past dies here.
-  const oos = pooledPf((c) => c.slice(Math.floor(c.length / 2)));
-
-  for (const cfg of CONFIGS) {
+  // First half = in-sample (what the grid above was reasoned about); second
+  // half = out-of-sample. Found in review, 2026-09-19: this used to measure
+  // the main Ret%/DD%/Trades/Win%/PF columns over the FULL series while
+  // "OOS-PF" re-measured only the second half — the two overlapped on that
+  // entire second half, so a config that only happened to work well on
+  // recent data would inflate BOTH columns together instead of the second
+  // one catching it. A real walk-forward split needs the two windows
+  // genuinely disjoint, or "OOS" is not actually out of anything.
+  const firstHalf = (c: Candle[]): Candle[] => c.slice(0, Math.floor(c.length / 2));
+  const secondHalf = (c: Candle[]): Candle[] => c.slice(Math.floor(c.length / 2));
+  const pooledStats = (h1slice: (c: Candle[]) => Candle[], cfg: Config) => {
     let retSum = 0, ddSum = 0, trades = 0, wins = 0, grossProfit = 0, grossLoss = 0;
     for (const d of data) {
-      const res = runLivePipelineBacktest(d.h1, {
-        symbol: d.symbol,
-        timeframe: '1h',
-        costRate: 0.003,
-        minConfidence: cfg.minConfidence,
-        criteria: cfg.criteria,
+      const res = runLivePipelineBacktest(h1slice(d.h1), {
+        symbol: d.symbol, timeframe: '1h', costRate: 0.003,
+        minConfidence: cfg.minConfidence, criteria: cfg.criteria,
+        // Passing the FULL d.h4 regardless of which h1 slice is being
+        // replayed is safe, not a lookahead leak: higherScanAt (livePipeline.ts)
+        // only ever considers 4h candles whose own timestamp is <= the
+        // current 1h bar being decided, so it can never see beyond whichever
+        // half is actually being replayed.
         higherCandles: cfg.confirmation ? d.h4 : undefined,
-        confirmationTimeframe: '4h',
-        trailing: cfg.trailing,
+        confirmationTimeframe: '4h', trailing: cfg.trailing,
       });
       retSum += res.totalReturnPct;
       ddSum += res.maxDrawdownPct;
@@ -127,14 +118,26 @@ async function main(): Promise<void> {
         if (t.pnl > 0) { wins++; grossProfit += t.pnl; } else { grossLoss += -t.pnl; }
       }
     }
-    rows.push({
-      name: cfg.name,
+    return {
       retMean: retSum / data.length,
       ddMean: ddSum / data.length,
       trades,
       winPct: trades > 0 ? (wins / trades) * 100 : 0,
       pf: grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0,
-      oosPf: oos(cfg).pf,
+    };
+  };
+
+  for (const cfg of CONFIGS) {
+    const inSample = pooledStats(firstHalf, cfg);
+    const outOfSample = pooledStats(secondHalf, cfg);
+    rows.push({
+      name: cfg.name,
+      retMean: inSample.retMean,
+      ddMean: inSample.ddMean,
+      trades: inSample.trades,
+      winPct: inSample.winPct,
+      pf: inSample.pf,
+      oosPf: outOfSample.pf,
     });
   }
 
@@ -144,7 +147,8 @@ async function main(): Promise<void> {
   const pad = (s: string, n: number) => s.padEnd(n);
   const num = (v: number, n: number) => v.toFixed(n).padStart(8);
   console.log(`\nSweep over ${data.length} symbols, ${LIMIT} 1h candles each. Buy&hold mean: ${bhMean.toFixed(2)}%`);
-  console.log(`(after fees 0.3%/side; sorted by profit factor)\n`);
+  console.log(`(after fees 0.3%/side; sorted by profit factor)`);
+  console.log(`(Ret%/MaxDD%/Trades/Win%/PF = first half of history, in-sample; OOS-PF = second half, genuinely disjoint)\n`);
   console.log(pad('Config', 34) + num2('Ret%') + num2('MaxDD%') + '  Trades' + '   Win%' + '     PF' + '  OOS-PF');
   console.log('-'.repeat(86));
   for (const r of rows) {
