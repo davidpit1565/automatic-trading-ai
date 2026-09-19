@@ -2686,6 +2686,17 @@ button.btn-sell:focus-visible {
   padding: 0.15rem 0.45rem;
   border-radius: var(--r-pill);
 }
+.ops-view-all {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--accent-text);
+  font-size: 0.72rem;
+  font-weight: var(--fw-semibold);
+  letter-spacing: normal;
+  text-transform: none;
+  cursor: pointer;
+}
 .ops-empty { color: var(--text-faint); font-size: 0.85rem; padding: var(--sp-3) 0; }
 
 .ops-kpi-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); }
@@ -2728,6 +2739,12 @@ button.btn-sell:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Trades screen (tradesView.ts) — closed-trade cards reuse .ops-action-card
+   but need their realized P&L prominent in the header, unlike the plain
+   symbol-only header on Overview's own action/position cards. */
+.tv-trade-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.4rem; }
+.tv-trade-pnl { font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
 
 /* ---------- Higher contrast ----------
    `--border`/`--border-strong` are the two tokens nearly every hairline

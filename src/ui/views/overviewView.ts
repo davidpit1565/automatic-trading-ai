@@ -80,7 +80,10 @@ export function renderOverviewView(container: HTMLElement): ViewHandle {
       <div id="ov-kpis" class="ops-kpi-row"></div>
     </div>
     <div class="ops-section">
-      <div class="ops-section-title">RECENT ACTIVITY</div>
+      <div class="ops-section-title">
+        RECENT ACTIVITY
+        <button class="ops-view-all" data-nav="trades">View trades →</button>
+      </div>
       <div id="ov-activity" class="ops-activity-list"></div>
       <div id="ov-activity-empty" class="ops-empty" hidden>No recent activity.</div>
     </div>
