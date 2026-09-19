@@ -10,6 +10,7 @@ import { initDataSource, type ActiveDataSource } from './dataSource';
 import { fetchSnapshot, findBtcSymbol } from './markets';
 import { formatPrice, formatPct } from './format';
 import { renderOverviewView } from './views/overviewView';
+import { renderTradesView } from './views/tradesView';
 import { renderCryptoView } from './views/cryptoView';
 import { renderStocksView } from './views/stocksView';
 import { renderMarketsView } from './views/marketsView';
@@ -52,6 +53,7 @@ type ViewRenderer = (container: HTMLElement, data: ActiveDataSource) => ViewHand
 
 const PRIMARY_VIEWS: Record<string, ViewRenderer> = {
   overview: (container) => renderOverviewView(container),
+  trades: (container) => renderTradesView(container),
   crypto: renderCryptoView,
   stocks: renderStocksView,
   value: renderValueView,
@@ -153,7 +155,7 @@ async function bootstrap(): Promise<void> {
     // `b.dataset['nav'] === name` at once: all four lost `aria-selected` AND
     // dropped to `tabIndex: -1`, making the entire bottom nav unreachable by
     // Tab while this screen was open, with no tab shown as active either.
-    const navName = name === 'value' ? 'crypto' : name;
+    const navName = name === 'value' ? 'crypto' : name === 'trades' ? 'overview' : name;
     document.querySelectorAll<HTMLButtonElement>('.nav-btn').forEach((b) => {
       const active = b.dataset['nav'] === navName;
       b.classList.toggle('active', active);
