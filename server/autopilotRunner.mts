@@ -1064,13 +1064,19 @@ export async function runLiveMirror(
   // real money — a losing streak in one day could never be halted by it.
   const liveLossTracker = new DailyLossTracker(liveStore);
   const recordLiveRealizedPnl = (pnl: number, ts: number): void => liveLossTracker.record(pnl, ts);
+  // Structured closed-trade record for LIVE positions — added 2026-09-19 so
+  // real trades are finally queryable (fees, real slippage, MAE/MFE) the
+  // same way paper's `TradeJournal` already is, instead of only ever a
+  // free-text audit-log line. Pure observability: nothing below reads this
+  // back to make a decision, so this has no effect on trading behavior.
+  const liveJournal = new TradeJournal(liveStore);
   // Catches a trade David makes directly in the Revolut X app instead of
   // through this bot (2026-09-04, David asked for this explicitly) — before
   // this cycle's own entry/exit checks below, so a manual fill from between
   // cycles is reconciled first (see liveManualTradeSync.mts's own doc
   // comment for why this ordering is race-free).
   const reconciledManualTrade = await syncManualTradesFromBroker(
-    liveStore, brokerAdapter, source, telegram, now, recordLiveRealizedPnl,
+    liveStore, brokerAdapter, source, telegram, now, recordLiveRealizedPnl, liveJournal, COST_RATE,
   );
   // A real, already-detected position/loss must never be lost to a killed
   // job — every OTHER real-money action in this cycle gets an immediate
@@ -1167,7 +1173,7 @@ export async function runLiveMirror(
     const killSwitchOutcomes = await checkManualKillSwitchCommands(store, telegram, killSwitch, audit, 'david', now);
     await notifyKillSwitchOutcomes(telegram, killSwitchOutcomes);
     const manualSellOutcomes = await checkManualSellRequests(
-      liveStore, telegram, source, ENTRY_TF, flowParams, now, recordLiveRealizedPnl, store,
+      liveStore, telegram, source, ENTRY_TF, flowParams, now, recordLiveRealizedPnl, store, liveJournal, COST_RATE,
     );
     // Persisted immediately once a real order actually reaches the broker,
     // not only once at the very end of this whole function (which itself
@@ -1244,6 +1250,8 @@ export async function runLiveMirror(
       now,
       150,
       recordLiveRealizedPnl,
+      liveJournal,
+      COST_RATE,
     );
     if (hasSubmittedOrder(exitOutcomes)) persistStateToGit(store, 'live-mirror: after automatic exits');
   } catch (cause) {

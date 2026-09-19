@@ -22,15 +22,18 @@ import type { KeyValueStore } from '../src/core/data/storage';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import type { Timeframe } from '../src/core/types';
 import type { ExitReason } from '../src/core/position/tradeJournal';
+import { TradeJournal } from '../src/core/position/tradeJournal';
 import type { ExitDecisionOptions } from '../src/core/autopilot/exitDecision';
 import {
   buildLiveExitIntent,
+  buildLiveJournalEntry,
   decideLiveExit,
   forgetLivePosition,
   markExitSubmitted,
   openLivePositions,
   reduceLivePositionQuantity,
   updateLiveHighestPrice,
+  updateLiveLowestPrice,
   type LiveOpenPosition,
 } from './liveExitFlow.mts';
 import { clearOutstandingEntry } from './liveEntryMirror.mts';
@@ -65,6 +68,13 @@ export interface ProposeLiveExitParams {
    * account's daily-loss circuit breaker. Optional so this stays callable
    * exactly as before wherever a caller has no tracker to feed. */
   readonly onRealizedPnl?: (pnl: number, now: number) => void;
+  /** Records a structured closed-trade entry on a genuine full-quantity
+   * fill — see `buildLiveJournalEntry`'s doc comment. Both this and
+   * `costRate` are optional, and only ever used together: omitting either
+   * silently skips journaling (never throws), so every existing caller
+   * keeps working unchanged until `autopilotRunner.mts` wires them in. */
+  readonly journal?: TradeJournal;
+  readonly costRate?: number;
 }
 
 /**
@@ -166,6 +176,10 @@ export async function proposeLiveExit(
         if (result.report.state === 'filled') {
           creditLiveCash(store, result.report.filledQuantity * fillPrice);
           params.onRealizedPnl?.((fillPrice - position.entryPrice) * result.report.filledQuantity, now);
+          if (params.journal && params.costRate !== undefined) {
+            const entry = buildLiveJournalEntry(position, fillPrice, intent.limitPrice, queued.reason, params.costRate, now);
+            if (entry) params.journal.append(entry);
+          }
           forgetLivePosition(store, position.id);
           // Releases this symbol for a FUTURE fresh entry — see
           // `liveEntryMirror.mts`'s `clearOutstandingEntry` doc comment.
@@ -279,6 +293,10 @@ export async function checkAutomaticExits(
   now: number,
   candleCount = 150,
   onRealizedPnl?: (pnl: number, now: number) => void,
+  /** See `ProposeLiveExitParams` — forwarded as-is, so omitting either
+   * keeps this exactly as callable as before (no journaling). */
+  journal?: TradeJournal,
+  costRate?: number,
 ): Promise<readonly LiveExitOutcome[]> {
   const outcomes: LiveExitOutcome[] = [];
   for (const position of openLivePositions(store)) {
@@ -291,14 +309,16 @@ export async function checkAutomaticExits(
       }
       const price = candles.value[candles.value.length - 1]!.close;
 
-      // Ratchet the highest-seen price BEFORE deciding (feeds a configured
-      // trailing stop) — then re-read, since this mutates the stored record.
+      // Ratchet the highest/lowest-seen price BEFORE deciding (highest feeds
+      // a configured trailing stop; lowest only feeds MAE at close) — then
+      // re-read, since this mutates the stored record.
       updateLiveHighestPrice(store, position.id, price);
+      updateLiveLowestPrice(store, position.id, price);
       const refreshed = findFresh(openLivePositions(store), position.id);
       if (!refreshed) continue; // forgotten by something else mid-loop — nothing left to exit
 
       const reason = decideLiveExit(refreshed, price, candles.value.map((c) => c.close), exitOptions);
-      const result = await proposeLiveExit(store, refreshed, reason, price, now, { flowParams, onRealizedPnl });
+      const result = await proposeLiveExit(store, refreshed, reason, price, now, { flowParams, onRealizedPnl, journal, costRate });
       outcomes.push({ symbol, ...result });
     } catch (cause) {
       // One position's transient failure (a network error, an unexpected

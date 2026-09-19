@@ -14,12 +14,14 @@ import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
 import { runLiveOrderFlow } from '../../server/liveOrchestrator.mts';
 import {
   buildLiveExitIntent,
+  buildLiveJournalEntry,
   decideLiveExit,
   forgetLivePosition,
   openLivePositions,
   recordLiveEntryFill,
   reduceLivePositionQuantity,
   updateLiveHighestPrice,
+  updateLiveLowestPrice,
 } from '../../server/liveExitFlow.mts';
 
 function approvedAssessment(overrides: Partial<TradeRiskAssessment> = {}): TradeRiskAssessment {
@@ -72,10 +74,14 @@ describe('recordLiveEntryFill', () => {
         id: 'entry-1',
         symbol: 'BTC-EUR',
         quantity: 2,
+        initialQuantity: 2,
         entryPrice: 101,
         stopLoss: 90,
         takeProfit: 120,
         highestPrice: 101,
+        lowestPrice: 101,
+        // |real fill (101) − signal price (100)| × quantity (2).
+        entrySlippage: 2,
         openedAt: 5000,
         // .entry overridden to the REAL fill price (101), not the originally
         // proposed one (100) — see the slippage test below for why.
@@ -163,6 +169,79 @@ describe('updateLiveHighestPrice', () => {
     const store = new MemoryStore();
     expect(() => updateLiveHighestPrice(store, 'unknown', 200)).not.toThrow();
     expect(openLivePositions(store)).toEqual([]);
+  });
+});
+
+describe('updateLiveLowestPrice', () => {
+  it('ratchets the lowest price down but never up', () => {
+    const store = new MemoryStore();
+    recordLiveEntryFill(store, buyIntent(), filledReport(), 5000);
+
+    updateLiveLowestPrice(store, 'entry-1', 90);
+    expect(openLivePositions(store)[0]!.lowestPrice).toBe(90);
+
+    updateLiveLowestPrice(store, 'entry-1', 95);
+    expect(openLivePositions(store)[0]!.lowestPrice).toBe(90);
+  });
+
+  it('no-ops for an untracked position id', () => {
+    const store = new MemoryStore();
+    expect(() => updateLiveLowestPrice(store, 'unknown', 1)).not.toThrow();
+    expect(openLivePositions(store)).toEqual([]);
+  });
+});
+
+describe('buildLiveJournalEntry', () => {
+  const COST_RATE = 0.003;
+
+  function closedPosition() {
+    const store = new MemoryStore();
+    // Filled at 101 against a 100 signal price — real €2 entry slippage.
+    recordLiveEntryFill(store, buyIntent(), filledReport({ avgFillPrice: 101 }), 5000);
+    updateLiveHighestPrice(store, 'entry-1', 112);
+    updateLiveLowestPrice(store, 'entry-1', 98);
+    return openLivePositions(store)[0]!;
+  }
+
+  it('builds a structured entry from real fill data — fees estimated, slippage measured', () => {
+    const position = closedPosition();
+    // Exits at 110 against a 108 signal price — real €4 exit slippage (2 units).
+    const entry = buildLiveJournalEntry(position, 110, 108, 'take-profit', COST_RATE, 20_000);
+
+    expect(entry).not.toBeNull();
+    expect(entry!.id).toBe('entry-1');
+    expect(entry!.entryPrice).toBe(101);
+    expect(entry!.exitPrice).toBe(110);
+    expect(entry!.positionSize).toBe(2);
+    expect(entry!.exitReason).toBe('take-profit');
+    expect(entry!.holdingDurationMs).toBe(15_000);
+    // MFE from the ratcheted highest (112) vs entry (101); MAE from the
+    // ratcheted lowest (98) vs entry (101).
+    expect(entry!.mfePct).toBeCloseTo(((112 - 101) / 101) * 100);
+    expect(entry!.maePct).toBeCloseTo(((101 - 98) / 101) * 100);
+    // slippage = entrySlippage (2) + exit slippage (|110-108|*2=4).
+    expect(entry!.slippage).toBe(6);
+    // fees = (101*2 + 110*2) * 0.003.
+    expect(entry!.fees).toBeCloseTo((101 * 2 + 110 * 2) * COST_RATE);
+    const expectedPnl = 110 * 2 - 101 * 2 - entry!.fees;
+    expect(entry!.realizedPnl).toBeCloseTo(expectedPnl);
+    expect(entry!.confidence).toBeNull();
+    expect(entry!.strategyVersion).toBeNull();
+  });
+
+  it('returns null instead of fabricating a number when a partial exit already touched this position', () => {
+    const position = closedPosition();
+    const partiallyReduced = { ...position, quantity: position.initialQuantity - 0.5 };
+
+    expect(buildLiveJournalEntry(partiallyReduced, 110, 108, 'take-profit', COST_RATE, 20_000)).toBeNull();
+  });
+
+  it('reports zero slippage when the exit signal price equals the exit price (e.g. a manual sale with no real signal)', () => {
+    const position = closedPosition();
+    const entry = buildLiveJournalEntry(position, 105, 105, 'manual', COST_RATE, 20_000);
+
+    // Only the ENTRY leg's real slippage remains — this exit measured none.
+    expect(entry!.slippage).toBe(position.entrySlippage);
   });
 });
 

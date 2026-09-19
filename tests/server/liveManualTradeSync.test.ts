@@ -7,6 +7,7 @@ import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
 import { openLivePositions, recordLiveEntryFill } from '../../server/liveExitFlow.mts';
 import { readRestingEntryIntent, rememberRestingEntryIntent } from '../../server/liveEntryMirror.mts';
 import { syncManualTradesFromBroker } from '../../server/liveManualTradeSync.mts';
+import { TradeJournal } from '../../src/core/position/tradeJournal';
 
 const NO_TELEGRAM = { token: '', chatId: '' };
 
@@ -139,6 +140,50 @@ describe('syncManualTradesFromBroker (2026-09-04: a real Revolut X trade made ou
     );
     expect(openLivePositions(store)).toHaveLength(0);
     expect(pnlEvents).toEqual([[(45_000 - 40_000) * 0.5, 2_000]]);
+  });
+
+  it('records a structured journal entry when a manual sell fully closes a tracked position, given a journal + costRate (added 2026-09-19)', async () => {
+    const store = new MemoryStore();
+    recordLiveEntryFill(store, buyIntent('XBTEUR', 0.5, 40_000), filledReport('XBTEUR', 0.5, 40_000), 500);
+    const journal = new TradeJournal(store);
+    await syncManualTradesFromBroker(
+      store,
+      fakeBroker([{ symbol: 'BTC', quantity: 0, avgCost: 0 }]),
+      fakeSource({ XBTEUR: 45_000 }),
+      NO_TELEGRAM,
+      2_000,
+      undefined,
+      journal,
+      0.003,
+    );
+    expect(journal.entries()).toHaveLength(1);
+    expect(journal.entries()[0]).toMatchObject({
+      id: 'entry-XBTEUR',
+      entryPrice: 40_000,
+      exitPrice: 45_000,
+      positionSize: 0.5,
+      exitReason: 'manual',
+      // No real "signal price" for a manual sale — entry and exit signal
+      // price are the same value, so only entry slippage (0 here) survives.
+      slippage: 0,
+    });
+  });
+
+  it('does not journal when the manual sell only partially closed the position, rather than fabricating a P&L for a leg that has not fully exited', async () => {
+    const store = new MemoryStore();
+    recordLiveEntryFill(store, buyIntent('XBTEUR', 0.5, 40_000), filledReport('XBTEUR', 0.5, 40_000), 500);
+    const journal = new TradeJournal(store);
+    await syncManualTradesFromBroker(
+      store,
+      fakeBroker([{ symbol: 'BTC', quantity: 0.2, avgCost: 0 }]), // sold 0.3 of 0.5
+      fakeSource({ XBTEUR: 45_000 }),
+      NO_TELEGRAM,
+      2_000,
+      undefined,
+      journal,
+      0.003,
+    );
+    expect(journal.entries()).toEqual([]);
   });
 
   it('partially reduces a tracked position on a partial manual sell', async () => {

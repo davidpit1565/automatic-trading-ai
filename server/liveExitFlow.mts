@@ -27,7 +27,7 @@
 import type { KeyValueStore } from '../src/core/data/storage';
 import type { OrderIntent, OrderStatusReport } from '../src/core/execution/types';
 import type { TradeRiskAssessment } from '../src/core/risk/riskEngine';
-import type { ExitReason } from '../src/core/position/tradeJournal';
+import type { ExitReason, JournalEntry } from '../src/core/position/tradeJournal';
 import { decideExit, type ExitDecisionOptions } from '../src/core/autopilot/exitDecision';
 
 const LIVE_OPEN_POSITIONS_KEY = 'live-open-positions';
@@ -42,6 +42,25 @@ export interface LiveOpenPosition {
   readonly takeProfit: number;
   /** Highest price seen since entry — feeds a configured trailing stop. */
   readonly highestPrice: number;
+  /** Lowest price seen since entry — mirrors `highestPrice`, feeds MAE at
+   * close (`buildLiveJournalEntry`). No configured behavior reads this
+   * (unlike `highestPrice`'s trailing stop) — it exists purely to measure. */
+  readonly lowestPrice: number;
+  /** The quantity THIS position was entered with — `quantity` below shrinks
+   * on a partial exit, but journaling (`buildLiveJournalEntry`) needs the
+   * original size to know whether a close is honestly a single clean fill
+   * or something a partial exit already touched. */
+  readonly initialQuantity: number;
+  /**
+   * Real, measured entry slippage in EUR: |actual fill price − the Kraken-
+   * derived signal price the order was built from| × filled quantity.
+   * Unlike paper trading's simulated `slippage` (a cost-rate estimate),
+   * this is genuine broker-vs-signal divergence — see `buildLiveJournalEntry`.
+   * Zero whenever the entry's real fill price was unknown and defaulted to
+   * the signal price itself (e.g. an external-reconcile buy), which is
+   * honest: there is no measured divergence to report, not a real zero.
+   */
+  readonly entrySlippage: number;
   readonly openedAt: number;
   /** The ORIGINAL risk assessment this position was entered under — kept
    * for the exit's own confirmation message/audit traceability, not reused
@@ -102,10 +121,13 @@ export function recordLiveEntryFill(
     id: intent.id,
     symbol: intent.symbol,
     quantity: report.filledQuantity,
+    initialQuantity: report.filledQuantity,
     entryPrice,
     stopLoss: intent.stopLoss,
     takeProfit: intent.takeProfit,
     highestPrice: entryPrice,
+    lowestPrice: entryPrice,
+    entrySlippage: Math.abs(entryPrice - intent.limitPrice) * report.filledQuantity,
     openedAt: now,
     // `.entry` overridden to the REAL fill price, not the originally
     // proposed one — a filled order can slip, and the exit's own P&L math
@@ -134,6 +156,91 @@ export function updateLiveHighestPrice(store: KeyValueStore, positionId: string,
   if (!existing || price <= existing.highestPrice) return;
   positions[positionId] = { ...existing, highestPrice: price };
   store.set(LIVE_OPEN_POSITIONS_KEY, positions);
+}
+
+/**
+ * Ratchets a tracked position's lowest-seen price — the MAE counterpart to
+ * `updateLiveHighestPrice`. Call alongside it, every cycle, before deciding
+ * an exit. No-ops for an untracked position id.
+ */
+export function updateLiveLowestPrice(store: KeyValueStore, positionId: string, price: number): void {
+  const positions = readPositions(store);
+  const existing = positions[positionId];
+  if (!existing || price >= existing.lowestPrice) return;
+  positions[positionId] = { ...existing, lowestPrice: price };
+  store.set(LIVE_OPEN_POSITIONS_KEY, positions);
+}
+
+/**
+ * Builds a structured journal entry for a position that just closed for
+ * real — the live counterpart to paper trading's `buildJournalEntry`
+ * (`src/core/position/positionEngine.ts`), so live trades are finally
+ * queryable the same way (fees, slippage, MAE/MFE, holding time) instead of
+ * only ever appearing as free-text audit-log lines. Added 2026-09-19 after
+ * an audit found LIVE trades never reached `TradeJournal` at all.
+ *
+ * Returns `null` — deliberately skips journaling — when `position.quantity`
+ * no longer equals `position.initialQuantity`: a partial exit already
+ * happened somewhere in this position's life, and this project has no
+ * per-leg exit history to build an honest weighted entry from (unlike
+ * paper's `PositionState`, which keeps one). Fabricating a P&L number from
+ * only the entry price and the FINAL exit price would silently misprice
+ * every quantity that left earlier at a different price — worse than not
+ * journaling at all. A future pass can extend this once partial-exit legs
+ * are tracked; until then, the plain audit-log entry every exit already
+ * gets is this case's only record, exactly as before this change.
+ *
+ * `fees` is a COST_RATE estimate on entry+exit notional — the SAME
+ * assumption paper trading already uses, since Revolut X's real order API
+ * has never been observed to return an actual fee figure (checked directly
+ * against every response shape documented in this file's own history).
+ * `slippage`, unlike paper's, is REAL: `position.entrySlippage` (measured at
+ * entry) plus this exit's own |fill price − signal price| × quantity —
+ * genuine broker-vs-signal divergence, not a simulated cost.
+ */
+export function buildLiveJournalEntry(
+  position: LiveOpenPosition,
+  exitPrice: number,
+  exitSignalPrice: number,
+  exitReason: ExitReason,
+  costRate: number,
+  now: number,
+): JournalEntry | null {
+  if (position.quantity !== position.initialQuantity) return null;
+  const quantity = position.initialQuantity;
+  const notionalEntry = position.entryPrice * quantity;
+  const notionalExit = exitPrice * quantity;
+  const fees = (notionalEntry + notionalExit) * costRate;
+  const exitSlippage = Math.abs(exitPrice - exitSignalPrice) * quantity;
+  const realizedPnl = notionalExit - notionalEntry - fees;
+  return {
+    id: position.id,
+    symbol: position.symbol,
+    entryTimestamp: position.openedAt,
+    exitTimestamp: now,
+    entryPrice: position.entryPrice,
+    exitPrice,
+    positionSize: quantity,
+    stopLoss: position.stopLoss,
+    takeProfit: position.takeProfit,
+    exitReason,
+    fees,
+    slippage: position.entrySlippage + exitSlippage,
+    holdingDurationMs: now - position.openedAt,
+    mfePct: ((position.highestPrice - position.entryPrice) / position.entryPrice) * 100,
+    maePct: ((position.entryPrice - position.lowestPrice) / position.entryPrice) * 100,
+    realizedPnl,
+    returnPct: notionalEntry > 0 ? (realizedPnl / notionalEntry) * 100 : 0,
+    strategyVersion: null,
+    validationVerdict: null,
+    // Not available on a live OrderIntent's TradeRiskAssessment (unlike
+    // paper's PositionState, which threads the signal's own confidence
+    // through) — left honestly null rather than guessed.
+    confidence: null,
+    notes:
+      'live trade — fees are a cost-rate ESTIMATE (Revolut X reports no real fee figure); ' +
+      'slippage is REAL (signal price vs actual broker fill, entry + exit)',
+  };
 }
 
 /**

@@ -59,8 +59,10 @@ import type { MarketDataSource } from '../src/core/data/revolutClient';
 import type { BrokerAdapter, OrderIntent, OrderStatusReport } from '../src/core/execution/types';
 import type { TradeRiskAssessment } from '../src/core/risk/riskEngine';
 import type { Instrument } from '../src/core/types';
+import type { TradeJournal } from '../src/core/position/tradeJournal';
 import { CURATED_INSTRUMENTS } from '../src/core/data/krakenPublic';
 import {
+  buildLiveJournalEntry,
   forgetLivePosition,
   openLivePositions,
   recordLiveEntryFill,
@@ -211,6 +213,14 @@ async function reconcileExternalSell(
   telegram: TelegramConfig,
   now: number,
   onRealizedPnl?: (pnl: number, now: number) => void,
+  /** See `ProposeLiveExitParams` (liveExitMirror.mts) — same optional pair,
+   * same meaning: journals a closed position ONLY when both are given and
+   * a real price was available this cycle (a manual sale has no separate
+   * "signal price" the way an automatic exit does, so entry and exit
+   * signal price are the same value here — honestly zero measured
+   * slippage, not a fabricated one). */
+  journal?: TradeJournal,
+  costRate?: number,
 ): Promise<void> {
   const first = trackedForSymbol[0];
   if (!first) return;
@@ -225,6 +235,10 @@ async function reconcileExternalSell(
       onRealizedPnl?.((price - position.entryPrice) * reduceBy, now);
     }
     if (reduceBy >= position.quantity - DUST_QTY) {
+      if (journal && costRate !== undefined && price !== null && price > 0) {
+        const entry = buildLiveJournalEntry(position, price, price, 'manual', costRate, now);
+        if (entry) journal.append(entry);
+      }
       forgetLivePosition(store, position.id);
       clearOutstandingEntry(store, symbol);
       closedAny = true;
@@ -259,6 +273,10 @@ export async function syncManualTradesFromBroker(
   telegram: TelegramConfig,
   now: number,
   onRealizedPnl?: (pnl: number, now: number) => void,
+  /** See `ProposeLiveExitParams` (liveExitMirror.mts) — same optional pair,
+   * forwarded to `reconcileExternalSell`. */
+  journal?: TradeJournal,
+  costRate?: number,
 ): Promise<boolean> {
   let brokerPositions: Awaited<ReturnType<BrokerAdapter['fetchPositions']>>;
   try {
@@ -283,7 +301,7 @@ export async function syncManualTradesFromBroker(
       // guaranteed non-empty here (trackedQty > brokerQty >= 0 requires at
       // least one tracked position), and reconcileExternalSell reduces/closes
       // it regardless of whether a current price was available for P&L.
-      await reconcileExternalSell(store, trackedForSymbol, -diff, source, telegram, now, onRealizedPnl);
+      await reconcileExternalSell(store, trackedForSymbol, -diff, source, telegram, now, onRealizedPnl, journal, costRate);
       reconciledAny = true;
     }
   }

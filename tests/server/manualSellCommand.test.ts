@@ -17,6 +17,7 @@ import { openLivePositions, recordLiveEntryFill } from '../../server/liveExitFlo
 import { checkManualSellRequests, parseSellCommand } from '../../server/manualSellCommand.mts';
 import { stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
 import { confirmationToken, TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
+import { TradeJournal } from '../../src/core/position/tradeJournal';
 
 function approvedAssessment(): TradeRiskAssessment {
   return {
@@ -268,6 +269,55 @@ describe('checkManualSellRequests', () => {
       9000,
     );
     expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report: exitReport }]);
+  });
+
+  it('records a structured journal entry for a manual /sell that fully closes the position, given a journal + costRate (added 2026-09-19)', async () => {
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    const killSwitch = new PersistedKillSwitch(store);
+    recordLiveEntryFill(store, buyIntent(), filledReport(), 5000);
+    const journal = new TradeJournal(store);
+
+    const fetchFn = seedTelegram([{ update_id: 1, message: { text: '/sell XBTEUR', chat: { id: 'C' } } }]);
+    const exitReport: OrderStatusReport = {
+      intentId: 'entry-1:manual-sell',
+      state: 'filled',
+      filledQuantity: 2,
+      avgFillPrice: 95,
+      detail: 'ok',
+    };
+    await checkManualSellRequests(
+      store,
+      { token: 'T', chatId: 'C', fetchFn },
+      fakeSource(95),
+      '1h',
+      {
+        confirmationGate: fakeConfirmationGate({
+          intentId: 'entry-1:manual-sell',
+          approved: true,
+          decidedAt: 1,
+          decidedBy: 'david',
+        }),
+        brokerAdapter: fakeBrokerAdapter(exitReport),
+        killSwitch,
+        audit,
+        verifySymbolExists: async () => true,
+      },
+      9000,
+      undefined,
+      store,
+      journal,
+      0.003,
+    );
+
+    expect(journal.entries()).toHaveLength(1);
+    expect(journal.entries()[0]).toMatchObject({
+      id: 'entry-1',
+      entryPrice: 100,
+      exitPrice: 95,
+      positionSize: 2,
+      exitReason: 'manual',
+    });
   });
 
   it('stops tracking the position once its sell genuinely fills, so a later /sell for the same symbol cannot sell it a second time', async () => {
