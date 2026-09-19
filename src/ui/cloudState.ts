@@ -121,6 +121,34 @@ export interface CloudState {
   readonly live: LiveAccountState | null;
 }
 
+/** A live BUY still awaiting a human's Telegram approve/reject tap — the
+ * "Action Required" data (`server/liveEntryMirror.mts`'s `PendingEntry`,
+ * joined with `telegramConfirmationGate.mts`'s send record for timing).
+ * `positionValue`/`riskAmount`/`riskPercentage` are the MOST RECENTLY
+ * computed sizing (`PendingEntry.lastAssessment`) — refreshed every cycle
+ * this stays pending, so they can drift slightly from what the original
+ * Telegram message showed if equity changed while the approval sat
+ * unanswered. Null only for a record persisted before that field existed,
+ * or before the confirmation was actually sent (send failed, will retry).
+ * Exit approvals (closing an existing position) are a known, explicit gap
+ * — not included here yet. */
+export interface CloudPendingApproval {
+  readonly symbol: string;
+  readonly confidence: number;
+  readonly entryPrice: number;
+  readonly stopLoss: number;
+  readonly takeProfit: number;
+  readonly rewardRiskRatio: number;
+  readonly queuedAt: number;
+  readonly sentAt: number | null;
+  /** `sentAt + 20 minutes` — this project's fixed confirmation window
+   * (`telegramConfirmationGate.mts`'s `MAX_PENDING_MS`). Null when `sentAt` is. */
+  readonly expiresAt: number | null;
+  readonly positionValue: number | null;
+  readonly riskAmount: number | null;
+  readonly riskPercentage: number | null;
+}
+
 /** One currently open REAL position — `symbol` is this project's internal
  * instrument code (e.g. 'XBTEUR'), read from the position's own entry
  * assessment, not the broker-native pair symbol it's stored under. */
@@ -162,6 +190,9 @@ export interface LiveAccountState {
    * after this was wired up (2026-09-19) — closes before that only exist
    * as a plain `recentEvents` line, never retroactively backfilled. */
   readonly tradeJournal: CloudLiveJournalEntry[];
+  /** Live entries still awaiting a human's Telegram tap, newest queued
+   * first — see `CloudPendingApproval`'s own doc comment. */
+  readonly pendingApprovals: CloudPendingApproval[];
 }
 
 /** A real, closed live trade with full economics — `fees` is always a
@@ -243,7 +274,31 @@ interface RawState {
     returnPct?: number;
     notes?: string | null;
   }>;
+  'live:live-entry-pending'?: Record<
+    string,
+    {
+      opportunity?: {
+        symbol?: string;
+        confidence?: number;
+        levels?: { entry?: number; stopLoss?: number; takeProfit?: number; riskReward?: number };
+      };
+      queuedAt?: number;
+      lastAssessment?: {
+        positionValue?: number;
+        riskAmount?: number;
+        riskPercentage?: number;
+        rewardRiskRatio?: number;
+      };
+    }
+  >;
+  'live:confirmation-gate-pending'?: Record<string, { sentAt?: number }>;
 }
+
+/** This project's fixed confirmation window
+ * (`server/telegramConfirmationGate.mts`'s `MAX_PENDING_MS`) — kept as its
+ * own named constant here since the frontend has no import access to that
+ * server module. */
+const CONFIRMATION_WINDOW_MS = 20 * 60 * 1000;
 
 interface RawLivePosition {
   symbol?: string;
@@ -342,6 +397,47 @@ function parseLiveAccountState(raw: RawState): LiveAccountState | null {
       notes: e.notes ?? null,
     }))
     .sort((a, b) => b.exitTimestamp - a.exitTimestamp);
+  const confirmationPending = raw['live:confirmation-gate-pending'] ?? {};
+  const pendingApprovals: CloudPendingApproval[] = Object.entries(raw['live:live-entry-pending'] ?? {})
+    // Dropped, not fabricated, when the record predates a field it needs
+    // (e.g. an opportunity/levels shape from before this was wired up).
+    .filter(
+      (
+        entry,
+      ): entry is [
+        string,
+        { opportunity: { symbol: string; confidence: number; levels: { entry: number; stopLoss: number; takeProfit: number; riskReward: number } }; queuedAt: number; lastAssessment?: { positionValue?: number; riskAmount?: number; riskPercentage?: number; rewardRiskRatio?: number } },
+      ] => {
+        const e = entry[1];
+        return (
+          typeof e.opportunity?.symbol === 'string' &&
+          typeof e.opportunity.confidence === 'number' &&
+          typeof e.opportunity.levels?.entry === 'number' &&
+          typeof e.opportunity.levels.stopLoss === 'number' &&
+          typeof e.opportunity.levels.takeProfit === 'number' &&
+          typeof e.opportunity.levels.riskReward === 'number' &&
+          typeof e.queuedAt === 'number'
+        );
+      },
+    )
+    .map(([symbol, e]) => {
+      const sentAt = confirmationPending[`live-entry:${symbol}:${e.queuedAt}`]?.sentAt ?? null;
+      return {
+        symbol,
+        confidence: e.opportunity.confidence,
+        entryPrice: e.opportunity.levels.entry,
+        stopLoss: e.opportunity.levels.stopLoss,
+        takeProfit: e.opportunity.levels.takeProfit,
+        rewardRiskRatio: e.opportunity.levels.riskReward,
+        queuedAt: e.queuedAt,
+        sentAt,
+        expiresAt: sentAt !== null ? sentAt + CONFIRMATION_WINDOW_MS : null,
+        positionValue: e.lastAssessment?.positionValue ?? null,
+        riskAmount: e.lastAssessment?.riskAmount ?? null,
+        riskPercentage: e.lastAssessment?.riskPercentage ?? null,
+      };
+    })
+    .sort((a, b) => b.queuedAt - a.queuedAt);
   return {
     cash,
     positions,
@@ -351,6 +447,7 @@ function parseLiveAccountState(raw: RawState): LiveAccountState | null {
     externalBtcQuantity: raw['live:live-external-btc-qty'] ?? 0,
     equityHistory: Array.isArray(raw['live:live-equity-history']) ? raw['live:live-equity-history'] : [],
     tradeJournal,
+    pendingApprovals,
   };
 }
 

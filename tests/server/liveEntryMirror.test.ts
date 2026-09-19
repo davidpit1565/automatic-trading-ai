@@ -421,6 +421,38 @@ describe('mirrorApprovedEntries', () => {
     expect(second).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report }]);
   });
 
+  it('persists the computed position size/risk onto the pending entry while it awaits confirmation — a UI has no other way to know a still-open approval\'s sizing (added 2026-09-19)', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const pendingGate: ConfirmationGate = {
+      async requestConfirmation() {
+        throw new ConfirmationPendingError('live-entry:XBTEUR');
+      },
+    };
+
+    await mirrorApprovedEntries(
+      store,
+      [opportunity()],
+      [XBT],
+      { XBTEUR: 100 },
+      {
+        confirmationGate: pendingGate,
+        brokerAdapter: fakeBrokerAdapter({ intentId: 'x', state: 'filled', filledQuantity: 0, avgFillPrice: null, detail: '' }),
+        killSwitch,
+        audit,
+        verifySymbolExists: async () => true,
+      },
+      1000,
+    );
+
+    const pending = store.get<Record<string, { lastAssessment?: { positionValue: number; riskAmount: number; riskPercentage: number; rewardRiskRatio: number } }>>('live-entry-pending');
+    expect(pending!['XBTEUR']!.lastAssessment).toBeDefined();
+    expect(pending!['XBTEUR']!.lastAssessment!.positionValue).toBeGreaterThan(0);
+    expect(pending!['XBTEUR']!.lastAssessment!.rewardRiskRatio).toBeGreaterThan(0);
+  });
+
   it('refuses a second entry attempt for a symbol with an outstanding (submitted, resting) order, and clearOutstandingEntry lifts it once the position is later closed', async () => {
     const store = new MemoryStore();
     initLiveCash(store, 100);

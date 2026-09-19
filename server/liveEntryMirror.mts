@@ -90,6 +90,24 @@ export function clearRestingEntryIntent(store: KeyValueStore, symbol: string): v
 interface PendingEntry {
   readonly opportunity: TradeOpportunity;
   readonly queuedAt: number;
+  /**
+   * The most recently computed sizing for this pending entry — added
+   * 2026-09-19 so a UI can show position size/risk for a still-open
+   * Telegram approval without re-running `assessTrade` itself (which needs
+   * live equity/open-positions state a frontend has no access to). Not
+   * necessarily identical to the numbers in the original Telegram message
+   * (built once, on the first cycle) — this is refreshed every cycle a
+   * still-pending entry is re-assessed, so it reflects the sizing that
+   * would actually be used if approved on THIS cycle, which can drift
+   * slightly if equity changed while the approval sat unanswered. Absent
+   * only for a record persisted before this field existed.
+   */
+  readonly lastAssessment?: {
+    readonly positionValue: number;
+    readonly riskAmount: number;
+    readonly riskPercentage: number;
+    readonly rewardRiskRatio: number;
+  };
 }
 
 function readPending(store: KeyValueStore): Record<string, PendingEntry> {
@@ -280,6 +298,19 @@ export async function mirrorApprovedEntries(
         store.set(PENDING_KEY, pending);
         continue;
       }
+      // Persist the sizing a UI can show for this still-open approval — see
+      // PendingEntry.lastAssessment's own doc comment for why this can't
+      // just be recomputed by the frontend itself.
+      pending[symbol] = {
+        ...pending[symbol]!,
+        lastAssessment: {
+          positionValue: assessment.positionValue,
+          riskAmount: assessment.riskAmount,
+          riskPercentage: assessment.riskPercentage,
+          rewardRiskRatio: assessment.rewardRiskRatio,
+        },
+      };
+      store.set(PENDING_KEY, pending);
       // Found in review, 2026-09-03: `assessment.positionValue` is sized
       // against total LIVE equity (cash + open positions' current value),
       // but an order can only actually be paid for out of free CASH — with
