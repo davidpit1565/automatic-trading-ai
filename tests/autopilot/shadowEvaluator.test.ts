@@ -16,9 +16,13 @@ import { TradeJournal } from '../../src/core/position/tradeJournal';
 import { PersistedKillSwitch } from '../../src/core/autopilot/killSwitch';
 import { PrefixedStore } from '../../src/core/data/prefixedStore';
 import {
+  CHAMPION_KEY,
+  compareToChampion,
   runShadowCycle,
   SHADOW_CANDIDATES,
+  SHADOW_MEANINGFUL_TRADES,
   type ShadowCandidate,
+  type ShadowStanding,
 } from '../../src/core/autopilot/shadowEvaluator';
 import { generateSyntheticCandles } from '../../src/core/data/synthetic';
 import type { MarketDataSource } from '../../src/core/data/revolutClient';
@@ -313,5 +317,73 @@ describe('shadow candidate configuration errors', () => {
     expect(standings).toHaveLength(1);
     expect(failures).toHaveLength(1);
     expect(failures[0]!.reason).toContain('duplicate');
+  });
+});
+
+describe('CHAMPION_KEY', () => {
+  it('names the shadow candidate that mirrors real production exactly', () => {
+    expect(SHADOW_CANDIDATES.some((c) => c.key === CHAMPION_KEY)).toBe(true);
+  });
+});
+
+describe('compareToChampion', () => {
+  function standing(overrides: Partial<ShadowStanding> = {}): ShadowStanding {
+    return {
+      key: 'x',
+      label: 'X',
+      equity: 100,
+      returnPct: 0,
+      trades: SHADOW_MEANINGFUL_TRADES,
+      winRatePct: 50,
+      profitFactor: 1,
+      openPositions: 0,
+      startedAt: 0,
+      ...overrides,
+    };
+  }
+
+  it('reports which metrics each side leads on, without collapsing them into one verdict', () => {
+    const champion = standing({ key: CHAMPION_KEY, returnPct: 5, profitFactor: 1.2, winRatePct: 55 });
+    const challenger = standing({ key: 'candidate', returnPct: 8, profitFactor: 1.1, winRatePct: 55 });
+
+    const result = compareToChampion(champion, challenger);
+
+    expect(result.comparable).toBe(true);
+    expect(result.challengerAheadOn).toEqual(['returnPct']);
+    expect(result.championAheadOn).toEqual(['profitFactor']);
+    // Equal winRatePct: neither side is "ahead" on it.
+  });
+
+  it('is not comparable when the challenger has not yet reached the meaningful-trades threshold', () => {
+    const champion = standing({ key: CHAMPION_KEY });
+    const challenger = standing({ key: 'candidate', trades: SHADOW_MEANINGFUL_TRADES - 1 });
+
+    const result = compareToChampion(champion, challenger);
+
+    expect(result.comparable).toBe(false);
+    expect(result.reason).toContain('candidate');
+    expect(result.challengerAheadOn).toEqual([]);
+    expect(result.championAheadOn).toEqual([]);
+  });
+
+  it('is not comparable when the champion itself is too new to be a reliable baseline', () => {
+    const champion = standing({ key: CHAMPION_KEY, trades: 3 });
+    const challenger = standing({ key: 'candidate' });
+
+    const result = compareToChampion(champion, challenger);
+
+    expect(result.comparable).toBe(false);
+    expect(result.reason).toContain(CHAMPION_KEY);
+  });
+
+  it('never divides by or compares a null profitFactor/winRatePct as if it were a real number', () => {
+    const champion = standing({ key: CHAMPION_KEY, profitFactor: null, winRatePct: null });
+    const challenger = standing({ key: 'candidate', profitFactor: 1.5, winRatePct: 60 });
+
+    const result = compareToChampion(champion, challenger);
+
+    expect(result.comparable).toBe(true);
+    expect(result.challengerAheadOn).not.toContain('profitFactor');
+    expect(result.challengerAheadOn).not.toContain('winRatePct');
   });
 });
