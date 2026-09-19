@@ -25,6 +25,7 @@
 import type { KeyValueStore } from '../src/core/data/storage';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import type { Timeframe } from '../src/core/types';
+import type { TradeJournal } from '../src/core/position/tradeJournal';
 import { openLivePositions, type LiveOpenPosition } from './liveExitFlow.mts';
 import { proposeLiveExit } from './liveExitMirror.mts';
 import type { LiveOrderFlowParams, LiveOrderFlowResult } from './liveOrchestrator.mts';
@@ -113,6 +114,10 @@ export async function checkManualSellRequests(
    * alive (other commands like `/discover` answered fine) — this is why.
    */
   telegramStore: KeyValueStore = store,
+  /** See `ProposeLiveExitParams` (liveExitMirror.mts) — forwarded as-is, so
+   * omitting either keeps this exactly as callable as before (no journaling). */
+  journal?: TradeJournal,
+  costRate?: number,
 ): Promise<readonly ManualSellOutcome[]> {
   // Shared poller (telegram.mts) — never poll Telegram directly here with a
   // private offset (a real bug, fixed 2026-09-02: see PROJECT_STATE.md).
@@ -177,7 +182,7 @@ export async function checkManualSellRequests(
         continue;
       }
       const price = candles.value[candles.value.length - 1]!.close;
-      const result = await proposeLiveExit(store, position, 'manual', price, now, { flowParams, onRealizedPnl });
+      const result = await proposeLiveExit(store, position, 'manual', price, now, { flowParams, onRealizedPnl, journal, costRate });
       outcomes.push({ symbol, ...result });
       if (result.outcome !== 'pending' && result.outcome !== 'outstanding-exit-already-pending') {
         pendingSymbols.delete(symbol);

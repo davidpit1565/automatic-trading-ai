@@ -15,6 +15,7 @@ import type { MarketDataSource } from '../../src/core/data/revolutClient';
 import { initLiveCash, liveCash } from '../../server/liveLedger.mts';
 import { forgetLivePosition, markExitSubmitted, openLivePositions, recordLiveEntryFill } from '../../server/liveExitFlow.mts';
 import { checkAutomaticExits, reapOrphanedExitConfirmations } from '../../server/liveExitMirror.mts';
+import { TradeJournal } from '../../src/core/position/tradeJournal';
 import { checkManualSellRequests } from '../../server/manualSellCommand.mts';
 import { ConfirmationPendingError } from '../../server/telegramConfirmationGate.mts';
 
@@ -143,6 +144,44 @@ describe('checkAutomaticExits', () => {
     expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report }]);
     expect(openLivePositions(store)).toEqual([]);
     expect(liveCash(store)).toBe(100 + 0.01 * 94);
+  });
+
+  it('records a structured journal entry on a real fill when a journal + costRate are given (added 2026-09-19 — live trades were previously invisible to TradeJournal entirely)', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const journal = new TradeJournal(store);
+    const report: OrderStatusReport = {
+      intentId: 'entry-1:auto-exit',
+      state: 'filled',
+      filledQuantity: 0.01,
+      avgFillPrice: 94,
+      detail: 'ok',
+    };
+
+    await checkAutomaticExits(
+      store,
+      fakeSource(ok([candle(94)])),
+      '1h',
+      {},
+      flowParams(report, killSwitch, audit),
+      2000,
+      150,
+      undefined,
+      journal,
+      0.003,
+    );
+
+    expect(journal.entries()).toHaveLength(1);
+    expect(journal.entries()[0]).toMatchObject({
+      id: 'entry-1',
+      entryPrice: 100,
+      exitPrice: 94,
+      positionSize: 0.01,
+      exitReason: 'stop-loss',
+    });
   });
 
   it("still reports 'submitted' (not swallowed into a generic error) when the post-fill bookkeeping itself throws — real gap found in a full-system review, 2026-09-04: a caller's outer try/catch used to turn this into a misleading non-submitted outcome, hiding from autopilotRunner.mts's hasSubmittedOrder gate that a real order had already reached the broker", async () => {
