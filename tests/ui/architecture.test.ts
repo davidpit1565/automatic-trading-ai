@@ -58,7 +58,7 @@ describe('UI layer architecture', () => {
       /core\/backtest\/metrics$/,
       /core\/monitor\/(monitoringEngine|scheduler|watchlist|opportunityLog|alerts|validationProvider)$/,
       /core\/position\/(positionEngine|portfolioEngine|tradeJournal|analytics|positionMonitor)$/,
-      /core\/autopilot\/(paperAutoPilot|killSwitch|auditLog)$/,
+      /core\/autopilot\/(paperAutoPilot|killSwitch|auditLog|championComparison)$/,
       /core\/feedback\/performanceFeedback$/,
       /core\/data\/backup$/,
       /core\/backtest\/engine$/,

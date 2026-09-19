@@ -3,19 +3,25 @@
  * trade journal — every number here is a plain sum/average/count over
  * `CloudLiveJournalEntry` records already shown individually on the Trades
  * screen, never a separately modelled or estimated figure. Empty (not
- * zero-filled) until at least one real trade has closed.
+ * zero-filled) until at least one real trade has closed in the selected
+ * period — and an empty period is distinguished from having no closed
+ * trades at all, rather than both reading as an identical blank.
  */
 
 import { fetchCloudState, type CloudLiveJournalEntry } from '../cloudState';
 import { escapeHtml } from '../format';
+import { baseOf, euro, signedEuro, formatDuration, formatDateTime } from '../opsFormat';
 import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 60_000;
-const euro = (v: number): string => `€${v.toFixed(2)}`;
-// `€${v.toFixed(2)}` on a negative embeds the minus mid-string ("€-5.00") —
-// this puts the sign before the currency symbol instead ("-€5.00"), same
-// convention overviewView.ts's today's-P&L KPI already settled on.
-const signedEuro = (v: number): string => `${v >= 0 ? '+' : '-'}${euro(Math.abs(v))}`;
+
+type Period = '7d' | '30d' | '90d' | 'all';
+const PERIOD_MS: Record<Exclude<Period, 'all'>, number> = {
+  '7d': 7 * 86_400_000,
+  '30d': 30 * 86_400_000,
+  '90d': 90 * 86_400_000,
+};
+const PERIOD_LABEL: Record<Period, string> = { '7d': '7D', '30d': '30D', '90d': '90D', all: 'ALL' };
 
 interface ReportStats {
   readonly tradeCount: number;
@@ -29,6 +35,12 @@ interface ReportStats {
   readonly totalFees: number;
   readonly totalSlippage: number;
   readonly avgHoldingMs: number;
+}
+
+function filterByPeriod(trades: readonly CloudLiveJournalEntry[], period: Period): CloudLiveJournalEntry[] {
+  if (period === 'all') return [...trades];
+  const cutoff = Date.now() - PERIOD_MS[period];
+  return trades.filter((t) => t.exitTimestamp >= cutoff);
 }
 
 function computeStats(trades: readonly CloudLiveJournalEntry[]): ReportStats | null {
@@ -51,16 +63,6 @@ function computeStats(trades: readonly CloudLiveJournalEntry[]): ReportStats | n
     totalSlippage: trades.reduce((s, t) => s + t.slippage, 0),
     avgHoldingMs: trades.reduce((s, t) => s + t.holdingDurationMs, 0) / trades.length,
   };
-}
-
-function formatDuration(ms: number): string {
-  const hours = Math.round(ms / 3_600_000);
-  if (hours < 24) return `${hours}h`;
-  return `${Math.floor(hours / 24)}d ${hours % 24}h`;
-}
-
-function baseOf(symbol: string): string {
-  return symbol.replace(/EUR$|USD$/, '');
 }
 
 function statsHtml(s: ReportStats): string {
@@ -100,13 +102,51 @@ export function renderReportsView(container: HTMLElement): ViewHandle {
     <button class="tool-back" data-nav="overview">← Overview</button>
     <h2 class="view-title">Reports</h2>
     <p class="view-sub">Aggregate stats over every closed real trade — plain sums and averages, nothing modelled.</p>
-    <div id="rp-empty" class="ops-empty" hidden>No closed trades yet — nothing to report.</div>
+    <div class="tv-filters" role="tablist" aria-label="Report period">
+      <button class="tv-filter" data-period="7d" role="tab" aria-selected="false">7D</button>
+      <button class="tv-filter" data-period="30d" role="tab" aria-selected="false">30D</button>
+      <button class="tv-filter" data-period="90d" role="tab" aria-selected="false">90D</button>
+      <button class="tv-filter active" data-period="all" role="tab" aria-selected="true">ALL</button>
+    </div>
+    <div id="rp-empty" class="ops-empty" hidden></div>
     <div id="rp-body"></div>
     <p class="muted-line" id="rp-status">Loading…</p>`;
 
+  const filterBar = container.querySelector<HTMLElement>('.tv-filters')!;
   const emptyEl = container.querySelector<HTMLElement>('#rp-empty')!;
   const bodyEl = container.querySelector<HTMLElement>('#rp-body')!;
   const statusEl = container.querySelector<HTMLElement>('#rp-status')!;
+
+  let period: Period = 'all';
+  let allTrades: CloudLiveJournalEntry[] = [];
+
+  function render(): void {
+    const filtered = filterByPeriod(allTrades, period);
+    const stats = computeStats(filtered);
+    emptyEl.hidden = stats !== null;
+    if (!stats) {
+      // Distinguishes two different empty reasons — nothing closed in this
+      // window vs. no closed live trades at all — which would otherwise
+      // both read as an identical blank.
+      emptyEl.textContent =
+        allTrades.length === 0
+          ? 'No closed live trades yet — nothing to report.'
+          : `No closed trades in the last ${PERIOD_LABEL[period]}.`;
+    }
+    bodyEl.innerHTML = stats ? statsHtml(stats) : '';
+  }
+
+  filterBar.addEventListener('click', (event) => {
+    const btn = (event.target as HTMLElement).closest<HTMLElement>('.tv-filter');
+    if (!btn) return;
+    period = btn.dataset['period'] as Period;
+    filterBar.querySelectorAll<HTMLElement>('.tv-filter').forEach((b) => {
+      const active = b === btn;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-selected', String(active));
+    });
+    render();
+  });
 
   async function load(): Promise<void> {
     const state = await fetchCloudState();
@@ -114,10 +154,9 @@ export function renderReportsView(container: HTMLElement): ViewHandle {
       statusEl.textContent = 'Unable to load the operations state. Retrying automatically.';
       return;
     }
-    const stats = computeStats(state.live?.tradeJournal ?? []);
-    emptyEl.hidden = stats !== null;
-    bodyEl.innerHTML = stats ? statsHtml(stats) : '';
-    statusEl.textContent = `Updated ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+    allTrades = state.live?.tradeJournal ?? [];
+    render();
+    statusEl.textContent = `Updated ${formatDateTime(Date.now())}`;
   }
 
   let timer = 0;
