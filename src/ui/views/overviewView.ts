@@ -75,7 +75,10 @@ export function renderOverviewView(container: HTMLElement): ViewHandle {
       <div id="ov-action-list" class="ops-action-list"></div>
     </div>
     <div class="ops-section">
-      <div class="ops-section-title">LIVE ACCOUNT <span class="ops-tag-live">REAL MONEY · REVOLUT X</span></div>
+      <div class="ops-section-title">
+        LIVE ACCOUNT <span class="ops-tag-live">REAL MONEY · REVOLUT X</span>
+        <button class="ops-view-all" data-nav="reports">Reports →</button>
+      </div>
       <div id="ov-live-empty" class="ops-empty" hidden>No live account yet.</div>
       <div id="ov-kpis" class="ops-kpi-row"></div>
     </div>
