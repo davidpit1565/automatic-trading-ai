@@ -87,6 +87,13 @@ export function renderOverviewView(container: HTMLElement): ViewHandle {
       <div id="ov-activity" class="ops-activity-list"></div>
       <div id="ov-activity-empty" class="ops-empty" hidden>No recent activity.</div>
     </div>
+    <div class="ops-section">
+      <div class="ops-section-title">
+        STRATEGIES
+        <button class="ops-view-all" data-nav="strategies">Champion vs. challengers →</button>
+      </div>
+      <div class="ops-empty">Forward-tested candidates, all simulated — never real money.</div>
+    </div>
     <p class="muted-line" id="ov-status">Loading…</p>`;
 
   const liveBadgeEl = container.querySelector<HTMLElement>('#ov-live-badge')!;
