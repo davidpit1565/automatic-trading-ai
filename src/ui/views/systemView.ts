@@ -18,31 +18,10 @@
 
 import { fetchCloudState } from '../cloudState';
 import { escapeHtml } from '../format';
+import { formatDateTime, relativeTime, STALE_MS } from '../opsFormat';
 import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 60_000;
-// Conservative and deliberately not tuned to the bot's exact cycle interval
-// (which has varied) — this only flags a genuinely long silence, not a
-// missed-a-beat false alarm.
-const STALE_MS = 30 * 60 * 1000;
-
-function formatDateTime(ms: number): string {
-  return new Date(ms).toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function relativeTime(ms: number): string {
-  const minutes = Math.round((Date.now() - ms) / 60_000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ${minutes % 60}m ago`;
-  return `${Math.floor(hours / 24)}d ${hours % 24}h ago`;
-}
 
 export function renderSystemView(container: HTMLElement): ViewHandle {
   container.innerHTML = `
@@ -67,6 +46,8 @@ export function renderSystemView(container: HTMLElement): ViewHandle {
     const state = await fetchCloudState();
     if (!state) {
       statusEl.textContent = 'Unable to load the operations state. Retrying automatically.';
+      killCardEl.innerHTML = `<div class="ops-action-row"><span>Status</span><span>Unknown</span></div>`;
+      heartbeatCardEl.innerHTML = `<div class="ops-empty">Unknown — unable to load the snapshot.</div>`;
       return;
     }
     const live = state.live;

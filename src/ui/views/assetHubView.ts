@@ -218,9 +218,15 @@ export function renderAssetHub(container: HTMLElement, opts: AssetHubOptions): V
       // pre-trade verification failure, the kill switch) — those correctly
       // fall back to the plain layout rather than a wrong or missing icon.
       const icon = e.symbol ? completedLogoHtml(baseCodeFromSymbol(e.symbol)) : '';
+      // `detail` can embed a raw broker/exchange HTTP response body (see
+      // revolutXBrokerAdapter.mts's rawBody) — escaped before innerHTML,
+      // same as overviewView.ts's activity feed already does. `symbol` is
+      // parsed from the audit entry's own intent id, not free text, but
+      // escaped too rather than assumed safe just because it usually looks
+      // like a plain instrument code.
       row.innerHTML = `
-        <div class="row-main">${icon}<div><div class="row-title"><span class="pill ${filled ? 'buy' : 'sell'}">${filled ? 'FILLED' : 'REJECTED'}</span>${e.symbol ? ` ${e.symbol}` : ''}</div>
-          <div class="row-sub">${e.detail}</div></div></div>
+        <div class="row-main">${icon}<div><div class="row-title"><span class="pill ${filled ? 'buy' : 'sell'}">${filled ? 'FILLED' : 'REJECTED'}</span>${e.symbol ? ` ${escapeHtml(e.symbol)}` : ''}</div>
+          <div class="row-sub">${escapeHtml(e.detail)}</div></div></div>
         <div class="row-side"><span class="row-sub">${new Date(e.at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></div>`;
       realActivityListEl.appendChild(row);
     }

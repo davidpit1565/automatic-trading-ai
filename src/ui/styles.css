@@ -2632,6 +2632,13 @@ button.btn-sell:focus-visible {
 .ops-status-critical { color: var(--cold); }
 .ops-status-unknown { color: var(--text-dim); }
 
+/* This app reads a periodically-committed JSON snapshot, not a live API —
+   this badge makes that explicit ("Fresh"/"Stale"/"Unknown", never "live")
+   so the operator is never misled into treating it as real-time. */
+.ops-freshness { margin: 0.3rem 0 0; font-size: 0.72rem; color: var(--text-faint); }
+.ops-freshness-stale { color: var(--warn); }
+.ops-freshness-unknown { color: var(--text-faint); }
+
 .ops-banner {
   border-radius: var(--r-md);
   padding: var(--sp-4) var(--sp-5);
@@ -2668,6 +2675,8 @@ button.btn-sell:focus-visible {
 .ops-section-title {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 0.3rem;
   gap: 0.5rem;
   margin-bottom: var(--sp-3);
   font-size: 0.74rem;
@@ -2676,6 +2685,13 @@ button.btn-sell:focus-visible {
   text-transform: uppercase;
   color: var(--text-dim);
 }
+/* Found in the 2026-09-19 mobile-width visual check: at 375px, the label
+   text itself (not just the row) was wrapping mid-word ("LIVE\nACCOUNT")
+   because the section title crams a label + badge + optional "View X"
+   link into one row. `flex-wrap` above lets the badge/link drop to their
+   own line instead; `white-space: nowrap` here stops the label text from
+   ever breaking internally regardless. */
+.ops-section-label { white-space: nowrap; }
 .ops-tag-live {
   font-size: 0.6rem;
   font-weight: 700;
@@ -2745,6 +2761,77 @@ button.btn-sell:focus-visible {
    symbol-only header on Overview's own action/position cards. */
 .tv-trade-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.4rem; }
 .tv-trade-pnl { font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+
+/* Trades screen filter bar: a small pill tablist (All/Open/Closed) plus a
+   native <select> for asset — deliberately not a second custom dropdown
+   widget, since a native select is already accessible/keyboard-usable for
+   free and this bar isn't a place that needs bespoke styling to earn its
+   keep. */
+.tv-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: var(--sp-4); align-items: center; }
+.tv-filter {
+  background: var(--surface);
+  border: none;
+  color: var(--text-dim);
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--r-pill);
+  font-size: 0.8rem;
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+.tv-filter.active { background: var(--accent); color: var(--text); }
+.tv-asset-select {
+  background: var(--surface);
+  border: none;
+  color: var(--text);
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--r-pill);
+  font-size: 0.8rem;
+  font-weight: var(--fw-semibold);
+}
+.ops-clickable { cursor: pointer; }
+.ops-clickable:hover { background: var(--surface-hover); }
+.ops-note { color: var(--text-faint); font-size: 0.78rem; }
+
+/* Trades screen: cards are the mobile representation, a real table is the
+   desktop one — both render from the same data (tradesView.ts), CSS picks
+   which is visible. A table squeezed sideways into a phone width reads
+   worse than a deliberate mobile layout; a card list stretched to desktop
+   width reads like an unfinished list, not an operations tool. */
+.tv-table-only { display: none; }
+.tv-table-wrap { overflow-x: auto; }
+.tv-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.tv-table th, .tv-table td { padding: 0.6rem 0.75rem; text-align: right; white-space: nowrap; font-size: 0.85rem; }
+.tv-table th:first-child, .tv-table td:first-child,
+.tv-table th:nth-child(2), .tv-table td:nth-child(2) { text-align: left; }
+.tv-table thead th {
+  color: var(--text-dim);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  border-bottom: 1px solid var(--border);
+  font-weight: var(--fw-semibold);
+}
+.tv-table tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; }
+.tv-table tbody tr:hover { background: var(--surface-hover); }
+.tv-table tbody tr:last-child { border-bottom: none; }
+@media (min-width: 900px) {
+  .tv-cards-only { display: none; }
+  .tv-table-only { display: block; }
+}
+
+/* Strategies screen: the distinction from LIVE must be unmissable, but this
+   is simulation, not a warning or an error — a neutral/accent tint (the
+   same family .tag-sim already uses), never the cold/red "real money" tint
+   and never the hot/green "bullish" tint either. */
+.ops-shadow-label {
+  display: inline-block;
+  background: var(--accent-tint);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--r-sm);
+  padding: 0.5rem 0.75rem;
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
 
 /* ---------- Higher contrast ----------
    `--border`/`--border-strong` are the two tokens nearly every hairline

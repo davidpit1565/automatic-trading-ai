@@ -18,19 +18,11 @@
  */
 
 import { fetchCloudState, type CloudPendingApproval } from '../cloudState';
-import { formatPrice, escapeHtml } from '../format';
+import { escapeHtml } from '../format';
+import { baseOf, euro, signedEuro, relativeTime, STALE_MS } from '../opsFormat';
 import type { ViewHandle } from '../viewLifecycle';
 
 const REFRESH_MS = 60_000;
-const euro = (v: number): string => `€${formatPrice(v)}`;
-
-/** Internal symbol (e.g. 'XBTEUR') -> a readable base (e.g. 'XBT'). Mirrors
- * the same convention `liveManualTradeSync.mts`'s own EUR-suffix stripping
- * uses server-side, kept in sync deliberately rather than guessing a
- * different rule client-side. */
-function baseOf(symbol: string): string {
-  return symbol.replace(/EUR$|USD$/, '');
-}
 
 function formatClock(ms: number): string {
   return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -65,6 +57,11 @@ export function renderOverviewView(container: HTMLElement): ViewHandle {
         <span id="ov-system-status" class="ops-status" data-nav="system" role="button" tabindex="0">● checking…</span>
       </div>
     </div>
+    <!-- This app reads a periodically-committed JSON snapshot, not a live
+         API — the freshness badge makes that architecture explicit instead
+         of letting the operator mistake the console for real-time. Never
+         says "live" itself; "Fresh"/"Stale"/"Unknown" only. -->
+    <p id="ov-freshness" class="ops-freshness"></p>
     <div id="ov-kill-switch" class="ops-banner ops-banner-critical" hidden>
       <div class="ops-banner-title">TRADING HALTED</div>
       <div class="ops-banner-body">Reason: <span id="ov-kill-reason"></span></div>
@@ -76,7 +73,7 @@ export function renderOverviewView(container: HTMLElement): ViewHandle {
     </div>
     <div class="ops-section">
       <div class="ops-section-title">
-        LIVE ACCOUNT <span class="ops-tag-live">REAL MONEY · REVOLUT X</span>
+        <span class="ops-section-label">LIVE ACCOUNT</span> <span class="ops-tag-live">REAL MONEY · REVOLUT X</span>
         <button class="ops-view-all" data-nav="reports">Reports →</button>
       </div>
       <div id="ov-live-empty" class="ops-empty" hidden>No live account yet.</div>
@@ -84,7 +81,7 @@ export function renderOverviewView(container: HTMLElement): ViewHandle {
     </div>
     <div class="ops-section">
       <div class="ops-section-title">
-        RECENT ACTIVITY
+        <span class="ops-section-label">RECENT ACTIVITY</span>
         <button class="ops-view-all" data-nav="trades">View trades →</button>
       </div>
       <div id="ov-activity" class="ops-activity-list"></div>
@@ -92,7 +89,7 @@ export function renderOverviewView(container: HTMLElement): ViewHandle {
     </div>
     <div class="ops-section">
       <div class="ops-section-title">
-        STRATEGIES
+        <span class="ops-section-label">STRATEGIES</span>
         <button class="ops-view-all" data-nav="strategies">Champion vs. challengers →</button>
       </div>
       <div class="ops-empty">Forward-tested candidates, all simulated — never real money.</div>
@@ -101,6 +98,7 @@ export function renderOverviewView(container: HTMLElement): ViewHandle {
 
   const liveBadgeEl = container.querySelector<HTMLElement>('#ov-live-badge')!;
   const systemStatusEl = container.querySelector<HTMLElement>('#ov-system-status')!;
+  const freshnessEl = container.querySelector<HTMLElement>('#ov-freshness')!;
   const killSwitchEl = container.querySelector<HTMLElement>('#ov-kill-switch')!;
   const killReasonEl = container.querySelector<HTMLElement>('#ov-kill-reason')!;
   const actionRequiredEl = container.querySelector<HTMLElement>('#ov-action-required')!;
@@ -118,10 +116,21 @@ export function renderOverviewView(container: HTMLElement): ViewHandle {
       statusEl.textContent = 'Unable to load the operations state. Retrying automatically.';
       systemStatusEl.textContent = '● Unknown';
       systemStatusEl.className = 'ops-status ops-status-unknown';
+      freshnessEl.textContent = 'Snapshot: Unknown';
+      freshnessEl.className = 'ops-freshness ops-freshness-unknown';
       return;
     }
     const live = state.live;
     liveBadgeEl.hidden = !live;
+
+    if (state.lastRunAt === null) {
+      freshnessEl.textContent = 'Snapshot: Unknown — no automation cycle recorded yet';
+      freshnessEl.className = 'ops-freshness ops-freshness-unknown';
+    } else {
+      const stale = now - state.lastRunAt > STALE_MS;
+      freshnessEl.textContent = `Snapshot updated ${relativeTime(state.lastRunAt)}${stale ? ' — stale' : ''}`;
+      freshnessEl.className = `ops-freshness ${stale ? 'ops-freshness-stale' : 'ops-freshness-fresh'}`;
+    }
 
     // Kill-switch state is real, measured data (server/liveOrchestrator.mts's
     // own gate) — genuinely all this slice knows about "system health" so
@@ -155,7 +164,7 @@ export function renderOverviewView(container: HTMLElement): ViewHandle {
         <div class="ops-kpi"><div class="ops-kpi-value">${euro(equity)}</div><div class="ops-kpi-label">Equity</div></div>
         <div class="ops-kpi"><div class="ops-kpi-value">${euro(live.cash)}</div><div class="ops-kpi-label">Available cash</div></div>
         <div class="ops-kpi"><div class="ops-kpi-value">${live.positions.length}</div><div class="ops-kpi-label">Open positions</div></div>
-        <div class="ops-kpi"><div class="ops-kpi-value ${todayPnl >= 0 ? 'ops-up' : 'ops-down'}">${todayCount === 0 ? '—' : `${todayPnl >= 0 ? '+' : '-'}${euro(Math.abs(todayPnl))}`}</div><div class="ops-kpi-label">Today's P&L (${todayCount} closed)</div></div>`;
+        <div class="ops-kpi"><div class="ops-kpi-value ${todayPnl >= 0 ? 'ops-up' : 'ops-down'}">${todayCount === 0 ? '—' : signedEuro(todayPnl)}</div><div class="ops-kpi-label">Today's P&L (${todayCount} closed)</div></div>`;
     }
 
     const events = live?.recentEvents ?? [];

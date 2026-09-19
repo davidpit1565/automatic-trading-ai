@@ -11,6 +11,7 @@ import { fetchSnapshot, findBtcSymbol } from './markets';
 import { formatPrice, formatPct } from './format';
 import { renderOverviewView } from './views/overviewView';
 import { renderTradesView } from './views/tradesView';
+import { renderTradeDetailView } from './views/tradeDetailView';
 import { renderStrategiesView } from './views/strategiesView';
 import { renderSystemView } from './views/systemView';
 import { renderReportsView } from './views/reportsView';
@@ -57,6 +58,7 @@ type ViewRenderer = (container: HTMLElement, data: ActiveDataSource) => ViewHand
 const PRIMARY_VIEWS: Record<string, ViewRenderer> = {
   overview: (container) => renderOverviewView(container),
   trades: (container) => renderTradesView(container),
+  'trade-detail': (container) => renderTradeDetailView(container),
   strategies: (container) => renderStrategiesView(container),
   system: (container) => renderSystemView(container),
   reports: (container) => renderReportsView(container),
@@ -70,7 +72,7 @@ const PRIMARY_VIEWS: Record<string, ViewRenderer> = {
  * links) — no bottom-nav button of their own, so `activateView` must alias
  * them back to the Overview tab for aria-selected/tabIndex, same as `value`
  * already aliases to `crypto` below. */
-const OVERVIEW_DRILLDOWNS = new Set(['trades', 'strategies', 'system', 'reports']);
+const OVERVIEW_DRILLDOWNS = new Set(['trades', 'trade-detail', 'strategies', 'system', 'reports']);
 
 const TOOL_VIEWS: Record<string, ViewRenderer | null> = {
   scan: renderMarketScanView,

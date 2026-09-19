@@ -210,6 +210,37 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
     expect(rows[1]!.querySelector('.coin-logo')).toBeNull();
   });
 
+  it('escapes real-activity detail/symbol before innerHTML instead of trusting them as safe markup (real gap: revolutXBrokerAdapter.mts can embed a raw broker HTTP response body in `detail`)', async () => {
+    const container = document.createElement('section');
+    document.body.appendChild(container);
+    renderAssetHub(container, {
+      ...baseOpts,
+      fetchState: async () =>
+        cloudState({
+          live: {
+            cash: 50,
+            positions: [],
+            killSwitchEngaged: false,
+            killSwitchReason: null,
+            recentEvents: [
+              { at: 1, event: 'rejected', detail: '<img src=x onerror=alert(1)>', symbol: '<b>XBTEUR</b>' },
+            ],
+            externalBtcQuantity: 0,
+            equityHistory: [],
+            tradeJournal: [],
+            pendingApprovals: [],
+          },
+        }),
+    });
+    await flush();
+
+    const list = container.querySelector('#hub-real-activity-list')!;
+    expect(list.querySelector('img')).toBeNull();
+    expect(list.querySelector('b')).toBeNull();
+    expect(list.textContent).toContain('<img src=x onerror=alert(1)>');
+    expect(list.textContent).toContain('<b>XBTEUR</b>');
+  });
+
   it('shows the untracked-BTC breakdown and feeds the real equity chart once external BTC and history exist', async () => {
     const container = document.createElement('section');
     document.body.appendChild(container);
