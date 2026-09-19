@@ -127,6 +127,9 @@ describe('mirrorApprovedEntries', () => {
     expect(outcomes).toEqual([
       { symbol: 'XBTEUR', outcome: 'submitted', report: { ...report, intentId: 'live-entry:XBTEUR:1000' } },
     ]);
+    // No costRate was passed — the shadow fee-viability check must stay
+    // silent, not merely coincidentally viable.
+    expect(audit.entries().some((e) => e.event === 'advisory')).toBe(false);
 
     // A real, filled buy must actually become a tracked open live position
     // (stop-loss/take-profit enforcement, visibility to the automatic exit
@@ -139,6 +142,41 @@ describe('mirrorApprovedEntries', () => {
     expect(tracked[0]!.quantity).toBe(0.01);
     expect(tracked[0]!.entryAssessment.asset).toBe('XBTEUR');
     expect(liveCash(store)).toBe(100 - 0.01 * 100);
+  });
+
+  it('audits (but NEVER blocks) an approved entry whose theoretical reward would not clear round-trip fees, when a costRate is given (shadow-only, added 2026-09-19)', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const report: OrderStatusReport = {
+      intentId: 'live-entry:XBTEUR',
+      state: 'filled',
+      filledQuantity: 0.01,
+      avgFillPrice: 100,
+      detail: 'ok',
+    };
+
+    const outcomes = await mirrorApprovedEntries(
+      store,
+      [opportunity()],
+      [XBT],
+      { XBTEUR: 100 },
+      flowParams(report, killSwitch, audit),
+      1000,
+      // An absurdly high cost rate makes ANY position fee-unviable,
+      // regardless of exactly how it was sized — the point being tested is
+      // "audits but still submits," not the precise sizing math.
+      { costRate: 0.5 },
+    );
+
+    // Still submitted normally — advisory-only means never blocking.
+    expect(outcomes).toEqual([
+      { symbol: 'XBTEUR', outcome: 'submitted', report: { ...report, intentId: 'live-entry:XBTEUR:1000' } },
+    ]);
+    const advisories = audit.entries().filter((e) => e.event === 'advisory');
+    expect(advisories).toHaveLength(1);
+    expect(advisories[0]!.detail).toContain('advisory only, NOT blocking');
   });
 
   it('re-checks equity/open-positions AFTER each fill within one call, not once before the loop (regression, 2026-09-03)', async () => {

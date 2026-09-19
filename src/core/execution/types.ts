@@ -74,7 +74,16 @@ export interface KillSwitch {
 export interface AuditLogEntry {
   readonly timestamp: number;
   readonly intentId: string;
-  readonly event: OrderState | 'kill-switch-engaged' | 'kill-switch-disengaged';
+  /**
+   * 'advisory' is NEVER a real order-state transition — it flags something
+   * worth a human's attention (e.g. `assessTradeEconomics`'s fee-viability
+   * check) about a trade that otherwise proceeded completely normally.
+   * Deliberately excluded from any consumer that filters real outcomes
+   * (e.g. `src/ui/cloudState.ts`'s recent-events feed, which only shows
+   * `filled`/`rejected`) — an advisory note must never be mistaken for a
+   * real fill or rejection.
+   */
+  readonly event: OrderState | 'kill-switch-engaged' | 'kill-switch-disengaged' | 'advisory';
   readonly mode: ExecutionMode;
   readonly detail: string;
 }
