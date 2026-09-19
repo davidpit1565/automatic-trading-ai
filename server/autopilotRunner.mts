@@ -1112,6 +1112,10 @@ export async function runLiveMirror(
       confidenceFloor: AUTOPILOT_MIN_CONFIDENCE,
       maxConfidence: MAX_CONFIDENCE,
     },
+    // Shadow/audit-only fee-viability check (assessTradeEconomics) — never
+    // blocks a trade, see MirrorApprovedEntriesOptions.costRate's doc
+    // comment.
+    costRate: COST_RATE,
   };
   const flowParams = {
     confirmationGate,

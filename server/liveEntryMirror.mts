@@ -33,6 +33,7 @@ import type { Instrument } from '../src/core/types';
 import type { OrderIntent } from '../src/core/execution/types';
 import type { TradeOpportunity } from '../src/core/signal/signalEngine';
 import { assessTrade, confidenceScaledRiskPct, DEFAULT_RISK_LIMITS, type RiskLimits } from '../src/core/risk/riskEngine';
+import { assessTradeEconomics } from '../src/core/risk/tradeEconomics';
 import { openLivePositions, recordLiveEntryFill } from './liveExitFlow.mts';
 import { debitLiveCash, liveCash, liveEquity } from './liveLedger.mts';
 import { runLiveOrderFlow, buildLiveOrderIntent, type LiveOrderFlowParams, type LiveOrderFlowResult } from './liveOrchestrator.mts';
@@ -184,6 +185,14 @@ export interface MirrorApprovedEntriesOptions {
    * confirmation, never what happens after.
    */
   readonly allowCapacityOverrideFor?: ReadonlySet<string>;
+  /**
+   * When given, audits (never blocks — see `assessTradeEconomics`'s own
+   * doc comment for why this stays advisory-only until validated against
+   * real history) every approved entry whose theoretical take-profit
+   * reward wouldn't even clear round-trip fees. Omit to skip the check
+   * entirely — existing callers are unaffected either way.
+   */
+  readonly costRate?: number;
 }
 
 export async function mirrorApprovedEntries(
@@ -290,6 +299,22 @@ export async function mirrorApprovedEntries(
         delete pending[symbol];
         store.set(PENDING_KEY, pending);
         continue;
+      }
+      // Shadow/audit-only (never blocks) — see MirrorApprovedEntriesOptions.costRate's
+      // doc comment for why this doesn't refuse the trade yet.
+      if (options.costRate !== undefined) {
+        const economics = assessTradeEconomics(assessment, options.costRate);
+        if (!economics.viable) {
+          flowParams.audit.append({
+            timestamp: now,
+            intentId: `economics-check:${symbol}:${now}`,
+            event: 'advisory',
+            mode: 'live',
+            detail:
+              `advisory only, NOT blocking: round-trip fees (€${economics.roundTripFees.toFixed(2)}) would exceed ` +
+              `this trade's own theoretical reward at target (€${(assessment.riskAmount * assessment.rewardRiskRatio).toFixed(2)})`,
+          });
+        }
       }
       const brokerSymbol = toRevolutXSymbol(assessment.asset, instruments);
       if (!brokerSymbol) {
