@@ -157,6 +157,7 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
             recentEvents: [{ at: 1_700_000_000_000, event: 'rejected', detail: 'Insufficient balance' }],
             externalBtcQuantity: 0,
             equityHistory: [],
+            tradeJournal: [],
           },
         }),
     });
@@ -194,6 +195,7 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
             ],
             externalBtcQuantity: 0,
             equityHistory: [],
+            tradeJournal: [],
           },
         }),
     });
@@ -225,6 +227,7 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
               { at: 1, equity: 100 },
               { at: 2, equity: 150 },
             ],
+            tradeJournal: [],
           },
         }),
     });
@@ -261,6 +264,7 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
             recentEvents: [],
             externalBtcQuantity: 0.001,
             equityHistory: [],
+            tradeJournal: [],
           },
         }),
     });
@@ -285,6 +289,7 @@ describe('renderAssetHub — the SIMULATED wallet is hidden entirely once a live
         recentEvents: [],
         externalBtcQuantity: 0,
         equityHistory: [],
+        tradeJournal: [],
       },
     });
 
@@ -336,6 +341,7 @@ describe('renderAssetHub — kill-switch banner on the Profit tab (2026-09-06 re
             recentEvents: [],
             externalBtcQuantity: 0,
             equityHistory: [],
+            tradeJournal: [],
           },
         }),
     });
@@ -367,6 +373,7 @@ describe('renderAssetHub — kill-switch banner on the Profit tab (2026-09-06 re
             recentEvents: [],
             externalBtcQuantity: 0,
             equityHistory: [],
+            tradeJournal: [],
           },
         }),
     });
@@ -399,6 +406,7 @@ describe('renderAssetHub — liveSubtitle swap once real money is live (2026-09-
             recentEvents: [],
             externalBtcQuantity: 0,
             equityHistory: [],
+            tradeJournal: [],
           },
         }),
     });

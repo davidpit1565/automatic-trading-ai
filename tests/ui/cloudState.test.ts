@@ -263,6 +263,7 @@ describe('live account state parsing (the real Revolut X account, separate from 
       }],
       externalBtcQuantity: 0.00075,
       equityHistory: [{ at: 4_000, equity: 150.42 }],
+      tradeJournal: [],
     });
   });
 
@@ -279,7 +280,7 @@ describe('live account state parsing (the real Revolut X account, separate from 
     expect(state!.live!.recentEvents.every((e) => e.symbol === null)).toBe(true);
   });
 
-  it('defaults an absent kill-switch/positions/audit-log/external-btc/equity-history to a safe empty state, not a crash', async () => {
+  it('defaults an absent kill-switch/positions/audit-log/external-btc/equity-history/trade-journal to a safe empty state, not a crash', async () => {
     const body = JSON.stringify({
       'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
       'live:live-cash-eur': 50,
@@ -293,7 +294,51 @@ describe('live account state parsing (the real Revolut X account, separate from 
       recentEvents: [],
       externalBtcQuantity: 0,
       equityHistory: [],
+      tradeJournal: [],
     });
+  });
+
+  it('parses the real closed-trade journal (fees, real slippage, MAE/MFE) newest first — added 2026-09-19 so live trades are finally visible in the UI, not just as a plain audit-log line', async () => {
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'live:live-cash-eur': 50,
+      'live:trade-journal': [
+        {
+          id: 'entry-1', symbol: 'XBTEUR', entryTimestamp: 1_000, exitTimestamp: 5_000,
+          entryPrice: 100, exitPrice: 110, positionSize: 2, exitReason: 'take-profit',
+          fees: 1.2, slippage: 0.5, holdingDurationMs: 4_000, mfePct: 12, maePct: 1,
+          realizedPnl: 18.8, returnPct: 9.4, notes: 'live trade — fees are a cost-rate ESTIMATE',
+        },
+        {
+          id: 'entry-2', symbol: 'ETHEUR', entryTimestamp: 2_000, exitTimestamp: 9_000,
+          entryPrice: 50, exitPrice: 48, positionSize: 1, exitReason: 'stop-loss',
+          fees: 0.3, slippage: 0.1, holdingDurationMs: 7_000, mfePct: 2, maePct: 4,
+          realizedPnl: -2.3, returnPct: -4.6, notes: null,
+        },
+      ],
+    });
+    const state = await fetchCloudState(okFetch(body));
+
+    // Newest (highest exitTimestamp) first.
+    expect(state!.live!.tradeJournal.map((e) => e.id)).toEqual(['entry-2', 'entry-1']);
+    expect(state!.live!.tradeJournal[1]).toEqual({
+      id: 'entry-1', symbol: 'XBTEUR', entryTimestamp: 1_000, exitTimestamp: 5_000,
+      entryPrice: 100, exitPrice: 110, positionSize: 2, exitReason: 'take-profit',
+      fees: 1.2, slippage: 0.5, holdingDurationMs: 4_000, mfePct: 12, maePct: 1,
+      realizedPnl: 18.8, returnPct: 9.4, notes: 'live trade — fees are a cost-rate ESTIMATE',
+    });
+  });
+
+  it('drops a malformed trade-journal entry (missing required fields) rather than showing fabricated zeros', async () => {
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'live:live-cash-eur': 50,
+      'live:trade-journal': [
+        { id: 'entry-1', symbol: 'XBTEUR' }, // missing prices/timestamps/exitReason
+      ],
+    });
+    const state = await fetchCloudState(okFetch(body));
+    expect(state!.live!.tradeJournal).toEqual([]);
   });
 });
 

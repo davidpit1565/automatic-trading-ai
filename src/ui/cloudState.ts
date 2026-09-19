@@ -156,6 +156,35 @@ export interface LiveAccountState {
    * positions + the untracked BTC above — mirroring `equityHistory` above
    * but for real, not simulated, money. */
   readonly equityHistory: Array<{ at: number; equity: number }>;
+  /** Every REAL closed trade, newest first, full detail — fees/slippage/
+   * MAE/MFE/holding-time (see `server/liveExitFlow.mts`'s
+   * `buildLiveJournalEntry`). Empty until the first live position closes
+   * after this was wired up (2026-09-19) — closes before that only exist
+   * as a plain `recentEvents` line, never retroactively backfilled. */
+  readonly tradeJournal: CloudLiveJournalEntry[];
+}
+
+/** A real, closed live trade with full economics — `fees` is always a
+ * cost-rate ESTIMATE (Revolut X reports no real fee figure); `slippage` is
+ * a REAL measurement (signal price vs actual broker fill). See `notes` for
+ * the same distinction spelled out for a human reader. */
+export interface CloudLiveJournalEntry {
+  readonly id: string;
+  readonly symbol: string;
+  readonly entryTimestamp: number;
+  readonly exitTimestamp: number;
+  readonly entryPrice: number;
+  readonly exitPrice: number;
+  readonly positionSize: number;
+  readonly exitReason: string;
+  readonly fees: number;
+  readonly slippage: number;
+  readonly holdingDurationMs: number;
+  readonly mfePct: number;
+  readonly maePct: number;
+  readonly realizedPnl: number;
+  readonly returnPct: number;
+  readonly notes: string | null;
 }
 
 interface RawState {
@@ -196,6 +225,24 @@ interface RawState {
   'live:audit-log'?: Array<{ timestamp?: number; event?: string; detail?: string; intentId?: string }>;
   'live:live-external-btc-qty'?: number;
   'live:live-equity-history'?: Array<{ at: number; equity: number }>;
+  'live:trade-journal'?: Array<{
+    id?: string;
+    symbol?: string;
+    entryTimestamp?: number;
+    exitTimestamp?: number;
+    entryPrice?: number;
+    exitPrice?: number;
+    positionSize?: number;
+    exitReason?: string;
+    fees?: number;
+    slippage?: number;
+    holdingDurationMs?: number;
+    mfePct?: number;
+    maePct?: number;
+    realizedPnl?: number;
+    returnPct?: number;
+    notes?: string | null;
+  }>;
 }
 
 interface RawLivePosition {
@@ -261,6 +308,40 @@ function parseLiveAccountState(raw: RawState): LiveAccountState | null {
     }))
     .sort((a, b) => b.at - a.at)
     .slice(0, 5);
+  const tradeJournal = (raw['live:trade-journal'] ?? [])
+    // A malformed/partial entry (missing id/symbol/prices) is dropped
+    // rather than shown with fabricated zeros — this project's own rule
+    // (never invent a number the source doesn't actually have).
+    .filter(
+      (e): e is Required<Omit<NonNullable<RawState['live:trade-journal']>[number], 'notes'>> & { notes?: string | null } =>
+        typeof e.id === 'string' &&
+        typeof e.symbol === 'string' &&
+        typeof e.entryTimestamp === 'number' &&
+        typeof e.exitTimestamp === 'number' &&
+        typeof e.entryPrice === 'number' &&
+        typeof e.exitPrice === 'number' &&
+        typeof e.positionSize === 'number' &&
+        typeof e.exitReason === 'string',
+    )
+    .map((e) => ({
+      id: e.id,
+      symbol: e.symbol,
+      entryTimestamp: e.entryTimestamp,
+      exitTimestamp: e.exitTimestamp,
+      entryPrice: e.entryPrice,
+      exitPrice: e.exitPrice,
+      positionSize: e.positionSize,
+      exitReason: e.exitReason,
+      fees: e.fees ?? 0,
+      slippage: e.slippage ?? 0,
+      holdingDurationMs: e.holdingDurationMs ?? 0,
+      mfePct: e.mfePct ?? 0,
+      maePct: e.maePct ?? 0,
+      realizedPnl: e.realizedPnl ?? 0,
+      returnPct: e.returnPct ?? 0,
+      notes: e.notes ?? null,
+    }))
+    .sort((a, b) => b.exitTimestamp - a.exitTimestamp);
   return {
     cash,
     positions,
@@ -269,6 +350,7 @@ function parseLiveAccountState(raw: RawState): LiveAccountState | null {
     recentEvents,
     externalBtcQuantity: raw['live:live-external-btc-qty'] ?? 0,
     equityHistory: Array.isArray(raw['live:live-equity-history']) ? raw['live:live-equity-history'] : [],
+    tradeJournal,
   };
 }
 
