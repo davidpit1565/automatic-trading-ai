@@ -13,6 +13,7 @@ import { renderOverviewView } from './views/overviewView';
 import { renderTradesView } from './views/tradesView';
 import { renderStrategiesView } from './views/strategiesView';
 import { renderSystemView } from './views/systemView';
+import { renderReportsView } from './views/reportsView';
 import { renderCryptoView } from './views/cryptoView';
 import { renderStocksView } from './views/stocksView';
 import { renderMarketsView } from './views/marketsView';
@@ -58,6 +59,7 @@ const PRIMARY_VIEWS: Record<string, ViewRenderer> = {
   trades: (container) => renderTradesView(container),
   strategies: (container) => renderStrategiesView(container),
   system: (container) => renderSystemView(container),
+  reports: (container) => renderReportsView(container),
   crypto: renderCryptoView,
   stocks: renderStocksView,
   value: renderValueView,
@@ -68,7 +70,7 @@ const PRIMARY_VIEWS: Record<string, ViewRenderer> = {
  * links) — no bottom-nav button of their own, so `activateView` must alias
  * them back to the Overview tab for aria-selected/tabIndex, same as `value`
  * already aliases to `crypto` below. */
-const OVERVIEW_DRILLDOWNS = new Set(['trades', 'strategies', 'system']);
+const OVERVIEW_DRILLDOWNS = new Set(['trades', 'strategies', 'system', 'reports']);
 
 const TOOL_VIEWS: Record<string, ViewRenderer | null> = {
   scan: renderMarketScanView,
