@@ -62,7 +62,7 @@ export function renderOverviewView(container: HTMLElement): ViewHandle {
       <div class="ops-title">OPERATIONS</div>
       <div class="ops-header-meta">
         <span id="ov-live-badge" class="ops-live-badge" hidden>LIVE · REAL MONEY · REVOLUT X</span>
-        <span id="ov-system-status" class="ops-status">● checking…</span>
+        <span id="ov-system-status" class="ops-status" data-nav="system" role="button" tabindex="0">● checking…</span>
       </div>
     </div>
     <div id="ov-kill-switch" class="ops-banner ops-banner-critical" hidden>
