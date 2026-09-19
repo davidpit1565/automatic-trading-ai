@@ -158,6 +158,7 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
             externalBtcQuantity: 0,
             equityHistory: [],
             tradeJournal: [],
+            pendingApprovals: [],
           },
         }),
     });
@@ -196,6 +197,7 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
             externalBtcQuantity: 0,
             equityHistory: [],
             tradeJournal: [],
+            pendingApprovals: [],
           },
         }),
     });
@@ -228,6 +230,7 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
               { at: 2, equity: 150 },
             ],
             tradeJournal: [],
+            pendingApprovals: [],
           },
         }),
     });
@@ -265,6 +268,7 @@ describe('renderAssetHub — real-money sections on History and Profit (real bug
             externalBtcQuantity: 0.001,
             equityHistory: [],
             tradeJournal: [],
+            pendingApprovals: [],
           },
         }),
     });
@@ -290,6 +294,7 @@ describe('renderAssetHub — the SIMULATED wallet is hidden entirely once a live
         externalBtcQuantity: 0,
         equityHistory: [],
         tradeJournal: [],
+        pendingApprovals: [],
       },
     });
 
@@ -342,6 +347,7 @@ describe('renderAssetHub — kill-switch banner on the Profit tab (2026-09-06 re
             externalBtcQuantity: 0,
             equityHistory: [],
             tradeJournal: [],
+            pendingApprovals: [],
           },
         }),
     });
@@ -374,6 +380,7 @@ describe('renderAssetHub — kill-switch banner on the Profit tab (2026-09-06 re
             externalBtcQuantity: 0,
             equityHistory: [],
             tradeJournal: [],
+            pendingApprovals: [],
           },
         }),
     });
@@ -407,6 +414,7 @@ describe('renderAssetHub — liveSubtitle swap once real money is live (2026-09-
             externalBtcQuantity: 0,
             equityHistory: [],
             tradeJournal: [],
+            pendingApprovals: [],
           },
         }),
     });

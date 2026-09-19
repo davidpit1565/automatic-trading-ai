@@ -264,6 +264,7 @@ describe('live account state parsing (the real Revolut X account, separate from 
       externalBtcQuantity: 0.00075,
       equityHistory: [{ at: 4_000, equity: 150.42 }],
       tradeJournal: [],
+      pendingApprovals: [],
     });
   });
 
@@ -295,6 +296,7 @@ describe('live account state parsing (the real Revolut X account, separate from 
       externalBtcQuantity: 0,
       equityHistory: [],
       tradeJournal: [],
+      pendingApprovals: [],
     });
   });
 
@@ -339,6 +341,94 @@ describe('live account state parsing (the real Revolut X account, separate from 
     });
     const state = await fetchCloudState(okFetch(body));
     expect(state!.live!.tradeJournal).toEqual([]);
+  });
+});
+
+describe('pending-approval parsing (the "Action Required" data — added 2026-09-19)', () => {
+  it('joins live-entry-pending with confirmation-gate-pending for a sent, still-open approval, including its most recent sizing', async () => {
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'live:live-cash-eur': 50,
+      'live:live-entry-pending': {
+        XBTEUR: {
+          opportunity: { symbol: 'XBTEUR', confidence: 72, levels: { entry: 100, stopLoss: 95, takeProfit: 115, riskReward: 3 } },
+          queuedAt: 1_000,
+          lastAssessment: { positionValue: 20, riskAmount: 1, riskPercentage: 1, rewardRiskRatio: 3 },
+        },
+      },
+      'live:confirmation-gate-pending': {
+        'live-entry:XBTEUR:1000': { sentAt: 2_000, messageId: 5, token: 'abc' },
+      },
+    });
+    const state = await fetchCloudState(okFetch(body));
+
+    expect(state!.live!.pendingApprovals).toEqual([{
+      symbol: 'XBTEUR',
+      confidence: 72,
+      entryPrice: 100,
+      stopLoss: 95,
+      takeProfit: 115,
+      rewardRiskRatio: 3,
+      queuedAt: 1_000,
+      sentAt: 2_000,
+      expiresAt: 2_000 + 20 * 60 * 1000,
+      positionValue: 20,
+      riskAmount: 1,
+      riskPercentage: 1,
+    }]);
+  });
+
+  it('reports sentAt/expiresAt/lastAssessment as null when the confirmation has not been sent yet or predates lastAssessment, rather than fabricating them', async () => {
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'live:live-cash-eur': 50,
+      'live:live-entry-pending': {
+        XBTEUR: {
+          opportunity: { symbol: 'XBTEUR', confidence: 72, levels: { entry: 100, stopLoss: 95, takeProfit: 115, riskReward: 3 } },
+          queuedAt: 1_000,
+          // No lastAssessment — a record persisted before that field existed.
+        },
+      },
+      // No confirmation-gate-pending entry — the send attempt hasn't
+      // succeeded yet and will retry next cycle.
+    });
+    const state = await fetchCloudState(okFetch(body));
+
+    expect(state!.live!.pendingApprovals).toEqual([{
+      symbol: 'XBTEUR',
+      confidence: 72,
+      entryPrice: 100,
+      stopLoss: 95,
+      takeProfit: 115,
+      rewardRiskRatio: 3,
+      queuedAt: 1_000,
+      sentAt: null,
+      expiresAt: null,
+      positionValue: null,
+      riskAmount: null,
+      riskPercentage: null,
+    }]);
+  });
+
+  it('drops a malformed pending-entry record (missing opportunity/levels/queuedAt) rather than fabricating one', async () => {
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'live:live-cash-eur': 50,
+      'live:live-entry-pending': {
+        XBTEUR: { opportunity: { symbol: 'XBTEUR' } }, // missing confidence/levels/queuedAt
+      },
+    });
+    const state = await fetchCloudState(okFetch(body));
+    expect(state!.live!.pendingApprovals).toEqual([]);
+  });
+
+  it('defaults to an empty list when absent', async () => {
+    const body = JSON.stringify({
+      'portfolio-engine': { cash: 100, initialCash: 100, baseCurrency: 'USD' },
+      'live:live-cash-eur': 50,
+    });
+    const state = await fetchCloudState(okFetch(body));
+    expect(state!.live!.pendingApprovals).toEqual([]);
   });
 });
 
