@@ -9,6 +9,7 @@ import { inject } from '@vercel/analytics';
 import { initDataSource, type ActiveDataSource } from './dataSource';
 import { fetchSnapshot, findBtcSymbol } from './markets';
 import { formatPrice, formatPct } from './format';
+import { renderOverviewView } from './views/overviewView';
 import { renderCryptoView } from './views/cryptoView';
 import { renderStocksView } from './views/stocksView';
 import { renderMarketsView } from './views/marketsView';
@@ -50,6 +51,7 @@ declare global {
 type ViewRenderer = (container: HTMLElement, data: ActiveDataSource) => ViewHandle | void;
 
 const PRIMARY_VIEWS: Record<string, ViewRenderer> = {
+  overview: (container) => renderOverviewView(container),
   crypto: renderCryptoView,
   stocks: renderStocksView,
   value: renderValueView,
@@ -306,7 +308,7 @@ async function bootstrap(): Promise<void> {
   // Set dark mode (always dark, no toggle)
   document.documentElement.setAttribute('data-theme', 'dark');
 
-  activateView('crypto');
+  activateView('overview');
   void mountTopbarBtc(data);
 }
 

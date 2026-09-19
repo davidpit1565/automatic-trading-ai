@@ -83,45 +83,46 @@ describe('main.ts global chrome (DOM integration)', () => {
     await import('../../src/ui/main.ts');
     await waitFor(() => document.getElementById('topbar-btc') !== null);
 
-    const cryptoTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="crypto"]')!;
+    const overviewTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="overview"]')!;
     const marketsTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="markets"]')!;
-    // Server-rendered initial state: Crypto is the default active view.
-    expect(cryptoTab.getAttribute('aria-selected')).toBe('true');
-    expect(cryptoTab.tabIndex).toBe(0);
+    // Server-rendered initial state: Overview is the default active view
+    // (the Operations Console's control room — see overviewView.ts).
+    expect(overviewTab.getAttribute('aria-selected')).toBe('true');
+    expect(overviewTab.tabIndex).toBe(0);
     expect(marketsTab.getAttribute('aria-selected')).toBe('false');
     expect(marketsTab.tabIndex).toBe(-1);
 
     marketsTab.click();
     // Previously `activateView` only ever toggled the visual `.active`
     // class — aria-selected was never written again after the very first
-    // (server-rendered) state, so a screen reader kept announcing "Crypto"
-    // as selected no matter which tab was actually showing.
+    // (server-rendered) state, so a screen reader kept announcing the
+    // default tab as selected no matter which tab was actually showing.
     expect(marketsTab.getAttribute('aria-selected')).toBe('true');
     expect(marketsTab.tabIndex).toBe(0);
-    expect(cryptoTab.getAttribute('aria-selected')).toBe('false');
-    expect(cryptoTab.tabIndex).toBe(-1);
+    expect(overviewTab.getAttribute('aria-selected')).toBe('false');
+    expect(overviewTab.tabIndex).toBe(-1);
   });
 
   it('moves focus AND switches the active view on a real ArrowRight/ArrowLeft keydown across the bottom-nav tablist', async () => {
     await import('../../src/ui/main.ts');
     await waitFor(() => document.getElementById('topbar-btc') !== null);
 
+    const overviewTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="overview"]')!;
     const cryptoTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="crypto"]')!;
-    const stocksTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="stocks"]')!;
-    cryptoTab.focus();
+    overviewTab.focus();
     // Real keyboard input, not a direct function call — this is the exact
     // event a keyboard user's arrow-key press produces, handled by the
     // delegated tablist keydown listener in main.ts (previously nothing:
     // arrow keys did nothing on any of the app's several tablists).
-    cryptoTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
-    expect(document.activeElement).toBe(stocksTab);
-    expect(document.getElementById('view-stocks')?.classList.contains('active')).toBe(true);
-    expect(stocksTab.getAttribute('aria-selected')).toBe('true');
+    overviewTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(cryptoTab);
+    expect(document.getElementById('view-crypto')?.classList.contains('active')).toBe(true);
+    expect(cryptoTab.getAttribute('aria-selected')).toBe('true');
 
-    // Wraps around: ArrowLeft from the first tab goes to the last (Tools).
+    // Wraps around: ArrowLeft from the first tab (Overview) goes to the last (Tools).
     const toolsTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="tools"]')!;
-    cryptoTab.focus();
-    cryptoTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+    overviewTab.focus();
+    overviewTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
     expect(document.activeElement).toBe(toolsTab);
     expect(document.getElementById('view-tools')?.classList.contains('active')).toBe(true);
   });
@@ -152,9 +153,20 @@ describe('main.ts global chrome (DOM integration)', () => {
   // its own — reached only via that hero and its own "← Home" back link.
   it('keeps the Crypto tab active and the bottom nav keyboard-reachable while on the value drill-down', async () => {
     await import('../../src/ui/main.ts');
+    // `topbar-btc`'s existence alone is true from the static HTML before
+    // bootstrap() ever runs — waiting on it doesn't actually wait for
+    // bootstrap's async body (which is what attaches the delegated [data-nav]
+    // click listener) to finish. Wait for `hidden === false` instead, which
+    // only flips once mountTopbarBtc's first tick completes, by which point
+    // the click listener (attached earlier in bootstrap) is guaranteed live —
+    // same condition tests 1/2 above already rely on for this reason.
+    await waitFor(() => document.getElementById('topbar-btc')?.hidden === false);
+    // Views render lazily — Crypto is no longer the default active view
+    // (Overview is), so its content only mounts once actually activated.
+    const cryptoTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="crypto"]')!;
+    cryptoTab.click();
     await waitFor(() => document.getElementById('home-sim-hero') !== null);
 
-    const cryptoTab = document.querySelector<HTMLElement>('.nav-btn[data-nav="crypto"]')!;
     const hero = document.getElementById('home-sim-hero')!;
     expect(hero.dataset['nav']).toBe('value');
 
