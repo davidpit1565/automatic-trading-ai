@@ -2595,6 +2595,140 @@ button.btn-sell:focus-visible {
   .bottom-nav { background: #1c1c1e; backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
 
+/* ---------- Operations Console — Overview ----------
+   The control-room screen (overviewView.ts): kill-switch/action banners,
+   live-account KPIs, recent activity. Reuses the same surface/tabular-nums/
+   badge conventions as the rest of the app rather than inventing a second
+   visual language for this one screen. */
+.ops-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-5);
+}
+.ops-title {
+  font-size: var(--fs-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.ops-header-meta { display: flex; align-items: center; gap: var(--sp-3); }
+/* Same red-tint convention as .tag-live elsewhere — real money is always
+   flagged with the cold/red tone, never green, so it can never be mistaken
+   for a positive/hot signal at a glance. */
+.ops-live-badge {
+  font-size: 0.62rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  background: var(--cold-tint);
+  color: var(--cold);
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--r-pill);
+}
+.ops-status { font-size: 0.78rem; font-weight: var(--fw-semibold); color: var(--text-dim); }
+.ops-status-ok { color: var(--hot); }
+.ops-status-critical { color: var(--cold); }
+.ops-status-unknown { color: var(--text-dim); }
+
+.ops-banner {
+  border-radius: var(--r-md);
+  padding: var(--sp-4) var(--sp-5);
+  margin-bottom: var(--sp-5);
+}
+.ops-banner-critical { background: var(--cold-tint); border: 1px solid rgba(242, 109, 125, 0.35); }
+.ops-banner-action { background: var(--warn-tint); border: 1px solid rgba(245, 185, 61, 0.35); }
+.ops-banner-title {
+  font-size: 0.78rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+.ops-banner-critical .ops-banner-title { color: var(--cold); }
+.ops-banner-action .ops-banner-title { color: var(--warn); }
+.ops-banner-body { margin-top: 0.35rem; font-size: 0.9rem; color: var(--text); }
+.ops-banner-note { margin-top: 0.3rem; font-size: 0.78rem; color: var(--text-dim); }
+
+.ops-action-list { display: flex; flex-direction: column; gap: var(--sp-3); margin-top: var(--sp-3); }
+.ops-action-card { background: var(--surface-raised); border-radius: var(--r-sm); padding: var(--sp-4); }
+.ops-action-symbol { font-weight: var(--fw-bold); font-size: 0.95rem; margin-bottom: 0.4rem; }
+.ops-action-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.2rem 0;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.ops-action-row span:last-child { color: var(--text); font-weight: var(--fw-medium); }
+.ops-action-row.ops-expired span:last-child { color: var(--cold); }
+
+.ops-section { margin-top: var(--sp-6); }
+.ops-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: var(--sp-3);
+  font-size: 0.74rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.ops-tag-live {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  background: var(--cold-tint);
+  color: var(--cold);
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--r-pill);
+}
+.ops-empty { color: var(--text-faint); font-size: 0.85rem; padding: var(--sp-3) 0; }
+
+.ops-kpi-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); }
+.ops-kpi { background: var(--surface); border-radius: var(--r-sm); padding: var(--sp-4); }
+.ops-kpi-value {
+  font-size: 1.15rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+  font-variant-numeric: tabular-nums;
+}
+.ops-kpi-label { margin-top: 0.2rem; font-size: 0.72rem; color: var(--text-dim); }
+.ops-kpi-value.ops-up { color: var(--hot); }
+.ops-kpi-value.ops-down { color: var(--cold); }
+
+.ops-activity-list { display: flex; flex-direction: column; }
+.ops-activity-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.ops-activity-row:last-child { border-bottom: none; }
+.ops-activity-time {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+.ops-activity-event { flex-shrink: 0; font-weight: var(--fw-semibold); text-transform: capitalize; }
+.ops-activity-filled { color: var(--hot); }
+.ops-activity-rejected, .ops-activity-cancelled { color: var(--cold); }
+.ops-activity-kill-switch-engaged { color: var(--cold); }
+.ops-activity-kill-switch-disengaged { color: var(--hot); }
+.ops-activity-advisory { color: var(--warn); }
+.ops-activity-detail {
+  overflow: hidden;
+  color: var(--text-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ---------- Higher contrast ----------
    `--border`/`--border-strong` are the two tokens nearly every hairline
    divider and card edge in the app draws from (dozens of call sites) — at
