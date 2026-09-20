@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 10281.708301127519,
+    "cash": 8756.77817634328,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 638.2143365383432,
@@ -9,7 +9,27 @@
       "equity": 10347.300252408018
     }
   },
-  "open-positions": [],
+  "open-positions": [
+    {
+      "id": "ALGOEUR:1789874796154:0",
+      "symbol": "ALGOEUR",
+      "openedAt": 1789874796154,
+      "entryPrice": 0.09079,
+      "quantity": 16745.996450391514,
+      "initialQuantity": 16745.996450391514,
+      "stopLoss": 0.08687938848104017,
+      "takeProfit": 0.09861122303791964,
+      "feesPaid": 4.561107053193137,
+      "realizedPnl": 0,
+      "highestPrice": 0.09079,
+      "lowestPrice": 0.09079,
+      "confidence": 53.69280735982362,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "audit-log": [
     {
       "timestamp": 1784042069348,
@@ -2040,12 +2060,19 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ATOMEUR: 1360.5917491660775 @ 1.4818 (stop-loss)"
+    },
+    {
+      "timestamp": 1789874796154,
+      "intentId": "ALGOEUR:1789874796154:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry ALGOEUR: 16745.996450391514 @ 0.09079 (stop 0.08687938848104017, target 0.09861122303791964, confidence 54)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1789874462007,
+    "at": 1789874796154,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -55844,15 +55871,38 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1789874817038,
+      "intentId": "live-entry:ALGOEUR:1789874796154",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1789874830152,
+      "intentId": "live-entry:ALGOEUR:1789874796154",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram"
+    },
+    {
+      "timestamp": 1789874831141,
+      "intentId": "live-entry:ALGOEUR:1789874796154",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "order 562b18a2-5554-4487-b522-1cbbe78edcc0 placed; status not yet confirmable — kill switch engaged, verify manually"
     }
   ],
-  "live:live-entry-outstanding-symbols": [],
+  "live:live-entry-outstanding-symbols": [
+    "ALGOEUR"
+  ],
   "live:kill-switch-keyboard-sent": true,
   "education-tip-last-sent-at": 1789852768210,
   "education-tip-index": 9,
   "live:kill-switch": {
-    "engaged": false,
-    "reason": null
+    "engaged": true,
+    "reason": "order live-entry:ALGOEUR:1789874796154 (venue 562b18a2-5554-4487-b522-1cbbe78edcc0): placed, but its fill status could not be confirmed — verify manually in the Revolut X app (and reconcile any real position this project doesn't yet track) before /resume"
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
@@ -67923,6 +67973,10 @@
     {
       "at": 1789874462007,
       "equity": 54.84
+    },
+    {
+      "at": 1789874796154,
+      "equity": 54.84
     }
   ],
   "live:revolut-x-order-map": {
@@ -67937,7 +67991,8 @@
     "live-entry:ATOMEUR:1788952662543:exit:1788991945597": "ae70584a-6a1e-4dbd-9653-e471d46f04dd",
     "external-reconcile:XBTEUR:1788982757047:exit:1789044439080": "f7d2a8de-9ead-4e32-a931-02e963b03150",
     "external-reconcile:XBTEUR:1788978020562:exit:1789068971220": "622d833b-b706-45b5-a895-5b57311a1e4c",
-    "live-entry:XBTEUR:1789693052589": "1a055f84-f6f8-4ba7-9c12-1127df7b0b20"
+    "live-entry:XBTEUR:1789693052589": "1a055f84-f6f8-4ba7-9c12-1127df7b0b20",
+    "live-entry:ALGOEUR:1789874796154": "562b18a2-5554-4487-b522-1cbbe78edcc0"
   },
   "live:live-open-positions": {},
   "telegram-unclaimed-messages": [
@@ -68174,6 +68229,10 @@
     {
       "id": "7383943998328706632",
       "data": "confirm:reject:mu6nafnu.qmbydv"
+    },
+    {
+      "id": "7383943996682407944",
+      "data": "confirm:approve:mu9993lt.vnqqxi"
     }
   ],
   "live:blackout-windows-cache": {
@@ -68272,7 +68331,7 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904949,
+  "telegram-shared-update-offset": 447904951,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
   "live:confirmation-gate-pending": {},
@@ -70292,5 +70351,41 @@
       "confidence": 40.23622370232943,
       "notes": "opened autonomously by the paper autopilot"
     }
-  ]
+  ],
+  "move-alert-buckets": {
+    "ALGOEUR:1789874796154:0": {
+      "neg": 0,
+      "pos": 0
+    }
+  },
+  "live:live-resting-entry-intents": {
+    "ALGOEUR": {
+      "id": "live-entry:ALGOEUR:1789874796154",
+      "createdAt": 1789874796154,
+      "mode": "live",
+      "symbol": "ALGO/EUR",
+      "side": "buy",
+      "quantity": 89.31885815499766,
+      "limitPrice": 0.09079,
+      "stopLoss": 0.08687938848104017,
+      "takeProfit": 0.09861122303791964,
+      "assessment": {
+        "approved": true,
+        "asset": "ALGOEUR",
+        "entry": 0.09079,
+        "stopLoss": 0.08687938848104017,
+        "takeProfit": 0.09861122303791964,
+        "positionSize": 89.31885815499766,
+        "positionValue": 8.109259131892237,
+        "riskAmount": 0.3492913555612728,
+        "riskPercentage": 0.6369280735982362,
+        "rewardRiskRatio": 1.9999999999999964,
+        "portfolioExposure": 14.787124602283436,
+        "reasons": [
+          "risking 0.35 (0.64% of equity) for a 2.0:1 reward/risk — within every configured limit"
+        ],
+        "warnings": []
+      }
+    }
+  }
 }
