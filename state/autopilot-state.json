@@ -22,7 +22,7 @@
       "feesPaid": 4.561107053193137,
       "realizedPnl": 0,
       "highestPrice": 0.09079,
-      "lowestPrice": 0.09079,
+      "lowestPrice": 0.09013,
       "confidence": 53.69280735982362,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -2070,9 +2070,9 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1789874796154,
+    "at": 1789875147437,
     "source": "Kraken public market data (read-only)",
-    "opened": 1,
+    "opened": 0,
     "closed": 0,
     "halted": false
   },
@@ -53861,7 +53861,7 @@
     ]
   },
   "longterm-shadow-last-run-day": "2026-09-20",
-  "live:live-cash-eur": 54.84,
+  "live:live-cash-eur": 46.73,
   "live:telegram-shared-update-offset": 447904572,
   "live:telegram-unclaimed-messages": [
     {
@@ -68089,6 +68089,10 @@
     {
       "at": 1789874796154,
       "equity": 54.84
+    },
+    {
+      "at": 1789875147437,
+      "equity": 46.73
     }
   ],
   "live:revolut-x-order-map": {
@@ -68106,7 +68110,38 @@
     "live-entry:XBTEUR:1789693052589": "1a055f84-f6f8-4ba7-9c12-1127df7b0b20",
     "live-entry:ALGOEUR:1789874796154": "562b18a2-5554-4487-b522-1cbbe78edcc0"
   },
-  "live:live-open-positions": {},
+  "live:live-open-positions": {
+    "live-entry:ALGOEUR:1789874796154": {
+      "id": "live-entry:ALGOEUR:1789874796154",
+      "symbol": "ALGO/EUR",
+      "quantity": 89.3188,
+      "initialQuantity": 89.3188,
+      "entryPrice": 0.09079,
+      "stopLoss": 0.08687938848104017,
+      "takeProfit": 0.09861122303791964,
+      "highestPrice": 0.09079,
+      "lowestPrice": 0.09079,
+      "entrySlippage": 0,
+      "openedAt": 1789875147437,
+      "entryAssessment": {
+        "approved": true,
+        "asset": "ALGOEUR",
+        "entry": 0.09079,
+        "stopLoss": 0.08687938848104017,
+        "takeProfit": 0.09861122303791964,
+        "positionSize": 89.31885815499766,
+        "positionValue": 8.109259131892237,
+        "riskAmount": 0.3492913555612728,
+        "riskPercentage": 0.6369280735982362,
+        "rewardRiskRatio": 1.9999999999999964,
+        "portfolioExposure": 14.787124602283436,
+        "reasons": [
+          "risking 0.35 (0.64% of equity) for a 2.0:1 reward/risk — within every configured limit"
+        ],
+        "warnings": []
+      }
+    }
+  },
   "telegram-unclaimed-messages": [
     {
       "updateId": 447904831,
@@ -70496,34 +70531,5 @@
       "pos": 0
     }
   },
-  "live:live-resting-entry-intents": {
-    "ALGOEUR": {
-      "id": "live-entry:ALGOEUR:1789874796154",
-      "createdAt": 1789874796154,
-      "mode": "live",
-      "symbol": "ALGO/EUR",
-      "side": "buy",
-      "quantity": 89.31885815499766,
-      "limitPrice": 0.09079,
-      "stopLoss": 0.08687938848104017,
-      "takeProfit": 0.09861122303791964,
-      "assessment": {
-        "approved": true,
-        "asset": "ALGOEUR",
-        "entry": 0.09079,
-        "stopLoss": 0.08687938848104017,
-        "takeProfit": 0.09861122303791964,
-        "positionSize": 89.31885815499766,
-        "positionValue": 8.109259131892237,
-        "riskAmount": 0.3492913555612728,
-        "riskPercentage": 0.6369280735982362,
-        "rewardRiskRatio": 1.9999999999999964,
-        "portfolioExposure": 14.787124602283436,
-        "reasons": [
-          "risking 0.35 (0.64% of equity) for a 2.0:1 reward/risk — within every configured limit"
-        ],
-        "warnings": []
-      }
-    }
-  }
+  "live:live-resting-entry-intents": {}
 }
