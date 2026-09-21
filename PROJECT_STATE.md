@@ -8003,3 +8003,46 @@ threatens the 30-minute cron budget, not touched here.
 Gate: `tsc --noEmit` clean, `vitest run` 1398/1398 (`krakenPublic.test.ts`'s
 `CANDIDATE_INSTRUMENTS` shape test updated for the new length/list, no other
 test changes needed), `npm run build` clean.
+
+## Order-status-check retry — root cause of the ~40h kill-switch halt (2026-09-21)
+
+David, after manually verifying and typing `/resume`: "לא עשיתי קיל סוויץ',
+סדר שלא יקרה יותר לבד" (I didn't [cause] a kill switch — arrange that it
+doesn't happen on its own anymore). Investigated the exact incident: the
+ALGOEUR order placed fine (Revolut X accepted it, gave back a
+`venue_order_id`) — `RevolutXBrokerAdapter.submit()`'s ONE follow-up
+`fetchOrderDetail` read (confirming the real fill state) then failed on a
+single attempt, and that alone auto-engaged the kill switch, halting ALL
+live trading (new entries AND every open position's own stop-loss/
+take-profit exits, on every symbol, not just this order's) for ~40 hours
+until David noticed and manually verified the position in the Revolut X
+app. The order itself had been fine the entire time — only the one status
+check had a transient hiccup.
+
+Fix: `fetchOrderDetail` now retries up to 3 times with the same exponential
+backoff `krakenPublic.ts`'s `KrakenPublicSource` already uses for transient
+Kraken failures (~0.5s/1s/2s) before giving up. The safety guarantee is
+unchanged — `submit()` still engages the kill switch and halts, exactly as
+before, if the status genuinely cannot be confirmed after all retries (a
+real, persistent problem still needs a human); this only absorbs a single
+transient blip on the status-check call itself, which is what actually
+happened here. Added two tests in
+`tests/server/revolutXBrokerAdapter.test.ts`: one proving a single 500 then
+a success now resolves without ever touching the kill switch, one proving
+persistent failure across the full retry budget still engages it exactly as
+before (existing test updated to assert the retry count, not narrowed).
+
+Separately confirmed while investigating: David's own `/resume` DID work
+correctly once it reached the poller (audit log shows `kill-switch-
+disengaged`, "disengaged manually by david", 19:53:07Z) — the delay he saw
+was the 30-minute cron gap, not a bug in the resume path itself. Found one
+adjacent rough edge while checking the Telegram queues: an unrelated bare
+"אשר" (no leading slash) message sits permanently unclaimed in the shared
+`telegram-unclaimed-messages` queue — harmless (matches neither `/pause`/
+`/resume` nor the `/אשר` approval fallback, since both require the leading
+slash), but worth a UX look later if David tries a Hebrew word without the
+slash again expecting it to do something.
+
+Gate: `tsc --noEmit` clean, `vitest run` 1399/1399 (up from 1398 — 1 new,
+existing kill-switch-engages-on-failure test updated to assert the retry
+count rather than narrowed), `npm run build` clean.

@@ -44,6 +44,10 @@ const API_BASE = 'https://revx.revolut.com';
 const API_PREFIX = '/api/1.0';
 const ORDER_MAP_KEY = 'revolut-x-order-map';
 const DEFAULT_TIMEOUT_MS = 15_000;
+/** Retries after ~0.5s, 1s, 2s — same backoff as krakenPublic.ts's transient retry. */
+const ORDER_DETAIL_MAX_RETRIES = 3;
+const ORDER_DETAIL_RETRY_BASE_MS = 500;
+const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 export interface RevolutXCredentials {
   readonly apiKey: string;
@@ -424,14 +428,31 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
     );
   }
 
+  /**
+   * Real incident, 2026-09-21: this follow-up read used to be a single
+   * attempt — one transient network hiccup or a busy-server response on
+   * THIS call (not the order placement itself, which had already
+   * succeeded) engaged the kill switch and halted all live trading —
+   * entries and exits alike, on every symbol, not just this order's — for
+   * ~40 hours until a human noticed and typed `/resume`. The order itself
+   * turned out to be fine; only this status check had failed. A bounded
+   * retry (same shape as `KrakenPublicSource`'s transient-failure retry in
+   * `src/core/data/krakenPublic.ts`) absorbs exactly that kind of blip
+   * without weakening the actual safety guarantee — `submit()` still
+   * engages the kill switch and halts, exactly as before, if the status
+   * genuinely can't be confirmed after retries.
+   */
   private async fetchOrderDetail(venueOrderId: string): Promise<RevolutXOrderDetail | null> {
-    try {
-      const result = await this.request('GET', `/orders/${venueOrderId}`);
-      if (!result.ok) return null;
-      return readOrderDetail(result.json);
-    } catch {
-      return null;
+    for (let attempt = 0; attempt <= ORDER_DETAIL_MAX_RETRIES; attempt++) {
+      if (attempt > 0) await delay(ORDER_DETAIL_RETRY_BASE_MS * 2 ** (attempt - 1));
+      try {
+        const result = await this.request('GET', `/orders/${venueOrderId}`);
+        if (result.ok) return readOrderDetail(result.json);
+      } catch {
+        // fall through to the next attempt (or give up below)
+      }
     }
+    return null;
   }
 
   async cancel(intentId: string): Promise<OrderStatusReport> {

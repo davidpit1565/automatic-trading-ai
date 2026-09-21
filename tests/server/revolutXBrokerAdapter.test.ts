@@ -233,10 +233,10 @@ describe('RevolutXBrokerAdapter', () => {
     expect(report.avgFillPrice).toBeNull();
   });
 
-  it('reports submitted (not filled) when the follow-up status read fails, and auto-engages the kill switch (real gap found 2026-09-03: a REAL order placed here can genuinely fill while its status is unreadable, and went completely untracked — no stop-loss, invisible to /sell — until a human happened to notice by checking Revolut X directly)', async () => {
-    const { fetchFn } = fakeFetch([
+  it('reports submitted (not filled) when the follow-up status read STILL fails after retries, and auto-engages the kill switch (real gap found 2026-09-03: a REAL order placed here can genuinely fill while its status is unreadable, and went completely untracked — no stop-loss, invisible to /sell — until a human happened to notice by checking Revolut X directly)', async () => {
+    const { fetchFn, calls } = fakeFetch([
       { status: 200, body: { data: [{ venue_order_id: 'venue-3', client_order_id: 'x', state: 'new' }] } },
-      { status: 500, body: { error: 'upstream hiccup' } },
+      { status: 500, body: { error: 'upstream hiccup' } }, // every GET attempt hits this (fakeFetch repeats the last entry)
     ]);
     const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
 
@@ -247,6 +247,24 @@ describe('RevolutXBrokerAdapter', () => {
     expect(report.detail).toContain('venue-3');
     expect(report.detail).toContain('verify manually');
     expect(killSwitch.isEngaged()).toBe(true);
+    // POST + one GET per attempt (initial + 3 retries) — genuinely exhausted, not a single blip.
+    expect(calls.length).toBe(5);
+  });
+
+  it('a single transient status-read blip recovers on retry WITHOUT engaging the kill switch — real incident, 2026-09-21: this exact single-attempt gap halted all live trading (entries AND exits, every symbol) for ~40 hours over one flaky follow-up read on an order that had actually filled fine', async () => {
+    const { fetchFn, calls } = fakeFetch([
+      { status: 200, body: { data: [{ venue_order_id: 'venue-6', client_order_id: 'x', state: 'new' }] } },
+      { status: 500, body: { error: 'upstream hiccup' } }, // attempt 1: transient failure
+      { status: 200, body: { data: { status: 'filled', filled_quantity: '2', average_fill_price: '99.5' } } }, // attempt 2: succeeds
+    ]);
+    const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn);
+
+    const report = await adapter.submit(intent());
+
+    expect(report.state).toBe('filled');
+    expect(report.filledQuantity).toBe(2);
+    expect(killSwitch.isEngaged()).toBe(false);
+    expect(calls.length).toBe(3); // POST + 2 GET attempts, not the full retry budget
   });
 
   it('treats a "duplicate client_order_id" rejection as AMBIGUOUS (not a clean, zero-exposure rejection) and auto-engages the kill switch — real production message, 2026-09-03: strong evidence an earlier attempt actually went through, which this project cannot look up by client_order_id to confirm', async () => {
