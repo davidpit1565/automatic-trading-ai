@@ -3,7 +3,13 @@ import { MemoryStore } from '../../src/core/data/storage';
 import { PersistedAuditLog } from '../../src/core/autopilot/auditLog';
 import type { OrderIntent } from '../../src/core/execution/types';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
-import { clearPendingConfirmation, ConfirmationPendingError, confirmationToken, TelegramConfirmationGate } from '../../server/telegramConfirmationGate.mts';
+import {
+  clearPendingConfirmation,
+  ConfirmationPendingError,
+  confirmationToken,
+  parseApprovalCommand,
+  TelegramConfirmationGate,
+} from '../../server/telegramConfirmationGate.mts';
 import { getSummaryTimezone, pollAllTelegramUpdates, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
 import { initLiveCash } from '../../server/liveLedger.mts';
 
@@ -61,7 +67,9 @@ function sellIntent(id = 'BTCEUR:1:0:exit', exitPrice = 110): OrderIntent {
 /** Routes the one fetchFn Telegram's client uses across sendMessage /
  * getUpdates / answerCallbackQuery, based on the endpoint in the URL —
  * mirrors how one real bot token talks to all three. */
-function fakeTelegram(getUpdatesResponses: { update_id: number; callback_query?: { id: string; data: string } }[][]) {
+function fakeTelegram(
+  getUpdatesResponses: { update_id: number; callback_query?: { id: string; data: string }; message?: { text: string } }[][],
+) {
   let updatesCallIndex = 0;
   const sent: string[] = [];
   const answered: string[] = [];
@@ -87,9 +95,11 @@ function fakeTelegram(getUpdatesResponses: { update_id: number; callback_query?:
       // an independent review, 2026-09-02) — every fixture here implicitly
       // comes from chat 'C', so stamp it on rather than repeating it at
       // every call site.
-      const stamped = batch.map((u) =>
-        u.callback_query ? { ...u, callback_query: { ...u.callback_query, message: { chat: { id: 'C' } } } } : u,
-      );
+      const stamped = batch.map((u) => {
+        if (u.callback_query) return { ...u, callback_query: { ...u.callback_query, message: { chat: { id: 'C' } } } };
+        if (u.message) return { ...u, message: { ...u.message, chat: { id: 'C' } } };
+        return u;
+      });
       return new Response(JSON.stringify({ ok: true, result: stamped }), { status: 200 });
     }
     if (url.includes('/answerCallbackQuery')) {
@@ -355,6 +365,100 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     expect(decision.approved).toBe(false);
     expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation', 'rejected']);
     expect(edited).toEqual([{ messageId: 1, text: expect.stringContaining('דחית'), keyboardCleared: true }]);
+  });
+
+  // David asked for this 2026-09-21: a button tap Telegram's client doesn't
+  // register (a real, recurring annoyance for him) should still be
+  // recoverable by typing instead of being stuck until the 20-minute
+  // auto-expiry.
+  describe('approve/reject text-command fallback', () => {
+    it('parseApprovalCommand recognizes the button-label word, a synonym, and the English equivalent — case-insensitively, tolerant of surrounding whitespace and Telegram bidi marks', () => {
+      expect(parseApprovalCommand('/אשר')).toBe('approve');
+      expect(parseApprovalCommand('  /אשר  ')).toBe('approve');
+      expect(parseApprovalCommand('/APPROVE')).toBe('approve');
+      expect(parseApprovalCommand('‏/אשר‎')).toBe('approve');
+      expect(parseApprovalCommand('/דחה')).toBe('reject');
+      expect(parseApprovalCommand('/דחייה')).toBe('reject');
+      expect(parseApprovalCommand('/Reject')).toBe('reject');
+      expect(parseApprovalCommand('/אשר בבקשה')).toBeNull();
+      expect(parseApprovalCommand('מה המצב?')).toBeNull();
+    });
+
+    it('resolves approved: true on a bare "/אשר" text reply when it is the only confirmation pending', async () => {
+      const { fetchFn, edited } = fakeTelegram([[{ update_id: 10, message: { text: '/אשר' } }]]);
+      const store = new MemoryStore();
+      const audit = new PersistedAuditLog(store);
+      const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+      const decision = await gate.requestConfirmation(intent());
+
+      expect(decision).toMatchObject({ intentId: 'BTCEUR:1:0', approved: true, decidedBy: 'C' });
+      expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation', 'confirmed']);
+      expect(audit.entries()[1]!.detail).toContain('(text command)');
+      expect(edited).toEqual([{ messageId: 1, text: expect.stringContaining('אישרת'), keyboardCleared: true }]);
+    });
+
+    it('resolves approved: false on a bare "/דחה" text reply', async () => {
+      const { fetchFn } = fakeTelegram([[{ update_id: 10, message: { text: '/דחה' } }]]);
+      const store = new MemoryStore();
+      const audit = new PersistedAuditLog(store);
+      const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+      const decision = await gate.requestConfirmation(intent());
+
+      expect(decision.approved).toBe(false);
+      expect(audit.entries()[1]!.detail).toContain('(text command)');
+    });
+
+    it('accepts the English /approve synonym too', async () => {
+      const { fetchFn } = fakeTelegram([[{ update_id: 10, message: { text: '/approve' } }]]);
+      const store = new MemoryStore();
+      const audit = new PersistedAuditLog(store);
+      const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+      const decision = await gate.requestConfirmation(intent());
+      expect(decision.approved).toBe(true);
+    });
+
+    it('ignores unrecognized text and keeps waiting rather than guessing', async () => {
+      const { fetchFn, sent } = fakeTelegram([
+        [{ update_id: 10, message: { text: 'מה קורה עם זה?' } }],
+        [], [], [], [],
+      ]);
+      const store = new MemoryStore();
+      const audit = new PersistedAuditLog(store);
+      const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+      const promise = gate.requestConfirmation(intent());
+      const assertion = expect(promise).rejects.toThrow(ConfirmationPendingError);
+      await vi.runAllTimersAsync();
+      await assertion;
+      expect(sent).toHaveLength(1);
+      expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation']);
+    });
+
+    // The critical safety case: a bare "/אשר" carries no information about
+    // WHICH trade it's meant for (unlike a button tap, whose callback_data
+    // embeds that specific confirmation's own token) — with more than one
+    // confirmation pending, resolving it to whichever one happens to poll
+    // first would risk approving the wrong trade. It must stay unmatched.
+    it('does NOT resolve a bare "/אשר" when more than one confirmation is pending, and leaves both records untouched', async () => {
+      const store = new MemoryStore();
+      const audit = new PersistedAuditLog(store);
+      const pendingA = { sentAt: 0, messageId: 1, token: confirmationToken(0, 'BTCEUR:1:0') };
+      const pendingB = { sentAt: 0, messageId: 2, token: confirmationToken(0, 'OTHER:1:0') };
+      store.set('confirmation-gate-pending', { 'BTCEUR:1:0': pendingA, 'OTHER:1:0': pendingB });
+
+      const { fetchFn, sent } = fakeTelegram([
+        [{ update_id: 10, message: { text: '/אשר' } }],
+        [], [], [], [],
+      ]);
+      const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+      const promise = gate.requestConfirmation(intent());
+      const assertion = expect(promise).rejects.toThrow(ConfirmationPendingError);
+      await vi.runAllTimersAsync();
+      await assertion;
+
+      expect(sent).toHaveLength(0); // already pending — no new send
+      expect(store.get('confirmation-gate-pending')).toEqual({ 'BTCEUR:1:0': pendingA, 'OTHER:1:0': pendingB });
+      expect(audit.entries()).toEqual([]);
+    });
   });
 
   it('ignores a callback tap for a different intent and keeps polling for the right one', async () => {

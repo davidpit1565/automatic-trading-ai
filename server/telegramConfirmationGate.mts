@@ -53,6 +53,33 @@ const MAX_PENDING_MS = 20 * 60 * 1000;
 const APPROVE_PREFIX = 'confirm:approve:';
 const REJECT_PREFIX = 'confirm:reject:';
 
+/**
+ * Text-command fallback for the ✅/❌ buttons (David asked 2026-09-21: a tap
+ * that Telegram's client doesn't register should still be recoverable by
+ * typing instead of being stuck until the 20-minute auto-expiry). Accepts
+ * the same words as the button labels ('אשר'/'דחה'), a couple of forgiving
+ * synonyms, and the English equivalents — all case-insensitive.
+ *
+ * Deliberately NOT matched against a specific intent's token the way a
+ * button's callback_data is — see `requestConfirmation`'s poll loop for why
+ * that keeps this safe when more than one confirmation is pending at once.
+ */
+const APPROVE_WORDS = new Set(['/אשר', '/approve']);
+const REJECT_WORDS = new Set(['/דחה', '/דחייה', '/reject']);
+
+/** Strips Telegram's occasional bidi/RTL control characters (invisible,
+ * sometimes inserted by mobile keyboards around Hebrew text starting with
+ * `/`) before comparing, so a real "/אשר" from a phone keyboard isn't
+ * missed just because of an invisible character neither side visibly
+ * shows. Returns null for anything that isn't exactly one of the known
+ * words — never guessed, same convention as `parseKillSwitchCommand`. */
+export function parseApprovalCommand(text: string): 'approve' | 'reject' | null {
+  const cleaned = text.replace(/[‎‏‪-‮]/g, '').trim().toLowerCase();
+  if (APPROVE_WORDS.has(cleaned)) return 'approve';
+  if (REJECT_WORDS.has(cleaned)) return 'reject';
+  return null;
+}
+
 export class ConfirmationPendingError extends Error {
   constructor(public readonly intentId: string) {
     super(
@@ -341,19 +368,39 @@ export class TelegramConfirmationGate implements ConfirmationGate {
         (u) => u.data === `${APPROVE_PREFIX}${token}` || u.data === `${REJECT_PREFIX}${token}`,
       );
 
-      if (matchIndex === -1) {
+      // A typed "/אשר"/"/דחה" has no token embedded in it the way a button's
+      // callback_data does, so it can only ever be resolved to THIS intent
+      // when it is the ONLY confirmation currently pending — `pendingAll`
+      // was loaded once above and is still accurate here (nothing else in
+      // this single-threaded process adds a pending confirmation mid-call).
+      // With two or more pending, a bare text command is left unmatched
+      // (stashed, tried again next poll) rather than guessed at — this must
+      // never be able to approve/reject the WRONG trade.
+      let textMatchIndex = -1;
+      let textDecision: 'approve' | 'reject' | null = null;
+      if (matchIndex === -1 && Object.keys(pendingAll).length === 1) {
+        textMatchIndex = polled.messages.findIndex((m) => parseApprovalCommand(m.text) !== null);
+        if (textMatchIndex !== -1) textDecision = parseApprovalCommand(polled.messages[textMatchIndex]!.text);
+      }
+
+      if (matchIndex === -1 && textMatchIndex === -1) {
         stashUnclaimedTelegramUpdates(this.telegramStore, polled);
         if (attempt < POLL_ATTEMPTS - 1) await sleep(POLL_INTERVAL_MS);
         continue;
       }
 
-      const match = polled.callbacks[matchIndex]!;
       stashUnclaimedTelegramUpdates(this.telegramStore, {
-        messages: polled.messages,
-        callbacks: polled.callbacks.filter((_, i) => i !== matchIndex),
+        messages: textMatchIndex === -1 ? polled.messages : polled.messages.filter((_, i) => i !== textMatchIndex),
+        callbacks: matchIndex === -1 ? polled.callbacks : polled.callbacks.filter((_, i) => i !== matchIndex),
       });
-      await answerCallbackQuery(match.id, this.telegram);
-      const approved = match.data === `${APPROVE_PREFIX}${token}`;
+      let approved: boolean;
+      if (matchIndex !== -1) {
+        const match = polled.callbacks[matchIndex]!;
+        await answerCallbackQuery(match.id, this.telegram);
+        approved = match.data === `${APPROVE_PREFIX}${token}`;
+      } else {
+        approved = textDecision === 'approve';
+      }
       delete pendingAll[intent.id];
       this.store.set(STORAGE_KEY, pendingAll);
       const decision: ConfirmationDecision = {
@@ -367,7 +414,9 @@ export class TelegramConfirmationGate implements ConfirmationGate {
         intentId: intent.id,
         event: approved ? 'confirmed' : 'rejected',
         mode: intent.mode,
-        detail: approved ? 'approved via Telegram' : 'rejected via Telegram',
+        detail:
+          (approved ? 'approved via Telegram' : 'rejected via Telegram') +
+          (matchIndex === -1 ? ' (text command)' : ' (button)'),
       });
       // David asked for this 2026-09-03: tapping אשר/דחה left the original
       // prompt sitting there untouched with no visible sign it registered

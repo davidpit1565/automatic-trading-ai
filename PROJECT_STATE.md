@@ -7932,3 +7932,44 @@ Gate: `tsc --noEmit` clean, `vitest run` 1321/1321 (up from 1308 — 13
 new), `npm run build` clean. Not committed to the real trading
 configuration in any way — this is a standalone measurement tool; the
 production `riskLimits` defaults are untouched.
+
+## Telegram approve/reject text-command fallback (2026-09-21)
+
+David asked for a fallback when a real-money confirmation's ✅/❌ button tap
+doesn't register in Telegram's client — being stuck until the 20-minute
+auto-expiry with no other way to answer is a genuine, recurring annoyance
+for him. Added: typing `/אשר` or `/דחה` (also accepts `/דחייה`, and the
+English `/approve`/`/reject`) now resolves the SAME pending confirmation a
+button tap would, in `server/telegramConfirmationGate.mts`'s existing
+`requestConfirmation` poll loop.
+
+Safety design, since this touches the live-money approval gate directly: a
+button's `callback_data` embeds that specific confirmation's own token, so
+two simultaneously-pending confirmations can never collide — a bare typed
+`/אשר` carries no such identifying information. The new
+`parseApprovalCommand` match is therefore only ever honored when it is the
+**sole** entry in `confirmation-gate-pending` (checked against the already-
+loaded `pendingAll` map); with two or more pending, the text is left
+unmatched (stashed, re-checked next poll) rather than guessed at — it can
+never resolve the wrong trade. The audit-log `detail` for every decision
+now also records `(button)` vs. `(text command)` for traceability. No
+change to the button flow itself, the 20-minute expiry, sender
+authorization (still the single hardcoded `chatId` check in
+`telegram.mts`), or any other live-trading behavior.
+
+Also ran (via `workflow_dispatch`) the existing weekly
+`discover-crypto-candidates.yml` on demand, in response to David asking
+whether there are more coins currently worth watching — confirmed this
+workflow is genuinely the "check now" mechanism already built for exactly
+that ask (read-only, sends its own Telegram message automatically if
+anything clears the bar, writes no state). Did not add a new watchlist/
+candidate-persistence mechanism — `CURATED_INSTRUMENTS` (live-traded) and
+`CANDIDATE_INSTRUMENTS` (shadow forward-test only) in
+`src/core/data/krakenPublic.ts` both remain manually-curated, append-only
+lists per this project's existing promotion-review convention; nothing
+here changes that.
+
+Gate: `tsc --noEmit` clean, `vitest run` 1398/1398 (up from 1392 — 6 new,
+all in `tests/server/telegramConfirmationGate.test.ts`, including a test
+proving the ambiguous-multiple-pending case leaves both records untouched
+rather than resolving either), `npm run build` clean.
