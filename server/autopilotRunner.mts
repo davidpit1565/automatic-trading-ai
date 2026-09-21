@@ -1411,7 +1411,7 @@ async function runShadows(
 }
 
 /**
- * Live forward test of the 13 new-candidate symbols (see `CANDIDATE_INSTRUMENTS`
+ * Live forward test of the new-candidate symbols (see `CANDIDATE_INSTRUMENTS`
  * in `krakenPublic.ts` for why: measured net-positive on real Kraken backtest
  * history, but backtest alone was already caught being wrong once tonight —
  * the BREAKOUT lead — so these earn a real live forward record before any
@@ -1428,16 +1428,18 @@ async function runShadows(
  * like the real bot does." Isolated by construction (own namespace, own
  * portfolio, own kill switch, real account and SHADOW_CANDIDATES scoreboard
  * both untouched) and 100% simulated — `runShadowCycle` never has a live-order
- * path. Bounded extra cost: 13 symbols' worth of candle fetches through the
- * same throttled `KrakenPublicSource` queue as everything else, not a new
- * fetch pattern.
+ * path. Extra cost scales linearly with `CANDIDATE_INSTRUMENTS`'s length
+ * (13 -> 42 symbols as of 2026-09-21) through the same throttled
+ * `KrakenPublicSource` queue as everything else — not a new fetch pattern,
+ * but a real ~3x increase in this function's own per-cycle fetch time worth
+ * tracking if it ever becomes a bottleneck against the 30-minute cron budget.
  */
 const CANDIDATE_WATCH_STANDINGS_KEY = 'candidate-watch-standings';
 const CANDIDATE_WATCH_SYMBOLS = CANDIDATE_INSTRUMENTS.map((i) => i.symbol);
 const CANDIDATE_WATCH_CANDIDATES: readonly ShadowCandidate[] = [
   {
     key: 'candidate-watch',
-    label: '13 new candidates, production defaults (forward test only — not real trading)',
+    label: `${CANDIDATE_INSTRUMENTS.length} candidates, production defaults (forward test only — not real trading)`,
     minConfidence: AUTOPILOT_MIN_CONFIDENCE,
     maxRsiForLong: AUTOPILOT_MAX_RSI_FOR_LONG,
     trailing: AUTOPILOT_TRAILING,

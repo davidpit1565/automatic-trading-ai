@@ -7962,14 +7962,44 @@ Also ran (via `workflow_dispatch`) the existing weekly
 whether there are more coins currently worth watching — confirmed this
 workflow is genuinely the "check now" mechanism already built for exactly
 that ask (read-only, sends its own Telegram message automatically if
-anything clears the bar, writes no state). Did not add a new watchlist/
-candidate-persistence mechanism — `CURATED_INSTRUMENTS` (live-traded) and
-`CANDIDATE_INSTRUMENTS` (shadow forward-test only) in
-`src/core/data/krakenPublic.ts` both remain manually-curated, append-only
-lists per this project's existing promotion-review convention; nothing
-here changes that.
+anything clears the bar, writes no state). At the time of that run, did not
+yet add anything to `CANDIDATE_INSTRUMENTS` off its results — see the
+"CANDIDATE_INSTRUMENTS expansion" entry below, added the same day after
+David approved appending qualifying symbols.
 
 Gate: `tsc --noEmit` clean, `vitest run` 1398/1398 (up from 1392 — 6 new,
 all in `tests/server/telegramConfirmationGate.test.ts`, including a test
 proving the ambiguous-multiple-pending case leaves both records untouched
 rather than resolving either), `npm run build` clean.
+
+## CANDIDATE_INSTRUMENTS expansion (2026-09-21)
+
+David: "אם אתה חושב שאפשר להוסיף לרשימה אז תוסיף" (if you think you can add
+to the list, add them) — re-ran `discoverCryptoCandidates.mts` on demand
+(top 80 EUR pairs by 24h volume, real Kraken history, ~720 1h candles, 4h
+confirmation). 33 symbols passed net-positive + PF>1 + >5 trades. Of those,
+SPX/MINA/DASH/OP were already in `CANDIDATE_INSTRUMENTS` and ARB was already
+added 2026-09-14; USELESS passed again but stays excluded (confirmed not
+tradable on Revolut X, per the original 2026-09-04 decision). The remaining
+27 genuinely new symbols (SUI, NEAR, TAO, ZEC, PEPE, POL, ONDO, VVV, HBAR,
+RENDER, FET, KAS, ZAMA, PENGU, FARTCOIN, NIL, CC, RAY, W, MEGA, PHA, SAGA,
+SYN, DRV, ETC, MANA, PROVE) were appended to `CANDIDATE_INSTRUMENTS` in
+`src/core/data/krakenPublic.ts` (13 -> 42 total), shadow/forward-test only —
+never added to `CURATED_INSTRUMENTS`, never touched by the real-money symbol
+slice. Two of these (NEAR, ETC) were explicitly rejected for
+`CURATED_INSTRUMENTS` on a different, earlier 2026-09-03 measurement
+(net-negative then); this run measured both net-positive instead — noted
+directly in the code comment as the reason this list exists as its own
+lower, shadow-only bar rather than reusing the curated one, so a later
+reader isn't confused by the apparent contradiction.
+
+Updated `server/autopilotRunner.mts`'s `CANDIDATE_WATCH_CANDIDATES` label
+to derive from `CANDIDATE_INSTRUMENTS.length` instead of a hardcoded "13",
+and its doc comment to note the ~3x per-cycle Kraken-fetch cost increase
+(13 -> 42 symbols) through the existing throttled `KrakenPublicSource`
+queue — same fetch pattern, just more of it; worth watching if it ever
+threatens the 30-minute cron budget, not touched here.
+
+Gate: `tsc --noEmit` clean, `vitest run` 1398/1398 (`krakenPublic.test.ts`'s
+`CANDIDATE_INSTRUMENTS` shape test updated for the new length/list, no other
+test changes needed), `npm run build` clean.

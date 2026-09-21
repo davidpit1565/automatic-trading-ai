@@ -134,6 +134,51 @@ export const CANDIDATE_INSTRUMENTS: Instrument[] = [
   // Kraken's live AssetPairs the same day; altname equals base+EUR for both.
   { symbol: 'NPCEUR', base: 'NPC', quote: 'EUR' },
   { symbol: 'ARBEUR', base: 'ARB', quote: 'EUR' },
+  // Added 2026-09-21 from that week's on-demand market-scan run (top 80 EUR
+  // pairs by 24h volume, real Kraken history, ~720 1h candles, 4h
+  // confirmation): 33 symbols passed net-positive + PF>1 + >5 trades. Of
+  // those, SPX/MINA/DASH/OP were already tracked above and ARB was already
+  // added 2026-09-14, so only genuinely new symbols were appended. USELESS
+  // also passed (+9.23%, PF 2.33, 15 trades) but was excluded — confirmed not
+  // tradable on the real broker (Revolut X), same reasoning as the original
+  // 2026-09-04 batch. Two of these (NEAR, ETC) were explicitly rejected for
+  // `CURATED_INSTRUMENTS` on 2026-09-03 on a different, earlier measurement
+  // (NEAR -0.99%/PF 0.79, ETC -0.16%/PF 0.91) — this run measured both
+  // net-positive instead (NEAR +3.19%/PF 1.92/10t, ETC +1.66%/PF 2.39/8t);
+  // that's exactly why this list exists as a separate, lower, shadow-only
+  // bar rather than reusing the curated one — they earn a real forward
+  // record here before any promotion decision is revisited, not a free pass
+  // into real money off one positive scan. All 27 verified as real, live
+  // Kraken EUR pairs by the scan itself (it fetches candle history straight
+  // from Kraken's public API — a symbol with no data wouldn't have appeared
+  // in the results at all).
+  { symbol: 'SUIEUR', base: 'SUI', quote: 'EUR' },
+  { symbol: 'NEAREUR', base: 'NEAR', quote: 'EUR' },
+  { symbol: 'TAOEUR', base: 'TAO', quote: 'EUR' },
+  { symbol: 'ZECEUR', base: 'ZEC', quote: 'EUR' },
+  { symbol: 'PEPEEUR', base: 'PEPE', quote: 'EUR' },
+  { symbol: 'POLEUR', base: 'POL', quote: 'EUR' },
+  { symbol: 'ONDOEUR', base: 'ONDO', quote: 'EUR' },
+  { symbol: 'VVVEUR', base: 'VVV', quote: 'EUR' },
+  { symbol: 'HBAREUR', base: 'HBAR', quote: 'EUR' },
+  { symbol: 'RENDEREUR', base: 'RENDER', quote: 'EUR' },
+  { symbol: 'FETEUR', base: 'FET', quote: 'EUR' },
+  { symbol: 'KASEUR', base: 'KAS', quote: 'EUR' },
+  { symbol: 'ZAMAEUR', base: 'ZAMA', quote: 'EUR' },
+  { symbol: 'PENGUEUR', base: 'PENGU', quote: 'EUR' },
+  { symbol: 'FARTCOINEUR', base: 'FARTCOIN', quote: 'EUR' },
+  { symbol: 'NILEUR', base: 'NIL', quote: 'EUR' },
+  { symbol: 'CCEUR', base: 'CC', quote: 'EUR' },
+  { symbol: 'RAYEUR', base: 'RAY', quote: 'EUR' },
+  { symbol: 'WEUR', base: 'W', quote: 'EUR' },
+  { symbol: 'MEGAEUR', base: 'MEGA', quote: 'EUR' },
+  { symbol: 'PHAEUR', base: 'PHA', quote: 'EUR' },
+  { symbol: 'SAGAEUR', base: 'SAGA', quote: 'EUR' },
+  { symbol: 'SYNEUR', base: 'SYN', quote: 'EUR' },
+  { symbol: 'DRVEUR', base: 'DRV', quote: 'EUR' },
+  { symbol: 'ETCEUR', base: 'ETC', quote: 'EUR' },
+  { symbol: 'MANAEUR', base: 'MANA', quote: 'EUR' },
+  { symbol: 'PROVEEUR', base: 'PROVE', quote: 'EUR' },
 ];
 
 /** Base asset codes (BTC, ETH, …) actually traded by the agent — for the UI's
