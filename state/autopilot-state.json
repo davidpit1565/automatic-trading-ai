@@ -21,7 +21,7 @@
       "takeProfit": 11.166213421236005,
       "feesPaid": 6.242389023665712,
       "realizedPnl": 0,
-      "highestPrice": 11.01558,
+      "highestPrice": 11.12013,
       "lowestPrice": 10.73037,
       "confidence": 48.37223402461221,
       "validationVerdict": null,
@@ -40,7 +40,7 @@
       "takeProfit": 99.51290730106476,
       "feesPaid": 6.259511170898439,
       "realizedPnl": 0,
-      "highestPrice": 97.76,
+      "highestPrice": 98.19,
       "lowestPrice": 95.16,
       "confidence": 49.15700026358959,
       "validationVerdict": null,
@@ -2107,10 +2107,17 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry SOLEUR: 21.668955484814756 @ 96.29 (stop 94.67854634946762, target 99.51290730106476, confidence 49)"
+    },
+    {
+      "timestamp": 1789950251868,
+      "intentId": "ENAEUR:1789950251868",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused ENAEUR: large trades show heavy net selling"
     }
   ],
   "autopilot-last-run": {
-    "at": 1789949913609,
+    "at": 1789950251868,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2126,10 +2133,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787713580907,
-      "equity": 10245.99
-    },
     {
       "at": 1787713893269,
       "equity": 10245.99
@@ -22125,6 +22128,10 @@
     {
       "at": 1789949913609,
       "equity": 10474.52
+    },
+    {
+      "at": 1789950251868,
+      "equity": 10504.08
     }
   ],
   "trade-journal": [
@@ -23908,7 +23915,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -21.35% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -21.15% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -23996,7 +24003,7 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 6225.918014261768,
+    "cash": 4090.271626918694,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 1438.9739048036197,
@@ -24006,13 +24013,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1789949913609,
+    "at": 1789950251868,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate / whale-flow)",
-        "equity": 11367.310024619586,
-        "returnPct": 13.673100246195864,
+        "equity": 11415.400470399041,
+        "returnPct": 14.154004703990413,
         "trades": 48,
         "winRatePct": 56.25,
         "profitFactor": 1.942038967367862,
@@ -24022,8 +24029,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11459.57092001367,
-        "returnPct": 14.595709200136698,
+        "equity": 11505.911492340856,
+        "returnPct": 15.059114923408561,
         "trades": 50,
         "winRatePct": 57.99999999999999,
         "profitFactor": 2.0555021151081307,
@@ -24033,8 +24040,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 11326.954857334682,
-        "returnPct": 13.269548573346821,
+        "equity": 11372.759152667972,
+        "returnPct": 13.727591526679717,
         "trades": 50,
         "winRatePct": 56.00000000000001,
         "profitFactor": 1.9060602236655326,
@@ -24066,12 +24073,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10218.68075136853,
-        "returnPct": 2.1868075136853076,
+        "equity": 10224.96028007949,
+        "returnPct": 2.2496028007948916,
         "trades": 250,
         "winRatePct": 42.8,
         "profitFactor": 1.284196531705121,
-        "openPositions": 3,
+        "openPositions": 5,
         "startedAt": 1785254092443
       },
       {
@@ -24088,8 +24095,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11252.156971167933,
-        "returnPct": 12.521569711679332,
+        "equity": 11297.658796463034,
+        "returnPct": 12.976587964630342,
         "trades": 38,
         "winRatePct": 57.89473684210527,
         "profitFactor": 2.0501087597518213,
@@ -24099,8 +24106,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10469.807541156773,
-        "returnPct": 4.698075411567734,
+        "equity": 10509.421303683475,
+        "returnPct": 5.094213036834754,
         "trades": 9,
         "winRatePct": 66.66666666666666,
         "profitFactor": 2.295601872336258,
@@ -24159,9 +24166,47 @@
       "takeProfit": 2398.523785919284,
       "feesPaid": 6.12752684949233,
       "realizedPnl": 0,
-      "highestPrice": 2332.89,
+      "highestPrice": 2343.88,
       "lowestPrice": 2330.92,
       "confidence": 70,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "LINKEUR:1789950251868:3",
+      "symbol": "LINKEUR",
+      "openedAt": 1789950251868,
+      "entryPrice": 11.12567,
+      "quantity": 183.94288724189545,
+      "initialQuantity": 183.94288724189545,
+      "stopLoss": 10.88151806961315,
+      "takeProfit": 11.613973860773697,
+      "feesPaid": 6.139463586901616,
+      "realizedPnl": 0,
+      "highestPrice": 11.12567,
+      "lowestPrice": 11.12567,
+      "confidence": 57.35062683868036,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "XBTEUR:1789950251868:4",
+      "symbol": "XBTEUR",
+      "openedAt": 1789950251868,
+      "entryPrice": 71198,
+      "quantity": 0.001162543178291651,
+      "initialQuantity": 0.001162543178291651,
+      "stopLoss": 70603.83314852686,
+      "takeProfit": 72386.33370294629,
+      "feesPaid": 0.2483122476240269,
+      "realizedPnl": 0,
+      "highestPrice": 71198,
+      "lowestPrice": 71198,
+      "confidence": 54.67828896919857,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -24169,20 +24214,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1788014661560,
-      "intentId": "SOLEUR:1788014661560:0",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper entry SOLEUR: 22.139066738572193 @ 90.69 (stop 89.2260758107372, target 93.6178483785256, confidence 65)"
-    },
-    {
-      "timestamp": 1788014661560,
-      "intentId": "ETHEUR:1788014661560:1",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper entry ETHEUR: 0.9498817905870878 @ 2112.46 (stop 2094.040368864987, target 2149.299262270026, confidence 56)"
-    },
     {
       "timestamp": 1788014972367,
       "intentId": "LINKEUR:1788014972367:2",
@@ -31168,6 +31199,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ETHEUR: 0.8762672892380591 @ 2330.92 (stop 2297.118107040358, target 2398.523785919284, confidence 70)"
+    },
+    {
+      "timestamp": 1789950251868,
+      "intentId": "LINKEUR:1789950251868:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry LINKEUR: 183.94288724189545 @ 11.12567 (stop 10.88151806961315, target 11.613973860773697, confidence 57)"
+    },
+    {
+      "timestamp": 1789950251868,
+      "intentId": "XBTEUR:1789950251868:4",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry XBTEUR: 0.001162543178291651 @ 71198 (stop 70603.83314852686, target 72386.33370294629, confidence 55)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -40855,7 +40900,7 @@
       "takeProfit": 11.166213421236005,
       "feesPaid": 6.708867628922337,
       "realizedPnl": 0,
-      "highestPrice": 11.06233,
+      "highestPrice": 11.12567,
       "lowestPrice": 10.73037,
       "confidence": 48.37223402461221,
       "validationVerdict": null,
@@ -40874,7 +40919,7 @@
       "takeProfit": 99.50290730106475,
       "feesPaid": 6.792232661292147,
       "realizedPnl": 0,
-      "highestPrice": 97.75,
+      "highestPrice": 98.18,
       "lowestPrice": 95.12,
       "confidence": 49.06391856157853,
       "validationVerdict": null,
@@ -41866,7 +41911,7 @@
       "takeProfit": 11.166213421236005,
       "feesPaid": 6.7577221111513355,
       "realizedPnl": 0,
-      "highestPrice": 11.06233,
+      "highestPrice": 11.12567,
       "lowestPrice": 10.73037,
       "confidence": 40.37223402461221,
       "validationVerdict": null,
@@ -41885,7 +41930,7 @@
       "takeProfit": 99.50290730106475,
       "feesPaid": 5.4223145941877515,
       "realizedPnl": 0,
-      "highestPrice": 97.75,
+      "highestPrice": 98.18,
       "lowestPrice": 95.12,
       "confidence": 41.06391856157853,
       "validationVerdict": null,
@@ -42821,7 +42866,7 @@
       "takeProfit": 11.166213421236005,
       "feesPaid": 6.679518266931088,
       "realizedPnl": 0,
-      "highestPrice": 11.06233,
+      "highestPrice": 11.12567,
       "lowestPrice": 10.73037,
       "confidence": 48.37223402461221,
       "validationVerdict": null,
@@ -42840,7 +42885,7 @@
       "takeProfit": 99.50290730106475,
       "feesPaid": 5.359564774224412,
       "realizedPnl": 0,
-      "highestPrice": 97.75,
+      "highestPrice": 98.18,
       "lowestPrice": 95.12,
       "confidence": 49.06391856157853,
       "validationVerdict": null,
@@ -51949,6 +51994,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused SOLEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1789950251868,
+      "intentId": "ENAEUR:1789950251868",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused ENAEUR: OKX top traders are net-short"
     }
   ],
   "shadow:whale-flow:open-positions": [],
@@ -52822,7 +52874,7 @@
       "takeProfit": 11.166213421236005,
       "feesPaid": 6.635409867694809,
       "realizedPnl": 0,
-      "highestPrice": 11.06233,
+      "highestPrice": 11.12567,
       "lowestPrice": 10.73037,
       "confidence": 48.37223402461221,
       "validationVerdict": null,
@@ -52841,7 +52893,7 @@
       "takeProfit": 99.50290730106475,
       "feesPaid": 5.324172727470902,
       "realizedPnl": 0,
-      "highestPrice": 97.75,
+      "highestPrice": 98.18,
       "lowestPrice": 95.12,
       "confidence": 49.06391856157853,
       "validationVerdict": null,
@@ -69513,6 +69565,10 @@
     {
       "at": 1789949913609,
       "equity": 55.29
+    },
+    {
+      "at": 1789950251868,
+      "equity": 55.31
     }
   ],
   "live:revolut-x-order-map": {
@@ -69914,13 +69970,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1789949913609,
+    "at": 1789950251868,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "13 new candidates, production defaults (forward test only — not real trading)",
-        "equity": 10715.0707186619,
-        "returnPct": 7.150707186619002,
+        "equity": 10732.398062456135,
+        "returnPct": 7.323980624561354,
         "trades": 24,
         "winRatePct": 50,
         "profitFactor": 1.8567955248064618,
@@ -69941,7 +69997,7 @@
       "takeProfit": 0.3811357258805143,
       "feesPaid": 6.488791503634461,
       "realizedPnl": 0,
-      "highestPrice": 0.3727,
+      "highestPrice": 0.3729,
       "lowestPrice": 0.356,
       "confidence": 54.322786112314525,
       "validationVerdict": null,
@@ -71630,7 +71686,7 @@
       "takeProfit": 11.166213421236005,
       "feesPaid": 6.17852013292006,
       "realizedPnl": 0,
-      "highestPrice": 11.06233,
+      "highestPrice": 11.12567,
       "lowestPrice": 10.73037,
       "confidence": 48.37223402461221,
       "validationVerdict": null,
@@ -71649,7 +71705,7 @@
       "takeProfit": 99.50290730106475,
       "feesPaid": 3.10699508730916,
       "realizedPnl": 0,
-      "highestPrice": 97.75,
+      "highestPrice": 98.18,
       "lowestPrice": 95.12,
       "confidence": 49.06391856157853,
       "validationVerdict": null,
