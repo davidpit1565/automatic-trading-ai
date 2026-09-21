@@ -60,7 +60,7 @@
       "feesPaid": 6.315532084949293,
       "realizedPnl": 0,
       "highestPrice": 1.0359,
-      "lowestPrice": 1.0271,
+      "lowestPrice": 1.0216,
       "confidence": 55.9701068779656,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -79,7 +79,7 @@
       "feesPaid": 6.358889791393062,
       "realizedPnl": 0,
       "highestPrice": 51.96,
-      "lowestPrice": 51.96,
+      "lowestPrice": 51.72,
       "confidence": 50.69217105625356,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -2211,9 +2211,9 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1789984082911,
+    "at": 1789984418962,
     "source": "Kraken public market data (read-only)",
-    "opened": 1,
+    "opened": 0,
     "closed": 0,
     "halted": false
   },
@@ -2227,10 +2227,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787734612411,
-      "equity": 10231.22
-    },
     {
       "at": 1787734924907,
       "equity": 10232.32
@@ -22226,6 +22222,10 @@
     {
       "at": 1789984082911,
       "equity": 10592.3
+    },
+    {
+      "at": 1789984418962,
+      "equity": 10545.54
     }
   ],
   "trade-journal": [
@@ -24055,7 +24055,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -25.25% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -25.30% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24153,13 +24153,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1789984082911,
+    "at": 1789984418962,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate / whale-flow)",
-        "equity": 11483.395792007068,
-        "returnPct": 14.833957920070679,
+        "equity": 11442.456095365746,
+        "returnPct": 14.424560953657457,
         "trades": 50,
         "winRatePct": 57.99999999999999,
         "profitFactor": 2.0627297590349105,
@@ -24169,8 +24169,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11564.925178566602,
-        "returnPct": 15.649251785666019,
+        "equity": 11531.060362877404,
+        "returnPct": 15.310603628774041,
         "trades": 52,
         "winRatePct": 59.61538461538461,
         "profitFactor": 2.1631251517874523,
@@ -24180,8 +24180,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 11431.089902092152,
-        "returnPct": 14.310899020921516,
+        "equity": 11397.616987509147,
+        "returnPct": 13.976169875091474,
         "trades": 52,
         "winRatePct": 57.692307692307686,
         "profitFactor": 2.0055169633919316,
@@ -24213,8 +24213,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10269.355626279548,
-        "returnPct": 2.6935562627954823,
+        "equity": 10223.209236567864,
+        "returnPct": 2.2320923656786364,
         "trades": 252,
         "winRatePct": 42.857142857142854,
         "profitFactor": 1.2717320956170644,
@@ -24224,8 +24224,8 @@
       {
         "key": "top-trader",
         "label": "Refuses entries while OKX top traders are net-short",
-        "equity": 9664.526538229638,
-        "returnPct": -3.3547346177036164,
+        "equity": 9650.465620773928,
+        "returnPct": -3.495343792260719,
         "trades": 6,
         "winRatePct": 16.666666666666664,
         "profitFactor": 0.19749301131827932,
@@ -24235,8 +24235,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11355.604357033688,
-        "returnPct": 13.556043570336879,
+        "equity": 11322.352481846192,
+        "returnPct": 13.223524818461922,
         "trades": 40,
         "winRatePct": 60,
         "profitFactor": 2.177434987273629,
@@ -24246,8 +24246,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10562.739540590941,
-        "returnPct": 5.627395405909411,
+        "equity": 10530.217786377327,
+        "returnPct": 5.3021778637732675,
         "trades": 11,
         "winRatePct": 72.72727272727273,
         "profitFactor": 2.7012525975313673,
@@ -24354,62 +24354,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1788108232290,
-      "intentId": "XBTEUR:1788108232290:3",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper entry XBTEUR: 0.02934811116893453 @ 68382.8 (stop 67950.80768981956, target 69246.78462036091, confidence 70)"
-    },
-    {
-      "timestamp": 1788109167182,
-      "intentId": "XRPEUR:1788109167182",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused XRPEUR: no exposure headroom: 6104.33 already deployed of the 60% total-exposure limit"
-    },
-    {
-      "timestamp": 1788109478825,
-      "intentId": "ADAEUR:1788109478825",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused ADAEUR: no exposure headroom: 6097.21 already deployed of the 60% total-exposure limit"
-    },
-    {
-      "timestamp": 1788109790642,
-      "intentId": "ADAEUR:1788109790642",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused ADAEUR: no exposure headroom: 6092.57 already deployed of the 60% total-exposure limit"
-    },
-    {
-      "timestamp": 1788110102291,
-      "intentId": "LINKEUR:1788014972367:2",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper exit LINKEUR: 201.9639448702467 @ 10.16231 (take-profit)"
-    },
-    {
-      "timestamp": 1788110102291,
-      "intentId": "LINKEUR:1788110102291:3",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper entry LINKEUR: 199.61468231271724 @ 10.16231 (stop 10.041054282452102, target 10.404821435095796, confidence 64)"
-    },
-    {
-      "timestamp": 1788110102291,
-      "intentId": "ADAEUR:1788110102291:4",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper entry ADAEUR: 38.0047156973972 @ 0.177681 (stop 0.17514059493614825, target 0.18276181012770348, confidence 70)"
-    },
-    {
-      "timestamp": 1788110725763,
-      "intentId": "LINKEUR:1788110102291:3",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper exit LINKEUR: 199.61468231271724 @ 10.02039 (stop-loss)"
-    },
     {
       "timestamp": 1788111349212,
       "intentId": "XRPEUR:1788111349212:4",
@@ -31350,6 +31294,62 @@
     {
       "timestamp": 1789984082911,
       "intentId": "UNIEUR:1789984082911",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused UNIEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1789984418962,
+      "intentId": "SOLEUR:1789984418962",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused SOLEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1789984418962,
+      "intentId": "VELOEUR:1789984418962",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused VELOEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1789984418962,
+      "intentId": "LINKEUR:1789984418962",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LINKEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1789984418962,
+      "intentId": "AAVEEUR:1789984418962",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AAVEEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1789984418962,
+      "intentId": "AEROEUR:1789984418962",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AEROEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1789984418962,
+      "intentId": "XRPEUR:1789984418962",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused XRPEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1789984418962,
+      "intentId": "XLMEUR:1789984418962",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused XLMEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1789984418962,
+      "intentId": "UNIEUR:1789984418962",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused UNIEUR: maximum open positions reached (5/5)"
@@ -41106,7 +41106,7 @@
       "feesPaid": 6.87728668967475,
       "realizedPnl": 0,
       "highestPrice": 1.0356,
-      "lowestPrice": 1.0267,
+      "lowestPrice": 1.0216,
       "confidence": 55.759618586225024,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -41125,7 +41125,7 @@
       "feesPaid": 6.894173979591996,
       "realizedPnl": 0,
       "highestPrice": 51.96,
-      "lowestPrice": 51.96,
+      "lowestPrice": 51.68,
       "confidence": 50.69217105625356,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -42166,7 +42166,7 @@
       "feesPaid": 6.92864890793679,
       "realizedPnl": 0,
       "highestPrice": 1.0356,
-      "lowestPrice": 1.0267,
+      "lowestPrice": 1.0216,
       "confidence": 47.759618586225024,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -42185,7 +42185,7 @@
       "feesPaid": 5.506521931129543,
       "realizedPnl": 0,
       "highestPrice": 52.23,
-      "lowestPrice": 51.91,
+      "lowestPrice": 51.68,
       "confidence": 42.97511384600615,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -43163,7 +43163,7 @@
       "feesPaid": 6.848467010702669,
       "realizedPnl": 0,
       "highestPrice": 1.0356,
-      "lowestPrice": 1.0267,
+      "lowestPrice": 1.0216,
       "confidence": 55.759618586225024,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -43182,7 +43182,7 @@
       "feesPaid": 5.44279762044994,
       "realizedPnl": 0,
       "highestPrice": 52.23,
-      "lowestPrice": 51.91,
+      "lowestPrice": 51.68,
       "confidence": 50.97511384600615,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -52643,6 +52643,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused LTCEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1789984418962,
+      "intentId": "ENAEUR:1789984418962",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused ENAEUR: OKX top traders are net-short"
     }
   ],
   "shadow:whale-flow:open-positions": [],
@@ -53517,7 +53524,7 @@
       "feesPaid": 6.803242953369065,
       "realizedPnl": 0,
       "highestPrice": 1.0356,
-      "lowestPrice": 1.0267,
+      "lowestPrice": 1.0216,
       "confidence": 55.759618586225024,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -53536,7 +53543,7 @@
       "feesPaid": 5.406855943099704,
       "realizedPnl": 0,
       "highestPrice": 52.23,
-      "lowestPrice": 51.91,
+      "lowestPrice": 51.68,
       "confidence": 50.97511384600615,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -70579,6 +70586,10 @@
     {
       "at": 1789984082911,
       "equity": 55.47
+    },
+    {
+      "at": 1789984418962,
+      "equity": 55.41
     }
   ],
   "live:revolut-x-order-map": {
@@ -70970,7 +70981,7 @@
   "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
-    "cash": 4341.460188002765,
+    "cash": 4317.957151450909,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 906.7925533209909,
@@ -70980,17 +70991,17 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1789984082911,
+    "at": 1789984418962,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "13 new candidates, production defaults (forward test only — not real trading)",
-        "equity": 10861.399301111185,
-        "returnPct": 8.613993011111852,
+        "equity": 10794.998325949788,
+        "returnPct": 7.949983259497877,
         "trades": 25,
         "winRatePct": 52,
         "profitFactor": 1.973951440539754,
-        "openPositions": 4,
+        "openPositions": 5,
         "startedAt": 1788551468687
       }
     ]
@@ -71046,7 +71057,7 @@
       "feesPaid": 6.489300924194563,
       "realizedPnl": 0,
       "highestPrice": 0.003902,
-      "lowestPrice": 0.003877,
+      "lowestPrice": 0.003853,
       "confidence": 56.96391709815695,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -71065,8 +71076,27 @@
       "feesPaid": 0.007011148895548104,
       "realizedPnl": 0,
       "highestPrice": 0.3817,
-      "lowestPrice": 0.3797,
+      "lowestPrice": 0.3767,
       "confidence": 48.44944324960318,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "PENDLEEUR:1789984418962:4",
+      "symbol": "PENDLEEUR",
+      "openedAt": 1789984418962,
+      "entryPrice": 2.401,
+      "quantity": 9.759574484317133,
+      "initialQuantity": 9.759574484317133,
+      "stopLoss": 2.33185127001115,
+      "takeProfit": 2.5392974599777003,
+      "feesPaid": 0.0702982150105363,
+      "realizedPnl": 0,
+      "highestPrice": 2.401,
+      "lowestPrice": 2.401,
+      "confidence": 48.4283488137381,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -71591,6 +71621,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused PENDLEEUR: no exposure headroom: 6519.94 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1789984418962,
+      "intentId": "PENDLEEUR:1789984418962:4",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry PENDLEEUR: 9.759574484317133 @ 2.401 (stop 2.33185127001115, target 2.5392974599777003, confidence 48)"
     }
   ],
   "live:live-blackout-queue": {
@@ -72930,7 +72967,7 @@
       "feesPaid": 6.314954949376394,
       "realizedPnl": 0,
       "highestPrice": 1.0356,
-      "lowestPrice": 1.0267,
+      "lowestPrice": 1.0216,
       "confidence": 55.759618586225024,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -72949,7 +72986,7 @@
       "feesPaid": 3.14845816456149,
       "realizedPnl": 0,
       "highestPrice": 52.23,
-      "lowestPrice": 51.91,
+      "lowestPrice": 51.68,
       "confidence": 50.97511384600615,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
