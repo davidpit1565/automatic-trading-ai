@@ -8229,3 +8229,45 @@ Gate: `tsc --noEmit` clean, `vitest run` 1411/1411 (up from 1407 — 4 new:
 no live account → silent, fresh heartbeat → silent, stale + live account →
 alerts unconditionally, no heartbeat recorded yet → silent), `npm run
 build` clean.
+
+## Upgrade 5/5: correlation-cap shadow test + a broader stale-trailing sweep (2026-09-22)
+
+Last of David's 5 upgrade items. Same investigate-first pattern as items 2
+and 3: portfolio-level correlation/exposure caps already exist and are
+already unit-tested (`riskEngine.ts`'s `correlationThreshold`/
+`maxCorrelatedExposurePct`), and a dedicated `'correlation-capped'` shadow
+candidate (threshold 0.7, cap 30% of equity) was already forward-testing
+them — "built and unit-tested, but never turned on in production," per its
+own pre-existing comment. Nothing new to build there.
+
+But auditing it surfaced the SAME stale-trailing bug fixed for `live-mirror`
+in upgrade 2/5, present in `'correlation-capped'` and three more candidates
+(`'high-conviction'`, `'top-trader'`, `'ai-judgment'`) — each still
+hardcoded the old `{activateR:1.5, trailR:1.5}` even though `live-mirror`
+(the baseline they're all judged against) no longer does. Every one of
+these frames itself as isolating exactly ONE variable against that
+baseline; left unfixed, each was silently comparing "its own feature AND
+the old trailing setting" instead. All four now reference
+`AUTOPILOT_TRAILING` directly, same as `live-mirror`. Deliberately left
+`'mean-reversion'`/`'breakout'` untouched — a different signal family with
+independent hyperparameters, never framed as a single-variable isolation.
+
+Added a regression test (`tests/autopilot/shadowEvaluator.test.ts`)
+asserting every non-exempt candidate's `trailing` field is wired to the
+live `AUTOPILOT_TRAILING` reference rather than a value that can silently
+drift again the next time production's trailing config changes.
+
+Gate: `tsc --noEmit` clean, `vitest run` 1412/1412 (up from 1411 — 1 new),
+`npm run build` clean.
+
+**All 5 of David's upgrade items are now shipped**, in sequence, each with
+its own PR and gate: (1) instant kill-switch Telegram alert, (2) trailing-
+stop forward test (+ a fixed stale baseline), (3) position reconciliation
+(already existed) + an urgent live dust-position-exit bug found and fixed
+along the way, (4) a real-money watchdog that catches a hung run (not just
+an unscheduled one), (5) correlation-cap forward test (+ the same
+stale-trailing bug fixed across three more candidates). Three of the five
+items turned out to already have solid existing infrastructure — the real
+contribution in those cases was finding and fixing the concrete bugs
+keeping that infrastructure from being fully trustworthy, not duplicating
+it.

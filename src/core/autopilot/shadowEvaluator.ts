@@ -336,12 +336,23 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     confirmationTimeframe: '4h',
     useWhaleFlowCheck: true,
   },
+  // This candidate, and every other one below that frames itself as
+  // isolating a single variable against `live-mirror` (`top-trader`,
+  // `ai-judgment`, `correlation-capped`), used to also hardcode the same
+  // stale `{activateR:1.5, trailR:1.5}` `live-mirror` itself had — fixed
+  // 2026-09-22 alongside that same bug (see `live-mirror`'s own comment):
+  // without this, each one was silently comparing "its own feature AND the
+  // old trailing setting" against the corrected baseline, not just its own
+  // feature. `mean-reversion`/`breakout` below are deliberately exempt —
+  // they're a different signal FAMILY with their own independent
+  // hyperparameters already (see their own comment), never framed as a
+  // single-variable isolation in the first place.
   {
     key: 'high-conviction',
     label: 'Conviction 55 (trades rarely; tests whether selectivity alone helps)',
     minConfidence: 55,
     maxRsiForLong: 65,
-    trailing: { activateR: 1.5, trailR: 1.5 },
+    trailing: AUTOPILOT_TRAILING,
     confirmationTimeframe: '4h',
   },
   // A different FAMILY, not a different setting. Backtested positive with a
@@ -373,7 +384,7 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     label: 'Refuses entries while OKX top traders are net-short',
     minConfidence: 40,
     maxRsiForLong: 65,
-    trailing: { activateR: 1.5, trailR: 1.5 },
+    trailing: AUTOPILOT_TRAILING,
     confirmationTimeframe: '4h',
     useTopTraderCheck: true,
   },
@@ -387,7 +398,7 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     label: 'Refuses entries an AI second opinion reads as bearish',
     minConfidence: 40,
     maxRsiForLong: 65,
-    trailing: { activateR: 1.5, trailR: 1.5 },
+    trailing: AUTOPILOT_TRAILING,
     confirmationTimeframe: '4h',
     useAiJudgmentCheck: true,
   },
@@ -396,12 +407,13 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
   // correlationThreshold/maxCorrelatedExposurePct: built and unit-tested, but
   // never turned on in production). First-guess threshold/cap, unmeasured —
   // this candidate exists to measure them, not because they're known good.
+  // David's 5-item "think big" upgrade request, item 5 (2026-09-22).
   {
     key: 'correlation-capped',
     label: 'Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)',
     minConfidence: 40,
     maxRsiForLong: 65,
-    trailing: { activateR: 1.5, trailR: 1.5 },
+    trailing: AUTOPILOT_TRAILING,
     confirmationTimeframe: '4h',
     correlationCap: { threshold: 0.7, maxExposurePct: 30 },
   },
