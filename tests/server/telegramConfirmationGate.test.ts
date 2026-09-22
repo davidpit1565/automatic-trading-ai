@@ -386,6 +386,8 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
       expect(parseApprovalCommand('דחייה')).toBe('reject');
       expect(parseApprovalCommand('/Reject')).toBe('reject');
       expect(parseApprovalCommand('reject')).toBe('reject');
+      expect(parseApprovalCommand('/Deny')).toBe('reject');
+      expect(parseApprovalCommand('deny')).toBe('reject');
       expect(parseApprovalCommand('/אשר בבקשה')).toBeNull();
       expect(parseApprovalCommand('מה המצב?')).toBeNull();
     });
@@ -432,6 +434,16 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
       const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
       const decision = await gate.requestConfirmation(intent());
       expect(decision.approved).toBe(true);
+    });
+
+    it('accepts the English "deny" synonym for reject too (David asked 2026-09-22)', async () => {
+      const { fetchFn } = fakeTelegram([[{ update_id: 10, message: { text: 'deny' } }]]);
+      const store = new MemoryStore();
+      const audit = new PersistedAuditLog(store);
+      const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+      const decision = await gate.requestConfirmation(intent());
+      expect(decision.approved).toBe(false);
+      expect(audit.entries()[1]!.detail).toContain('(text command)');
     });
 
     it('ignores unrecognized text and keeps waiting rather than guessing', async () => {

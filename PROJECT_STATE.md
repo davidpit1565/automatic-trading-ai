@@ -8067,3 +8067,16 @@ fallback).
 
 Gate: `tsc --noEmit` clean, `vitest run` 1400/1400 (up from 1399 — 1 new),
 `npm run build` clean.
+
+## English "deny" synonym for reject (2026-09-22)
+
+David asked for an English pair too ("approve"/"deny"), and whether "deny"
+is the best fit or whether to use something better — judged "reject"
+(already supported) at least as clear, so added "deny"/"/deny" as an
+ADDITIONAL synonym in `REJECT_WORDS` rather than replacing "reject": both
+now work, nothing that already worked changes. Same safety scoping,
+unchanged. Added a unit-test case and one end-to-end integration test
+(`tests/server/telegramConfirmationGate.test.ts`).
+
+Gate: `tsc --noEmit` clean, `vitest run` 1401/1401 (up from 1400 — 1 new),
+`npm run build` clean.
