@@ -15,6 +15,7 @@ import { PortfolioEngine } from '../../src/core/position/portfolioEngine';
 import { TradeJournal } from '../../src/core/position/tradeJournal';
 import { PersistedKillSwitch } from '../../src/core/autopilot/killSwitch';
 import { PrefixedStore } from '../../src/core/data/prefixedStore';
+import { AUTOPILOT_TRAILING } from '../../src/core/autopilot/paperAutoPilot';
 import {
   CHAMPION_KEY,
   compareToChampion,
@@ -173,6 +174,24 @@ describe('shadow evaluation', () => {
     expect(SHADOW_CANDIDATES.some((c) => c.key === 'live-mirror')).toBe(true);
     // Keys must be unique or candidates would share a namespace.
     expect(new Set(SHADOW_CANDIDATES.map((c) => c.key)).size).toBe(SHADOW_CANDIDATES.length);
+  });
+
+  // Real bug, 2026-09-22: 'live-mirror' — the trusted baseline every other
+  // single-variable-isolation candidate is judged against — used to
+  // hardcode `{activateR:1.5, trailR:1.5}`, which silently drifted from
+  // real production the moment AUTOPILOT_TRAILING was measured off. Every
+  // candidate that frames itself as isolating ONE variable against that
+  // baseline must track the SAME live `AUTOPILOT_TRAILING` reference, not a
+  // hardcoded snapshot that can drift again the next time production's
+  // trailing config changes. `mean-reversion`/`breakout` are deliberately
+  // exempt — a different signal family with independent hyperparameters,
+  // never framed as isolating a single variable in the first place.
+  it('keeps every single-variable-isolation candidate\'s trailing config wired to the live AUTOPILOT_TRAILING reference, not a value that can silently drift', () => {
+    const exempt = new Set(['mean-reversion', 'breakout']);
+    for (const c of SHADOW_CANDIDATES) {
+      if (exempt.has(c.key) || c.key === 'trailing-forward-test') continue;
+      expect(c.trailing, `${c.key} should reference AUTOPILOT_TRAILING`).toBe(AUTOPILOT_TRAILING);
+    }
   });
 });
 
