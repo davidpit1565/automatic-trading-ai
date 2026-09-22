@@ -8163,3 +8163,69 @@ completely). Scoped as separate future work, not rushed into this pass.
 Gate: `tsc --noEmit` clean, `vitest run` 1406/1406 (unchanged — existing
 coverage already asserts `live-mirror` exists and every shadow key is
 unique, both still true), `npm run build` clean.
+
+## Urgent, unplanned: dust-position exit loop (2026-09-22)
+
+Found live and ongoing while investigating upgrade item 3 (position
+reconciliation) — not part of the planned sequence. A reconciled position
+worth a fraction of a cent (0.000028 ALGO, leftover residue from earlier
+manual reconciliations — see the 2026-09-04 entries below) had been
+triggering its stop-loss every ~5-minute cycle for ~9 hours straight. Every
+sell attempt was submitted and rejected by Revolut X itself (no real
+exchange fills an order this far below any realistic minimum notional),
+and every cycle still sent David a Telegram confirmation request for it
+first — a real, ongoing ping for literally nothing.
+
+Fixed in `liveExitMirror.mts`: `checkAutomaticExits` now skips proposing
+any exit when a position's current notional value (`quantity * price`) is
+below `MIN_EXIT_NOTIONAL_EUR` (€0.50 — comfortably below the smallest real
+position this project ever sizes, well above the actual €0.0027 dust
+case). The position stays tracked (still counted in equity) — it's just
+never offered up for a sell nobody's broker would accept. Manual `/sell`
+is untouched; only the automatic per-cycle exit-check loop is guarded.
+
+Gate: `tsc --noEmit` clean, `vitest run` 1407/1407 (up from 1406 — 1 new,
+proving a dust position that would otherwise clearly trigger a stop-loss
+is skipped with zero audit/Telegram activity), `npm run build` clean.
+
+## Upgrade 4/5: real-money watchdog that catches a HUNG run, not just an unscheduled one (2026-09-22)
+
+Fourth of David's 5 upgrade items. Investigated before writing code, same
+as items 2 and 3: `.github/workflows/system-monitor.yml` +
+`server/workflowWatchdog.mts` already exist and already re-trigger
+`autopilot.yml`/`stocks-autopilot.yml` (with a Telegram alert) when
+GitHub's own scheduler silently stops firing one of them — a real, measured
+2026-08-31 failure mode. That part needed no changes.
+
+But that watchdog only checks whether a NEW workflow run was CREATED
+recently (`workflow_runs`'s `created_at`) — it can't tell whether the
+CURRENTLY-running one is actually progressing. Since `autopilot.yml` fires
+on a ~30-minute cron regardless of whether the previous run finished
+(`concurrency: cancel-in-progress: false`), a genuinely hung run (a stuck
+call with no timeout somewhere in the chain) would still look "fine" to it
+— new runs keep getting created on schedule even while the stuck one never
+progresses. Separately, `monitorSystemChanges` already computes a 6-hour
+staleness check on the SAME `autopilot-last-run` heartbeat, but it's
+entirely silenced (`SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED = false`,
+David's 2026-09-06 request to stop all paper/simulated-account Telegram
+noise) and only ever runs against the paper state files — never a
+live-money-specific check.
+
+Added `checkLiveHeartbeat` (`systemMonitor.mts`) — deliberately NOT gated
+behind `SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED` (a stalled real-money
+autopilot is unconditionally worth alerting on, unlike paper noise), and
+only fires once `hasLiveAccount` is true (so it never nags during
+paper-only testing). Reads the SAME per-cycle `autopilot-last-run`
+heartbeat, with a tighter 45-minute threshold (vs the workflow-trigger
+watchdog's 90) since it's checking genuine progress, not just scheduling.
+`runLiveMirror` runs AFTER the heartbeat write each cycle (see
+`autopilotRunner.mts`), so a hang inside it blocks the NEXT cycle's
+heartbeat too — staleness here already implies live-mirror itself isn't
+progressing, not just the paper side. Wired into
+`systemMonitorRunner.mts`'s existing 2-hourly run, alongside the workflow
+watchdog.
+
+Gate: `tsc --noEmit` clean, `vitest run` 1411/1411 (up from 1407 — 4 new:
+no live account → silent, fresh heartbeat → silent, stale + live account →
+alerts unconditionally, no heartbeat recorded yet → silent), `npm run
+build` clean.

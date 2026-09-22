@@ -15,8 +15,9 @@
  */
 
 import { fileURLToPath } from 'node:url';
+import { PrefixedStore } from '../src/core/data/prefixedStore';
 import { FileStore } from './fileStore.mts';
-import { monitorSystemChanges } from './systemMonitor.mts';
+import { checkLiveHeartbeat, monitorSystemChanges } from './systemMonitor.mts';
 import { checkAndNudgeStaleWorkflow } from './workflowWatchdog.mts';
 import { sendTelegramMessage } from './telegram.mts';
 import { isUsMarketOpen } from '../src/core/data/marketHours';
@@ -81,8 +82,14 @@ async function main(): Promise<void> {
     chatId: process.env['TELEGRAM_CHAT_ID'] ?? '',
   };
 
-  await monitorSystemChanges(new FileStore(CRYPTO_STATE_PATH), telegram, Date.now(), 'Crypto', '€');
+  const cryptoStore = new FileStore(CRYPTO_STATE_PATH);
+  await monitorSystemChanges(cryptoStore, telegram, Date.now(), 'Crypto', '€');
   await monitorSystemChanges(new FileStore(STOCKS_STATE_PATH), telegram, Date.now(), 'Stocks', '$');
+  // Live-money-specific: unlike the (silenced) paper-only monitor above,
+  // this always alerts when it fires — see checkLiveHeartbeat's own doc
+  // comment for why the workflow-trigger watchdog below isn't enough on
+  // its own to catch a hung (not just unscheduled) run.
+  await checkLiveHeartbeat(cryptoStore, new PrefixedStore(cryptoStore, 'live'), telegram, Date.now());
   await runWatchdog(telegram);
 }
 

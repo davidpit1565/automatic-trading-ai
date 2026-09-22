@@ -12,7 +12,9 @@
  * (improved, degraded, fixed, broke). Also alerts if no activity for 6h.
  */
 
+import type { KeyValueStore } from '../src/core/data/storage';
 import { FileStore } from './fileStore.mts';
+import { hasLiveAccount } from './liveLedger.mts';
 import { sendTelegramMessage, SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED } from './telegram.mts';
 
 const STALE_ACTIVITY_THRESHOLD_MS = 6 * 60 * 60 * 1000; // 6 hours
@@ -293,3 +295,54 @@ export async function monitorSystemChanges(
 }
 
 const AUTOPILOT_LAST_RUN_KEY = 'autopilot-last-run';
+
+/**
+ * Generous relative to the real ~5-minute internal cycle cadence
+ * (`autopilotRunner.mts`'s `STATE_COMMIT_EVERY`/heartbeat write) — covers a
+ * normal gap between GitHub's ~30-minute triggers while still catching a
+ * genuinely hung run (a stuck network call with no timeout somewhere in the
+ * chain) well before a human would otherwise notice. Tighter than the
+ * workflow-trigger watchdog's 90 minutes (`workflowWatchdog.mts`) on
+ * purpose: that one can only tell whether GitHub scheduled a NEW run
+ * recently, not whether the currently-running one is actually progressing —
+ * a run stuck mid-cycle still "looks" fine to it because a fresh trigger
+ * fires on schedule regardless. This checks the thing that actually proves
+ * live work is happening: the heartbeat every cycle writes.
+ */
+const LIVE_HEARTBEAT_STALE_AFTER_MS = 45 * 60 * 1000;
+
+/**
+ * Live-money-specific staleness alert — deliberately NOT gated behind
+ * `SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED` (that flag silences only
+ * paper/simulated-account messaging, per its own doc comment in
+ * `telegram.mts`; a stalled autopilot with real money at stake is
+ * unconditionally worth an alert). Only fires once real money has ever been
+ * enabled (`hasLiveAccount`) — otherwise there's nothing live to be stale
+ * about, and this would just nag during ordinary paper-only testing.
+ *
+ * Reads the SAME `autopilot-last-run` heartbeat `monitorSystemChanges`
+ * already reads (one shared per-cycle write, not live-specific by key —
+ * see `autopilotRunner.mts`'s own doc comment for why staleness here
+ * already implies `runLiveMirror` itself isn't progressing either: it runs
+ * AFTER the heartbeat write in the same cycle, so a hang inside it blocks
+ * the next cycle's heartbeat from ever landing).
+ */
+export async function checkLiveHeartbeat(
+  store: KeyValueStore,
+  liveStore: KeyValueStore,
+  telegram: { token: string; chatId: string },
+  now: number,
+): Promise<void> {
+  if (!telegram.token || !telegram.chatId) return;
+  if (!hasLiveAccount(liveStore)) return;
+  const heartbeat = store.get<{ at: number }>(AUTOPILOT_LAST_RUN_KEY);
+  if (!heartbeat) return;
+  const staleMs = now - heartbeat.at;
+  if (staleMs <= LIVE_HEARTBEAT_STALE_AFTER_MS) return;
+  const staleMinutes = Math.round(staleMs / 60_000);
+  await sendTelegramMessage(
+    `🚨 המסחר החי לא התקדם כבר ${staleMinutes} דקות — הריצה האחרונה נתקעה, לא רק שגיאה רגילה (זה לא היה מתריע ` +
+      `לולא זה). כדאי לבדוק את ה-workflow ב-GitHub Actions ולוודא שהחשבון האמיתי לא תקוע באמצע פעולה.`,
+    telegram,
+  );
+}
