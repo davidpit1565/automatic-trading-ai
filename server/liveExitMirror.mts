@@ -45,9 +45,25 @@ export type LiveExitOutcome =
   | { readonly symbol: string; readonly outcome: 'outstanding-exit-already-pending' }
   | { readonly symbol: string; readonly outcome: 'no-price-data' }
   | { readonly symbol: string; readonly outcome: 'no-exit-signal' }
+  | { readonly symbol: string; readonly outcome: 'dust-skipped' }
   | ({ readonly symbol: string } & LiveOrderFlowResult);
 
 const EXIT_PENDING_KEY = 'live-exit-pending';
+
+/**
+ * Real incident, 2026-09-22: a reconciled position worth a fraction of a
+ * cent (0.000028 ALGO, ~€0.000003 — leftover float/rounding residue from
+ * earlier manual reconciliations, see `liveManualTradeSync.mts`) triggered
+ * its stop-loss every cycle, and every attempt to actually sell it was
+ * rejected by Revolut X itself — no real exchange accepts an order this far
+ * below any realistic minimum notional. The result was a silent ~9-hour
+ * loop: propose exit, send a Telegram confirmation request, get rejected by
+ * the broker regardless of the human's answer, repeat every cycle — real
+ * pings for literally nothing. Comfortably below any real position this
+ * project ever sizes (the smallest live entries run several euros), so this
+ * can never suppress a position actually worth exiting.
+ */
+const MIN_EXIT_NOTIONAL_EUR = 0.5;
 
 interface PendingExit {
   readonly reason: ExitReason;
@@ -316,6 +332,15 @@ export async function checkAutomaticExits(
       updateLiveLowestPrice(store, position.id, price);
       const refreshed = findFresh(openLivePositions(store), position.id);
       if (!refreshed) continue; // forgotten by something else mid-loop — nothing left to exit
+
+      // See MIN_EXIT_NOTIONAL_EUR's doc comment — a real broker will never
+      // fill an order this small, so proposing one every cycle only pings a
+      // human for nothing. Left tracked (still counted in equity, still
+      // visible in the app) — just never offered as something to sell.
+      if (refreshed.quantity * price < MIN_EXIT_NOTIONAL_EUR) {
+        outcomes.push({ symbol, outcome: 'dust-skipped' });
+        continue;
+      }
 
       const reason = decideLiveExit(refreshed, price, candles.value.map((c) => c.close), exitOptions);
       const result = await proposeLiveExit(store, refreshed, reason, price, now, { flowParams, onRealizedPnl, journal, costRate });

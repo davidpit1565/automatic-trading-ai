@@ -146,6 +146,60 @@ describe('checkAutomaticExits', () => {
     expect(liveCash(store)).toBe(100 + 0.01 * 94);
   });
 
+  it('skips proposing an exit for a dust position — real incident, 2026-09-22: a reconciled position worth a fraction of a cent kept triggering its stop-loss and pinging Telegram every cycle for ~9 hours, and every sell was rejected by Revolut X itself (no real order that small clears any broker minimum)', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    // 0.001 units at price 100 = €0.10 notional, comfortably below MIN_EXIT_NOTIONAL_EUR.
+    recordLiveEntryFill(
+      store,
+      {
+        id: 'external-reconcile:DUSTEUR:1',
+        createdAt: 0,
+        mode: 'live',
+        symbol: 'DUST-BROKER',
+        side: 'buy',
+        quantity: 0.001,
+        limitPrice: 100,
+        stopLoss: 95,
+        takeProfit: 115,
+        assessment: {
+          approved: true,
+          asset: 'DUSTEUR',
+          entry: 100,
+          stopLoss: 95,
+          takeProfit: 115,
+          positionSize: 0.001,
+          positionValue: 0.1,
+          riskAmount: 0.005,
+          riskPercentage: 0,
+          rewardRiskRatio: 3,
+          portfolioExposure: 0,
+          reasons: [],
+          warnings: [],
+        },
+      },
+      { intentId: 'external-reconcile:DUSTEUR:1', state: 'filled', filledQuantity: 0.001, avgFillPrice: 100, detail: 'ok' },
+      0,
+    );
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+
+    // price 94 would otherwise clearly trigger a stop-loss exit (94 <= 95).
+    const outcomes = await checkAutomaticExits(
+      store,
+      fakeSource(ok([candle(94)])),
+      '1h',
+      {},
+      flowParams({ intentId: 'x', state: 'filled', filledQuantity: 0, avgFillPrice: null, detail: '' }, killSwitch, audit),
+      2000,
+    );
+
+    expect(outcomes).toEqual([{ symbol: 'DUSTEUR', outcome: 'dust-skipped' }]);
+    // Still tracked — just never offered up for a sell nobody's broker would fill.
+    expect(openLivePositions(store)).toHaveLength(1);
+    expect(audit.entries()).toEqual([]); // no confirmation request, no Telegram ping
+  });
+
   it('records a structured journal entry on a real fill when a journal + costRate are given (added 2026-09-19 — live trades were previously invisible to TradeJournal entirely)', async () => {
     const store = new MemoryStore();
     initLiveCash(store, 100);
