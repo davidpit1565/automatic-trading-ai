@@ -2255,7 +2255,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790094042182,
+    "at": 1790094413909,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -58878,6 +58878,20 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1790094439392,
+      "intentId": "external-reconcile:ALGOEUR:1790049640921:exit:1790093668175",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram (button)"
+    },
+    {
+      "timestamp": 1790094439723,
+      "intentId": "external-reconcile:ALGOEUR:1790049640921:exit:1790093668175",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "Revolut X rejected the order: HTTP 400 — {\"message\":\"base_size precision must not exceed 4 decimal places\",\"error_id\":\"baf6d9ce-32be-4629-9800-20286f99207d\",\"timestamp\":1790094439656}"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -72901,6 +72915,10 @@
     {
       "at": 1790094042182,
       "equity": 55.47
+    },
+    {
+      "at": 1790094413909,
+      "equity": 55.47
     }
   ],
   "live:revolut-x-order-map": {
@@ -72957,7 +72975,12 @@
       }
     }
   },
-  "telegram-unclaimed-messages": [],
+  "telegram-unclaimed-messages": [
+    {
+      "updateId": 447904985,
+      "text": "/approve"
+    }
+  ],
   "telegram-unclaimed-callbacks": [
     {
       "id": "7383943995548587904",
@@ -73218,6 +73241,10 @@
     {
       "id": "7383943996403053366",
       "data": "confirm:approve:muc2fzms.avxti7"
+    },
+    {
+      "id": "7383943996257714227",
+      "data": "confirm:approve:mucvkdyl.vqi8bh"
     }
   ],
   "live:blackout-windows-cache": {
@@ -73316,21 +73343,10 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904980,
+  "telegram-shared-update-offset": 447904986,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "external-reconcile:ALGOEUR:1790049640921": {
-      "reason": "stop-loss",
-      "queuedAt": 1790093668175
-    }
-  },
-  "live:confirmation-gate-pending": {
-    "external-reconcile:ALGOEUR:1790049640921:exit:1790093668175": {
-      "sentAt": 1790093693613,
-      "messageId": 863,
-      "token": "mucvkdyl.vqi8bh"
-    }
-  },
+  "live:live-exit-pending": {},
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 4370.461140495792,
