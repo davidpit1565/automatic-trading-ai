@@ -60,12 +60,19 @@ const REJECT_PREFIX = 'confirm:reject:';
  * the same words as the button labels ('אשר'/'דחה'), a couple of forgiving
  * synonyms, and the English equivalents — all case-insensitive.
  *
+ * Both the slash form ('/אשר') and the bare word ('אשר') are accepted —
+ * David asked for the bare form 2026-09-22 after typing exactly that during
+ * the ALGOEUR kill-switch incident (no leading slash) and having it sit
+ * unrecognized in the shared unclaimed-messages queue instead of doing
+ * anything. The slash form stays supported too so nothing that already
+ * worked stops working.
+ *
  * Deliberately NOT matched against a specific intent's token the way a
  * button's callback_data is — see `requestConfirmation`'s poll loop for why
  * that keeps this safe when more than one confirmation is pending at once.
  */
-const APPROVE_WORDS = new Set(['/אשר', '/approve']);
-const REJECT_WORDS = new Set(['/דחה', '/דחייה', '/reject']);
+const APPROVE_WORDS = new Set(['/אשר', 'אשר', '/approve', 'approve']);
+const REJECT_WORDS = new Set(['/דחה', 'דחה', '/דחייה', 'דחייה', '/reject', 'reject']);
 
 /** Strips Telegram's occasional bidi/RTL control characters (invisible,
  * sometimes inserted by mobile keyboards around Hebrew text starting with
