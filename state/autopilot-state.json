@@ -2253,7 +2253,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790049295854,
+    "at": 1790049640921,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -72034,6 +72034,10 @@
     {
       "at": 1790049295854,
       "equity": 55.5
+    },
+    {
+      "at": 1790049640921,
+      "equity": 55.5
     }
   ],
   "live:revolut-x-order-map": {
@@ -72052,7 +72056,38 @@
     "live-entry:ALGOEUR:1789874796154": "562b18a2-5554-4487-b522-1cbbe78edcc0",
     "live-entry:ALGOEUR:1789874796154:exit:1790044757904": "6916b231-d6d1-429e-9c13-21a538c28ca3"
   },
-  "live:live-open-positions": {},
+  "live:live-open-positions": {
+    "external-reconcile:ALGOEUR:1790049640921": {
+      "id": "external-reconcile:ALGOEUR:1790049640921",
+      "symbol": "ALGO/EUR",
+      "quantity": 0.010728,
+      "initialQuantity": 0.010728,
+      "entryPrice": 0.09777,
+      "stopLoss": 0.09630345,
+      "takeProfit": 0.1007031,
+      "highestPrice": 0.09777,
+      "lowestPrice": 0.09777,
+      "entrySlippage": 0,
+      "openedAt": 1790049640921,
+      "entryAssessment": {
+        "approved": true,
+        "asset": "ALGOEUR",
+        "entry": 0.09777,
+        "stopLoss": 0.09630345,
+        "takeProfit": 0.1007031,
+        "positionSize": 0.010728,
+        "positionValue": 0.00104887656,
+        "riskAmount": 0.000015733148399999967,
+        "riskPercentage": 0,
+        "rewardRiskRatio": 2,
+        "portfolioExposure": 0,
+        "reasons": [],
+        "warnings": [
+          "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
+        ]
+      }
+    }
+  },
   "telegram-unclaimed-messages": [
     {
       "updateId": 447904831,
