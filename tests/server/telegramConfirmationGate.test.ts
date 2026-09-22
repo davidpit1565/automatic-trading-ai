@@ -372,14 +372,20 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
   // recoverable by typing instead of being stuck until the 20-minute
   // auto-expiry.
   describe('approve/reject text-command fallback', () => {
-    it('parseApprovalCommand recognizes the button-label word, a synonym, and the English equivalent — case-insensitively, tolerant of surrounding whitespace and Telegram bidi marks', () => {
+    it('parseApprovalCommand recognizes the button-label word, a synonym, and the English equivalent — with or without the leading slash, case-insensitively, tolerant of surrounding whitespace and Telegram bidi marks', () => {
       expect(parseApprovalCommand('/אשר')).toBe('approve');
+      expect(parseApprovalCommand('אשר')).toBe('approve'); // bare word, no slash — David asked for this 2026-09-22
       expect(parseApprovalCommand('  /אשר  ')).toBe('approve');
+      expect(parseApprovalCommand('  אשר  ')).toBe('approve');
       expect(parseApprovalCommand('/APPROVE')).toBe('approve');
+      expect(parseApprovalCommand('approve')).toBe('approve');
       expect(parseApprovalCommand('‏/אשר‎')).toBe('approve');
       expect(parseApprovalCommand('/דחה')).toBe('reject');
+      expect(parseApprovalCommand('דחה')).toBe('reject');
       expect(parseApprovalCommand('/דחייה')).toBe('reject');
+      expect(parseApprovalCommand('דחייה')).toBe('reject');
       expect(parseApprovalCommand('/Reject')).toBe('reject');
+      expect(parseApprovalCommand('reject')).toBe('reject');
       expect(parseApprovalCommand('/אשר בבקשה')).toBeNull();
       expect(parseApprovalCommand('מה המצב?')).toBeNull();
     });
@@ -405,6 +411,17 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
       const decision = await gate.requestConfirmation(intent());
 
       expect(decision.approved).toBe(false);
+      expect(audit.entries()[1]!.detail).toContain('(text command)');
+    });
+
+    it('resolves approved: true on a bare "אשר" (no leading slash) — real incident, 2026-09-21: David typed exactly this during the ALGOEUR kill-switch confusion and it sat unrecognized', async () => {
+      const { fetchFn } = fakeTelegram([[{ update_id: 10, message: { text: 'אשר' } }]]);
+      const store = new MemoryStore();
+      const audit = new PersistedAuditLog(store);
+      const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+      const decision = await gate.requestConfirmation(intent());
+
+      expect(decision).toMatchObject({ intentId: 'BTCEUR:1:0', approved: true, decidedBy: 'C' });
       expect(audit.entries()[1]!.detail).toContain('(text command)');
     });
 

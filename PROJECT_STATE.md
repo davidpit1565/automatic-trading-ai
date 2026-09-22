@@ -8046,3 +8046,24 @@ slash again expecting it to do something.
 Gate: `tsc --noEmit` clean, `vitest run` 1399/1399 (up from 1398 — 1 new,
 existing kill-switch-engages-on-failure test updated to assert the retry
 count rather than narrowed), `npm run build` clean.
+
+## Bare "אשר"/"דחה" (no leading slash) now also work (2026-09-22)
+
+Predicted exactly this the entry above: David hit the rough edge noted
+there — he asked for the bare word to work too, having typed plain "אשר"
+(no slash) during the ALGOEUR incident and had it sit unrecognized.
+`telegramConfirmationGate.mts`'s `APPROVE_WORDS`/`REJECT_WORDS` now include
+both the slash form (`/אשר`, `/approve`, ...) and the bare word (`אשר`,
+`approve`, ...) — the slash forms stay supported so nothing that already
+worked stops working. Same safety scoping as before, unchanged: a bare word
+still only ever resolves when it's the SOLE pending confirmation.
+
+Updated `parseApprovalCommand`'s unit test for both forms and added one
+integration test proving a real bare "אשר" reply resolves `approved: true`
+end-to-end. Did not touch `/pause`/`/resume` (`manualKillSwitchCommand.mts`)
+— that's a separate command, English-only by design, and out of scope for
+this ask (David's request was specifically about the trade approve/reject
+fallback).
+
+Gate: `tsc --noEmit` clean, `vitest run` 1400/1400 (up from 1399 — 1 new),
+`npm run build` clean.
