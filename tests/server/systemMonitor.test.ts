@@ -3,7 +3,8 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { fetchSystemState, monitorSystemChanges } from '../../server/systemMonitor.mts';
+import { MemoryStore } from '../../src/core/data/storage';
+import { checkLiveHeartbeat, fetchSystemState, monitorSystemChanges } from '../../server/systemMonitor.mts';
 
 describe('fetchSystemState', () => {
   it('returns a valid system state snapshot', async () => {
@@ -128,6 +129,68 @@ describe('monitorSystemChanges', () => {
 
     expect(sentBody).toBeNull();
 
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('checkLiveHeartbeat (2026-09-22, real-money watchdog)', () => {
+  const now = 10_000_000;
+
+  it('sends nothing when no live account has ever been enabled — nothing live to be stale about', async () => {
+    const store = new MemoryStore();
+    store.set('autopilot-last-run', { at: now - 60 * 60 * 1000 }); // 1h stale
+    const liveStore = new MemoryStore(); // never initialized — hasLiveAccount() is false
+    const fetchFn = vi.fn();
+    vi.stubGlobal('fetch', fetchFn);
+
+    await checkLiveHeartbeat(store, liveStore, { token: 'T', chatId: 'C' }, now);
+
+    expect(fetchFn).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('sends nothing when the heartbeat is recent, even with a live account active', async () => {
+    const store = new MemoryStore();
+    store.set('autopilot-last-run', { at: now - 5 * 60 * 1000 }); // 5 min — fresh
+    const liveStore = new MemoryStore();
+    liveStore.set('live-cash-eur', 50);
+    const fetchFn = vi.fn();
+    vi.stubGlobal('fetch', fetchFn);
+
+    await checkLiveHeartbeat(store, liveStore, { token: 'T', chatId: 'C' }, now);
+
+    expect(fetchFn).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('alerts — unconditionally, not gated behind SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED — when the live account is active and the heartbeat is stale past the threshold', async () => {
+    const store = new MemoryStore();
+    store.set('autopilot-last-run', { at: now - 60 * 60 * 1000 }); // 1h stale
+    const liveStore = new MemoryStore();
+    liveStore.set('live-cash-eur', 50);
+    let sentBody: string | null = null;
+    vi.stubGlobal('fetch', (_url: string, init: { body: string }) => {
+      sentBody = init.body;
+      return Promise.resolve({ ok: true, json: async () => ({ ok: true, result: {} }) } as Response);
+    });
+
+    await checkLiveHeartbeat(store, liveStore, { token: 'T', chatId: 'C' }, now);
+
+    expect(sentBody).not.toBeNull();
+    expect(JSON.parse(sentBody!).text).toContain('60');
+    vi.unstubAllGlobals();
+  });
+
+  it('sends nothing when there is no recorded heartbeat at all', async () => {
+    const store = new MemoryStore();
+    const liveStore = new MemoryStore();
+    liveStore.set('live-cash-eur', 50);
+    const fetchFn = vi.fn();
+    vi.stubGlobal('fetch', fetchFn);
+
+    await checkLiveHeartbeat(store, liveStore, { token: 'T', chatId: 'C' }, now);
+
+    expect(fetchFn).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 });
