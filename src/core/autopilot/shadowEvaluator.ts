@@ -34,7 +34,7 @@ import { breakoutSignal, meanReversionSignal } from '../signal/alternativeSignal
 import type { Timeframe } from '../types';
 import { PersistedAuditLog } from './auditLog';
 import { PersistedKillSwitch } from './killSwitch';
-import { PaperAutoPilot } from './paperAutoPilot';
+import { AUTOPILOT_TRAILING, PaperAutoPilot } from './paperAutoPilot';
 
 export interface ShadowCandidate {
   /** Stable storage namespace — changing it restarts that candidate's record. */
@@ -289,12 +289,20 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
   // earned it). This candidate must include the same check, or its name
   // would be a lie: a 'live-mirror' that quietly omits a gate production
   // actually applies is measuring the wrong thing.
+  // `trailing` MUST reference `AUTOPILOT_TRAILING` (not a hardcoded value) —
+  // found stale 2026-09-22: this used to hardcode `{activateR:1.5,
+  // trailR:1.5}`, which drifted from real production the moment
+  // `AUTOPILOT_TRAILING` was measured off on 2026-08-27 (see
+  // `paperAutoPilot.ts`'s own dated comment). A 'live-mirror' whose whole
+  // purpose is to be the trustworthy baseline every other shadow is judged
+  // against must actually track what changes in real production, not a
+  // value frozen the day this candidate was written.
   {
     key: 'live-mirror',
-    label: 'Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate / whale-flow)',
+    label: 'Mirror of production (40 / 65 / AUTOPILOT_TRAILING / 4h gate / whale-flow)',
     minConfidence: 40,
     maxRsiForLong: 65,
-    trailing: { activateR: 1.5, trailR: 1.5 },
+    trailing: AUTOPILOT_TRAILING,
     confirmationTimeframe: '4h',
     useWhaleFlowCheck: true,
   },
@@ -303,14 +311,30 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     label: 'No higher-timeframe gate (isolates what the 4h gate contributes)',
     minConfidence: 40,
     maxRsiForLong: 65,
-    trailing: { activateR: 1.5, trailR: 1.5 },
+    trailing: AUTOPILOT_TRAILING,
   },
+  // Was 'fixed-stop' (no trailing) — repurposed 2026-09-22, David's "think
+  // big" upgrade request: does the trailing-stop mechanism (built, wired,
+  // but measured OFF for real money on 2026-08-27's dataset) actually help
+  // on THIS forward-going window? A fresh re-measurement the same day
+  // (`scripts/sweepAutopilot.mts`, real Kraken data, 3 windows incl.
+  // in-sample/out-of-sample) came back genuinely MIXED — a clear win on a
+  // 2-year daily window, roughly neutral on 1h/30d, worse profit factor on
+  // 4h/120d — not the clean, unambiguous improvement this project's "only
+  // measured improvements" bar requires before touching real capital. Same
+  // config everywhere else as `live-mirror` (including whale-flow) so this
+  // isolates EXACTLY one variable — trailing on vs off — against the true
+  // current production baseline, and the resulting real forward record (not
+  // another backtest) decides whether `AUTOPILOT_TRAILING` should ever
+  // change from `undefined`.
   {
-    key: 'fixed-stop',
-    label: 'Fixed stop, no trailing (isolates what trailing contributes)',
+    key: 'trailing-forward-test',
+    label: 'Trailing stop 1.5R/1.5R vs current no-trail production (forward test since 2026-09-22)',
     minConfidence: 40,
     maxRsiForLong: 65,
+    trailing: { activateR: 1.5, trailR: 1.5 },
     confirmationTimeframe: '4h',
+    useWhaleFlowCheck: true,
   },
   {
     key: 'high-conviction',
