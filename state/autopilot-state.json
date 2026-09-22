@@ -2255,7 +2255,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790094772766,
+    "at": 1790095134271,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2271,10 +2271,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787824495271,
-      "equity": 10195.85
-    },
     {
       "at": 1787824805638,
       "equity": 10195.85
@@ -22270,6 +22266,10 @@
     {
       "at": 1790094772766,
       "equity": 10638.27
+    },
+    {
+      "at": 1790095134271,
+      "equity": 10652.8
     }
   ],
   "trade-journal": [
@@ -24289,13 +24289,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1790094772766,
+    "at": 1790095134271,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate / whale-flow)",
-        "equity": 11357.379338595565,
-        "returnPct": 13.573793385955652,
+        "equity": 11366.054765425746,
+        "returnPct": 13.660547654257464,
         "trades": 54,
         "winRatePct": 59.25925925925925,
         "profitFactor": 2.0484912077065207,
@@ -24305,8 +24305,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11452.107962990023,
-        "returnPct": 14.521079629900232,
+        "equity": 11459.866778504016,
+        "returnPct": 14.598667785040162,
         "trades": 55,
         "winRatePct": 60,
         "profitFactor": 2.1552055602510602,
@@ -24316,8 +24316,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 11334.421968627443,
-        "returnPct": 13.344219686274428,
+        "equity": 11342.09099512824,
+        "returnPct": 13.420909951282392,
         "trades": 54,
         "winRatePct": 57.407407407407405,
         "profitFactor": 1.976674126600291,
@@ -24349,8 +24349,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10321.382442980046,
-        "returnPct": 3.2138244298004612,
+        "equity": 10326.76993626547,
+        "returnPct": 3.2676993626546933,
         "trades": 257,
         "winRatePct": 43.190661478599225,
         "profitFactor": 1.3075306973298404,
@@ -24371,8 +24371,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11244.82909087597,
-        "returnPct": 12.4482909087597,
+        "equity": 11252.447474730228,
+        "returnPct": 12.524474747302284,
         "trades": 43,
         "winRatePct": 60.46511627906976,
         "profitFactor": 2.1674067001946913,
@@ -24382,8 +24382,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10443.524681739942,
-        "returnPct": 4.43524681739942,
+        "equity": 10450.550943844275,
+        "returnPct": 4.50550943844275,
         "trades": 15,
         "winRatePct": 73.33333333333333,
         "profitFactor": 2.676628348354375,
@@ -58913,6 +58913,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "Revolut X rejected the order: HTTP 400 — {\"message\":\"base_size precision must not exceed 4 decimal places\",\"error_id\":\"2b5ba9f7-ad1a-44de-b0c5-885e6fb7a0c0\",\"timestamp\":1790094800916}"
+    },
+    {
+      "timestamp": 1790095159153,
+      "intentId": "external-reconcile:ALGOEUR:1790049640921:exit:1790095134271",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -72944,6 +72951,10 @@
     {
       "at": 1790094772766,
       "equity": 55.47
+    },
+    {
+      "at": 1790095134271,
+      "equity": 55.47
     }
   ],
   "live:revolut-x-order-map": {
@@ -73365,8 +73376,19 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447904986,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:live-exit-pending": {
+    "external-reconcile:ALGOEUR:1790049640921": {
+      "reason": "stop-loss",
+      "queuedAt": 1790095134271
+    }
+  },
+  "live:confirmation-gate-pending": {
+    "external-reconcile:ALGOEUR:1790049640921:exit:1790095134271": {
+      "sentAt": 1790095158934,
+      "messageId": 866,
+      "token": "mucwfsly.1mocrsy"
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 4370.461140495792,
@@ -73379,13 +73401,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790094772766,
+    "at": 1790095134271,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "42 candidates, production defaults (forward test only — not real trading)",
-        "equity": 10622.505947883299,
-        "returnPct": 6.225059478832991,
+        "equity": 10631.128037317365,
+        "returnPct": 6.31128037317365,
         "trades": 31,
         "winRatePct": 45.16129032258064,
         "profitFactor": 1.6660803657520225,
