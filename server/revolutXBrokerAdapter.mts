@@ -28,6 +28,7 @@
 
 import { createHash } from 'node:crypto';
 import { buildAuthHeaders } from './signing.mjs';
+import { sendTelegramMessage, type TelegramConfig } from './telegram.mts';
 import type {
   AuditLog,
   BrokerAdapter,
@@ -234,7 +235,31 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
     private readonly credentials: RevolutXCredentials,
     private readonly fetchFn: typeof fetch = fetch,
     private readonly timeoutMs: number = DEFAULT_TIMEOUT_MS,
+    /**
+     * Optional — when configured, an auto-engaged kill switch (any of the
+     * three `this.killSwitch.engage(...)` calls below) also sends an
+     * IMMEDIATE Telegram alert, instead of David only finding out at the
+     * next twice-daily digest. Real incident, 2026-09-20/21: the kill switch
+     * auto-engaged over an unconfirmed ALGOEUR fill and stayed engaged for
+     * ~40 hours — blocking every subsequent order, entries and exits alike,
+     * on every symbol — before David happened to ask about it; the digest
+     * WOULD have mentioned it (`readLiveSummary`'s `killSwitchEngaged`), but
+     * only at the next 08:00/22:00 slot, up to ~12 hours later. Best-effort:
+     * `sendTelegramMessage` already never throws on failure (returns
+     * `sent: false`), so a failed alert can never mask the real kill-switch
+     * reason, which is still recorded in the audit log and `killSwitch`
+     * itself regardless of whether the Telegram send succeeds.
+     */
+    private readonly telegram?: TelegramConfig,
   ) {}
+
+  private async alertKillSwitchEngaged(reason: string): Promise<void> {
+    if (!this.telegram) return;
+    await sendTelegramMessage(
+      `🚨 המסחר החי הושבת אוטומטית!\n\n${reason}\n\nהמערכת תישאר מושבתת — כולל stop-loss/take-profit של פוזיציות פתוחות — עד שתבדוק ידנית באפליקציית Revolut X ותשלח /resume.`,
+      this.telegram,
+    );
+  }
 
   private orderMap(): Record<string, string> {
     return this.store.get<Record<string, string>>(ORDER_MAP_KEY) ?? {};
@@ -318,9 +343,9 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
       // explicitly /resume's — since automated certainty isn't available,
       // the safe fallback is mandatory human involvement, not a hopeful
       // assumption in either direction.
-      this.killSwitch.engage(
-        `order ${intent.id}: network failure before a response was received (${message}) — Revolut X may or may not have placed it; verify manually in the Revolut X app before /resume`,
-      );
+      const reason = `order ${intent.id}: network failure before a response was received (${message}) — Revolut X may or may not have placed it; verify manually in the Revolut X app before /resume`;
+      this.killSwitch.engage(reason);
+      await this.alertKillSwitchEngaged(reason);
       return this.reportAndAudit(
         intent.id,
         'rejected',
@@ -341,9 +366,9 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
       // rather than guess in either direction, force a human to check
       // Revolut X directly.
       if (/already been placed/i.test(rawBody)) {
-        this.killSwitch.engage(
-          `order ${intent.id}: Revolut X says this exact order was already placed (${rawBody}) — an EARLIER attempt may have genuinely filled and this project cannot look it up by client_order_id; verify manually in the Revolut X app before /resume`,
-        );
+        const reason = `order ${intent.id}: Revolut X says this exact order was already placed (${rawBody}) — an EARLIER attempt may have genuinely filled and this project cannot look it up by client_order_id; verify manually in the Revolut X app before /resume`;
+        this.killSwitch.engage(reason);
+        await this.alertKillSwitchEngaged(reason);
         return this.reportAndAudit(
           intent.id,
           'rejected',
@@ -412,9 +437,9 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
       // stop-loss/take-profit, invisible to /sell) until a human noticed by
       // checking Revolut X directly. Same "can't verify, so stop and ask a
       // human" reasoning as the network-failure-before-response branch.
-      this.killSwitch.engage(
-        `order ${intent.id} (venue ${venueOrderId}): placed, but its fill status could not be confirmed — verify manually in the Revolut X app (and reconcile any real position this project doesn't yet track) before /resume`,
-      );
+      const reason = `order ${intent.id} (venue ${venueOrderId}): placed, but its fill status could not be confirmed — verify manually in the Revolut X app (and reconcile any real position this project doesn't yet track) before /resume`;
+      this.killSwitch.engage(reason);
+      await this.alertKillSwitchEngaged(reason);
       return this.reportAndAudit(intent.id, 'submitted', `order ${venueOrderId} placed; status not yet confirmable — kill switch engaged, verify manually`);
     }
     return this.reportAndAudit(

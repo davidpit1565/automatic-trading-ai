@@ -267,6 +267,93 @@ describe('RevolutXBrokerAdapter', () => {
     expect(calls.length).toBe(3); // POST + 2 GET attempts, not the full retry budget
   });
 
+  describe('instant Telegram alert on an auto-engaged kill switch (2026-09-22)', () => {
+    // Real incident, 2026-09-20/21: the kill switch auto-engaged and David
+    // only found out ~40 hours later, when he happened to ask about it —
+    // the daily digest DOES include kill-switch state (readLiveSummary), but
+    // only at the next 08:00/22:00 slot. These tests prove every auto-engage
+    // path also fires an immediate Telegram message, not just an audit entry.
+    function fakeTelegramConfig() {
+      const sent: string[] = [];
+      const fetchFn = (async (url: string, init?: { body?: string }) => {
+        if (String(url).includes('/sendMessage')) {
+          sent.push(JSON.parse(init!.body!).text);
+          return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 });
+        }
+        throw new Error(`unexpected Telegram endpoint: ${url}`);
+      }) as unknown as typeof fetch;
+      return { telegram: { token: 'T', chatId: 'C', fetchFn }, sent };
+    }
+
+    it('alerts immediately when the fill-status read never confirms after retries', async () => {
+      const { fetchFn } = fakeFetch([
+        { status: 200, body: { data: [{ venue_order_id: 'venue-alert-1', client_order_id: 'x', state: 'new' }] } },
+        { status: 500, body: { error: 'upstream down' } },
+      ]);
+      const { telegram, sent } = fakeTelegramConfig();
+      const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn, undefined, telegram);
+
+      await adapter.submit(intent());
+
+      expect(killSwitch.isEngaged()).toBe(true);
+      expect(sent).toHaveLength(1);
+      expect(sent[0]).toContain('🚨');
+      expect(sent[0]).toContain('venue-alert-1');
+    });
+
+    it('alerts immediately on a network failure before any response was received', async () => {
+      const throwingFetch = (async () => {
+        throw new Error('ECONNRESET');
+      }) as unknown as typeof fetch;
+      const { telegram, sent } = fakeTelegramConfig();
+      const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), throwingFetch, undefined, telegram);
+
+      await adapter.submit(intent());
+
+      expect(killSwitch.isEngaged()).toBe(true);
+      expect(sent).toHaveLength(1);
+      expect(sent[0]).toContain('ECONNRESET');
+    });
+
+    it('alerts immediately on a "duplicate client_order_id" rejection', async () => {
+      const { fetchFn } = fakeFetch([
+        { status: 400, body: { message: "An order with the client_order_id 'abc' has already been placed.", error_id: 'x' } },
+      ]);
+      const { telegram, sent } = fakeTelegramConfig();
+      const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn, undefined, telegram);
+
+      await adapter.submit(intent());
+
+      expect(killSwitch.isEngaged()).toBe(true);
+      expect(sent).toHaveLength(1);
+      expect(sent[0]).toContain('already been placed');
+    });
+
+    it('never engages the kill switch or sends an alert on a clean fill — no false alarms', async () => {
+      const { fetchFn } = fakeFetch([
+        { status: 200, body: { data: [{ venue_order_id: 'venue-clean', client_order_id: 'x', state: 'new' }] } },
+        { status: 200, body: { data: { status: 'filled', filled_quantity: '2', average_fill_price: '99.5' } } },
+      ]);
+      const { telegram, sent } = fakeTelegramConfig();
+      const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), fetchFn, undefined, telegram);
+
+      await adapter.submit(intent());
+
+      expect(killSwitch.isEngaged()).toBe(false);
+      expect(sent).toHaveLength(0);
+    });
+
+    it('does not attempt a Telegram send at all when no telegram config is passed (existing behavior, unaffected)', async () => {
+      const throwingFetch = (async () => {
+        throw new Error('offline');
+      }) as unknown as typeof fetch;
+      const adapter = new RevolutXBrokerAdapter(store, audit, killSwitch, credentials(), throwingFetch);
+
+      await expect(adapter.submit(intent())).resolves.toBeDefined();
+      expect(killSwitch.isEngaged()).toBe(true);
+    });
+  });
+
   it('treats a "duplicate client_order_id" rejection as AMBIGUOUS (not a clean, zero-exposure rejection) and auto-engages the kill switch — real production message, 2026-09-03: strong evidence an earlier attempt actually went through, which this project cannot look up by client_order_id to confirm', async () => {
     const { fetchFn } = fakeFetch([
       {

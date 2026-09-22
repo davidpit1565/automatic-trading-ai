@@ -1043,7 +1043,7 @@ export async function runLiveMirror(
   }
   const killSwitch = new PersistedKillSwitch(liveStore);
   const audit = new PersistedAuditLog(liveStore);
-  const brokerAdapter = new RevolutXBrokerAdapter(liveStore, audit, killSwitch, credentials);
+  const brokerAdapter = new RevolutXBrokerAdapter(liveStore, audit, killSwitch, credentials, undefined, undefined, telegram);
   // Reconcile the tracked cash figure against Revolut X's own real balance
   // before anything sizes a trade off of it — see liveLedger.mts's own doc
   // comment for the real incident (2026-09-03) that made this necessary.

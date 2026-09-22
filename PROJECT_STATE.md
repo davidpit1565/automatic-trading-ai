@@ -8080,3 +8080,37 @@ unchanged. Added a unit-test case and one end-to-end integration test
 
 Gate: `tsc --noEmit` clean, `vitest run` 1401/1401 (up from 1400 — 1 new),
 `npm run build` clean.
+
+## Instant Telegram alert on kill-switch auto-engage (2026-09-22, upgrade 1/5)
+
+First of 5 "serious upgrade" items David asked for after the ALGOEUR
+incident (full list: instant kill-switch alert, trailing-stop/partial
+profit-taking, position reconciliation vs Revolut X, an autopilot watchdog,
+portfolio-level correlation caps — going one at a time, in order).
+
+Until now, an auto-engaged kill switch (`RevolutXBrokerAdapter.submit()`'s
+three `killSwitch.engage(...)` sites — network failure before a response,
+a "duplicate order already placed" rejection, or a fill status that never
+confirms) only showed up in the audit log and the next twice-daily digest
+(`readLiveSummary`'s `killSwitchEngaged`) — up to ~12 hours later. That's
+exactly what happened 2026-09-20/21: the halt sat unnoticed for ~40 hours.
+
+Added an optional `telegram?: TelegramConfig` constructor param to
+`RevolutXBrokerAdapter` — when configured, every auto-engage site now also
+sends an immediate Telegram message (🚨, the same `reason` string that goes
+into the kill switch/audit log) via a new private `alertKillSwitchEngaged`
+helper. `sendTelegramMessage` already never throws on failure, so a failed
+alert can never mask the real kill-switch reason — that's still recorded
+regardless. Wired through at the one real call site
+(`autopilotRunner.mts`'s `runLiveMirror`, which already has `telegram` in
+scope). No behavior change for anything else; existing tests (none of
+which pass a `telegram` argument) are unaffected — verified with a new
+explicit test that a missing config never even attempts a send.
+
+Added 5 new tests in `tests/server/revolutXBrokerAdapter.test.ts`: alerts
+on the fill-status-never-confirms path, the network-failure path, and the
+duplicate-order path; a clean fill sends nothing (no false alarms); and no
+`telegram` config means no send attempt at all.
+
+Gate: `tsc --noEmit` clean, `vitest run` 1406/1406 (up from 1401 — 5 new),
+`npm run build` clean.
