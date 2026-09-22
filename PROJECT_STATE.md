@@ -8114,3 +8114,52 @@ duplicate-order path; a clean fill sends nothing (no false alarms); and no
 
 Gate: `tsc --noEmit` clean, `vitest run` 1406/1406 (up from 1401 — 5 new),
 `npm run build` clean.
+
+## Trailing-stop shadow forward test + a real stale-baseline bug fix (2026-09-22, upgrade 2/5)
+
+Second of David's 5 upgrade items. Investigated before writing any code:
+the trailing-stop MECHANISM already exists (`src/core/risk/trailingStop.ts`,
+wired into both paper and live exits via `exitDecision.ts`'s `decideExit`)
+— it's just measured OFF for real money (`AUTOPILOT_TRAILING = undefined`
+in `paperAutoPilot.ts`, since 2026-08-27's measurement on that day's data).
+
+Re-ran `scripts/sweepAutopilot.mts` fresh (real Kraken data, 3 windows —
+1h/30d, 4h/120d, and a 2-year daily window — in-sample + out-of-sample)
+against the exact current production baseline. Result: genuinely MIXED —
+clearly better return AND profit factor on the 2-year daily window (same
+trade count, same win rate — purely captured more profit per winning
+trade), roughly neutral on 1h/30d, but worse profit factor (despite a
+slightly higher raw return) on 4h/120d. Not the clean, unambiguous
+improvement this project's "only measured improvements" bar requires
+before touching real capital — David explicitly asked to be careful here,
+so did NOT flip `AUTOPILOT_TRAILING` on.
+
+Found a real bug while investigating the shadow-candidate harness that
+already existed for exactly this kind of question
+(`src/core/autopilot/shadowEvaluator.ts`): the `'live-mirror'` shadow
+candidate — whose entire purpose is to be the trustworthy forward-record
+baseline every other shadow is judged against — hardcoded a stale
+`trailing: {activateR:1.5, trailR:1.5}` that drifted from real production
+the moment `AUTOPILOT_TRAILING` was measured off on 2026-08-27. Fixed it to
+reference `AUTOPILOT_TRAILING` directly (imported from `paperAutoPilot.ts`)
+instead of a hardcoded value, so it can never silently drift like that
+again, and corrected its label.
+
+Repurposed the now-redundant `'fixed-stop'` candidate (it was no longer
+isolating anything once `live-mirror` also has no trail) into
+`'trailing-forward-test'`: identical to the corrected `live-mirror` in
+every other respect (including whale-flow, which the old `fixed-stop` was
+missing — a second, smaller pre-existing single-variable-isolation gap
+fixed as part of the same change) except `trailing: {activateR:1.5,
+trailR:1.5}` — a clean, single-variable forward test. Its real forward
+record (not another backtest) is what decides whether `AUTOPILOT_TRAILING`
+should ever move off `undefined` for real money.
+
+Partial profit-taking (scaling out of a position rather than closing it
+whole) — the other half of what David asked about — does not exist in this
+codebase at all yet (the exit pipeline only supports closing a position
+completely). Scoped as separate future work, not rushed into this pass.
+
+Gate: `tsc --noEmit` clean, `vitest run` 1406/1406 (unchanged — existing
+coverage already asserts `live-mirror` exists and every shadow key is
+unique, both still true), `npm run build` clean.
