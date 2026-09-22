@@ -79,7 +79,7 @@
       "feesPaid": 6.417280618910387,
       "realizedPnl": 0,
       "highestPrice": 54.82,
-      "lowestPrice": 54.82,
+      "lowestPrice": 54.7,
       "confidence": 55.842611647005135,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -2288,9 +2288,9 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790106276494,
+    "at": 1790106650384,
     "source": "Kraken public market data (read-only)",
-    "opened": 1,
+    "opened": 0,
     "closed": 0,
     "halted": false
   },
@@ -56345,7 +56345,7 @@
     ]
   },
   "longterm-shadow-last-run-day": "2026-09-22",
-  "live:live-cash-eur": 55.47,
+  "live:live-cash-eur": 44.40028442,
   "live:telegram-shared-update-offset": 447904572,
   "live:telegram-unclaimed-messages": [
     {
@@ -56362,57 +56362,7 @@
     }
   ],
   "live:telegram-unclaimed-callbacks": [],
-  "live:live-entry-pending": {
-    "LTCEUR": {
-      "opportunity": {
-        "symbol": "LTCEUR",
-        "timeframe": "1h",
-        "direction": "long",
-        "levels": {
-          "entry": 54.82,
-          "stopLoss": 53.28354041330854,
-          "takeProfit": 57.892919173382914,
-          "riskReward": 2
-        },
-        "confidence": 55.842611647005135,
-        "confidenceComponents": [
-          {
-            "label": "Scanner evidence",
-            "detail": "composite score 55 of 100",
-            "effect": 32.88482954849755
-          },
-          {
-            "label": "Trend strength",
-            "detail": "ADX 29.9",
-            "effect": 4.957782098507588
-          },
-          {
-            "label": "Volume participation",
-            "detail": "2.12× average volume",
-            "effect": 10
-          },
-          {
-            "label": "Higher timeframe confirmation (4h)",
-            "detail": "score 56 on the 4h chart",
-            "effect": 8
-          }
-        ],
-        "explanation": "LTCEUR on the 1h timeframe shows bullish technical evidence (score 55/100 over 150 candles), driven mainly by Trend (EMA 20/50 + ADX) (EMA20 53.64 vs EMA50 52.80, ADX 29.9), Volume (vs 20-bar average) (relative volume 2.12×), Stochastic %K 14 (%K 79.3). Suggested plan: enter near 54.82, stop loss at 53.28 (2× ATR below entry), take profit at 57.89 (4× ATR above), risk/reward 2.0. Confidence 48/90 reflects the strength of current evidence only — it is not a guarantee, and any position should be sized so its loss at the stop is acceptable. The larger 4h trend confirms this setup (score 56).",
-        "warnings": [],
-        "basedOn": {
-          "score": 54.808049247495916,
-          "candleCount": 150
-        }
-      },
-      "queuedAt": 1790106276494,
-      "lastAssessment": {
-        "positionValue": 11.09400054264,
-        "riskAmount": 0.3109354886628868,
-        "riskPercentage": 0.5605470947433262,
-        "rewardRiskRatio": 2
-      }
-    }
-  },
+  "live:live-entry-pending": {},
   "live:manual-buy-pending-symbols": [
     "SYMBOL",
     "EURXBTEUR"
@@ -59168,9 +59118,25 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1790106675284,
+      "intentId": "live-entry:LTCEUR:1790106276494",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram (text command)"
+    },
+    {
+      "timestamp": 1790106676384,
+      "intentId": "live-entry:LTCEUR:1790106276494",
+      "event": "filled",
+      "mode": "live",
+      "detail": "Revolut X order dc745242-787a-4155-838b-50174eec9e0c: filled"
     }
   ],
-  "live:live-entry-outstanding-symbols": [],
+  "live:live-entry-outstanding-symbols": [
+    "LTCEUR"
+  ],
   "live:kill-switch-keyboard-sent": true,
   "education-tip-last-sent-at": 1790025847328,
   "education-tip-index": 10,
@@ -73327,6 +73293,10 @@
     {
       "at": 1790106276494,
       "equity": 55.47
+    },
+    {
+      "at": 1790106650384,
+      "equity": 55.47
     }
   ],
   "live:revolut-x-order-map": {
@@ -73349,7 +73319,8 @@
     "external-reconcile:ALGOEUR:1790049640921:exit:1790069289416": "a6eb3e08-86c2-4611-82f6-8c67bd01ea49",
     "external-reconcile:ALGOEUR:1790049640921:exit:1790074408403": "01c104f8-f777-43db-8035-b1fc24a3262b",
     "external-reconcile:ALGOEUR:1790049640921:exit:1790074780819": "d755819b-4b6d-495e-9cc8-e2dc4f2c7d14",
-    "external-reconcile:ALGOEUR:1790049640921:exit:1790075884129": "953f3aa8-6fef-42d4-9435-7c5b5949f16c"
+    "external-reconcile:ALGOEUR:1790049640921:exit:1790075884129": "953f3aa8-6fef-42d4-9435-7c5b5949f16c",
+    "live-entry:LTCEUR:1790106276494": "dc745242-787a-4155-838b-50174eec9e0c"
   },
   "live:live-open-positions": {
     "external-reconcile:ALGOEUR:1790049640921": {
@@ -73379,6 +73350,38 @@
         "reasons": [],
         "warnings": [
           "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
+        ]
+      }
+    },
+    "live-entry:LTCEUR:1790106276494": {
+      "id": "live-entry:LTCEUR:1790106276494",
+      "symbol": "LTC/EUR",
+      "quantity": 0.2023714,
+      "initialQuantity": 0.2023714,
+      "entryPrice": 54.7,
+      "stopLoss": 53.28354041330854,
+      "takeProfit": 57.892919173382914,
+      "highestPrice": 54.7,
+      "lowestPrice": 54.7,
+      "entrySlippage": 0.024284567999999482,
+      "openedAt": 1790106650384,
+      "entryAssessment": {
+        "approved": true,
+        "asset": "LTCEUR",
+        "entry": 54.7,
+        "stopLoss": 53.28354041330854,
+        "takeProfit": 57.892919173382914,
+        "positionSize": 0.20237140719372493,
+        "positionValue": 11.09400054236,
+        "riskAmount": 0.31093548865503917,
+        "riskPercentage": 0.5605470947433262,
+        "rewardRiskRatio": 2,
+        "portfolioExposure": 20.000004888768466,
+        "reasons": [
+          "risking 0.31 (0.56% of equity) for a 2.0:1 reward/risk — within every configured limit"
+        ],
+        "warnings": [
+          "size capped by the 20% single-position limit"
         ]
       }
     }
@@ -73766,16 +73769,10 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904992,
+  "telegram-shared-update-offset": 447904994,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {
-    "live-entry:LTCEUR:1790106276494": {
-      "sentAt": 1790106301331,
-      "messageId": 867,
-      "token": "mud32m4z.njqfpq"
-    }
-  },
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 6565.543328558437,
