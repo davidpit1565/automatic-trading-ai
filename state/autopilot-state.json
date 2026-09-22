@@ -2267,7 +2267,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790080307095,
+    "at": 1790080681363,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2283,10 +2283,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787818599585,
-      "equity": 10195.85
-    },
     {
       "at": 1787818909627,
       "equity": 10195.85
@@ -22282,6 +22278,10 @@
     {
       "at": 1790080307095,
       "equity": 10633.81
+    },
+    {
+      "at": 1790080681363,
+      "equity": 10632.72
     }
   ],
   "trade-journal": [
@@ -24180,7 +24180,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -26.81% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -26.69% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24278,13 +24278,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1790080307095,
+    "at": 1790080681363,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / trail 1.5-1.5 / 4h gate / whale-flow)",
-        "equity": 11379.392018566725,
-        "returnPct": 13.793920185667247,
+        "equity": 11378.535848344949,
+        "returnPct": 13.785358483449489,
         "trades": 53,
         "winRatePct": 58.490566037735846,
         "profitFactor": 2.0190206650015217,
@@ -24294,8 +24294,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11484.132771516213,
-        "returnPct": 14.841327715162134,
+        "equity": 11482.011119412851,
+        "returnPct": 14.820111194128513,
         "trades": 54,
         "winRatePct": 59.25925925925925,
         "profitFactor": 2.1251381491994894,
@@ -24305,8 +24305,8 @@
       {
         "key": "fixed-stop",
         "label": "Fixed stop, no trailing (isolates what trailing contributes)",
-        "equity": 11351.232466428752,
-        "returnPct": 13.512324664287517,
+        "equity": 11349.13536717735,
+        "returnPct": 13.491353671773505,
         "trades": 54,
         "winRatePct": 57.407407407407405,
         "profitFactor": 1.976674126600291,
@@ -24338,8 +24338,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10302.05159742842,
-        "returnPct": 3.020515974284208,
+        "equity": 10298.207530478405,
+        "returnPct": 2.982075304784048,
         "trades": 255,
         "winRatePct": 43.13725490196079,
         "profitFactor": 1.284121171124973,
@@ -24360,8 +24360,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11276.274262342116,
-        "returnPct": 12.762742623421165,
+        "equity": 11274.191011348525,
+        "returnPct": 12.741910113485247,
         "trades": 42,
         "winRatePct": 59.523809523809526,
         "profitFactor": 2.132116667903982,
@@ -24371,8 +24371,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10472.86184495542,
-        "returnPct": 4.7286184495541965,
+        "equity": 10470.91566827496,
+        "returnPct": 4.709156682749599,
         "trades": 14,
         "winRatePct": 71.42857142857143,
         "profitFactor": 2.548349541662905,
@@ -58798,6 +58798,13 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1790080707910,
+      "intentId": "external-reconcile:ALGOEUR:1790049640921:exit:1790080307095",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "rejected via Telegram (button)"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -72753,6 +72760,10 @@
     {
       "at": 1790080307095,
       "equity": 55.47
+    },
+    {
+      "at": 1790080681363,
+      "equity": 55.47
     }
   ],
   "live:revolut-x-order-map": {
@@ -73168,21 +73179,10 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447904980,
+  "telegram-shared-update-offset": 447904983,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "external-reconcile:ALGOEUR:1790049640921": {
-      "reason": "stop-loss",
-      "queuedAt": 1790080307095
-    }
-  },
-  "live:confirmation-gate-pending": {
-    "external-reconcile:ALGOEUR:1790049640921:exit:1790080307095": {
-      "sentAt": 1790080332917,
-      "messageId": 857,
-      "token": "mucnm0s5.seco52"
-    }
-  },
+  "live:live-exit-pending": {},
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 4189.753979166982,
@@ -73195,13 +73195,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790080307095,
+    "at": 1790080681363,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "42 candidates, production defaults (forward test only — not real trading)",
-        "equity": 10602.733368192668,
-        "returnPct": 6.0273336819266845,
+        "equity": 10594.126932507155,
+        "returnPct": 5.941269325071553,
         "trades": 30,
         "winRatePct": 43.333333333333336,
         "profitFactor": 1.5239614116366207,
@@ -74116,6 +74116,20 @@
     {
       "timestamp": 1790080307095,
       "intentId": "FETEUR:1790080307095",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused FETEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790080681363,
+      "intentId": "NEAREUR:1790080681363",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused NEAREUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790080681363,
+      "intentId": "FETEUR:1790080681363",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused FETEUR: maximum open positions reached (5/5)"
