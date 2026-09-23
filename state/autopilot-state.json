@@ -2273,10 +2273,17 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 9534.846475236509 @ 0.226757 (take-profit)"
+    },
+    {
+      "timestamp": 1790141251767,
+      "intentId": "FILEUR:1790141251767",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused FILEUR: large trades show heavy net selling"
     }
   ],
   "autopilot-last-run": {
-    "at": 1790140904718,
+    "at": 1790141251767,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2292,10 +2299,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787887010742,
-      "equity": 10195.85
-    },
     {
       "at": 1787887320616,
       "equity": 10195.85
@@ -22291,6 +22294,10 @@
     {
       "at": 1790140904718,
       "equity": 10857.08
+    },
+    {
+      "at": 1790141251767,
+      "equity": 10849.45
     }
   ],
   "trade-journal": [
@@ -24235,7 +24242,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -26.10% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -26.16% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24333,13 +24340,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1790140904718,
+    "at": 1790141251767,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / AUTOPILOT_TRAILING / 4h gate / whale-flow)",
-        "equity": 11473.341458331273,
-        "returnPct": 14.733414583312735,
+        "equity": 11468.102569994171,
+        "returnPct": 14.68102569994171,
         "trades": 55,
         "winRatePct": 60,
         "profitFactor": 2.0525695093801533,
@@ -24349,8 +24356,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11771.931655392178,
-        "returnPct": 17.71931655392178,
+        "equity": 11768.068040102862,
+        "returnPct": 17.68068040102862,
         "trades": 56,
         "winRatePct": 60.71428571428571,
         "profitFactor": 2.1557022198384512,
@@ -24393,8 +24400,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10425.64930082998,
-        "returnPct": 4.256493008299803,
+        "equity": 10425.423859024755,
+        "returnPct": 4.25423859024755,
         "trades": 257,
         "winRatePct": 43.190661478599225,
         "profitFactor": 1.3075306973298404,
@@ -24404,8 +24411,8 @@
       {
         "key": "top-trader",
         "label": "Refuses entries while OKX top traders are net-short",
-        "equity": 9796.812822645154,
-        "returnPct": -2.031871773548464,
+        "equity": 9802.770805031241,
+        "returnPct": -1.9722919496875875,
         "trades": 7,
         "winRatePct": 28.57142857142857,
         "profitFactor": 0.22995689228195904,
@@ -24415,8 +24422,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11558.864094029761,
-        "returnPct": 15.58864094029761,
+        "equity": 11555.07040873255,
+        "returnPct": 15.550704087325503,
         "trades": 44,
         "winRatePct": 61.36363636363637,
         "profitFactor": 2.167989628097811,
@@ -24426,8 +24433,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10735.315876044653,
-        "returnPct": 7.35315876044653,
+        "equity": 10731.779855764664,
+        "returnPct": 7.317798557646638,
         "trades": 15,
         "winRatePct": 73.33333333333333,
         "profitFactor": 2.676628348354375,
@@ -24534,13 +24541,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1788619451381,
-      "intentId": "XRPEUR:1788619451381",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused XRPEUR: no exposure headroom: 6007.11 already deployed of the 60% total-exposure limit"
-    },
     {
       "timestamp": 1788619786583,
       "intentId": "XRPEUR:1788619786583",
@@ -31533,6 +31533,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused LINKEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790141251767,
+      "intentId": "HNTEUR:1790141251767",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused HNTEUR: maximum open positions reached (5/5)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -42487,6 +42494,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 491.9936296023026 @ 0.227349 (take-profit)"
+    },
+    {
+      "timestamp": 1790141251767,
+      "intentId": "FILEUR:1790141251767",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused FILEUR: large trades show heavy net selling"
     }
   ],
   "shadow:no-confirm:open-positions": [
@@ -43568,6 +43582,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 59.20069334062229 @ 0.227349 (take-profit)"
+    },
+    {
+      "timestamp": 1790141251767,
+      "intentId": "FILEUR:1790141251767",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused FILEUR: no exposure headroom: 7158.47 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:fixed-stop:open-positions": [
@@ -53599,6 +53620,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused LTCEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1790141251767,
+      "intentId": "FILEUR:1790141251767",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused FILEUR: OKX top traders are net-short"
     }
   ],
   "shadow:whale-flow:open-positions": [],
@@ -55391,6 +55419,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 58.12918292667933 @ 0.227349 (take-profit)"
+    },
+    {
+      "timestamp": 1790141251767,
+      "intentId": "FILEUR:1790141251767",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused FILEUR: no exposure headroom: 7028.91 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:ai-judgment:trade-journal": [
@@ -73748,6 +73783,10 @@
     {
       "at": 1790140904718,
       "equity": 55.71
+    },
+    {
+      "at": 1790141251767,
+      "equity": 55.71
     }
   ],
   "live:revolut-x-order-map": {
@@ -74236,13 +74275,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790140904718,
+    "at": 1790141251767,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "42 candidates, production defaults (forward test only — not real trading)",
-        "equity": 11033.867421246165,
-        "returnPct": 10.338674212461648,
+        "equity": 11008.655070238841,
+        "returnPct": 10.086550702388413,
         "trades": 34,
         "winRatePct": 50,
         "profitFactor": 1.8247235935279937,
@@ -77084,6 +77123,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry LTCEUR: 24.82248387987089 @ 54.89 (stop 53.353540413308544, target 57.962919173382915, confidence 54)"
+    },
+    {
+      "timestamp": 1790141251767,
+      "intentId": "FILEUR:1790141251767",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused FILEUR: no exposure headroom: 6540.41 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:correlation-capped:trade-journal": [
@@ -77573,5 +77619,14 @@
       "day": "2026-09-23",
       "equity": 10000
     }
-  }
+  },
+  "shadow:trailing-forward-test:audit-log": [
+    {
+      "timestamp": 1790141251767,
+      "intentId": "FILEUR:1790141251767",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused FILEUR: large trades show heavy net selling"
+    }
+  ]
 }
