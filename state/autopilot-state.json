@@ -1,35 +1,15 @@
 {
   "portfolio-engine": {
-    "cash": 9200.505317830351,
+    "cash": 10408.824748137213,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 876.7943805097356,
+    "closedRealizedPnl": 830.880925683078,
     "dayAnchor": {
       "day": "2026-09-23",
       "equity": 10790.701553916111
     }
   },
-  "open-positions": [
-    {
-      "id": "XLMEUR:1790056328771:4",
-      "symbol": "XLMEUR",
-      "openedAt": 1790056328771,
-      "entryPrice": 0.185535,
-      "quantity": 6760.087773916079,
-      "initialQuantity": 6760.087773916079,
-      "stopLoss": 0.17949986074072077,
-      "takeProfit": 0.19760527851855847,
-      "feesPaid": 3.762698655400559,
-      "realizedPnl": 0,
-      "highestPrice": 0.196313,
-      "lowestPrice": 0.179547,
-      "confidence": 52.19107315767283,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "open-positions": [],
   "audit-log": [
     {
       "timestamp": 1784042069348,
@@ -2291,13 +2271,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit LTCEUR: 39.020312652987876 @ 52.88 (stop-loss)"
+    },
+    {
+      "timestamp": 1790173863526,
+      "intentId": "XLMEUR:1790056328771:4",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit XLMEUR: 6760.087773916079 @ 0.179281 (stop-loss)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1790173493282,
+    "at": 1790173863526,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "daily-summary-last-day": "2026-07-14",
@@ -2310,10 +2297,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1787928945309,
-      "equity": 10195.85
-    },
     {
       "at": 1787929255855,
       "equity": 10195.85
@@ -22309,6 +22292,10 @@
     {
       "at": 1790173493282,
       "equity": 10417.42
+    },
+    {
+      "at": 1790173863526,
+      "equity": 10408.82
     }
   ],
   "trade-journal": [
@@ -24197,6 +24184,29 @@
       "validationVerdict": null,
       "confidence": 55.842611647005135,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "XLMEUR:1790056328771:4",
+      "symbol": "XLMEUR",
+      "entryTimestamp": 1790056328771,
+      "exitTimestamp": 1790173863526,
+      "entryPrice": 0.185535,
+      "exitPrice": 0.179281,
+      "positionSize": 6760.087773916079,
+      "stopLoss": 0.17949986074072077,
+      "takeProfit": 0.19760527851855847,
+      "exitReason": "stop-loss",
+      "fees": 7.398564543986904,
+      "slippage": 0,
+      "holdingDurationMs": 117534755,
+      "mfePct": 5.8091465222195175,
+      "maePct": 3.3707925728299295,
+      "realizedPnl": -45.91345482665756,
+      "returnPct": -3.6606801951114396,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 52.19107315767283,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "alerted-trade-ids": [
@@ -24307,7 +24317,7 @@
       {
         "key": "trades",
         "ok": true,
-        "detail": "82 / 20 closed trades"
+        "detail": "83 / 20 closed trades"
       },
       {
         "key": "days",
@@ -24317,12 +24327,12 @@
       {
         "key": "profitable",
         "ok": true,
-        "detail": "after-fee return +8.77%"
+        "detail": "after-fee return +8.31%"
       },
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -26.92% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -26.54% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24332,7 +24342,7 @@
       {
         "key": "consistency",
         "ok": true,
-        "detail": "profit factor 1.39 (needs ≥ 1.2)"
+        "detail": "profit factor 1.36 (needs ≥ 1.2)"
       }
     ],
     "summary": "READY — the paper record clears every safety threshold (not a profit guarantee).",
@@ -24351,7 +24361,7 @@
   "monthly-report-last": "2026-08-19",
   "daily-loss": {
     "day": "2026-09-23",
-    "loss": 266.80472843775567
+    "loss": 312.71818326441326
   },
   "shadow:live-mirror:shadow-started-at": 1785254092443,
   "shadow:live-mirror:portfolio-engine": {
@@ -24420,7 +24430,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1790173493282,
+    "at": 1790173863526,
     "standings": [
       {
         "key": "live-mirror",
@@ -24469,8 +24479,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9320.661338153455,
-        "returnPct": -6.793386618465447,
+        "equity": 9277.997961215051,
+        "returnPct": -7.220020387849491,
         "trades": 108,
         "winRatePct": 40.74074074074074,
         "profitFactor": 0.8717072185332397,
@@ -37567,7 +37577,7 @@
       "feesPaid": 5.561845702286768,
       "realizedPnl": 0,
       "highestPrice": 0.0835414,
-      "lowestPrice": 0.0829596,
+      "lowestPrice": 0.0824174,
       "confidence": 30.76235122335183,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -37605,7 +37615,7 @@
       "feesPaid": 5.545166171973262,
       "realizedPnl": 0,
       "highestPrice": 100.08,
-      "lowestPrice": 99.66,
+      "lowestPrice": 99.53,
       "confidence": 34.92165368826031,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -41596,6 +41606,27 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ETHEUR: no exposure headroom: 5633.11 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1790173863526,
+      "intentId": "ETHEUR:1790173863526",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ETHEUR: no exposure headroom: 5590.60 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1790173863526,
+      "intentId": "LINKEUR:1790173863526",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LINKEUR: no exposure headroom: 5590.60 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1790173863526,
+      "intentId": "DOTEUR:1790173863526",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused DOTEUR: no exposure headroom: 5590.60 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:live-mirror:open-positions": [],
@@ -74631,6 +74662,10 @@
     {
       "at": 1790173493282,
       "equity": 55.12
+    },
+    {
+      "at": 1790173863526,
+      "equity": 55.04
     }
   ],
   "live:revolut-x-order-map": {
@@ -74666,7 +74701,7 @@
       "stopLoss": 0.09630345,
       "takeProfit": 0.1007031,
       "highestPrice": 0.10015,
-      "lowestPrice": 0.09209,
+      "lowestPrice": 0.092,
       "entrySlippage": 0,
       "openedAt": 1790049640921,
       "entryAssessment": {
@@ -74696,7 +74731,7 @@
       "stopLoss": 53.28354041330854,
       "takeProfit": 57.892919173382914,
       "highestPrice": 56.49,
-      "lowestPrice": 52.85,
+      "lowestPrice": 52.62,
       "entrySlippage": 0.024284567999999482,
       "openedAt": 1790106650384,
       "entryAssessment": {
@@ -75130,7 +75165,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790173493282,
+    "at": 1790173863526,
     "standings": [
       {
         "key": "candidate-watch",
@@ -78563,12 +78598,6 @@
     }
   ],
   "live:live-resting-entry-intents": {},
-  "move-alert-buckets": {
-    "XLMEUR:1790056328771:4": {
-      "neg": 0,
-      "pos": 0
-    }
-  },
   "shadow:high-conviction:open-positions": [],
   "shadow:high-conviction:audit-log": [
     {
