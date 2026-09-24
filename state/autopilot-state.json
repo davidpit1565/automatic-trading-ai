@@ -21,7 +21,7 @@
       "takeProfit": 63.723780459807514,
       "feesPaid": 5.069395384203367,
       "realizedPnl": 0,
-      "highestPrice": 58.67,
+      "highestPrice": 59.41,
       "lowestPrice": 58.67,
       "confidence": 59.92033524267231,
       "validationVerdict": null,
@@ -2329,9 +2329,9 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790254633004,
+    "at": 1790255003188,
     "source": "Kraken public market data (read-only)",
-    "opened": 1,
+    "opened": 0,
     "closed": 0,
     "halted": false
   },
@@ -58057,57 +58057,7 @@
     }
   ],
   "live:telegram-unclaimed-callbacks": [],
-  "live:live-entry-pending": {
-    "LTCEUR": {
-      "opportunity": {
-        "symbol": "LTCEUR",
-        "timeframe": "1h",
-        "direction": "long",
-        "levels": {
-          "entry": 58.67,
-          "stopLoss": 56.143109770096245,
-          "takeProfit": 63.723780459807514,
-          "riskReward": 2
-        },
-        "confidence": 59.92033524267231,
-        "confidenceComponents": [
-          {
-            "label": "Scanner evidence",
-            "detail": "composite score 56 of 100",
-            "effect": 33.354459949676176
-          },
-          {
-            "label": "Trend strength",
-            "detail": "ADX 37.1",
-            "effect": 8.565875292996132
-          },
-          {
-            "label": "Volume participation",
-            "detail": "2.06× average volume",
-            "effect": 10
-          },
-          {
-            "label": "Higher timeframe confirmation (4h)",
-            "detail": "score 47 on the 4h chart",
-            "effect": 8
-          }
-        ],
-        "explanation": "LTCEUR on the 1h timeframe shows bullish technical evidence (score 56/100 over 150 candles), driven mainly by Trend (EMA 20/50 + ADX) (EMA20 57.48 vs EMA50 55.79, ADX 37.1), Volume (vs 20-bar average) (relative volume 2.06×), Stochastic %K 14 (%K 66.4). Suggested plan: enter near 58.67, stop loss at 56.14 (2× ATR below entry), take profit at 63.72 (4× ATR above), risk/reward 2.0. Confidence 52/90 reflects the strength of current evidence only — it is not a guarantee, and any position should be sized so its loss at the stop is acceptable. The larger 4h trend confirms this setup (score 47).",
-        "warnings": [],
-        "basedOn": {
-          "score": 55.59076658279363,
-          "candleCount": 150
-        }
-      },
-      "queuedAt": 1790254633004,
-      "lastAssessment": {
-        "positionValue": 9.146397603868222,
-        "riskAmount": 0.3939311870466974,
-        "riskPercentage": 0.6992033524267229,
-        "rewardRiskRatio": 2
-      }
-    }
-  },
+  "live:live-entry-pending": {},
   "live:manual-buy-pending-symbols": [
     "SYMBOL",
     "EURXBTEUR"
@@ -61185,9 +61135,25 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1790255026624,
+      "intentId": "live-entry:LTCEUR:1790254633004",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram (text command)"
+    },
+    {
+      "timestamp": 1790255027895,
+      "intentId": "live-entry:LTCEUR:1790254633004",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "Revolut X order 111f0d50-29d8-46bb-b68f-c92c4604278e: new"
     }
   ],
-  "live:live-entry-outstanding-symbols": [],
+  "live:live-entry-outstanding-symbols": [
+    "LTCEUR"
+  ],
   "live:kill-switch-keyboard-sent": true,
   "education-tip-last-sent-at": 1790201056354,
   "education-tip-index": 11,
@@ -76800,6 +76766,10 @@
     {
       "at": 1790254633004,
       "equity": 56.34
+    },
+    {
+      "at": 1790255003188,
+      "equity": 56.34
     }
   ],
   "live:revolut-x-order-map": {
@@ -76823,7 +76793,8 @@
     "external-reconcile:ALGOEUR:1790049640921:exit:1790074408403": "01c104f8-f777-43db-8035-b1fc24a3262b",
     "external-reconcile:ALGOEUR:1790049640921:exit:1790074780819": "d755819b-4b6d-495e-9cc8-e2dc4f2c7d14",
     "external-reconcile:ALGOEUR:1790049640921:exit:1790075884129": "953f3aa8-6fef-42d4-9435-7c5b5949f16c",
-    "live-entry:LTCEUR:1790106276494": "dc745242-787a-4155-838b-50174eec9e0c"
+    "live-entry:LTCEUR:1790106276494": "dc745242-787a-4155-838b-50174eec9e0c",
+    "live-entry:LTCEUR:1790254633004": "111f0d50-29d8-46bb-b68f-c92c4604278e"
   },
   "live:live-open-positions": {
     "external-reconcile:ALGOEUR:1790049640921": {
@@ -77264,16 +77235,10 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447905009,
+  "telegram-shared-update-offset": 447905011,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {
-    "live-entry:LTCEUR:1790254633004": {
-      "sentAt": 1790254656540,
-      "messageId": 910,
-      "token": "mufjedr0.137rgvc"
-    }
-  },
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 4788.660293644651,
@@ -80934,7 +80899,36 @@
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
-  "live:live-resting-entry-intents": {},
+  "live:live-resting-entry-intents": {
+    "LTCEUR": {
+      "id": "live-entry:LTCEUR:1790254633004",
+      "createdAt": 1790255003188,
+      "mode": "live",
+      "symbol": "LTC/EUR",
+      "side": "buy",
+      "quantity": 0.15589564691657604,
+      "limitPrice": 58.67,
+      "stopLoss": 56.143109770096245,
+      "takeProfit": 63.723780459807514,
+      "assessment": {
+        "approved": true,
+        "asset": "LTCEUR",
+        "entry": 58.67,
+        "stopLoss": 56.143109770096245,
+        "takeProfit": 63.723780459807514,
+        "positionSize": 0.15589564691657604,
+        "positionValue": 9.146397604595517,
+        "riskAmount": 0.39393118707802166,
+        "riskPercentage": 0.699203352426723,
+        "rewardRiskRatio": 2,
+        "portfolioExposure": 16.234291443837627,
+        "reasons": [
+          "risking 0.39 (0.70% of equity) for a 2.0:1 reward/risk — within every configured limit"
+        ],
+        "warnings": []
+      }
+    }
+  },
   "shadow:high-conviction:open-positions": [],
   "shadow:high-conviction:audit-log": [
     {
