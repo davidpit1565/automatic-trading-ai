@@ -2302,7 +2302,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790246170484,
+    "at": 1790246522991,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2318,10 +2318,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788003797711,
-      "equity": 10195.85
-    },
     {
       "at": 1788004107727,
       "equity": 10195.85
@@ -22317,6 +22313,10 @@
     {
       "at": 1790246170484,
       "equity": 10408.82
+    },
+    {
+      "at": 1790246522991,
+      "equity": 10408.82
     }
   ],
   "trade-journal": [
@@ -24353,7 +24353,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -25.68% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -25.93% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24451,7 +24451,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1790246170484,
+    "at": 1790246522991,
     "standings": [
       {
         "key": "live-mirror",
@@ -24500,8 +24500,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9267.689147637131,
-        "returnPct": -7.323108523628689,
+        "equity": 9291.728189774485,
+        "returnPct": -7.082718102255149,
         "trades": 108,
         "winRatePct": 40.74074074074074,
         "profitFactor": 0.8717072185332397,
@@ -42308,6 +42308,13 @@
     {
       "timestamp": 1790246170484,
       "intentId": "VELOEUR:1790246170484",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused VELOEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790246522991,
+      "intentId": "VELOEUR:1790246522991",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused VELOEUR: maximum open positions reached (5/5)"
@@ -76353,6 +76360,10 @@
     {
       "at": 1790246170484,
       "equity": 56.34
+    },
+    {
+      "at": 1790246522991,
+      "equity": 56.34
     }
   ],
   "live:revolut-x-order-map": {
@@ -76823,7 +76834,7 @@
   "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
-    "cash": 8853.358107210006,
+    "cash": 6827.990102599553,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 293.2480846644456,
@@ -76833,17 +76844,17 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790246170484,
+    "at": 1790246522991,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "42 candidates, production defaults (forward test only — not real trading)",
-        "equity": 10096.550371936453,
-        "returnPct": 0.965503719364533,
+        "equity": 10084.124696178535,
+        "returnPct": 0.8412469617853459,
         "trades": 43,
         "winRatePct": 41.86046511627907,
         "profitFactor": 1.152021000874339,
-        "openPositions": 1,
+        "openPositions": 2,
         "startedAt": 1788551468687
       }
     ]
@@ -76863,6 +76874,25 @@
       "highestPrice": 1.429,
       "lowestPrice": 1.249,
       "confidence": 51.93446828309045,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "ETCEUR:1790246522991:1",
+      "symbol": "ETCEUR",
+      "openedAt": 1790246522991,
+      "entryPrice": 8.245,
+      "quantity": 244.9132897983373,
+      "initialQuantity": 244.9132897983373,
+      "stopLoss": 7.919638220155966,
+      "takeProfit": 8.895723559688065,
+      "feesPaid": 6.057930223161873,
+      "realizedPnl": 0,
+      "highestPrice": 8.245,
+      "lowestPrice": 8.245,
+      "confidence": 51.626376696815036,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -77926,6 +77956,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit SAGAEUR: 25912.25181245904 @ 0.03922 (stop-loss)"
+    },
+    {
+      "timestamp": 1790246522991,
+      "intentId": "ETCEUR:1790246522991:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry ETCEUR: 244.9132897983373 @ 8.245 (stop 7.919638220155966, target 8.895723559688065, confidence 52)"
     }
   ],
   "live:live-blackout-queue": {},
