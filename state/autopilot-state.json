@@ -2302,7 +2302,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790242355663,
+    "at": 1790242716716,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -57725,7 +57725,7 @@
     ]
   },
   "longterm-shadow-last-run-day": "2026-09-24",
-  "live:live-cash-eur": 44.4,
+  "live:live-cash-eur": 56.35949118,
   "live:telegram-shared-update-offset": 447904572,
   "live:telegram-unclaimed-messages": [
     {
@@ -60841,11 +60841,23 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1790242736347,
+      "intentId": "live-entry:LTCEUR:1790106276494:exit:1790242355663",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram (text command)"
+    },
+    {
+      "timestamp": 1790242737074,
+      "intentId": "live-entry:LTCEUR:1790106276494:exit:1790242355663",
+      "event": "filled",
+      "mode": "live",
+      "detail": "Revolut X order 5f285a12-94de-4a09-8e82-79dc21aa01f8: filled"
     }
   ],
-  "live:live-entry-outstanding-symbols": [
-    "LTCEUR"
-  ],
+  "live:live-entry-outstanding-symbols": [],
   "live:kill-switch-keyboard-sent": true,
   "education-tip-last-sent-at": 1790201056354,
   "education-tip-index": 11,
@@ -76366,6 +76378,10 @@
     {
       "at": 1790242355663,
       "equity": 56.29
+    },
+    {
+      "at": 1790242716716,
+      "equity": 56.36
     }
   ],
   "live:revolut-x-order-map": {
@@ -76389,7 +76405,8 @@
     "external-reconcile:ALGOEUR:1790049640921:exit:1790074408403": "01c104f8-f777-43db-8035-b1fc24a3262b",
     "external-reconcile:ALGOEUR:1790049640921:exit:1790074780819": "d755819b-4b6d-495e-9cc8-e2dc4f2c7d14",
     "external-reconcile:ALGOEUR:1790049640921:exit:1790075884129": "953f3aa8-6fef-42d4-9435-7c5b5949f16c",
-    "live-entry:LTCEUR:1790106276494": "dc745242-787a-4155-838b-50174eec9e0c"
+    "live-entry:LTCEUR:1790106276494": "dc745242-787a-4155-838b-50174eec9e0c",
+    "live-entry:LTCEUR:1790106276494:exit:1790242355663": "5f285a12-94de-4a09-8e82-79dc21aa01f8"
   },
   "live:live-open-positions": {
     "external-reconcile:ALGOEUR:1790049640921": {
@@ -76419,38 +76436,6 @@
         "reasons": [],
         "warnings": [
           "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
-        ]
-      }
-    },
-    "live-entry:LTCEUR:1790106276494": {
-      "id": "live-entry:LTCEUR:1790106276494",
-      "symbol": "LTC/EUR",
-      "quantity": 0.2021892,
-      "initialQuantity": 0.2023714,
-      "entryPrice": 54.7,
-      "stopLoss": 53.28354041330854,
-      "takeProfit": 57.892919173382914,
-      "highestPrice": 60.89,
-      "lowestPrice": 52.32,
-      "entrySlippage": 0.024284567999999482,
-      "openedAt": 1790106650384,
-      "entryAssessment": {
-        "approved": true,
-        "asset": "LTCEUR",
-        "entry": 54.7,
-        "stopLoss": 53.28354041330854,
-        "takeProfit": 57.892919173382914,
-        "positionSize": 0.20237140719372493,
-        "positionValue": 11.09400054236,
-        "riskAmount": 0.31093548865503917,
-        "riskPercentage": 0.5605470947433262,
-        "rewardRiskRatio": 2,
-        "portfolioExposure": 20.000004888768466,
-        "reasons": [
-          "risking 0.31 (0.56% of equity) for a 2.0:1 reward/risk — within every configured limit"
-        ],
-        "warnings": [
-          "size capped by the 20% single-position limit"
         ]
       }
     }
@@ -76862,21 +76847,10 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447905009,
+  "telegram-shared-update-offset": 447905010,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "live-entry:LTCEUR:1790106276494": {
-      "reason": "take-profit",
-      "queuedAt": 1790242355663
-    }
-  },
-  "live:confirmation-gate-pending": {
-    "live-entry:LTCEUR:1790106276494:exit:1790242355663": {
-      "sentAt": 1790242375236,
-      "messageId": 906,
-      "token": "mufc35fo.1b1zdwj"
-    }
-  },
+  "live:live-exit-pending": {},
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 8853.358107210006,
