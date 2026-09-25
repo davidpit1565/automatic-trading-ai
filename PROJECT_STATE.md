@@ -8271,3 +8271,52 @@ items turned out to already have solid existing infrastructure — the real
 contribution in those cases was finding and fixing the concrete bugs
 keeping that infrastructure from being fully trustworthy, not duplicating
 it.
+
+## Blackout auto-exit — protective exits no longer wait for a Shabbat/Yom Tov tap (2026-09-25)
+
+David, ahead of a Shabbat+Sukkot stretch he'd be unreachable for, asked
+directly: does a take-profit/stop-loss execute automatically without his
+approval? Investigated before answering: it did NOT. The existing
+Shabbat/Yom Tov blackout mechanism (`blackoutCalendar.mts`,
+`liveBlackoutQueue.mts`, added 2026-09-03) only covers NEW ENTRIES —
+queuing them so a proposal never silently vanishes, then summarizing once
+the window ends. EXITS (`liveExitMirror.mts`'s `checkAutomaticExits`) had
+no blackout awareness at all: a stop-loss or take-profit firing during a
+multi-day blackout went through the exact same
+`TelegramConfirmationGate` — 20 minutes unanswered, and it REJECTS (not
+approves) automatically, then `checkAutomaticExits` just re-proposes the
+same exit on the next cycle, forever, for the whole blackout. This is
+exactly what happened for real with the ALGOEUR position (2026-09-20/21,
+documented earlier in this file) — a take-profit-level crossing that never
+executed. David confirmed he wants this fixed.
+
+Added `LiveOrderFlowParams.autoApprove` (`liveOrchestrator.mts`) — when
+set, `runLiveOrderFlow` skips calling `ConfirmationGate.requestConfirmation`
+entirely (never fakes a "human decision" through that interface — its own
+contract says every real implementation MUST block for one) and instead
+synthesizes the `ConfirmationDecision` directly, auditing it explicitly so
+the bypass is never silent. Everything else in the chain is unchanged:
+kill-switch check, symbol check, and `revalidate` (if given) all still
+apply exactly as before — `autoApprove` only ever replaces the "wait on a
+Telegram tap" step.
+
+`checkAutomaticExits` gained `blackoutActive`/`telegram` params
+(`autopilotRunner.mts` passes `isBlackout(...) !== null` and the shared
+`telegram` config). When blackout is active, every exit proposed that
+cycle gets `autoApprove` — David already reviewed and approved the
+stop-loss/take-profit levels at entry time, so a protective exit closing
+that same position is enforcing a decision already made, not taking on
+new risk (unlike a fresh entry, which still always waits, blackout or
+not — asymmetric by design, matching the kill-switch's own "engaging is
+always safe, disengaging always needs a human" pattern). Since bypassing
+`ConfirmationGate` also skips its own Telegram message, added a dedicated
+`buildBlackoutAutoExitMessage` sent right after a genuine fill — David is
+still told exactly what happened (symbol, reason, entry/exit price, P&L),
+just after the fact instead of being asked first. The pre-existing dust
+guard (`MIN_EXIT_NOTIONAL_EUR`) still applies before any of this, unchanged.
+
+Gate: `tsc --noEmit` clean, `vitest run` 1420/1420 (up from 1412 — 8 new:
+5 in `liveOrchestrator.test.ts` covering `autoApprove` bypasses the gate
+but not the kill-switch/symbol/revalidate checks and audits the decision,
+3 in `liveExitMirror.test.ts` covering the blackout wiring end-to-end,
+including that the dust guard still applies first), `npm run build` clean.

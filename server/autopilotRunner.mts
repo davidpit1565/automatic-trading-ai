@@ -1228,11 +1228,13 @@ export async function runLiveMirror(
     );
     await notifyLiveEntryOutcomes(telegram, mirroredOutcomes);
     if (hasSubmittedOrder(mirroredOutcomes)) persistStateToGit(store, 'live-mirror: after auto-approved entries');
-    // Shabbat/Yom Tov: the confirmation above is still sent as always —
-    // David asked (2026-09-03) to keep the option to approve any time he's
-    // actually available. This only remembers what was proposed so
-    // anything that never got answered by the time the window ends can be
-    // summarized in one message, instead of silently vanishing.
+    // Shabbat/Yom Tov, ENTRIES: the confirmation above is still sent as
+    // always — David asked (2026-09-03) to keep the option to approve any
+    // time he's actually available (a NEW entry takes on fresh risk, so it
+    // must always wait for an explicit human tap). This only remembers what
+    // was proposed so anything that never got answered by the time the
+    // window ends can be summarized in one message, instead of silently
+    // vanishing.
     const blackoutWindows = await ensureBlackoutWindows(liveStore, now, telegram.fetchFn ?? fetch);
     const activeBlackout = isBlackout(blackoutWindows, now);
     const wasInBlackout = liveStore.get<boolean>('live-blackout-active') ?? false;
@@ -1245,6 +1247,12 @@ export async function runLiveMirror(
       if (message) await sendTelegramMessage(message, telegram);
     }
     liveStore.set('live-blackout-active', activeBlackout !== null);
+    // Shabbat/Yom Tov, EXITS: the opposite policy (David asked 2026-09-25,
+    // ahead of a Shabbat+Sukkot stretch he'd be unreachable for) — a
+    // protective stop-loss/take-profit for an ALREADY-approved position
+    // auto-approves instead of waiting on a tap. See
+    // `LiveOrderFlowParams.autoApprove`'s doc comment for the full
+    // reasoning (a real ~40h incident this is meant to prevent).
     const exitOutcomes = await checkAutomaticExits(
       liveStore,
       source,
@@ -1256,6 +1264,8 @@ export async function runLiveMirror(
       recordLiveRealizedPnl,
       liveJournal,
       COST_RATE,
+      activeBlackout !== null,
+      telegram,
     );
     if (hasSubmittedOrder(exitOutcomes)) persistStateToGit(store, 'live-mirror: after automatic exits');
   } catch (cause) {

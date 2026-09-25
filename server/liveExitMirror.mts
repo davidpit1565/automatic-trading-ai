@@ -6,7 +6,15 @@
  * and live are the same pipeline", docs/execution-architecture.md property
  * 3), and if a reason fires, proposes an exit through the exact same
  * `runLiveOrderFlow` safety chain — kill-switch, symbol check, human
- * confirmation. Nothing here bypasses confirmation.
+ * confirmation.
+ *
+ * One exception, added 2026-09-25 (David asked, ahead of a Shabbat+Sukkot
+ * stretch): during an active Shabbat/Yom Tov blackout window
+ * (`blackoutCalendar.mts`), a protective exit (stop-loss/take-profit)
+ * auto-approves via `LiveOrderFlowParams.autoApprove` instead of waiting on
+ * a Telegram tap — see that field's own doc comment for why. A NEW entry
+ * NEVER does this (see `liveEntryMirror.mts`) — only closing a position
+ * whose risk was already reviewed at entry time.
  *
  * `proposeLiveExit` below is shared with `manualSellCommand.mts` — see its
  * own doc comment for why: an automatic exit and a human's `/sell` for the
@@ -40,6 +48,7 @@ import { clearOutstandingEntry } from './liveEntryMirror.mts';
 import { creditLiveCash } from './liveLedger.mts';
 import { runLiveOrderFlow, type LiveOrderFlowParams, type LiveOrderFlowResult } from './liveOrchestrator.mts';
 import { clearPendingConfirmation } from './telegramConfirmationGate.mts';
+import { formatQty, sendTelegramMessage, type TelegramConfig } from './telegram.mts';
 
 export type LiveExitOutcome =
   | { readonly symbol: string; readonly outcome: 'outstanding-exit-already-pending' }
@@ -294,18 +303,44 @@ export function reapOrphanedExitConfirmations(store: KeyValueStore): void {
   if (changed) store.set(EXIT_PENDING_KEY, pending);
 }
 
+/** Hebrew, matches `buildExitConfirmationMessage`'s own P&L wording — sent
+ * separately since `autoApprove` skips `TelegramConfirmationGate` entirely,
+ * so nothing else announces this fill. See `checkAutomaticExits`'s
+ * `blackoutActive` param for when this fires. */
+function buildBlackoutAutoExitMessage(position: LiveOpenPosition, exitPrice: number, reason: ExitReason): string {
+  const pnl = (exitPrice - position.entryPrice) * position.quantity;
+  const sign = pnl >= 0 ? '+' : '';
+  const verdict = pnl >= 0 ? 'ברווח ✅' : 'בהפסד';
+  const reasonLabel = reason === 'stop-loss' ? 'עצירת הפסד' : reason === 'take-profit' ? 'יעד רווח' : reason;
+  return (
+    `🕯️ שבת/חג — יציאה בוצעה אוטומטית, בלי לחכות לאישור טלגרם\n\n` +
+    `מכירה ${position.symbol} (כמות: ${formatQty(position.quantity)}) — ${reasonLabel}\n` +
+    `נכנסת במחיר ${position.entryPrice}, יצאת במחיר ${exitPrice}\n\n` +
+    `💶 רווח/הפסד: ${sign}€${Math.abs(pnl).toFixed(2)} (${verdict})\n\n` +
+    `זו הייתה יציאה הגנתית מפוזיציה שכבר אישרת בכניסה — לא נדרש אישור נוסף בזמן שבת/חג.`
+  );
+}
+
 /**
  * Call once per cycle. `entryTimeframe`/`candleCount` should match whatever
  * the paper autopilot uses for the same symbols (default 150, matching
  * `paperAutoPilot.ts`'s `SCAN_CANDLES`) so the trend-exit EMA (if
  * configured) sees the same amount of history paper's own exit check does.
+ *
+ * `blackoutActive`/`telegram` (added 2026-09-25): when a Shabbat/Yom Tov
+ * blackout is currently active (`autopilotRunner.mts`'s own
+ * `isBlackout`/`blackoutCalendar.mts`), any exit proposed THIS call
+ * auto-approves instead of waiting on a Telegram tap — see
+ * `LiveOrderFlowParams.autoApprove`'s doc comment for the full reasoning.
+ * `telegram` is REQUIRED whenever `blackoutActive` is true (a blackout
+ * auto-exit must never be silent) and unused otherwise.
  */
 export async function checkAutomaticExits(
   store: KeyValueStore,
   source: MarketDataSource,
   entryTimeframe: Timeframe,
   exitOptions: ExitDecisionOptions,
-  flowParams: Omit<LiveOrderFlowParams, 'intent'>,
+  flowParams: Omit<LiveOrderFlowParams, 'intent' | 'autoApprove'>,
   now: number,
   candleCount = 150,
   onRealizedPnl?: (pnl: number, now: number) => void,
@@ -313,6 +348,8 @@ export async function checkAutomaticExits(
    * keeps this exactly as callable as before (no journaling). */
   journal?: TradeJournal,
   costRate?: number,
+  blackoutActive = false,
+  telegram?: TelegramConfig,
 ): Promise<readonly LiveExitOutcome[]> {
   const outcomes: LiveExitOutcome[] = [];
   for (const position of openLivePositions(store)) {
@@ -343,8 +380,22 @@ export async function checkAutomaticExits(
       }
 
       const reason = decideLiveExit(refreshed, price, candles.value.map((c) => c.close), exitOptions);
-      const result = await proposeLiveExit(store, refreshed, reason, price, now, { flowParams, onRealizedPnl, journal, costRate });
+      // Captured BEFORE the call — proposeLiveExit deletes the pending
+      // record once it resolves, and a RESUMED attempt (reason === null
+      // this cycle) has no reason of its own to fall back on otherwise.
+      const queuedReason = reason ?? readPendingExits(store)[refreshed.id]?.reason ?? null;
+      const result = await proposeLiveExit(store, refreshed, reason, price, now, {
+        flowParams: blackoutActive
+          ? { ...flowParams, autoApprove: { decidedBy: 'system-blackout', note: 'שבת/חג — יציאה הגנתית אושרה אוטומטית ללא אישור טלגרם' } }
+          : flowParams,
+        onRealizedPnl,
+        journal,
+        costRate,
+      });
       outcomes.push({ symbol, ...result });
+      if (blackoutActive && result.outcome === 'submitted' && result.report.state === 'filled' && telegram && queuedReason) {
+        await sendTelegramMessage(buildBlackoutAutoExitMessage(refreshed, price, queuedReason), telegram);
+      }
     } catch (cause) {
       // One position's transient failure (a network error, an unexpected
       // broker response) must never stop every OTHER open position from
