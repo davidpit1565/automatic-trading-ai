@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 10580.741220340466,
+    "cash": 8458.244531540167,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 1007.8667932705342,
@@ -9,7 +9,27 @@
       "equity": 10580.741220340466
     }
   },
-  "open-positions": [],
+  "open-positions": [
+    {
+      "id": "LINKEUR:1790310426075:0",
+      "symbol": "LINKEUR",
+      "openedAt": 1790310426075,
+      "entryPrice": 11.73839,
+      "quantity": 180.275850782611,
+      "initialQuantity": 180.275850782611,
+      "stopLoss": 11.405588723465467,
+      "takeProfit": 12.403992553069067,
+      "feesPaid": 6.34844473220428,
+      "realizedPnl": 0,
+      "highestPrice": 11.73839,
+      "lowestPrice": 11.73839,
+      "confidence": 48.09938110081305,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "audit-log": [
     {
       "timestamp": 1784042069348,
@@ -2320,12 +2340,19 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused LINKEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1790310426075,
+      "intentId": "LINKEUR:1790310426075:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry LINKEUR: 180.275850782611 @ 11.73839 (stop 11.405588723465467, target 12.403992553069067, confidence 48)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1790310083518,
+    "at": 1790310426075,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -2339,10 +2366,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788051424376,
-      "equity": 10195.85
-    },
     {
       "at": 1788051737471,
       "equity": 10195.85
@@ -22338,6 +22361,10 @@
     {
       "at": 1790310083518,
       "equity": 10580.74
+    },
+    {
+      "at": 1790310426075,
+      "equity": 10574.39
     }
   ],
   "trade-journal": [
@@ -24397,7 +24424,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -25.36% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -25.38% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24495,7 +24522,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1790310083518,
+    "at": 1790310426075,
     "standings": [
       {
         "key": "live-mirror",
@@ -24511,8 +24538,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11495.92071550785,
-        "returnPct": 14.959207155078493,
+        "equity": 11497.312353066405,
+        "returnPct": 14.97312353066405,
         "trades": 60,
         "winRatePct": 58.333333333333336,
         "profitFactor": 1.9718841239433809,
@@ -24544,8 +24571,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9450.332003603624,
-        "returnPct": -5.496679963963761,
+        "equity": 9454.758258095037,
+        "returnPct": -5.452417419049635,
         "trades": 110,
         "winRatePct": 41.81818181818181,
         "profitFactor": 0.9110003129763968,
@@ -24555,8 +24582,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10280.112143661489,
-        "returnPct": 2.801121436614885,
+        "equity": 10282.021664692496,
+        "returnPct": 2.820216646924964,
         "trades": 265,
         "winRatePct": 43.0188679245283,
         "profitFactor": 1.2925830035580148,
@@ -24577,8 +24604,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11287.848848955093,
-        "returnPct": 12.878488489550927,
+        "equity": 11289.215298394181,
+        "returnPct": 12.892152983941815,
         "trades": 48,
         "winRatePct": 58.333333333333336,
         "profitFactor": 1.9554849500630684,
@@ -24588,8 +24615,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10482.76002772844,
-        "returnPct": 4.8276002772844,
+        "equity": 10484.029017218967,
+        "returnPct": 4.840290172189671,
         "trades": 19,
         "winRatePct": 63.1578947368421,
         "profitFactor": 1.9256396541866159,
@@ -58304,7 +58331,52 @@
     }
   ],
   "live:telegram-unclaimed-callbacks": [],
-  "live:live-entry-pending": {},
+  "live:live-entry-pending": {
+    "LINKEUR": {
+      "opportunity": {
+        "symbol": "LINKEUR",
+        "timeframe": "1h",
+        "direction": "long",
+        "levels": {
+          "entry": 11.73839,
+          "stopLoss": 11.405588723465467,
+          "takeProfit": 12.403992553069067,
+          "riskReward": 2
+        },
+        "confidence": 48.09938110081305,
+        "confidenceComponents": [
+          {
+            "label": "Scanner evidence",
+            "detail": "composite score 45 of 100",
+            "effect": 26.792892557328315
+          },
+          {
+            "label": "Trend strength",
+            "detail": "ADX 46.6",
+            "effect": 13.306488543484733
+          },
+          {
+            "label": "Higher timeframe confirmation (4h)",
+            "detail": "score 51 on the 4h chart",
+            "effect": 8
+          }
+        ],
+        "explanation": "LINKEUR on the 1h timeframe shows bullish technical evidence (score 45/100 over 150 candles), driven mainly by Trend (EMA 20/50 + ADX) (EMA20 11.47 vs EMA50 11.27, ADX 46.6), Stochastic %K 14 (%K 84.2), Momentum (RSI 14) (RSI 62.9). Suggested plan: enter near 11.74, stop loss at 11.41 (2× ATR below entry), take profit at 12.40 (4× ATR above), risk/reward 2.0. Confidence 40/90 reflects the strength of current evidence only — it is not a guarantee, and any position should be sized so its loss at the stop is acceptable. The larger 4h trend confirms this setup (score 51).",
+        "warnings": [],
+        "basedOn": {
+          "score": 44.654820928880525,
+          "candleCount": 150
+        }
+      },
+      "queuedAt": 1790310426075,
+      "lastAssessment": {
+        "positionValue": 11.268000558992,
+        "riskAmount": 0.31946501777708686,
+        "riskPercentage": 0.5670305323550059,
+        "rewardRiskRatio": 1.9999999999999947
+      }
+    }
+  },
   "live:manual-buy-pending-symbols": [
     "SYMBOL",
     "EURXBTEUR"
@@ -61396,6 +61468,13 @@
       "event": "submitted",
       "mode": "live",
       "detail": "Revolut X order 111f0d50-29d8-46bb-b68f-c92c4604278e: new"
+    },
+    {
+      "timestamp": 1790310445863,
+      "intentId": "live-entry:LINKEUR:1790310426075",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -77433,6 +77512,10 @@
     {
       "at": 1790310083518,
       "equity": 56.34
+    },
+    {
+      "at": 1790310426075,
+      "equity": 56.34
     }
   ],
   "live:revolut-x-order-map": {
@@ -77901,7 +77984,13 @@
   "telegram-shared-update-offset": 447905011,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:confirmation-gate-pending": {
+    "live-entry:LINKEUR:1790310426075": {
+      "sentAt": 1790310445716,
+      "messageId": 917,
+      "token": "muggm4yc.19fot5c"
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 5928.430860932173,
@@ -77914,13 +78003,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790310083518,
+    "at": 1790310426075,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "42 candidates, production defaults (forward test only — not real trading)",
-        "equity": 9994.352476310587,
-        "returnPct": -0.05647523689412992,
+        "equity": 9984.312532082376,
+        "returnPct": -0.15687467917623507,
         "trades": 45,
         "winRatePct": 40,
         "profitFactor": 1.0922988311938269,
@@ -77980,7 +78069,7 @@
       "feesPaid": 2.3568665574983805,
       "realizedPnl": 0,
       "highestPrice": 0.000003377,
-      "lowestPrice": 0.000003236,
+      "lowestPrice": 0.00000323,
       "confidence": 50.571327207846736,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -81941,5 +82030,11 @@
       "confidence": 60.1291505331238,
       "notes": "opened autonomously by the paper autopilot"
     }
-  ]
+  ],
+  "move-alert-buckets": {
+    "LINKEUR:1790310426075:0": {
+      "neg": 0,
+      "pos": 0
+    }
+  }
 }
