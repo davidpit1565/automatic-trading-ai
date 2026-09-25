@@ -1,0 +1,49 @@
+# Sends the Telegram report for the weekly coin-review Routine (a Claude
+# Code session that runs the actual discovery/readiness/promotion decision
+# and merges its own PR to main, then dispatches this workflow to report the
+# outcome — see scripts/weeklyCoinReviewReport.mts's doc comment).
+#
+# workflow_dispatch only: this never runs on its own schedule, and its
+# inputs are structured symbol lists + one short note, never raw free text —
+# the script always renders ITS OWN fixed template from them.
+
+name: Weekly coin review report
+
+on:
+  workflow_dispatch:
+    inputs:
+      added:
+        description: 'Comma-separated bases newly added to CANDIDATE_INSTRUMENTS this week (blank if none)'
+        type: string
+        default: ''
+      promoted:
+        description: 'Comma-separated bases promoted to CURATED_INSTRUMENTS this week (blank if none)'
+        type: string
+        default: ''
+      notes:
+        description: 'One short context line (e.g. why nothing qualified this week)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Send weekly coin review report
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ADDED: ${{ inputs.added }}
+          PROMOTED: ${{ inputs.promoted }}
+          NOTES: ${{ inputs.notes }}
+        run: npx tsx scripts/weeklyCoinReviewReport.mts
