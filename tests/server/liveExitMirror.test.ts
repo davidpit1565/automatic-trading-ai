@@ -35,12 +35,30 @@ function fakeSource(candles: Result<Candle[]>): MarketDataSource {
   };
 }
 
-function fakeConfirmationGate(outcome: ConfirmationDecision): ConfirmationGate {
-  return {
+function fakeConfirmationGate(outcome: ConfirmationDecision): ConfirmationGate & { calls: number } {
+  const gate = {
+    calls: 0,
     async requestConfirmation() {
+      gate.calls++;
       return outcome;
     },
   };
+  return gate;
+}
+
+/** Minimal Telegram config whose fetchFn only ever needs to answer
+ * sendMessage (all `checkAutomaticExits`'s blackout-notification path
+ * calls), capturing the message text sent. */
+function fakeBlackoutTelegram() {
+  const sent: string[] = [];
+  const fetchFn = (async (url: string, init?: { body?: string }) => {
+    if (String(url).includes('/sendMessage')) {
+      sent.push(JSON.parse(init!.body!).text);
+      return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 });
+    }
+    throw new Error(`unexpected Telegram endpoint: ${url}`);
+  }) as unknown as typeof fetch;
+  return { telegram: { token: 'T', chatId: 'C', fetchFn }, sent };
 }
 
 function fakeBrokerAdapter(report: OrderStatusReport): BrokerAdapter {
@@ -621,6 +639,105 @@ describe('checkAutomaticExits', () => {
       { symbol: 'XBTEUR', outcome: 'no-price-data' },
       { symbol: 'ETHEUR', outcome: 'submitted', report },
     ]);
+  });
+
+  // Shabbat/Yom Tov blackout auto-approve (2026-09-25) — David asked for
+  // this ahead of a Shabbat+Sukkot stretch he'd be unreachable for: without
+  // it, a stop-loss/take-profit firing during a multi-day blackout would
+  // just keep expiring unanswered every cycle, never actually closing the
+  // position (a real ~40h incident this exists to prevent).
+  describe('blackoutActive (Shabbat/Yom Tov auto-approve)', () => {
+    it('auto-approves a stop-loss exit without ever calling the confirmation gate, and sends a Telegram notice', async () => {
+      const store = new MemoryStore();
+      initLiveCash(store, 100);
+      openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+      const killSwitch = new PersistedKillSwitch(store);
+      const audit = new PersistedAuditLog(store);
+      const gate = fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' });
+      const report: OrderStatusReport = { intentId: 'entry-1:exit:2000', state: 'filled', filledQuantity: 0.01, avgFillPrice: 94, detail: 'ok' };
+      const { telegram, sent } = fakeBlackoutTelegram();
+
+      const outcomes = await checkAutomaticExits(
+        store,
+        fakeSource(ok([candle(94)])), // below the 95 stop-loss
+        '1h',
+        {},
+        { confirmationGate: gate, brokerAdapter: fakeBrokerAdapter(report), killSwitch, audit, verifySymbolExists: async () => true },
+        2000,
+        150,
+        undefined,
+        undefined,
+        undefined,
+        true, // blackoutActive
+        telegram,
+      );
+
+      expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'submitted', report }]);
+      expect(gate.calls).toBe(0); // the human is never asked
+      expect(openLivePositions(store)).toEqual([]); // filled and forgotten, exactly as a normal exit would
+      expect(sent).toHaveLength(1);
+      expect(sent[0]).toContain('🕯️');
+      expect(sent[0]).toContain('XBTEUR');
+    });
+
+    it('still waits for a real human tap when no blackout is active (default behavior unchanged)', async () => {
+      const store = new MemoryStore();
+      initLiveCash(store, 100);
+      openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+      const killSwitch = new PersistedKillSwitch(store);
+      const audit = new PersistedAuditLog(store);
+      const gate = fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' });
+      const report: OrderStatusReport = { intentId: 'entry-1:exit:2000', state: 'filled', filledQuantity: 0.01, avgFillPrice: 94, detail: 'ok' };
+      const { telegram, sent } = fakeBlackoutTelegram();
+
+      await checkAutomaticExits(
+        store,
+        fakeSource(ok([candle(94)])),
+        '1h',
+        {},
+        { confirmationGate: gate, brokerAdapter: fakeBrokerAdapter(report), killSwitch, audit, verifySymbolExists: async () => true },
+        2000,
+        150,
+        undefined,
+        undefined,
+        undefined,
+        false, // blackoutActive
+        telegram,
+      );
+
+      expect(gate.calls).toBe(1); // the human IS asked, as always outside a blackout
+      expect(sent).toHaveLength(0); // no blackout notice — this was a normal confirmation
+    });
+
+    it('never auto-approves a dust position — the value guard still applies first', async () => {
+      const store = new MemoryStore();
+      initLiveCash(store, 100);
+      openPosition(store, 'entry-1', 'DUSTEUR', { stopLoss: 95, takeProfit: 115 });
+      const killSwitch = new PersistedKillSwitch(store);
+      const audit = new PersistedAuditLog(store);
+      const gate = fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' });
+      const { telegram, sent } = fakeBlackoutTelegram();
+
+      // quantity 0.01 * price 1 = €0.01 notional — well under MIN_EXIT_NOTIONAL_EUR.
+      const outcomes = await checkAutomaticExits(
+        store,
+        fakeSource(ok([candle(1)])),
+        '1h',
+        {},
+        { confirmationGate: gate, brokerAdapter: fakeBrokerAdapter({ intentId: 'x', state: 'filled', filledQuantity: 0.01, avgFillPrice: 1, detail: 'ok' }), killSwitch, audit, verifySymbolExists: async () => true },
+        2000,
+        150,
+        undefined,
+        undefined,
+        undefined,
+        true, // blackoutActive
+        telegram,
+      );
+
+      expect(outcomes).toEqual([{ symbol: 'DUSTEUR', outcome: 'dust-skipped' }]);
+      expect(gate.calls).toBe(0);
+      expect(sent).toHaveLength(0);
+    });
   });
 });
 

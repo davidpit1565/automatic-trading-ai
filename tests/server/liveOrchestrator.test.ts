@@ -367,4 +367,113 @@ describe('runLiveOrderFlow', () => {
     expect(last.detail).toContain('david');
     expect(last.detail).toContain('price moved 4%');
   });
+
+  // Shabbat/Yom Tov blackout auto-approve (2026-09-25) — see
+  // LiveOrderFlowParams.autoApprove's own doc comment.
+  describe('autoApprove (blackout exit bypass)', () => {
+    it('never calls the confirmation gate at all when autoApprove is set, and submits straight to the broker', async () => {
+      const killSwitch = new PersistedKillSwitch(new MemoryStore());
+      const audit = new PersistedAuditLog(new MemoryStore());
+      const gate = fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' });
+      const broker = fakeBrokerAdapter(filledReport());
+      const theIntent = intent();
+
+      const result = await runLiveOrderFlow({
+        intent: theIntent,
+        confirmationGate: gate,
+        brokerAdapter: broker,
+        killSwitch,
+        audit,
+        verifySymbolExists: async () => true,
+        autoApprove: { decidedBy: 'system-blackout', note: 'שבת — אושר אוטומטית' },
+      });
+
+      expect(result).toEqual({ outcome: 'submitted', report: filledReport() });
+      expect(gate.calls).toHaveLength(0); // the human is never asked
+      expect(broker.submitCalls).toEqual([theIntent]);
+    });
+
+    it('still audits the auto-approved decision — never a silent bypass', async () => {
+      const killSwitch = new PersistedKillSwitch(new MemoryStore());
+      const audit = new PersistedAuditLog(new MemoryStore());
+      const gate = fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' });
+      const broker = fakeBrokerAdapter(filledReport());
+
+      await runLiveOrderFlow({
+        intent: intent(),
+        confirmationGate: gate,
+        brokerAdapter: broker,
+        killSwitch,
+        audit,
+        verifySymbolExists: async () => true,
+        autoApprove: { decidedBy: 'system-blackout', note: 'שבת — אושר אוטומטית' },
+      });
+
+      const confirmedEntry = audit.entries().find((e) => e.event === 'confirmed');
+      expect(confirmedEntry).toBeDefined();
+      expect(confirmedEntry!.detail).toContain('שבת');
+    });
+
+    it('still runs revalidate — autoApprove only replaces the human tap, not the rest of the chain', async () => {
+      const killSwitch = new PersistedKillSwitch(new MemoryStore());
+      const audit = new PersistedAuditLog(new MemoryStore());
+      const gate = fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' });
+      const broker = fakeBrokerAdapter(filledReport());
+
+      const result = await runLiveOrderFlow({
+        intent: intent(),
+        confirmationGate: gate,
+        brokerAdapter: broker,
+        killSwitch,
+        audit,
+        verifySymbolExists: async () => true,
+        autoApprove: { decidedBy: 'system-blackout', note: 'שבת — אושר אוטומטית' },
+        revalidate: async () => ({ ok: false, reason: 'stale' }),
+      });
+
+      expect(result).toEqual({ outcome: 'stale-after-approval', reason: 'stale' });
+      expect(broker.submitCalls).toHaveLength(0);
+    });
+
+    it('still refuses immediately on a kill switch, never even reaching autoApprove', async () => {
+      const killSwitch = new PersistedKillSwitch(new MemoryStore());
+      killSwitch.engage('testing');
+      const audit = new PersistedAuditLog(new MemoryStore());
+      const gate = fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' });
+      const broker = fakeBrokerAdapter(filledReport());
+
+      const result = await runLiveOrderFlow({
+        intent: intent(),
+        confirmationGate: gate,
+        brokerAdapter: broker,
+        killSwitch,
+        audit,
+        verifySymbolExists: async () => true,
+        autoApprove: { decidedBy: 'system-blackout', note: 'שבת — אושר אוטומטית' },
+      });
+
+      expect(result).toEqual({ outcome: 'blocked-by-kill-switch' });
+      expect(broker.submitCalls).toHaveLength(0);
+    });
+
+    it('still refuses an unknown symbol, never even reaching autoApprove', async () => {
+      const killSwitch = new PersistedKillSwitch(new MemoryStore());
+      const audit = new PersistedAuditLog(new MemoryStore());
+      const gate = fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' });
+      const broker = fakeBrokerAdapter(filledReport());
+
+      const result = await runLiveOrderFlow({
+        intent: intent(),
+        confirmationGate: gate,
+        brokerAdapter: broker,
+        killSwitch,
+        audit,
+        verifySymbolExists: async () => false,
+        autoApprove: { decidedBy: 'system-blackout', note: 'שבת — אושר אוטומטית' },
+      });
+
+      expect(result.outcome).toBe('unknown-symbol');
+      expect(broker.submitCalls).toHaveLength(0);
+    });
+  });
 });

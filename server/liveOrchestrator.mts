@@ -19,6 +19,12 @@
  * audited too, not just the eventual approve/reject/submit — a blocked or
  * unknown-symbol attempt still leaves a record of having happened.
  *
+ * One narrow, explicit exception to "human confirmation via
+ * `ConfirmationGate`": `LiveOrderFlowParams.autoApprove`, used ONLY for a
+ * position's own protective exit firing during a Shabbat/Yom Tov blackout
+ * (see that field's own doc comment) — everything else in the chain still
+ * applies unchanged, including the kill-switch and symbol checks.
+ *
  * Scope note: this handles the BUY/entry side only (`buildLiveOrderIntent`
  * maps an already risk-approved `TradeRiskAssessment` to an OrderIntent).
  * Live position EXITS are a materially different problem — deciding *when*
@@ -38,6 +44,7 @@
 import type {
   AuditLog,
   BrokerAdapter,
+  ConfirmationDecision,
   ConfirmationGate,
   KillSwitch,
   OrderIntent,
@@ -88,6 +95,26 @@ export interface LiveOrderFlowParams {
    * already `true`.
    */
   readonly revalidate?: () => Promise<{ readonly ok: boolean; readonly reason?: string }>;
+  /**
+   * Bypasses the human confirmation step entirely for THIS order — David
+   * asked for this 2026-09-25, ahead of a Shabbat+Sukkot stretch he'd be
+   * unreachable for: `TelegramConfirmationGate`'s 20-minute auto-expiry
+   * REJECTS an unanswered exit rather than approving it, so a real
+   * stop-loss or take-profit firing during a multi-day blackout would just
+   * keep re-proposing and re-expiring, unanswered, for the whole window —
+   * never actually closing the position (confirmed happening for real with
+   * the ALGOEUR position, 2026-09-20/21). See `PROJECT_STATE.md` for the
+   * full reasoning.
+   *
+   * `ConfirmationGate.requestConfirmation` is deliberately never called
+   * when this is set, rather than faking a "human decision" through it —
+   * that interface's own contract states every real implementation MUST
+   * block for an explicit human decision, and nothing here may pretend to
+   * be one. Only ever set by `checkAutomaticExits` for a position CLOSING
+   * — never for a NEW entry, which takes on fresh risk a human must
+   * actually see and approve, blackout or not.
+   */
+  readonly autoApprove?: { readonly decidedBy: string; readonly note: string };
 }
 
 /**
@@ -124,7 +151,7 @@ export function buildLiveOrderIntent(
 }
 
 export async function runLiveOrderFlow(params: LiveOrderFlowParams): Promise<LiveOrderFlowResult> {
-  const { intent, confirmationGate, brokerAdapter, killSwitch, audit, verifySymbolExists, revalidate } = params;
+  const { intent, confirmationGate, brokerAdapter, killSwitch, audit, verifySymbolExists, revalidate, autoApprove } = params;
 
   if (killSwitch.isEngaged()) {
     audit.append({
@@ -160,12 +187,27 @@ export async function runLiveOrderFlow(params: LiveOrderFlowParams): Promise<Liv
     }
   }
 
-  let decision;
-  try {
-    decision = await confirmationGate.requestConfirmation(intent);
-  } catch (cause) {
-    if (cause instanceof ConfirmationPendingError) return { outcome: 'pending' };
-    throw cause;
+  let decision: ConfirmationDecision;
+  if (autoApprove) {
+    decision = {
+      intentId: intent.id,
+      approved: true,
+      decidedAt: Date.now(),
+      decidedBy: autoApprove.decidedBy,
+      note: autoApprove.note,
+    };
+    // TelegramConfirmationGate audits its own 'awaiting-confirmation' and
+    // 'confirmed'/'rejected' entries as part of requestConfirmation — since
+    // that's skipped entirely here, this is the only audit record of the
+    // decision itself (never silent, matching every other real-money path).
+    audit.append({ timestamp: decision.decidedAt, intentId: intent.id, event: 'confirmed', mode: intent.mode, detail: autoApprove.note });
+  } else {
+    try {
+      decision = await confirmationGate.requestConfirmation(intent);
+    } catch (cause) {
+      if (cause instanceof ConfirmationPendingError) return { outcome: 'pending' };
+      throw cause;
+    }
   }
 
   if (!decision.approved) {
