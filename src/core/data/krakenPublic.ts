@@ -108,11 +108,13 @@ export const CURATED_INSTRUMENTS: Instrument[] = [
  * (backtest +6.48% vs real forward record -2.05%) — backtest alone is not
  * enough to trust with real money here. These run the production-default
  * strategy on real live data in paper mode to build an honest forward
- * record before any decision to add them to `CURATED_INSTRUMENTS`. All 13
- * verified `online` on Kraken's live `AssetPairs` (2026-09-04); altname
- * equals base+EUR for every one, no `ASSET_ALIASES` needed.
- * USELESS/EUR was in the same candidate batch but is excluded here — confirmed
- * not tradable on the real broker (Revolut X).
+ * record before any decision to add them to `CURATED_INSTRUMENTS`. Every
+ * entry here is a confirmed live Kraken EUR pair (each came from a real
+ * backtest scan, which fetched real candle history for it) — see each
+ * dated batch comment below for its own measured numbers and whether
+ * Revolut X tradability was checked. USELESS/EUR passed the same scan
+ * more than once but is excluded here — confirmed not tradable on the real
+ * broker (Revolut X).
  */
 export const CANDIDATE_INSTRUMENTS: Instrument[] = [
   { symbol: 'PUMPEUR', base: 'PUMP', quote: 'EUR' },
@@ -179,6 +181,32 @@ export const CANDIDATE_INSTRUMENTS: Instrument[] = [
   { symbol: 'ETCEUR', base: 'ETC', quote: 'EUR' },
   { symbol: 'MANAEUR', base: 'MANA', quote: 'EUR' },
   { symbol: 'PROVEEUR', base: 'PROVE', quote: 'EUR' },
+  // Added 2026-09-25 from that week's on-demand market-scan run (top 80 EUR
+  // pairs by 24h volume, real Kraken history, ~720 1h candles, 4h
+  // confirmation): 44 symbols passed net-positive + PF>1 + >5 trades. Of
+  // those, only these 13 were genuinely new (everything else was already
+  // tracked here or in `CURATED_INSTRUMENTS`): QNT +1.61%/PF 2.25/7t, SEI
+  // +1.31%/PF 1.79/7t, APT +1.71%/PF 1.75/7t, WIF +1.60%/PF 1.65/8t, SNX
+  // +0.74%/PF 1.29/8t, GRT +2.27%/PF 1.66/13t, ASTER +0.44%/PF 1.23/6t, AKT
+  // +1.30%/PF 1.26/15t, PYTH +4.33%/PF 2.37/11t, PEAQ +7.86%/PF 2.66/13t,
+  // VIRTUAL +2.85%/PF 2.16/10t, CAKE +0.94%/PF 1.24/16t, GRASS +4.34%/PF
+  // 2.89/10t. Revolut X tradability NOT verified for any of these (no live
+  // broker check run this session) — required before any future promotion
+  // to `CURATED_INSTRUMENTS`, same as USELESS was excluded earlier for
+  // failing exactly that check.
+  { symbol: 'QNTEUR', base: 'QNT', quote: 'EUR' },
+  { symbol: 'SEIEUR', base: 'SEI', quote: 'EUR' },
+  { symbol: 'APTEUR', base: 'APT', quote: 'EUR' },
+  { symbol: 'WIFEUR', base: 'WIF', quote: 'EUR' },
+  { symbol: 'SNXEUR', base: 'SNX', quote: 'EUR' },
+  { symbol: 'GRTEUR', base: 'GRT', quote: 'EUR' },
+  { symbol: 'ASTEREUR', base: 'ASTER', quote: 'EUR' },
+  { symbol: 'AKTEUR', base: 'AKT', quote: 'EUR' },
+  { symbol: 'PYTHEUR', base: 'PYTH', quote: 'EUR' },
+  { symbol: 'PEAQEUR', base: 'PEAQ', quote: 'EUR' },
+  { symbol: 'VIRTUALEUR', base: 'VIRTUAL', quote: 'EUR' },
+  { symbol: 'CAKEEUR', base: 'CAKE', quote: 'EUR' },
+  { symbol: 'GRASSEUR', base: 'GRASS', quote: 'EUR' },
 ];
 
 /** Base asset codes (BTC, ETH, …) actually traded by the agent — for the UI's
