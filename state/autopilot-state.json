@@ -40,7 +40,7 @@
       "takeProfit": 1.1043030838329484,
       "feesPaid": 6.378527883612059,
       "realizedPnl": 0,
-      "highestPrice": 1.0609,
+      "highestPrice": 1.0449,
       "lowestPrice": 1.0281,
       "confidence": 50.27859804881512,
       "validationVerdict": null,
@@ -97,8 +97,8 @@
       "takeProfit": 0.23865962610236469,
       "feesPaid": 0.8052347280927207,
       "realizedPnl": 0,
-      "highestPrice": 0.225272,
-      "lowestPrice": 0.221791,
+      "highestPrice": 0.225203,
+      "lowestPrice": 0.222126,
       "confidence": 56.677391368927445,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -2538,7 +2538,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790371523411,
+    "at": 1790371663828,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -59573,7 +59573,7 @@
     ]
   },
   "longterm-shadow-last-run-day": "2026-09-25",
-  "live:live-cash-eur": 23.74,
+  "live:live-cash-eur": 34.709849608,
   "live:telegram-shared-update-offset": 447904572,
   "live:telegram-unclaimed-messages": [
     {
@@ -62880,31 +62880,23 @@
       "detail": "confirmation request sent to Telegram"
     },
     {
-      "timestamp": 1790366457378,
+      "timestamp": 1790371684860,
       "intentId": "live-entry:ATOMEUR:1790340349162:exit:1790364916886",
-      "event": "rejected",
+      "event": "confirmed",
       "mode": "live",
-      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+      "detail": "שבת/חג — יציאה הגנתית אושרה אוטומטית ללא אישור טלגרם"
     },
     {
-      "timestamp": 1790366820058,
-      "intentId": "live-entry:ATOMEUR:1790340349162:exit:1790366793883",
-      "event": "awaiting-confirmation",
+      "timestamp": 1790371685854,
+      "intentId": "live-entry:ATOMEUR:1790340349162:exit:1790364916886",
+      "event": "filled",
       "mode": "live",
-      "detail": "confirmation request sent to Telegram"
-    },
-    {
-      "timestamp": 1790368322614,
-      "intentId": "live-entry:ATOMEUR:1790340349162:exit:1790366793883",
-      "event": "rejected",
-      "mode": "live",
-      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+      "detail": "Revolut X order 3ecf7dae-ad7c-4afe-b6fe-17ce09b95909: filled"
     }
   ],
   "live:live-entry-outstanding-symbols": [
     "LTCEUR",
     "LINKEUR",
-    "ATOMEUR",
     "DOTEUR"
   ],
   "live:kill-switch-keyboard-sent": true,
@@ -79537,68 +79529,8 @@
       "equity": 57.02
     },
     {
-      "at": 1790366050158,
-      "equity": 57.06
-    },
-    {
-      "at": 1790366430312,
-      "equity": 57.08
-    },
-    {
-      "at": 1790366793883,
-      "equity": 57.09
-    },
-    {
-      "at": 1790367168398,
-      "equity": 57.1
-    },
-    {
-      "at": 1790367541718,
-      "equity": 57.19
-    },
-    {
-      "at": 1790367920151,
-      "equity": 57.28
-    },
-    {
-      "at": 1790368297174,
-      "equity": 57.4
-    },
-    {
-      "at": 1790368655898,
-      "equity": 57.37
-    },
-    {
-      "at": 1790369014428,
-      "equity": 57.4
-    },
-    {
-      "at": 1790369375056,
-      "equity": 57.4
-    },
-    {
-      "at": 1790369733190,
-      "equity": 57.3
-    },
-    {
-      "at": 1790370092562,
-      "equity": 57.24
-    },
-    {
-      "at": 1790370452182,
-      "equity": 57.08
-    },
-    {
-      "at": 1790370809947,
-      "equity": 57.08
-    },
-    {
-      "at": 1790371166635,
-      "equity": 57
-    },
-    {
-      "at": 1790371523411,
-      "equity": 57.04
+      "at": 1790371663828,
+      "equity": 57.02
     }
   ],
   "live:revolut-x-order-map": {
@@ -79626,7 +79558,8 @@
     "live-entry:LTCEUR:1790254633004": "111f0d50-29d8-46bb-b68f-c92c4604278e",
     "live-entry:LINKEUR:1790338952450": "6a5d0e61-b970-4f3c-91bb-0b652b1f6bc1",
     "live-entry:ATOMEUR:1790340349162": "220600e0-56c4-4a50-b72b-c1f3cef8e2ac",
-    "live-entry:DOTEUR:1790346962182": "9d906dee-3cdf-46cb-8bad-502370b1c5d8"
+    "live-entry:DOTEUR:1790346962182": "9d906dee-3cdf-46cb-8bad-502370b1c5d8",
+    "live-entry:ATOMEUR:1790340349162:exit:1790364916886": "3ecf7dae-ad7c-4afe-b6fe-17ce09b95909"
   },
   "live:live-open-positions": {
     "external-reconcile:ALGOEUR:1790049640921": {
@@ -79656,38 +79589,6 @@
         "reasons": [],
         "warnings": [
           "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
-        ]
-      }
-    },
-    "live-entry:ATOMEUR:1790340349162": {
-      "id": "live-entry:ATOMEUR:1790340349162",
-      "symbol": "ATOM/EUR",
-      "quantity": 7.04822,
-      "initialQuantity": 7.04822,
-      "entryPrice": 1.5987,
-      "stopLoss": 1.559562797593848,
-      "takeProfit": 1.676974404812304,
-      "highestPrice": 1.5987,
-      "lowestPrice": 1.5408,
-      "entrySlippage": 0,
-      "openedAt": 1790342122431,
-      "entryAssessment": {
-        "approved": true,
-        "asset": "ATOMEUR",
-        "entry": 1.5987,
-        "stopLoss": 1.559562797593848,
-        "takeProfit": 1.676974404812304,
-        "positionSize": 7.0482270434678185,
-        "positionValue": 11.268000574392001,
-        "riskAmount": 0.2758478884047146,
-        "riskPercentage": 0.48961284050981474,
-        "rewardRiskRatio": 2,
-        "portfolioExposure": 20.00000509755033,
-        "reasons": [
-          "risking 0.28 (0.49% of equity) for a 2.0:1 reward/risk — within every configured limit"
-        ],
-        "warnings": [
-          "size capped by the 20% single-position limit"
         ]
       }
     },
@@ -79729,7 +79630,7 @@
       "entryPrice": 1.0358,
       "stopLoss": 1.0106984580835259,
       "takeProfit": 1.1043030838329484,
-      "highestPrice": 1.0586,
+      "highestPrice": 1.0449,
       "lowestPrice": 1.0281,
       "entrySlippage": 0.06566527999999994,
       "openedAt": 1790347325449,
@@ -79761,8 +79662,8 @@
       "entryPrice": 73609.8,
       "stopLoss": 72505.653,
       "takeProfit": 75818.09400000001,
-      "highestPrice": 73842.2,
-      "lowestPrice": 73425.1,
+      "highestPrice": 73782.6,
+      "lowestPrice": 73444.2,
       "entrySlippage": 0,
       "openedAt": 1790352192918,
       "entryAssessment": {
@@ -81668,7 +81569,7 @@
   "live:live-blackout-queue": {},
   "live:daily-loss": {
     "day": "2026-09-25",
-    "loss": 0.00003488399999999718
+    "loss": 0.29817459
   },
   "shadow:candidate-watch:trade-journal": [
     {
@@ -82912,36 +82813,6 @@
   },
   "state-merge-collisions": [
     {
-      "key": "shadow:breakout:audit-log",
-      "at": 1790273836438,
-      "label": "cycle 26/70"
-    },
-    {
-      "key": "shadow:ai-judgment:open-positions",
-      "at": 1790273836438,
-      "label": "cycle 26/70"
-    },
-    {
-      "key": "shadow:ai-judgment:trade-journal",
-      "at": 1790273836438,
-      "label": "cycle 26/70"
-    },
-    {
-      "key": "shadow:ai-judgment:portfolio-engine",
-      "at": 1790273836438,
-      "label": "cycle 26/70"
-    },
-    {
-      "key": "shadow:ai-judgment:audit-log",
-      "at": 1790273836438,
-      "label": "cycle 26/70"
-    },
-    {
-      "key": "shadow:correlation-capped:open-positions",
-      "at": 1790273836438,
-      "label": "cycle 26/70"
-    },
-    {
       "key": "shadow:correlation-capped:trade-journal",
       "at": 1790273836438,
       "label": "cycle 26/70"
@@ -83410,6 +83281,36 @@
       "key": "shadow:mean-reversion:audit-log",
       "at": 1790274542841,
       "label": "cycle 28/70"
+    },
+    {
+      "key": "open-positions",
+      "at": 1790371690307,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "autopilot-last-run",
+      "at": 1790371690307,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:live-equity-history",
+      "at": 1790371690307,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:audit-log",
+      "at": 1790371690307,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:live-exit-pending",
+      "at": 1790371690307,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:live-open-positions",
+      "at": 1790371690307,
+      "label": "live-mirror: after automatic exits"
     }
   ],
   "shadow:correlation-capped:open-positions": [
@@ -84585,6 +84486,29 @@
       "maePct": 3.4254873884789094,
       "realizedPnl": 0.6201163123240008,
       "returnPct": 7.647020596982057,
+      "strategyVersion": null,
+      "validationVerdict": null,
+      "confidence": null,
+      "notes": "live trade — fees are a cost-rate ESTIMATE (Revolut X reports no real fee figure); slippage is REAL (signal price vs actual broker fill, entry + exit)"
+    },
+    {
+      "id": "live-entry:ATOMEUR:1790340349162",
+      "symbol": "ATOM/EUR",
+      "entryTimestamp": 1790342122431,
+      "exitTimestamp": 1790371663828,
+      "entryPrice": 1.5987,
+      "exitPrice": 1.5564,
+      "positionSize": 7.04822,
+      "stopLoss": 1.559562797593848,
+      "takeProfit": 1.676974404812304,
+      "exitReason": "stop-loss",
+      "fees": 0.066713516766,
+      "slippage": 0.007048219999999224,
+      "holdingDurationMs": 29541397,
+      "mfePct": 0,
+      "maePct": 3.6216926252580257,
+      "realizedPnl": -0.36485322276600063,
+      "returnPct": -3.2379620942015443,
       "strategyVersion": null,
       "validationVerdict": null,
       "confidence": null,
