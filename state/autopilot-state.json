@@ -40,7 +40,7 @@
       "takeProfit": 1.676974404812304,
       "feesPaid": 6.422298494100711,
       "realizedPnl": 0,
-      "highestPrice": 1.6012,
+      "highestPrice": 1.6058,
       "lowestPrice": 1.5987,
       "confidence": 54.06667041867583,
       "validationVerdict": null,
@@ -2432,7 +2432,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790341069027,
+    "at": 1790341429390,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -59048,57 +59048,7 @@
     }
   ],
   "live:telegram-unclaimed-callbacks": [],
-  "live:live-entry-pending": {
-    "ATOMEUR": {
-      "opportunity": {
-        "symbol": "ATOMEUR",
-        "timeframe": "1h",
-        "direction": "long",
-        "levels": {
-          "entry": 1.5987,
-          "stopLoss": 1.559562797593848,
-          "takeProfit": 1.676974404812304,
-          "riskReward": 2
-        },
-        "confidence": 54.06667041867583,
-        "confidenceComponents": [
-          {
-            "label": "Scanner evidence",
-            "detail": "composite score 47 of 100",
-            "effect": 28.227259003660187
-          },
-          {
-            "label": "Trend strength",
-            "detail": "ADX 35.7",
-            "effect": 7.839411415015643
-          },
-          {
-            "label": "Volume participation",
-            "detail": "2.62× average volume",
-            "effect": 10
-          },
-          {
-            "label": "Higher timeframe confirmation (4h)",
-            "detail": "score 48 on the 4h chart",
-            "effect": 8
-          }
-        ],
-        "explanation": "ATOMEUR on the 1h timeframe shows bullish technical evidence (score 47/100 over 150 candles), driven mainly by Volume (vs 20-bar average) (relative volume 2.62×), Trend (EMA 20/50 + ADX) (EMA20 1.57 vs EMA50 1.55, ADX 35.7), Stochastic %K 14 (%K 85.1). Suggested plan: enter near 1.60, stop loss at 1.56 (2× ATR below entry), take profit at 1.68 (4× ATR above), risk/reward 2.0. Confidence 46/90 reflects the strength of current evidence only — it is not a guarantee, and any position should be sized so its loss at the stop is acceptable. The larger 4h trend confirms this setup (score 48).",
-        "warnings": [],
-        "basedOn": {
-          "score": 47.04543167276698,
-          "candleCount": 150
-        }
-      },
-      "queuedAt": 1790340349162,
-      "lastAssessment": {
-        "positionValue": 11.268000573048,
-        "riskAmount": 0.27584788837181257,
-        "riskPercentage": 0.48961284050981474,
-        "rewardRiskRatio": 2
-      }
-    }
-  },
+  "live:live-entry-pending": {},
   "live:manual-buy-pending-symbols": [
     "SYMBOL",
     "EURXBTEUR"
@@ -62232,11 +62182,26 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1790341449110,
+      "intentId": "live-entry:ATOMEUR:1790340349162",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram (text command)"
+    },
+    {
+      "timestamp": 1790341450448,
+      "intentId": "live-entry:ATOMEUR:1790340349162",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "Revolut X order 220600e0-56c4-4a50-b72b-c1f3cef8e2ac: new"
     }
   ],
   "live:live-entry-outstanding-symbols": [
     "LTCEUR",
-    "LINKEUR"
+    "LINKEUR",
+    "ATOMEUR"
   ],
   "live:kill-switch-keyboard-sent": true,
   "education-tip-last-sent-at": 1790201056354,
@@ -78618,6 +78583,10 @@
     {
       "at": 1790341069027,
       "equity": 56.34
+    },
+    {
+      "at": 1790341429390,
+      "equity": 56.34
     }
   ],
   "live:revolut-x-order-map": {
@@ -78643,7 +78612,8 @@
     "external-reconcile:ALGOEUR:1790049640921:exit:1790075884129": "953f3aa8-6fef-42d4-9435-7c5b5949f16c",
     "live-entry:LTCEUR:1790106276494": "dc745242-787a-4155-838b-50174eec9e0c",
     "live-entry:LTCEUR:1790254633004": "111f0d50-29d8-46bb-b68f-c92c4604278e",
-    "live-entry:LINKEUR:1790338952450": "6a5d0e61-b970-4f3c-91bb-0b652b1f6bc1"
+    "live-entry:LINKEUR:1790338952450": "6a5d0e61-b970-4f3c-91bb-0b652b1f6bc1",
+    "live-entry:ATOMEUR:1790340349162": "220600e0-56c4-4a50-b72b-c1f3cef8e2ac"
   },
   "live:live-open-positions": {
     "external-reconcile:ALGOEUR:1790049640921": {
@@ -79084,16 +79054,10 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447905014,
+  "telegram-shared-update-offset": 447905015,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {
-    "live-entry:ATOMEUR:1790340349162": {
-      "sentAt": 1790340368810,
-      "messageId": 924,
-      "token": "mugyfhre.16q580l"
-    }
-  },
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 4032.7614567635746,
@@ -83124,6 +83088,36 @@
           "risking 0.34 (0.60% of equity) for a 2.0:1 reward/risk — within every configured limit"
         ],
         "warnings": []
+      }
+    },
+    "ATOMEUR": {
+      "id": "live-entry:ATOMEUR:1790340349162",
+      "createdAt": 1790341429390,
+      "mode": "live",
+      "symbol": "ATOM/EUR",
+      "side": "buy",
+      "quantity": 7.0482270434678185,
+      "limitPrice": 1.5987,
+      "stopLoss": 1.559562797593848,
+      "takeProfit": 1.676974404812304,
+      "assessment": {
+        "approved": true,
+        "asset": "ATOMEUR",
+        "entry": 1.5987,
+        "stopLoss": 1.559562797593848,
+        "takeProfit": 1.676974404812304,
+        "positionSize": 7.0482270434678185,
+        "positionValue": 11.268000574392001,
+        "riskAmount": 0.2758478884047146,
+        "riskPercentage": 0.48961284050981474,
+        "rewardRiskRatio": 2,
+        "portfolioExposure": 20.00000509755033,
+        "reasons": [
+          "risking 0.28 (0.49% of equity) for a 2.0:1 reward/risk — within every configured limit"
+        ],
+        "warnings": [
+          "size capped by the 20% single-position limit"
+        ]
       }
     }
   },
