@@ -41,7 +41,7 @@
       "feesPaid": 6.422298494100711,
       "realizedPnl": 0,
       "highestPrice": 1.6058,
-      "lowestPrice": 1.5987,
+      "lowestPrice": 1.5933,
       "confidence": 54.06667041867583,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -2432,7 +2432,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790341778123,
+    "at": 1790342122431,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -59031,7 +59031,7 @@
     ]
   },
   "longterm-shadow-last-run-day": "2026-09-25",
-  "live:live-cash-eur": 56.34,
+  "live:live-cash-eur": 45.07,
   "live:telegram-shared-update-offset": 447904572,
   "live:telegram-unclaimed-messages": [
     {
@@ -78591,6 +78591,10 @@
     {
       "at": 1790341778123,
       "equity": 56.34
+    },
+    {
+      "at": 1790342122431,
+      "equity": 45.07
     }
   ],
   "live:revolut-x-order-map": {
@@ -78647,6 +78651,38 @@
         "reasons": [],
         "warnings": [
           "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
+        ]
+      }
+    },
+    "live-entry:ATOMEUR:1790340349162": {
+      "id": "live-entry:ATOMEUR:1790340349162",
+      "symbol": "ATOM/EUR",
+      "quantity": 7.04822,
+      "initialQuantity": 7.04822,
+      "entryPrice": 1.5987,
+      "stopLoss": 1.559562797593848,
+      "takeProfit": 1.676974404812304,
+      "highestPrice": 1.5987,
+      "lowestPrice": 1.5987,
+      "entrySlippage": 0,
+      "openedAt": 1790342122431,
+      "entryAssessment": {
+        "approved": true,
+        "asset": "ATOMEUR",
+        "entry": 1.5987,
+        "stopLoss": 1.559562797593848,
+        "takeProfit": 1.676974404812304,
+        "positionSize": 7.0482270434678185,
+        "positionValue": 11.268000574392001,
+        "riskAmount": 0.2758478884047146,
+        "riskPercentage": 0.48961284050981474,
+        "rewardRiskRatio": 2,
+        "portfolioExposure": 20.00000509755033,
+        "reasons": [
+          "risking 0.28 (0.49% of equity) for a 2.0:1 reward/risk — within every configured limit"
+        ],
+        "warnings": [
+          "size capped by the 20% single-position limit"
         ]
       }
     }
@@ -83092,36 +83128,6 @@
           "risking 0.34 (0.60% of equity) for a 2.0:1 reward/risk — within every configured limit"
         ],
         "warnings": []
-      }
-    },
-    "ATOMEUR": {
-      "id": "live-entry:ATOMEUR:1790340349162",
-      "createdAt": 1790341429390,
-      "mode": "live",
-      "symbol": "ATOM/EUR",
-      "side": "buy",
-      "quantity": 7.0482270434678185,
-      "limitPrice": 1.5987,
-      "stopLoss": 1.559562797593848,
-      "takeProfit": 1.676974404812304,
-      "assessment": {
-        "approved": true,
-        "asset": "ATOMEUR",
-        "entry": 1.5987,
-        "stopLoss": 1.559562797593848,
-        "takeProfit": 1.676974404812304,
-        "positionSize": 7.0482270434678185,
-        "positionValue": 11.268000574392001,
-        "riskAmount": 0.2758478884047146,
-        "riskPercentage": 0.48961284050981474,
-        "rewardRiskRatio": 2,
-        "portfolioExposure": 20.00000509755033,
-        "reasons": [
-          "risking 0.28 (0.49% of equity) for a 2.0:1 reward/risk — within every configured limit"
-        ],
-        "warnings": [
-          "size capped by the 20% single-position limit"
-        ]
       }
     }
   },
