@@ -1,5 +1,69 @@
 # PROJECT_STATE
 
+## Weekly coin review, made recurring — 13 new shadow candidates, per-symbol readiness tool built, nothing promoted (2026-09-25)
+
+David asked for an ongoing weekly process: look for coins worth adding, add
+them to the demo (shadow-watch) or, if genuinely justified, to real trading,
+and report every week in Telegram what changed and why — "do it yourself,"
+recurring, no need to ask each time.
+
+**Ran the existing weekly discovery scan fresh tonight**
+(`scripts/discoverCryptoCandidates.mts 80`, real Kraken data, ~720 1h
+candles/symbol, 4h confirmation, same methodology as every prior addition).
+44 of 80 non-curated pairs passed (net-positive + PF>1 + >5 trades). Of
+those, 31 were already tracked (in `CURATED_INSTRUMENTS` or
+`CANDIDATE_INSTRUMENTS`) — only 13 were genuinely new: **QNT, SEI, APT, WIF,
+SNX, GRT, ASTER, AKT, PYTH, PEAQ, VIRTUAL, CAKE, GRASS**. Added all 13 to
+`CANDIDATE_INSTRUMENTS` (`src/core/data/krakenPublic.ts`) — forward-test
+shadow-watch only, 100% simulated money, isolated portfolio, never read by
+the real-trading symbol slice. Revolut X tradability was **not** verified
+for any of the 13 (no live broker check run this session) — flagged in the
+source comment as required before any future promotion, same as USELESS was
+excluded earlier for failing exactly that check.
+
+**Checked whether anything already-watched is mature enough to promote to
+`CURATED_INSTRUMENTS` (real-trading-eligible) — found a real gap and fixed
+it.** `shadow:candidate-watch`'s own `ShadowStanding` is a POOLED basket
+across all 42 (now 55) candidate symbols trading one shared virtual
+portfolio — it can say "the basket did +1.02%, 46 trades, PF 1.07" but
+never "which ONE coin is ready," which is exactly the question a promotion
+decision needs. Built `candidateReadinessBySymbol`
+(`src/core/autopilot/candidateReadiness.ts`) — regroups the same
+`shadow:candidate-watch` trade journal by `JournalEntry.symbol` and reuses
+the project's own verified `tradeAnalytics` math per group, plus a
+read-only reporter (`scripts/candidateReadiness.mts`, mirrors
+`shadowStandings.mts`'s style). Ran it tonight: **no symbol has cleared
+`SHADOW_MEANINGFUL_TRADES` (20) on its own** — the busiest (MINAEUR) has
+only 6 individual trades. **Nothing promoted to `CURATED_INSTRUMENTS`
+tonight** — there is no honest per-symbol forward record yet for anything,
+consistent with every prior promotion in this file always requiring real,
+mature, individually-attributable evidence (never a basket average, never a
+single backtest window).
+
+**Made this recurring, autonomously, without David needing to ask again:**
+created a weekly Routine (Sunday mornings, fresh session in this
+environment) whose prompt reproduces tonight's exact method — run the
+discovery scan, add genuinely-new well-measured symbols to
+`CANDIDATE_INSTRUMENTS`, run `candidateReadiness.mts` against the current
+`CANDIDATE_INSTRUMENTS` list, promote to `CURATED_INSTRUMENTS` **only** a
+symbol that has individually cleared `SHADOW_MEANINGFUL_TRADES` with a
+clearly positive, non-thin record (same rigor as every manual entry in this
+file — a single window or a basket average is never enough), full gate,
+commit/PR/merge to main, update this file, then send exactly one Telegram
+report naming what was added, the real numbers behind it, and explicitly
+whether it went to the simulated demo tier or `CURATED_INSTRUMENTS`
+(real-trading-eligible — still gated per-order by the existing
+`ConfirmationGate` Telegram tap-approval, so a promotion alone never risks
+real capital by itself). If nothing qualifies some week, the Routine reports
+that too rather than forcing an addition.
+
+**Tests**: `tests/autopilot/candidateReadiness.test.ts` (4 new — grouping,
+sort order, the maturity threshold, empty input), `tests/data/krakenPublic.test.ts`'s
+`CANDIDATE_INSTRUMENTS` shape test updated for the new count (42→55) and
+full base list. Gate: tsc clean, 1424 vitest passed (was 1420), vite build
+ok. Nothing touched under `server/**`'s live-order path; `CURATED_INSTRUMENTS`
+and the real-trading symbol slice are unchanged.
+
 ## New automation: daily strategy sweep research agent (2026-09-16)
 Added `.github/workflows/daily-strategy-sweep.yml` (daily cron, 06:00 UTC,
 also `workflow_dispatch`) + `scripts/reportStrategySweep.mts`. Runs the

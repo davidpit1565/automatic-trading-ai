@@ -571,8 +571,8 @@ describe('transient failure handling', () => {
 });
 
 describe('CANDIDATE_INSTRUMENTS (forward-test-only, never real trading)', () => {
-  it('lists exactly the 42 measured candidates, each a valid EUR pair', () => {
-    expect(CANDIDATE_INSTRUMENTS).toHaveLength(42);
+  it('lists exactly the 55 measured candidates, each a valid EUR pair', () => {
+    expect(CANDIDATE_INSTRUMENTS).toHaveLength(55);
     for (const i of CANDIDATE_INSTRUMENTS) {
       expect(i.quote).toBe('EUR');
       expect(i.symbol).toBe(`${i.base}EUR`); // no Kraken alias needed for any of these
@@ -581,6 +581,7 @@ describe('CANDIDATE_INSTRUMENTS (forward-test-only, never real trading)', () => 
       'PUMP', 'XMR', 'SPX', 'CRV', 'DASH', 'ZRO', 'BONK', 'OP', 'SYRUP', 'MINA', 'TIA', 'CHIP', 'PENDLE', 'NPC', 'ARB',
       'SUI', 'NEAR', 'TAO', 'ZEC', 'PEPE', 'POL', 'ONDO', 'VVV', 'HBAR', 'RENDER', 'FET', 'KAS', 'ZAMA', 'PENGU',
       'FARTCOIN', 'NIL', 'CC', 'RAY', 'W', 'MEGA', 'PHA', 'SAGA', 'SYN', 'DRV', 'ETC', 'MANA', 'PROVE',
+      'QNT', 'SEI', 'APT', 'WIF', 'SNX', 'GRT', 'ASTER', 'AKT', 'PYTH', 'PEAQ', 'VIRTUAL', 'CAKE', 'GRASS',
     ]);
   });
 
