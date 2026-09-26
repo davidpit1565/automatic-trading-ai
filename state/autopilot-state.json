@@ -2598,10 +2598,24 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused AAVEEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790408982336,
+      "intentId": "AAVEEUR:1790408982336",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AAVEEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790408982336,
+      "intentId": "ATOMEUR:1790408982336",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused ATOMEUR: large trades show heavy net selling"
     }
   ],
   "autopilot-last-run": {
-    "at": 1790408633746,
+    "at": 1790408982336,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2617,10 +2631,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788144727197,
-      "equity": 10195.85
-    },
     {
       "at": 1788145037124,
       "equity": 10195.85
@@ -22616,6 +22626,10 @@
     {
       "at": 1790408633746,
       "equity": 10658.23
+    },
+    {
+      "at": 1790408982336,
+      "equity": 10659.77
     }
   ],
   "trade-journal": [
@@ -24721,7 +24735,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -24.14% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -24.21% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24819,13 +24833,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1790408633746,
+    "at": 1790408982336,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / AUTOPILOT_TRAILING / 4h gate / whale-flow)",
-        "equity": 11477.51017076633,
-        "returnPct": 14.775101707663307,
+        "equity": 11475.283476040642,
+        "returnPct": 14.752834760406422,
         "trades": 61,
         "winRatePct": 57.377049180327866,
         "profitFactor": 1.9115742691931323,
@@ -24835,8 +24849,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11620.43409775789,
-        "returnPct": 16.204340977578905,
+        "equity": 11623.830986531815,
+        "returnPct": 16.23830986531815,
         "trades": 62,
         "winRatePct": 58.06451612903226,
         "profitFactor": 2.0088058397276907,
@@ -24846,8 +24860,8 @@
       {
         "key": "trailing-forward-test",
         "label": "Trailing stop 1.5R/1.5R vs current no-trail production (forward test since 2026-09-22)",
-        "equity": 10310.206194582057,
-        "returnPct": 3.102061945820569,
+        "equity": 10308.20596270139,
+        "returnPct": 3.082059627013896,
         "trades": 3,
         "winRatePct": 66.66666666666666,
         "profitFactor": 4.682373221960774,
@@ -24857,8 +24871,8 @@
       {
         "key": "high-conviction",
         "label": "Conviction 55 (trades rarely; tests whether selectivity alone helps)",
-        "equity": 9909.26661658634,
-        "returnPct": -0.9073338341366071,
+        "equity": 9908.100851692296,
+        "returnPct": -0.918991483077043,
         "trades": 1,
         "winRatePct": 0,
         "profitFactor": 0,
@@ -24868,8 +24882,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9557.712316823612,
-        "returnPct": -4.422876831763879,
+        "equity": 9557.877239650335,
+        "returnPct": -4.421227603496646,
         "trades": 111,
         "winRatePct": 42.34234234234234,
         "profitFactor": 1.002313543529514,
@@ -24879,8 +24893,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10565.138250372987,
-        "returnPct": 5.651382503729874,
+        "equity": 10578.971782708482,
+        "returnPct": 5.789717827084823,
         "trades": 270,
         "winRatePct": 43.7037037037037,
         "profitFactor": 1.344336384984146,
@@ -24901,8 +24915,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11410.108585542752,
-        "returnPct": 14.101085855427517,
+        "equity": 11413.443991899989,
+        "returnPct": 14.134439918999888,
         "trades": 50,
         "winRatePct": 57.99999999999999,
         "profitFactor": 1.9979365870115664,
@@ -24912,8 +24926,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10565.179648296868,
-        "returnPct": 5.651796482968676,
+        "equity": 10566.1723811072,
+        "returnPct": 5.661723811072006,
         "trades": 21,
         "winRatePct": 61.904761904761905,
         "profitFactor": 1.9370133018967872,
@@ -24991,7 +25005,7 @@
       "takeProfit": 69.04273084827449,
       "feesPaid": 6.379176556936672,
       "realizedPnl": 0,
-      "highestPrice": 64.67,
+      "highestPrice": 64.83,
       "lowestPrice": 62.94,
       "confidence": 70,
       "validationVerdict": null,
@@ -44492,6 +44506,20 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused AAVEEUR: no exposure headroom: 6936.39 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1790408982336,
+      "intentId": "AAVEEUR:1790408982336",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AAVEEUR: no exposure headroom: 6932.84 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1790408982336,
+      "intentId": "ATOMEUR:1790408982336",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused ATOMEUR: large trades show heavy net selling"
     }
   ],
   "shadow:no-confirm:open-positions": [
@@ -45785,6 +45813,13 @@
     {
       "timestamp": 1790405849037,
       "intentId": "ATOMEUR:1790405849037",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ATOMEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790408982336,
+      "intentId": "ATOMEUR:1790408982336",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ATOMEUR: maximum open positions reached (5/5)"
@@ -56745,6 +56780,20 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused AAVEEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1790408982336,
+      "intentId": "AAVEEUR:1790408982336",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused AAVEEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1790408982336,
+      "intentId": "ATOMEUR:1790408982336",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused ATOMEUR: OKX top traders are net-short"
     }
   ],
   "shadow:whale-flow:open-positions": [],
@@ -58772,6 +58821,13 @@
     {
       "timestamp": 1790405849037,
       "intentId": "ATOMEUR:1790405849037",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ATOMEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790408982336,
+      "intentId": "ATOMEUR:1790408982336",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ATOMEUR: maximum open positions reached (5/5)"
@@ -80340,6 +80396,10 @@
     {
       "at": 1790408633746,
       "equity": 57.6
+    },
+    {
+      "at": 1790408982336,
+      "equity": 57.6
     }
   ],
   "live:revolut-x-order-map": {
@@ -80923,13 +80983,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790408633746,
+    "at": 1790408982336,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "55 candidates, production defaults (forward test only — not real trading)",
-        "equity": 10091.887757921811,
-        "returnPct": 0.918877579218115,
+        "equity": 10101.81335656385,
+        "returnPct": 1.018133565638509,
         "trades": 48,
         "winRatePct": 39.58333333333333,
         "profitFactor": 1.089496733808228,
@@ -82551,6 +82611,13 @@
     {
       "timestamp": 1790408633746,
       "intentId": "ONDOEUR:1790408633746",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ONDOEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790408982336,
+      "intentId": "ONDOEUR:1790408982336",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ONDOEUR: maximum open positions reached (5/5)"
@@ -84908,6 +84975,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ATOMEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790408982336,
+      "intentId": "ATOMEUR:1790408982336",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ATOMEUR: maximum open positions reached (5/5)"
     }
   ],
   "shadow:correlation-capped:trade-journal": [
@@ -85853,6 +85927,20 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused AAVEEUR: no exposure headroom: 6230.94 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1790408982336,
+      "intentId": "AAVEEUR:1790408982336",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AAVEEUR: no exposure headroom: 6227.74 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1790408982336,
+      "intentId": "ATOMEUR:1790408982336",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused ATOMEUR: large trades show heavy net selling"
     }
   ],
   "shadow:trailing-forward-test:open-positions": [
