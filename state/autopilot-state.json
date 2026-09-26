@@ -2657,7 +2657,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790422939273,
+    "at": 1790423298455,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2673,10 +2673,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788157368845,
-      "equity": 10195.85
-    },
     {
       "at": 1788157678913,
       "equity": 10195.85
@@ -22672,6 +22668,10 @@
     {
       "at": 1790422939273,
       "equity": 10745.31
+    },
+    {
+      "at": 1790423298455,
+      "equity": 10744.94
     }
   ],
   "trade-journal": [
@@ -24875,13 +24875,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1790422939273,
+    "at": 1790423298455,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / AUTOPILOT_TRAILING / 4h gate / whale-flow)",
-        "equity": 11574.135595888623,
-        "returnPct": 15.741355958886233,
+        "equity": 11575.098382442546,
+        "returnPct": 15.750983824425457,
         "trades": 61,
         "winRatePct": 57.377049180327866,
         "profitFactor": 1.9115742691931323,
@@ -24891,8 +24891,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11743.163030524198,
-        "returnPct": 17.43163030524198,
+        "equity": 11761.95176980928,
+        "returnPct": 17.619517698092803,
         "trades": 62,
         "winRatePct": 58.06451612903226,
         "profitFactor": 2.0088058397276907,
@@ -24902,8 +24902,8 @@
       {
         "key": "trailing-forward-test",
         "label": "Trailing stop 1.5R/1.5R vs current no-trail production (forward test since 2026-09-22)",
-        "equity": 10397.0044671889,
-        "returnPct": 3.9700446718890086,
+        "equity": 10397.86933489493,
+        "returnPct": 3.9786933489492915,
         "trades": 3,
         "winRatePct": 66.66666666666666,
         "profitFactor": 4.682373221960774,
@@ -24913,8 +24913,8 @@
       {
         "key": "high-conviction",
         "label": "Conviction 55 (trades rarely; tests whether selectivity alone helps)",
-        "equity": 9949.874093728844,
-        "returnPct": -0.5012590627115605,
+        "equity": 9950.262682026858,
+        "returnPct": -0.49737317973142126,
         "trades": 1,
         "winRatePct": 0,
         "profitFactor": 0,
@@ -24924,8 +24924,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9559.789531137341,
-        "returnPct": -4.402104688626586,
+        "equity": 9557.7669155656,
+        "returnPct": -4.422330844343996,
         "trades": 111,
         "winRatePct": 42.34234234234234,
         "profitFactor": 1.002313543529514,
@@ -24935,8 +24935,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10576.209282893204,
-        "returnPct": 5.762092828932036,
+        "equity": 10577.19540453413,
+        "returnPct": 5.7719540453413,
         "trades": 270,
         "winRatePct": 43.7037037037037,
         "profitFactor": 1.344336384984146,
@@ -24946,8 +24946,8 @@
       {
         "key": "top-trader",
         "label": "Refuses entries while OKX top traders are net-short",
-        "equity": 9713.886625933756,
-        "returnPct": -2.8611337406624444,
+        "equity": 9747.222419484253,
+        "returnPct": -2.527775805157471,
         "trades": 8,
         "winRatePct": 25,
         "profitFactor": 0.19445315884786804,
@@ -24957,8 +24957,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11530.61617051512,
-        "returnPct": 15.306161705151208,
+        "equity": 11549.064840644372,
+        "returnPct": 15.490648406443725,
         "trades": 50,
         "winRatePct": 57.99999999999999,
         "profitFactor": 1.9979365870115664,
@@ -24968,8 +24968,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10689.75232507088,
-        "returnPct": 6.897523250708801,
+        "equity": 10707.127759563546,
+        "returnPct": 7.071277595635456,
         "trades": 21,
         "winRatePct": 61.904761904761905,
         "profitFactor": 1.9370133018967872,
@@ -25076,27 +25076,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1789130690342,
-      "intentId": "SOLEUR:1789130690342",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused SOLEUR: no exposure headroom: 5876.11 already deployed of the 60% total-exposure limit"
-    },
-    {
-      "timestamp": 1789130690342,
-      "intentId": "DOGEEUR:1789130690342",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused DOGEEUR: no exposure headroom: 5876.11 already deployed of the 60% total-exposure limit"
-    },
-    {
-      "timestamp": 1789131028718,
-      "intentId": "SOLEUR:1789131028718",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused SOLEUR: no exposure headroom: 5910.31 already deployed of the 60% total-exposure limit"
-    },
     {
       "timestamp": 1789131028718,
       "intentId": "LTCEUR:1789131028718",
@@ -32072,6 +32051,27 @@
     {
       "timestamp": 1790422939273,
       "intentId": "AVAXEUR:1790422939273",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AVAXEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790423298455,
+      "intentId": "FILEUR:1790423298455",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused FILEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790423298455,
+      "intentId": "HNTEUR:1790423298455",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused HNTEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790423298455,
+      "intentId": "AVAXEUR:1790423298455",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused AVAXEUR: maximum open positions reached (5/5)"
@@ -54501,7 +54501,7 @@
       "takeProfit": 0.8568983157789752,
       "feesPaid": 5.806794700088407,
       "realizedPnl": 0,
-      "highestPrice": 0.7926,
+      "highestPrice": 0.8059,
       "lowestPrice": 0.7883,
       "confidence": 48.6290781429248,
       "validationVerdict": null,
@@ -80798,6 +80798,10 @@
     {
       "at": 1790422939273,
       "equity": 57.83
+    },
+    {
+      "at": 1790423298455,
+      "equity": 57.83
     }
   ],
   "live:revolut-x-order-map": {
@@ -81381,13 +81385,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790422939273,
+    "at": 1790423298455,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "55 candidates, production defaults (forward test only — not real trading)",
-        "equity": 10125.975500075963,
-        "returnPct": 1.259755000759633,
+        "equity": 10121.233038100982,
+        "returnPct": 1.212330381009815,
         "trades": 48,
         "winRatePct": 39.58333333333333,
         "profitFactor": 1.089496733808228,
@@ -81465,7 +81469,7 @@
       "takeProfit": 286.21651212367624,
       "feesPaid": 0.02330583074553942,
       "realizedPnl": 0,
-      "highestPrice": 283.2913,
+      "highestPrice": 284.5,
       "lowestPrice": 262.8706,
       "confidence": 48.23272091402735,
       "validationVerdict": null,
@@ -83044,6 +83048,13 @@
     {
       "timestamp": 1790422939273,
       "intentId": "FETEUR:1790422939273",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused FETEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790423298455,
+      "intentId": "FETEUR:1790423298455",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused FETEUR: maximum open positions reached (5/5)"
