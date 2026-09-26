@@ -2584,10 +2584,17 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused AAVEEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790408286014,
+      "intentId": "AAVEEUR:1790408286014",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AAVEEUR: maximum open positions reached (5/5)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1790407937024,
+    "at": 1790408286014,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2603,10 +2610,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788144107780,
-      "equity": 10195.85
-    },
     {
       "at": 1788144417515,
       "equity": 10195.85
@@ -22602,6 +22605,10 @@
     {
       "at": 1790407937024,
       "equity": 10659.4
+    },
+    {
+      "at": 1790408286014,
+      "equity": 10653.79
     }
   ],
   "trade-journal": [
@@ -24707,7 +24714,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -24.12% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -24.24% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24805,13 +24812,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1790407937024,
+    "at": 1790408286014,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / AUTOPILOT_TRAILING / 4h gate / whale-flow)",
-        "equity": 11480.242118301037,
-        "returnPct": 14.802421183010376,
+        "equity": 11473.262104581241,
+        "returnPct": 14.732621045812412,
         "trades": 61,
         "winRatePct": 57.377049180327866,
         "profitFactor": 1.9115742691931323,
@@ -24821,8 +24828,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11613.982311973909,
-        "returnPct": 16.139823119739084,
+        "equity": 11616.417740493403,
+        "returnPct": 16.164177404934037,
         "trades": 62,
         "winRatePct": 58.06451612903226,
         "profitFactor": 2.0088058397276907,
@@ -24832,8 +24839,8 @@
       {
         "key": "trailing-forward-test",
         "label": "Trailing stop 1.5R/1.5R vs current no-trail production (forward test since 2026-09-22)",
-        "equity": 10312.660293247754,
-        "returnPct": 3.126602932477544,
+        "equity": 10306.390171973942,
+        "returnPct": 3.063901719739424,
         "trades": 3,
         "winRatePct": 66.66666666666666,
         "profitFactor": 4.682373221960774,
@@ -24843,8 +24850,8 @@
       {
         "key": "high-conviction",
         "label": "Conviction 55 (trades rarely; tests whether selectivity alone helps)",
-        "equity": 9907.323675096268,
-        "returnPct": -0.9267632490373218,
+        "equity": 9909.072322437332,
+        "returnPct": -0.9092767756266766,
         "trades": 1,
         "winRatePct": 0,
         "profitFactor": 0,
@@ -24854,8 +24861,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9557.045394492208,
-        "returnPct": -4.4295460550779175,
+        "equity": 9556.937726071254,
+        "returnPct": -4.430622739287465,
         "trades": 111,
         "winRatePct": 42.34234234234234,
         "profitFactor": 1.002313543529514,
@@ -24865,8 +24872,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10562.613338647869,
-        "returnPct": 5.626133386478687,
+        "equity": 10565.065610497348,
+        "returnPct": 5.650656104973478,
         "trades": 270,
         "winRatePct": 43.7037037037037,
         "profitFactor": 1.344336384984146,
@@ -24887,8 +24894,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11403.773574669096,
-        "returnPct": 14.03773574669096,
+        "equity": 11406.164922843012,
+        "returnPct": 14.061649228430124,
         "trades": 50,
         "winRatePct": 57.99999999999999,
         "profitFactor": 1.9979365870115664,
@@ -24898,8 +24905,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10559.464388959583,
-        "returnPct": 5.594643889595828,
+        "equity": 10562.06611159588,
+        "returnPct": 5.620661115958791,
         "trades": 21,
         "winRatePct": 61.904761904761905,
         "profitFactor": 1.9370133018967872,
@@ -44464,6 +44471,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused AAVEEUR: no exposure headroom: 6939.13 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1790408286014,
+      "intentId": "AAVEEUR:1790408286014",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AAVEEUR: no exposure headroom: 6933.02 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:no-confirm:open-positions": [
@@ -56700,6 +56714,13 @@
     {
       "timestamp": 1790407937024,
       "intentId": "AAVEEUR:1790407937024",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused AAVEEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1790408286014,
+      "intentId": "AAVEEUR:1790408286014",
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused AAVEEUR: OKX top traders are net-short"
@@ -80290,6 +80311,10 @@
     {
       "at": 1790407937024,
       "equity": 57.63
+    },
+    {
+      "at": 1790408286014,
+      "equity": 57.58
     }
   ],
   "live:revolut-x-order-map": {
@@ -80873,13 +80898,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790407937024,
+    "at": 1790408286014,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "55 candidates, production defaults (forward test only — not real trading)",
-        "equity": 10083.912635369405,
-        "returnPct": 0.8391263536940461,
+        "equity": 10087.108818258816,
+        "returnPct": 0.8710881825881552,
         "trades": 48,
         "winRatePct": 39.58333333333333,
         "profitFactor": 1.089496733808228,
@@ -82487,6 +82512,13 @@
     {
       "timestamp": 1790407937024,
       "intentId": "ONDOEUR:1790407937024",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ONDOEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790408286014,
+      "intentId": "ONDOEUR:1790408286014",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ONDOEUR: maximum open positions reached (5/5)"
@@ -85775,6 +85807,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused AAVEEUR: no exposure headroom: 6233.39 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1790408286014,
+      "intentId": "AAVEEUR:1790408286014",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AAVEEUR: no exposure headroom: 6227.91 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:trailing-forward-test:open-positions": [
