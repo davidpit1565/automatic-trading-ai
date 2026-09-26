@@ -21,7 +21,7 @@
       "takeProfit": 13.011969630108798,
       "feesPaid": 5.790688134985007,
       "realizedPnl": 0,
-      "highestPrice": 12.50432,
+      "highestPrice": 12.52548,
       "lowestPrice": 12.05363,
       "confidence": 49.9906584923515,
       "validationVerdict": null,
@@ -2626,10 +2626,17 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ATOMEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790421498542,
+      "intentId": "AEROEUR:1790421498542",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AEROEUR: maximum open positions reached (5/5)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1790421138876,
+    "at": 1790421498542,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2645,10 +2652,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788155819133,
-      "equity": 10195.85
-    },
     {
       "at": 1788156129106,
       "equity": 10195.85
@@ -22644,6 +22647,10 @@
     {
       "at": 1790421138876,
       "equity": 10707.86
+    },
+    {
+      "at": 1790421498542,
+      "equity": 10733.57
     }
   ],
   "trade-journal": [
@@ -24749,7 +24756,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -23.92% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -23.75% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24847,13 +24854,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1790421138876,
+    "at": 1790421498542,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / AUTOPILOT_TRAILING / 4h gate / whale-flow)",
-        "equity": 11533.440015690292,
-        "returnPct": 15.33440015690292,
+        "equity": 11560.960323355843,
+        "returnPct": 15.609603233558428,
         "trades": 61,
         "winRatePct": 57.377049180327866,
         "profitFactor": 1.9115742691931323,
@@ -24863,8 +24870,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11673.387074052122,
-        "returnPct": 16.733870740521215,
+        "equity": 11700.694990145083,
+        "returnPct": 17.006949901450827,
         "trades": 62,
         "winRatePct": 58.06451612903226,
         "profitFactor": 2.0088058397276907,
@@ -24874,8 +24881,8 @@
       {
         "key": "trailing-forward-test",
         "label": "Trailing stop 1.5R/1.5R vs current no-trail production (forward test since 2026-09-22)",
-        "equity": 10360.447773549748,
-        "returnPct": 3.604477735497476,
+        "equity": 10385.169167157646,
+        "returnPct": 3.851691671576464,
         "trades": 3,
         "winRatePct": 66.66666666666666,
         "profitFactor": 4.682373221960774,
@@ -24885,8 +24892,8 @@
       {
         "key": "high-conviction",
         "label": "Conviction 55 (trades rarely; tests whether selectivity alone helps)",
-        "equity": 9939.965092129476,
-        "returnPct": -0.6003490787052397,
+        "equity": 9945.211034152671,
+        "returnPct": -0.5478896584732865,
         "trades": 1,
         "winRatePct": 0,
         "profitFactor": 0,
@@ -24896,8 +24903,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9560.39715668778,
-        "returnPct": -4.396028433122192,
+        "equity": 9561.560810895551,
+        "returnPct": -4.384391891044488,
         "trades": 111,
         "winRatePct": 42.34234234234234,
         "profitFactor": 1.002313543529514,
@@ -24907,8 +24914,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10580.676153726996,
-        "returnPct": 5.806761537269958,
+        "equity": 10576.700404008006,
+        "returnPct": 5.767004040080064,
         "trades": 270,
         "winRatePct": 43.7037037037037,
         "profitFactor": 1.344336384984146,
@@ -24918,19 +24925,19 @@
       {
         "key": "top-trader",
         "label": "Refuses entries while OKX top traders are net-short",
-        "equity": 9677.44953205164,
-        "returnPct": -3.2255046794836018,
+        "equity": 9672.184372113923,
+        "returnPct": -3.27815627886077,
         "trades": 8,
         "winRatePct": 25,
         "profitFactor": 0.19445315884786804,
-        "openPositions": 1,
+        "openPositions": 2,
         "startedAt": 1786965153850
       },
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11462.103132765513,
-        "returnPct": 14.621031327655128,
+        "equity": 11488.916785787795,
+        "returnPct": 14.889167857877947,
         "trades": 50,
         "winRatePct": 57.99999999999999,
         "profitFactor": 1.9979365870115664,
@@ -24940,8 +24947,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10623.681310686052,
-        "returnPct": 6.2368131068605175,
+        "equity": 10649.831850678496,
+        "returnPct": 6.498318506784963,
         "trades": 21,
         "winRatePct": 61.904761904761905,
         "profitFactor": 1.9370133018967872,
@@ -24962,7 +24969,7 @@
       "takeProfit": 12.829696309721708,
       "feesPaid": 0.06656197868139042,
       "realizedPnl": 0,
-      "highestPrice": 12.50432,
+      "highestPrice": 12.56769,
       "lowestPrice": 12.04529,
       "confidence": 62.749221894985496,
       "validationVerdict": null,
@@ -43103,7 +43110,7 @@
       "takeProfit": 13.009789630108799,
       "feesPaid": 6.8350191926819175,
       "realizedPnl": 0,
-      "highestPrice": 12.50432,
+      "highestPrice": 12.56769,
       "lowestPrice": 12.04529,
       "confidence": 49.91892331314236,
       "validationVerdict": null,
@@ -44548,6 +44555,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ATOMEUR: no exposure headroom: 6925.34 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1790421498542,
+      "intentId": "AEROEUR:1790421498542",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AEROEUR: no exposure headroom: 7022.77 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:no-confirm:open-positions": [
@@ -44600,7 +44614,7 @@
       "takeProfit": 13.009789630108799,
       "feesPaid": 6.988358064432856,
       "realizedPnl": 0,
-      "highestPrice": 12.50432,
+      "highestPrice": 12.56769,
       "lowestPrice": 12.04529,
       "confidence": 41.91892331314236,
       "validationVerdict": null,
@@ -45858,6 +45872,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ATOMEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790421498542,
+      "intentId": "AEROEUR:1790421498542",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AEROEUR: maximum open positions reached (5/5)"
     }
   ],
   "shadow:fixed-stop:open-positions": [
@@ -53612,7 +53633,7 @@
   },
   "shadow:top-trader:shadow-started-at": 1786965153850,
   "shadow:top-trader:portfolio-engine": {
-    "cash": 8451.188430042092,
+    "cash": 6509.783401979201,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -347.7404262364242,
@@ -54401,6 +54422,25 @@
       "highestPrice": 0.4797,
       "lowestPrice": 0.3906,
       "confidence": 40.538688241158965,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "AEROEUR:1790421498542:1",
+      "symbol": "AEROEUR",
+      "openedAt": 1790421498542,
+      "entryPrice": 0.7883,
+      "quantity": 2455.408135687939,
+      "initialQuantity": 2455.408135687939,
+      "stopLoss": 0.7540008421105124,
+      "takeProfit": 0.8568983157789752,
+      "feesPaid": 5.806794700088407,
+      "realizedPnl": 0,
+      "highestPrice": 0.7883,
+      "lowestPrice": 0.7883,
+      "confidence": 48.6290781429248,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -56899,6 +56939,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused LINKEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1790421498542,
+      "intentId": "AEROEUR:1790421498542:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry AEROEUR: 2455.408135687939 @ 0.7883 (stop 0.7540008421105124, target 0.8568983157789752, confidence 49)"
     }
   ],
   "shadow:whale-flow:open-positions": [],
@@ -57818,7 +57865,7 @@
       "takeProfit": 13.009789630108799,
       "feesPaid": 6.861871396458188,
       "realizedPnl": 0,
-      "highestPrice": 12.50432,
+      "highestPrice": 12.56769,
       "lowestPrice": 12.04529,
       "confidence": 49.91892331314236,
       "validationVerdict": null,
@@ -58943,6 +58990,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ATOMEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790421498542,
+      "intentId": "AEROEUR:1790421498542",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AEROEUR: maximum open positions reached (5/5)"
     }
   ],
   "shadow:ai-judgment:trade-journal": [
@@ -80640,6 +80694,10 @@
     {
       "at": 1790421138876,
       "equity": 57.7
+    },
+    {
+      "at": 1790421498542,
+      "equity": 57.8
     }
   ],
   "live:revolut-x-order-map": {
@@ -80709,7 +80767,7 @@
       "entryPrice": 12.20122,
       "stopLoss": 11.7958451849456,
       "takeProfit": 13.011969630108798,
-      "highestPrice": 12.50432,
+      "highestPrice": 12.55203,
       "lowestPrice": 12.05533,
       "entrySlippage": 0,
       "openedAt": 1790344197646,
@@ -81223,13 +81281,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790421138876,
+    "at": 1790421498542,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "55 candidates, production defaults (forward test only — not real trading)",
-        "equity": 10149.628205410307,
-        "returnPct": 1.496282054103067,
+        "equity": 10154.204689018889,
+        "returnPct": 1.5420468901888853,
         "trades": 48,
         "winRatePct": 39.58333333333333,
         "profitFactor": 1.089496733808228,
@@ -81307,7 +81365,7 @@
       "takeProfit": 286.21651212367624,
       "feesPaid": 0.02330583074553942,
       "realizedPnl": 0,
-      "highestPrice": 281.5394,
+      "highestPrice": 282.2049,
       "lowestPrice": 262.8706,
       "confidence": 48.23272091402735,
       "validationVerdict": null,
@@ -81326,7 +81384,7 @@
       "takeProfit": 0.13742384518428916,
       "feesPaid": 6.058127157958666,
       "realizedPnl": 0,
-      "highestPrice": 0.1296,
+      "highestPrice": 0.1299,
       "lowestPrice": 0.1244,
       "confidence": 48.79914295950076,
       "validationVerdict": null,
@@ -84713,7 +84771,7 @@
       "takeProfit": 13.009789630108799,
       "feesPaid": 6.364888638466539,
       "realizedPnl": 0,
-      "highestPrice": 12.50432,
+      "highestPrice": 12.56769,
       "lowestPrice": 12.04529,
       "confidence": 49.91892331314236,
       "validationVerdict": null,
@@ -85236,6 +85294,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ATOMEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790421498542,
+      "intentId": "AEROEUR:1790421498542",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AEROEUR: maximum open positions reached (5/5)"
     }
   ],
   "shadow:correlation-capped:trade-journal": [
@@ -86209,6 +86274,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ATOMEUR: no exposure headroom: 6221.00 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1790421498542,
+      "intentId": "AEROEUR:1790421498542",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AEROEUR: no exposure headroom: 6308.53 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:trailing-forward-test:open-positions": [
@@ -86223,7 +86295,7 @@
       "takeProfit": 13.009789630108799,
       "feesPaid": 6.139873210477945,
       "realizedPnl": 0,
-      "highestPrice": 12.50432,
+      "highestPrice": 12.56769,
       "lowestPrice": 12.04529,
       "confidence": 49.91892331314236,
       "validationVerdict": null,
