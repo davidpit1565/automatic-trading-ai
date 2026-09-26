@@ -1,9 +1,9 @@
 {
   "portfolio-engine": {
-    "cash": 2113.745918658738,
+    "cash": 4367.416728610764,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 1063.409619912711,
+    "closedRealizedPnl": 1190.9044686607167,
     "dayAnchor": {
       "day": "2026-09-26",
       "equity": 10620.596318412194
@@ -24,25 +24,6 @@
       "highestPrice": 12.71309,
       "lowestPrice": 12.05363,
       "confidence": 49.9906584923515,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "DOTEUR:1790346962182:2",
-      "symbol": "DOTEUR",
-      "openedAt": 1790346962182,
-      "entryPrice": 1.0419,
-      "quantity": 2040.6718122699103,
-      "initialQuantity": 2040.6718122699103,
-      "stopLoss": 1.0106984580835259,
-      "takeProfit": 1.1043030838329484,
-      "feesPaid": 6.378527883612059,
-      "realizedPnl": 0,
-      "highestPrice": 1.1031,
-      "lowestPrice": 1.0281,
-      "confidence": 50.27859804881512,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -2682,13 +2663,20 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ATOMEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790435183542,
+      "intentId": "DOTEUR:1790346962182:2",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit DOTEUR: 2040.6718122699103 @ 1.1077 (take-profit)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1790434823419,
+    "at": 1790435183542,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "daily-summary-last-day": "2026-07-14",
@@ -24679,6 +24667,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 54.06667041867583,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "DOTEUR:1790346962182:2",
+      "symbol": "DOTEUR",
+      "entryTimestamp": 1790346962182,
+      "exitTimestamp": 1790435183542,
+      "entryPrice": 1.0419,
+      "exitPrice": 1.1077,
+      "positionSize": 2040.6718122699103,
+      "stopLoss": 1.0106984580835259,
+      "takeProfit": 1.1043030838329484,
+      "exitReason": "take-profit",
+      "fees": 13.159884382966197,
+      "slippage": 0,
+      "holdingDurationMs": 88221360,
+      "mfePct": 6.315385353680762,
+      "maePct": 1.3245033112582814,
+      "realizedPnl": 127.49484874800567,
+      "returnPct": 5.996439197619719,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 50.27859804881512,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
@@ -63763,6 +63774,20 @@
       "event": "filled",
       "mode": "live",
       "detail": "Revolut X order 3ecf7dae-ad7c-4afe-b6fe-17ce09b95909: filled"
+    },
+    {
+      "timestamp": 1790435208156,
+      "intentId": "live-entry:DOTEUR:1790346962182:exit:1790435183542",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "שבת/חג — יציאה הגנתית אושרה אוטומטית ללא אישור טלגרם"
+    },
+    {
+      "timestamp": 1790435208673,
+      "intentId": "live-entry:DOTEUR:1790346962182:exit:1790435183542",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "Revolut X order d5e92dc1-ac1d-4366-bdd1-761cd6263fe6: new"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -81110,6 +81135,10 @@
     {
       "at": 1790434823419,
       "equity": 58.05
+    },
+    {
+      "at": 1790435183542,
+      "equity": 58.05
     }
   ],
   "live:revolut-x-order-map": {
@@ -81138,7 +81167,8 @@
     "live-entry:LINKEUR:1790338952450": "6a5d0e61-b970-4f3c-91bb-0b652b1f6bc1",
     "live-entry:ATOMEUR:1790340349162": "220600e0-56c4-4a50-b72b-c1f3cef8e2ac",
     "live-entry:DOTEUR:1790346962182": "9d906dee-3cdf-46cb-8bad-502370b1c5d8",
-    "live-entry:ATOMEUR:1790340349162:exit:1790364916886": "3ecf7dae-ad7c-4afe-b6fe-17ce09b95909"
+    "live-entry:ATOMEUR:1790340349162:exit:1790364916886": "3ecf7dae-ad7c-4afe-b6fe-17ce09b95909",
+    "live-entry:DOTEUR:1790346962182:exit:1790435183542": "d5e92dc1-ac1d-4366-bdd1-761cd6263fe6"
   },
   "live:live-open-positions": {
     "external-reconcile:ALGOEUR:1790049640921": {
@@ -81209,7 +81239,7 @@
       "entryPrice": 1.0358,
       "stopLoss": 1.0106984580835259,
       "takeProfit": 1.1043030838329484,
-      "highestPrice": 1.0994,
+      "highestPrice": 1.1066,
       "lowestPrice": 1.0281,
       "entrySlippage": 0.06566527999999994,
       "openedAt": 1790347325449,
@@ -81231,7 +81261,8 @@
         "warnings": [
           "size capped by the 20% single-position limit"
         ]
-      }
+      },
+      "outstandingExitSubmittedAt": 1790435183542
     },
     "external-reconcile:XBTEUR:1790352192918": {
       "id": "external-reconcile:XBTEUR:1790352192918",
@@ -87027,10 +87058,6 @@
   ],
   "move-alert-buckets": {
     "LINKEUR:1790338952450:0": {
-      "neg": 0,
-      "pos": 0
-    },
-    "DOTEUR:1790346962182:2": {
       "neg": 0,
       "pos": 0
     },
