@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 4164.636621141043,
+    "cash": 2133.320445175209,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 1114.720153687743,
@@ -81,6 +81,25 @@
       "highestPrice": 137.9,
       "lowestPrice": 133.99,
       "confidence": 50.464058496909146,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "VELOEUR:1790526343821:4",
+      "symbol": "VELOEUR",
+      "openedAt": 1790526343821,
+      "entryPrice": 0.004469,
+      "quantity": 453175.30870486196,
+      "initialQuantity": 453175.30870486196,
+      "stopLoss": 0.004330727905739514,
+      "takeProfit": 0.0047455441885209705,
+      "feesPaid": 6.075721363806084,
+      "realizedPnl": 0,
+      "highestPrice": 0.004469,
+      "lowestPrice": 0.004469,
+      "confidence": 60.83695598042628,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -2656,12 +2675,19 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit XRPEUR: 1474.82967250357 @ 1.34031 (stop-loss)"
+    },
+    {
+      "timestamp": 1790526343821,
+      "intentId": "VELOEUR:1790526343821:4",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry VELOEUR: 453175.30870486196 @ 0.004469 (stop 0.004330727905739514, target 0.0047455441885209705, confidence 61)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1790525980917,
+    "at": 1790526343821,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -2675,10 +2701,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788225775024,
-      "equity": 10195.85
-    },
     {
       "at": 1788226086162,
       "equity": 10195.85
@@ -22674,6 +22696,10 @@
     {
       "at": 1790525980917,
       "equity": 10678.17
+    },
+    {
+      "at": 1790526343821,
+      "equity": 10689.32
     }
   ],
   "trade-journal": [
@@ -24825,7 +24851,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -24.94% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -24.84% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24858,7 +24884,7 @@
   },
   "shadow:live-mirror:shadow-started-at": 1785254092443,
   "shadow:live-mirror:portfolio-engine": {
-    "cash": 4658.664190584001,
+    "cash": 4618.362996803056,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 1885.2931245378609,
@@ -24923,24 +24949,24 @@
     }
   },
   "shadow-standings": {
-    "at": 1790525980917,
+    "at": 1790526343821,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / AUTOPILOT_TRAILING / 4h gate / whale-flow)",
-        "equity": 11528.936040787848,
-        "returnPct": 15.289360407878485,
+        "equity": 11548.42538400691,
+        "returnPct": 15.484253840069103,
         "trades": 62,
         "winRatePct": 58.06451612903226,
         "profitFactor": 1.982026027274331,
-        "openPositions": 4,
+        "openPositions": 5,
         "startedAt": 1785254092443
       },
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11588.400953258286,
-        "returnPct": 15.88400953258286,
+        "equity": 11593.957258488317,
+        "returnPct": 15.939572584883171,
         "trades": 62,
         "winRatePct": 58.06451612903226,
         "profitFactor": 2.0088058397276907,
@@ -24950,19 +24976,19 @@
       {
         "key": "trailing-forward-test",
         "label": "Trailing stop 1.5R/1.5R vs current no-trail production (forward test since 2026-09-22)",
-        "equity": 10345.699274562594,
-        "returnPct": 3.4569927456259393,
+        "equity": 10346.542863034709,
+        "returnPct": 3.465428630347087,
         "trades": 5,
         "winRatePct": 60,
         "profitFactor": 6.339497262661402,
-        "openPositions": 3,
+        "openPositions": 4,
         "startedAt": 1790108791371
       },
       {
         "key": "high-conviction",
         "label": "Conviction 55 (trades rarely; tests whether selectivity alone helps)",
-        "equity": 9923.83867776188,
-        "returnPct": -0.761613222381202,
+        "equity": 9934.136267659262,
+        "returnPct": -0.6586373234073836,
         "trades": 1,
         "winRatePct": 0,
         "profitFactor": 0,
@@ -24972,8 +24998,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9551.40044013994,
-        "returnPct": -4.485995598600603,
+        "equity": 9547.708329757414,
+        "returnPct": -4.522916702425864,
         "trades": 111,
         "winRatePct": 42.34234234234234,
         "profitFactor": 1.002313543529514,
@@ -24983,8 +25009,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10426.384998984766,
-        "returnPct": 4.2638499898476585,
+        "equity": 10407.10488885012,
+        "returnPct": 4.071048888501191,
         "trades": 272,
         "winRatePct": 43.38235294117647,
         "profitFactor": 1.306666792310542,
@@ -24994,19 +25020,19 @@
       {
         "key": "top-trader",
         "label": "Refuses entries while OKX top traders are net-short",
-        "equity": 9511.254624475736,
-        "returnPct": -4.887453755242641,
+        "equity": 9508.76210901016,
+        "returnPct": -4.912378909898398,
         "trades": 9,
         "winRatePct": 22.22222222222222,
         "profitFactor": 0.16029859909396144,
-        "openPositions": 3,
+        "openPositions": 4,
         "startedAt": 1786965153850
       },
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11378.655228981195,
-        "returnPct": 13.78655228981195,
+        "equity": 11384.1109671641,
+        "returnPct": 13.841109671641005,
         "trades": 50,
         "winRatePct": 57.99999999999999,
         "profitFactor": 1.9979365870115664,
@@ -25016,8 +25042,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10551.571407102652,
-        "returnPct": 5.5157140710265224,
+        "equity": 10562.81100279344,
+        "returnPct": 5.628110027934399,
         "trades": 21,
         "winRatePct": 61.904761904761905,
         "profitFactor": 1.9370133018967872,
@@ -43289,6 +43315,25 @@
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
       "exits": []
+    },
+    {
+      "id": "VELOEUR:1790526343821:4",
+      "symbol": "VELOEUR",
+      "openedAt": 1790526343821,
+      "entryPrice": 0.004469,
+      "quantity": 8990.971542955465,
+      "initialQuantity": 8990.971542955465,
+      "stopLoss": 0.004330727905739514,
+      "takeProfit": 0.0047455441885209705,
+      "feesPaid": 0.12054195547640394,
+      "realizedPnl": 0,
+      "highestPrice": 0.004469,
+      "lowestPrice": 0.004469,
+      "confidence": 60.83695598042628,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
     }
   ],
   "shadow:live-mirror:audit-log": [
@@ -44712,6 +44757,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry AAVEEUR: 16.693421900395997 @ 136.99 (stop 133.94080260765963, target 143.0883947846808, confidence 53)"
+    },
+    {
+      "timestamp": 1790526343821,
+      "intentId": "VELOEUR:1790526343821:4",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry VELOEUR: 8990.971542955465 @ 0.004469 (stop 0.004330727905739514, target 0.0047455441885209705, confidence 61)"
     }
   ],
   "shadow:no-confirm:open-positions": [
@@ -46050,6 +46102,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused AEROEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790526343821,
+      "intentId": "VELOEUR:1790526343821",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused VELOEUR: maximum open positions reached (5/5)"
     }
   ],
   "shadow:fixed-stop:open-positions": [
@@ -53827,7 +53886,7 @@
   },
   "shadow:top-trader:shadow-started-at": 1786965153850,
   "shadow:top-trader:portfolio-engine": {
-    "cash": 5703.919624891537,
+    "cash": 3799.806944937459,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -439.71829621359944,
@@ -54654,6 +54713,25 @@
       "highestPrice": 137.81,
       "lowestPrice": 134.05,
       "confidence": 53.48741331746782,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "VELOEUR:1790526343821:3",
+      "symbol": "VELOEUR",
+      "openedAt": 1790526343821,
+      "entryPrice": 0.004469,
+      "quantity": 424796.9182526438,
+      "initialQuantity": 424796.9182526438,
+      "stopLoss": 0.004330727905739514,
+      "takeProfit": 0.0047455441885209705,
+      "feesPaid": 5.695252283013195,
+      "realizedPnl": 0,
+      "highestPrice": 0.004469,
+      "lowestPrice": 0.004469,
+      "confidence": 60.83695598042628,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -57194,6 +57272,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit AEROEUR: 2455.408135687939 @ 0.7531 (stop-loss)"
+    },
+    {
+      "timestamp": 1790526343821,
+      "intentId": "VELOEUR:1790526343821:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry VELOEUR: 424796.9182526438 @ 0.004469 (stop 0.004330727905739514, target 0.0047455441885209705, confidence 61)"
     }
   ],
   "shadow:whale-flow:open-positions": [],
@@ -59289,6 +59374,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused AEROEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790526343821,
+      "intentId": "VELOEUR:1790526343821",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused VELOEUR: maximum open positions reached (5/5)"
     }
   ],
   "shadow:ai-judgment:trade-journal": [
@@ -63805,6 +63897,20 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1790526369420,
+      "intentId": "verify-symbol-exists",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "'VELO/EUR' not found among 384 tradable pairs from revolut-x; no pair with base 'VELO/EUR' listed at all"
+    },
+    {
+      "timestamp": 1790526369440,
+      "intentId": "live-entry:VELOEUR:1790526343821",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "could not verify 'VELO/EUR' as a currently tradable instrument on revolut-x (either it doesn't exist there, or the check itself failed) — refusing rather than guessing a symbol mapping"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -81767,6 +81873,10 @@
     {
       "at": 1790525980917,
       "equity": 57.95
+    },
+    {
+      "at": 1790526343821,
+      "equity": 57.96
     }
   ],
   "live:revolut-x-order-map": {
@@ -82318,13 +82428,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790525980917,
+    "at": 1790526343821,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "55 candidates, production defaults (forward test only — not real trading)",
-        "equity": 10173.735481771699,
-        "returnPct": 1.7373548177169869,
+        "equity": 10194.806119912151,
+        "returnPct": 1.9480611991215118,
         "trades": 52,
         "winRatePct": 42.30769230769231,
         "profitFactor": 1.116578148561517,
@@ -82421,7 +82531,7 @@
       "takeProfit": 0.5989062168761733,
       "feesPaid": 2.0080955476402678,
       "realizedPnl": 0,
-      "highestPrice": 0.5454,
+      "highestPrice": 0.5457,
       "lowestPrice": 0.5408,
       "confidence": 49.775976273381254,
       "validationVerdict": null,
@@ -84084,6 +84194,13 @@
       "stopLoss": 133.29080260765963,
       "takeProfit": 142.43839478468078,
       "queuedAt": 1790441752763
+    },
+    "VELOEUR": {
+      "symbol": "VELOEUR",
+      "entry": 0.004469,
+      "stopLoss": 0.004330727905739514,
+      "takeProfit": 0.0047455441885209705,
+      "queuedAt": 1790526343821
     }
   },
   "live:daily-loss": {
@@ -86571,6 +86688,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused AEROEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790526343821,
+      "intentId": "VELOEUR:1790526343821",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused VELOEUR: maximum open positions reached (5/5)"
     }
   ],
   "shadow:correlation-capped:trade-journal": [
@@ -87255,7 +87379,7 @@
   ],
   "shadow:trailing-forward-test:shadow-started-at": 1790108791371,
   "shadow:trailing-forward-test:portfolio-engine": {
-    "cash": 6218.508116550656,
+    "cash": 4142.166951107962,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 371.31523057312137,
@@ -87593,6 +87717,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ALGOEUR: 19927.37487278624 @ 0.10236 (stop-loss)"
+    },
+    {
+      "timestamp": 1790526343821,
+      "intentId": "VELOEUR:1790526343821:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry VELOEUR: 463220.13271947287 @ 0.004469 (stop 0.004330727905739514, target 0.0047455441885209705, confidence 61)"
     }
   ],
   "shadow:trailing-forward-test:open-positions": [
@@ -87648,6 +87779,25 @@
       "highestPrice": 137.81,
       "lowestPrice": 134.05,
       "confidence": 53.48741331746782,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "VELOEUR:1790526343821:3",
+      "symbol": "VELOEUR",
+      "openedAt": 1790526343821,
+      "entryPrice": 0.004469,
+      "quantity": 463220.13271947287,
+      "initialQuantity": 463220.13271947287,
+      "stopLoss": 0.004330727905739514,
+      "takeProfit": 0.0047455441885209705,
+      "feesPaid": 6.210392319369973,
+      "realizedPnl": 0,
+      "highestPrice": 0.004469,
+      "lowestPrice": 0.004469,
+      "confidence": 60.83695598042628,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -87785,6 +87935,10 @@
       "pos": 0
     },
     "AAVEEUR:1790441752763:4": {
+      "neg": 0,
+      "pos": 0
+    },
+    "VELOEUR:1790526343821:4": {
       "neg": 0,
       "pos": 0
     }
