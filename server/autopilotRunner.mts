@@ -653,20 +653,27 @@ async function latestPrices(
   return prices;
 }
 
-async function main(): Promise<void> {
-  const store = new FileStore(STATE_PATH);
-  const source = await pickSource();
-  if (source === null) {
-    console.error('No live market data source reachable — skipping cycle.');
-    process.exitCode = 1;
-    return;
-  }
-  const instruments = await source.getInstruments();
-  if (!instruments.ok) {
-    console.error('Could not load instruments — skipping cycle.');
-    process.exitCode = 1;
-    return;
-  }
+export interface ProductionAutopilot {
+  readonly autopilot: PaperAutoPilot;
+  readonly symbols: readonly string[];
+  readonly portfolio: PortfolioEngine;
+  readonly journal: TradeJournal;
+}
+
+/**
+ * Builds the SAME `PaperAutoPilot` instance production runs every cycle —
+ * extracted from `main()` (behavior-identical, pure refactor) so any other
+ * caller that needs the real, fully-gated pipeline (e.g. an on-demand CLI
+ * tip check, `scripts/checkTipNow.mts`) reuses it exactly rather than
+ * risking a subtly different reimplementation of a real-money decision
+ * pipeline. See each option's own inline comment for why it's set the way
+ * it is — unchanged from before this extraction.
+ */
+export async function buildProductionAutopilot(
+  store: FileStore,
+  source: MarketDataSource,
+  instruments: readonly Instrument[],
+): Promise<ProductionAutopilot> {
   // Trade ONLY the validated majors — see the CURATED_INSTRUMENTS doc
   // comment in krakenPublic.ts for the real-history measurements behind
   // each addition. The instrument list is broadened beyond this for
@@ -678,7 +685,7 @@ async function main(): Promise<void> {
   // CURATED_INSTRUMENTS, or a newly-curated symbol would be silently
   // excluded from real trading while the UI's "TRADED" badge (CURATED_BASES,
   // the same source array) kept claiming it traded.
-  const symbols = instruments.value.slice(0, CURATED_INSTRUMENTS.length).map((i) => i.symbol);
+  const symbols = instruments.slice(0, CURATED_INSTRUMENTS.length).map((i) => i.symbol);
 
   const journal = new TradeJournal(store);
   const positions = new PositionEngine(store, journal);
@@ -687,7 +694,7 @@ async function main(): Promise<void> {
     baseCurrency: 'EUR',
   });
   const regimeCheck = await buildRegimeCheck(source, symbols);
-  const marketRegimeCheck = await buildMarketRegimeCheck(source, instruments.value);
+  const marketRegimeCheck = await buildMarketRegimeCheck(source, instruments);
   const autopilot = new PaperAutoPilot({
     source,
     symbols,
@@ -738,6 +745,25 @@ async function main(): Promise<void> {
     // silently blocks every entry.
     whaleFlowCheck: buildWhaleFlowCheck(source) ?? undefined,
   });
+
+  return { autopilot, symbols, portfolio, journal };
+}
+
+async function main(): Promise<void> {
+  const store = new FileStore(STATE_PATH);
+  const source = await pickSource();
+  if (source === null) {
+    console.error('No live market data source reachable — skipping cycle.');
+    process.exitCode = 1;
+    return;
+  }
+  const instruments = await source.getInstruments();
+  if (!instruments.ok) {
+    console.error('Could not load instruments — skipping cycle.');
+    process.exitCode = 1;
+    return;
+  }
+  const { autopilot, symbols, portfolio, journal } = await buildProductionAutopilot(store, source, instruments.value);
 
   const telegram = {
     token: process.env['TELEGRAM_BOT_TOKEN'] ?? '',
