@@ -2637,7 +2637,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790590090616,
+    "at": 1790590438910,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2653,10 +2653,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788295938388,
-      "equity": 10195.85
-    },
     {
       "at": 1788296249254,
       "equity": 10195.85
@@ -22652,6 +22648,10 @@
     {
       "at": 1790590090616,
       "equity": 10608.2
+    },
+    {
+      "at": 1790590438910,
+      "equity": 10619.19
     }
   ],
   "trade-journal": [
@@ -24895,7 +24895,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -22.80% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -22.72% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24993,13 +24993,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1790590090616,
+    "at": 1790590438910,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / AUTOPILOT_TRAILING / 4h gate / whale-flow)",
-        "equity": 11516.231269106469,
-        "returnPct": 15.162312691064688,
+        "equity": 11529.215092267286,
+        "returnPct": 15.292150922672862,
         "trades": 66,
         "winRatePct": 56.060606060606055,
         "profitFactor": 1.9758262544796346,
@@ -25009,8 +25009,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11382.064380797907,
-        "returnPct": 13.820643807979069,
+        "equity": 11395.332104060995,
+        "returnPct": 13.953321040609953,
         "trades": 64,
         "winRatePct": 57.8125,
         "profitFactor": 1.9441673688990642,
@@ -25020,8 +25020,8 @@
       {
         "key": "trailing-forward-test",
         "label": "Trailing stop 1.5R/1.5R vs current no-trail production (forward test since 2026-09-22)",
-        "equity": 10141.654422117319,
-        "returnPct": 1.4165442211731898,
+        "equity": 10153.317743864834,
+        "returnPct": 1.533177438648345,
         "trades": 8,
         "winRatePct": 37.5,
         "profitFactor": 2.080982474969805,
@@ -25042,8 +25042,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9288.589451728545,
-        "returnPct": -7.114105482714549,
+        "equity": 9285.81122807287,
+        "returnPct": -7.141887719271307,
         "trades": 114,
         "winRatePct": 41.228070175438596,
         "profitFactor": 0.9277195483553461,
@@ -25053,8 +25053,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10338.063094867952,
-        "returnPct": 3.380630948679518,
+        "equity": 10365.57394163242,
+        "returnPct": 3.6557394163241956,
         "trades": 278,
         "winRatePct": 42.805755395683455,
         "profitFactor": 1.2630053629806484,
@@ -25075,8 +25075,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11176.053271331792,
-        "returnPct": 11.760532713317916,
+        "equity": 11189.080853764704,
+        "returnPct": 11.890808537647045,
         "trades": 52,
         "winRatePct": 57.692307692307686,
         "profitFactor": 1.9251319740666355,
@@ -25086,8 +25086,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10453.772229283994,
-        "returnPct": 4.537722292839935,
+        "equity": 10465.857904177574,
+        "returnPct": 4.658579041775738,
         "trades": 23,
         "winRatePct": 60.86956521739131,
         "profitFactor": 1.9932437764073607,
@@ -44312,6 +44312,20 @@
     {
       "timestamp": 1790589392771,
       "intentId": "UNIEUR:1790589392771",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused UNIEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790590438910,
+      "intentId": "FILEUR:1790590438910",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused FILEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790590438910,
+      "intentId": "UNIEUR:1790590438910",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused UNIEUR: maximum open positions reached (5/5)"
@@ -83837,6 +83851,10 @@
     {
       "at": 1790590090616,
       "equity": 57.56
+    },
+    {
+      "at": 1790590438910,
+      "equity": 57.61
     }
   ],
   "live:revolut-x-order-map": {
@@ -84388,13 +84406,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790590090616,
+    "at": 1790590438910,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "55 candidates, production defaults (forward test only — not real trading)",
-        "equity": 9933.764953148831,
-        "returnPct": -0.6623504685116859,
+        "equity": 9928.009433404728,
+        "returnPct": -0.7199056659527195,
         "trades": 59,
         "winRatePct": 40.67796610169492,
         "profitFactor": 1.0498670591999884,
