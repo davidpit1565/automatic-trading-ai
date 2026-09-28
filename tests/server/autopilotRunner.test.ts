@@ -1008,6 +1008,8 @@ describe('checkHelpRequests (David asked 2026-09-03 for a pinnable command list)
     expect(sent[0]).toContain('/status');
     expect(sent[0]).toContain('/pause');
     expect(sent[0]).toContain('/resume');
+    expect(sent[0]).toContain('אשר');
+    expect(sent[0]).toContain('דחה');
   });
 
   it('does nothing, and stashes the message back, for anything else', async () => {
