@@ -1904,7 +1904,7 @@ export async function checkStatusRequests(
   return true;
 }
 
-const HELP_MESSAGE = [
+export const HELP_MESSAGE = [
   '📋 פקודות זמינות:',
   '',
   '/status — מצב נוכחי של החשבון האמיתי: הון, מזומן, פוזיציות פתוחות, קניות/מכירות ב-24 השעות האחרונות.',
