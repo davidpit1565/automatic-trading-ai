@@ -1,5 +1,34 @@
 # PROJECT_STATE
 
+## Weekly coin review #2 — 11 new shadow candidates; fixed a real bug where the recurring Routine silently failed to run at all (2026-09-28)
+
+The first scheduled firing of the weekly coin-review Routine (2026-09-25's
+entry below) ran this morning but did **nothing** beyond staging local file
+edits it could never commit — `create_new_session_on_fire: true` spawns a
+session with no `mcp__github__*` tools at all (confirmed via `get_session`:
+its tool list was `Bash/Write/Edit/Read/Glob/Grep/Agent/NotebookEdit/WebFetch/
+WebSearch/TaskStop/SearchMcpRegistry/SuggestConnectors/ListConnectors/Artifact`
+— no GitHub MCP), so it could never branch/PR/merge/dispatch the Telegram
+report as instructed. It ended `SESSION_STATUS_BUCKET_REVIEW_READY` with
+uncommitted local changes nobody could recover cleanly. **Fixed** by deleting
+that Routine and recreating it bound to THIS persistent session (the default
+`create_trigger` mode — fires into the same conversation, keeps the GitHub
+MCP tools this session already has) instead of a fresh spawned one. The
+win-rate check-in Routine (below, unrelated) already worked this way, which
+is what exposed the pattern to copy.
+
+**Redid this week's review manually here, same methodology.** Discovery scan
+(`discoverCryptoCandidates.mts 80`, real Kraken data) found 43 passing
+symbols; cross-checked against the now-66-entry `CANDIDATE_INSTRUMENTS` +
+20-entry `CURATED_INSTRUMENTS` — only 11 genuinely new: **MON, WLD, INJ, TON,
+NIGHT, LDO, APE, IMX, SHX, RUNE, SUPER**. Added to `CANDIDATE_INSTRUMENTS`
+(shadow-watch, simulated only). Re-ran `candidateReadiness.mts` against
+fresh `origin/main` state: busiest individual symbol (MINAEUR) has only 6 of
+its own trades, still far below the 20-trade bar — **nothing promoted to
+`CURATED_INSTRUMENTS`** this week either, same as last week.
+
+Gate: tsc clean, vitest green (count updated for the +11), build clean.
+
 ## Weekly coin review, made recurring — 13 new shadow candidates, per-symbol readiness tool built, nothing promoted (2026-09-25)
 
 David asked for an ongoing weekly process: look for coins worth adding, add
