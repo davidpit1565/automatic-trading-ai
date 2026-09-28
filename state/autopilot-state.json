@@ -2661,7 +2661,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790571875995,
+    "at": 1790572239427,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2677,10 +2677,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788279266975,
-      "equity": 10195.85
-    },
     {
       "at": 1788279577839,
       "equity": 10195.85
@@ -22676,6 +22672,10 @@
     {
       "at": 1790571875995,
       "equity": 10526.95
+    },
+    {
+      "at": 1790572239427,
+      "equity": 10507.93
     }
   ],
   "trade-journal": [
@@ -24873,7 +24873,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -24.61% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -24.70% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24971,13 +24971,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1790571875995,
+    "at": 1790572239427,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / AUTOPILOT_TRAILING / 4h gate / whale-flow)",
-        "equity": 11458.541911080287,
-        "returnPct": 14.585419110802869,
+        "equity": 11438.942667680327,
+        "returnPct": 14.389426676803268,
         "trades": 64,
         "winRatePct": 56.25,
         "profitFactor": 1.9094718268560336,
@@ -24987,8 +24987,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11449.496091316381,
-        "returnPct": 14.494960913163812,
+        "equity": 11443.690384222595,
+        "returnPct": 14.436903842225949,
         "trades": 63,
         "winRatePct": 57.14285714285714,
         "profitFactor": 1.9155230152114637,
@@ -24998,8 +24998,8 @@
       {
         "key": "trailing-forward-test",
         "label": "Trailing stop 1.5R/1.5R vs current no-trail production (forward test since 2026-09-22)",
-        "equity": 10182.986379614964,
-        "returnPct": 1.829863796149639,
+        "equity": 10186.902014471423,
+        "returnPct": 1.8690201447142316,
         "trades": 7,
         "winRatePct": 42.857142857142854,
         "profitFactor": 2.084362230763599,
@@ -25009,8 +25009,8 @@
       {
         "key": "high-conviction",
         "label": "Conviction 55 (trades rarely; tests whether selectivity alone helps)",
-        "equity": 9940.353680427492,
-        "returnPct": -0.5964631957250822,
+        "equity": 9919.369912334714,
+        "returnPct": -0.8063008766528583,
         "trades": 1,
         "winRatePct": 0,
         "profitFactor": 0,
@@ -25020,8 +25020,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9501.876071331006,
-        "returnPct": -4.981239286689942,
+        "equity": 9501.648278771367,
+        "returnPct": -4.983517212286333,
         "trades": 112,
         "winRatePct": 41.964285714285715,
         "profitFactor": 1.0023080066227283,
@@ -25031,8 +25031,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10266.710460506258,
-        "returnPct": 2.6671046050625775,
+        "equity": 10266.615041737023,
+        "returnPct": 2.666150417370227,
         "trades": 277,
         "winRatePct": 42.96028880866426,
         "profitFactor": 1.2636059325362825,
@@ -25053,8 +25053,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11242.264493103028,
-        "returnPct": 12.422644931030282,
+        "equity": 11236.563867136847,
+        "returnPct": 12.36563867136847,
         "trades": 51,
         "winRatePct": 56.86274509803921,
         "profitFactor": 1.8926149055380916,
@@ -25064,8 +25064,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10465.284685064606,
-        "returnPct": 4.652846850646056,
+        "equity": 10448.492781513132,
+        "returnPct": 4.484927815131322,
         "trades": 22,
         "winRatePct": 59.09090909090909,
         "profitFactor": 1.8229386516514359,
@@ -43497,6 +43497,20 @@
     {
       "timestamp": 1790571875995,
       "intentId": "AEROEUR:1790571875995",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AEROEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790572239427,
+      "intentId": "UNIEUR:1790572239427",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused UNIEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790572239427,
+      "intentId": "AEROEUR:1790572239427",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused AEROEUR: maximum open positions reached (5/5)"
@@ -82744,6 +82758,10 @@
     {
       "at": 1790571875995,
       "equity": 57.77
+    },
+    {
+      "at": 1790572239427,
+      "equity": 57.79
     }
   ],
   "live:revolut-x-order-map": {
@@ -83295,13 +83313,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790571875995,
+    "at": 1790572239427,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "55 candidates, production defaults (forward test only — not real trading)",
-        "equity": 10213.689565157681,
-        "returnPct": 2.1368956515768147,
+        "equity": 10202.41069792971,
+        "returnPct": 2.024106979297103,
         "trades": 54,
         "winRatePct": 44.44444444444444,
         "profitFactor": 1.1683324137347255,
@@ -83399,7 +83417,7 @@
       "feesPaid": 2.081869572253927,
       "realizedPnl": 0,
       "highestPrice": 0.12702,
-      "lowestPrice": 0.12265,
+      "lowestPrice": 0.12235,
       "confidence": 49.602835364693114,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
