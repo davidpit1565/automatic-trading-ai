@@ -1,0 +1,29 @@
+# One-time dispatch: re-sends the bot's own /help text to Telegram (now
+# documents the typed approve/reject alternative David asked about).
+# Deleted right after use — see scripts/sendHelpMessageOnce.mts's doc
+# comment.
+
+name: Send help message (one-time)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Send help message
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: npx tsx scripts/sendHelpMessageOnce.mts
