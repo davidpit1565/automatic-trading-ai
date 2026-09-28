@@ -207,6 +207,33 @@ export const CANDIDATE_INSTRUMENTS: Instrument[] = [
   { symbol: 'VIRTUALEUR', base: 'VIRTUAL', quote: 'EUR' },
   { symbol: 'CAKEEUR', base: 'CAKE', quote: 'EUR' },
   { symbol: 'GRASSEUR', base: 'GRASS', quote: 'EUR' },
+  // Added 2026-09-28 from that week's on-demand market-scan run (top 80 EUR
+  // pairs by 24h volume, real Kraken history, ~720 1h candles, 4h
+  // confirmation): 43 symbols passed net-positive + PF>1 + >5 trades. Of
+  // those, only these 11 were genuinely new (everything else was already
+  // tracked here or in `CURATED_INSTRUMENTS`): MON +0.88%/PF 1.22/10t, WLD
+  // +1.85%/PF 1.31/13t, INJ +0.22%/PF 1.06/7t, TON +0.08%/PF 1.02/11t, NIGHT
+  // +0.70%/PF 1.22/10t, LDO +0.70%/PF 1.19/10t, APE +0.19%/PF 1.10/8t, IMX
+  // +0.95%/PF 1.36/11t, SHX +0.18%/PF 1.12/11t, RUNE +0.62%/PF 1.17/12t,
+  // SUPER +3.57%/PF 2.13/14t. Revolut X tradability NOT verified for any of
+  // these (no live broker check run this session) — required before any
+  // future promotion to `CURATED_INSTRUMENTS`. Also re-checked whether
+  // anything already tracked here is individually mature enough to promote
+  // (`candidateReadiness.mts`, per-symbol trade count, independent of the
+  // pooled basket standing): the busiest single symbol (MINAEUR) has only 6
+  // of its own closed trades, still far below `SHADOW_MEANINGFUL_TRADES`
+  // (20) — nothing promoted this week either.
+  { symbol: 'MONEUR', base: 'MON', quote: 'EUR' },
+  { symbol: 'WLDEUR', base: 'WLD', quote: 'EUR' },
+  { symbol: 'INJEUR', base: 'INJ', quote: 'EUR' },
+  { symbol: 'TONEUR', base: 'TON', quote: 'EUR' },
+  { symbol: 'NIGHTEUR', base: 'NIGHT', quote: 'EUR' },
+  { symbol: 'LDOEUR', base: 'LDO', quote: 'EUR' },
+  { symbol: 'APEEUR', base: 'APE', quote: 'EUR' },
+  { symbol: 'IMXEUR', base: 'IMX', quote: 'EUR' },
+  { symbol: 'SHXEUR', base: 'SHX', quote: 'EUR' },
+  { symbol: 'RUNEEUR', base: 'RUNE', quote: 'EUR' },
+  { symbol: 'SUPEREUR', base: 'SUPER', quote: 'EUR' },
 ];
 
 /** Base asset codes (BTC, ETH, …) actually traded by the agent — for the UI's
