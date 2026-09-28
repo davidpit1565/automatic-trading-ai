@@ -1,0 +1,30 @@
+# On-demand CLI equivalent of Telegram's /tip (David asked 2026-09-28: "is
+# there a good trade right now for my idle cash?"). workflow_dispatch only —
+# no schedule, since this isn't a recurring need, just a way to get a real
+# answer (with Telegram credentials) on demand instead of typing /tip into
+# the bot and waiting for the next autopilot cycle to answer it.
+
+name: Check tip now (on-demand)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check for a live trading opportunity
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: npx tsx scripts/checkTipNow.mts
