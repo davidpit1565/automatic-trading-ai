@@ -2624,7 +2624,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790598853240,
+    "at": 1790599220280,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -65382,6 +65382,27 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1790599240833,
+      "intentId": "live-entry:LINKEUR:1790338952450:exit:1790598118344",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram (button)"
+    },
+    {
+      "timestamp": 1790599241373,
+      "intentId": "live-entry:LINKEUR:1790338952450:exit:1790598118344",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "Revolut X order 73a40985-d18c-456f-a61c-b00afd401a74: new"
+    },
+    {
+      "timestamp": 1790599242048,
+      "intentId": "external-reconcile:ALGOEUR:1790598485161:exit:1790599220280",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -84084,6 +84105,10 @@
     {
       "at": 1790598853240,
       "equity": 58.34
+    },
+    {
+      "at": 1790599220280,
+      "equity": 58.23
     }
   ],
   "live:revolut-x-order-map": {
@@ -84112,7 +84137,8 @@
     "live-entry:LINKEUR:1790338952450": "6a5d0e61-b970-4f3c-91bb-0b652b1f6bc1",
     "live-entry:ATOMEUR:1790340349162": "220600e0-56c4-4a50-b72b-c1f3cef8e2ac",
     "live-entry:DOTEUR:1790346962182": "9d906dee-3cdf-46cb-8bad-502370b1c5d8",
-    "live-entry:ATOMEUR:1790340349162:exit:1790364916886": "3ecf7dae-ad7c-4afe-b6fe-17ce09b95909"
+    "live-entry:ATOMEUR:1790340349162:exit:1790364916886": "3ecf7dae-ad7c-4afe-b6fe-17ce09b95909",
+    "live-entry:LINKEUR:1790338952450:exit:1790598118344": "73a40985-d18c-456f-a61c-b00afd401a74"
   },
   "live:live-open-positions": {
     "external-reconcile:ALGOEUR:1790049640921": {
@@ -84173,7 +84199,8 @@
           "risking 0.34 (0.60% of equity) for a 2.0:1 reward/risk — within every configured limit"
         ],
         "warnings": []
-      }
+      },
+      "outstandingExitSubmittedAt": 1790599220280
     },
     "external-reconcile:XBTEUR:1790352192918": {
       "id": "external-reconcile:XBTEUR:1790352192918",
@@ -84214,7 +84241,7 @@
       "stopLoss": 0.11478205,
       "takeProfit": 0.12002589999999999,
       "highestPrice": 0.11653,
-      "lowestPrice": 0.11577,
+      "lowestPrice": 0.11427,
       "entrySlippage": 0,
       "openedAt": 1790598485161,
       "entryAssessment": {
@@ -84236,7 +84263,12 @@
       }
     }
   },
-  "telegram-unclaimed-messages": [],
+  "telegram-unclaimed-messages": [
+    {
+      "updateId": 447905021,
+      "text": "/אשר"
+    }
+  ],
   "telegram-unclaimed-callbacks": [
     {
       "id": "7383943995548587904",
@@ -84643,12 +84675,12 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447905020,
+  "telegram-shared-update-offset": 447905022,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {
-    "live-entry:LINKEUR:1790338952450": {
-      "reason": "take-profit",
-      "queuedAt": 1790598118344
+    "external-reconcile:ALGOEUR:1790598485161": {
+      "reason": "stop-loss",
+      "queuedAt": 1790599220280
     }
   },
   "live:confirmation-gate-pending": {
@@ -84657,10 +84689,10 @@
       "messageId": 947,
       "token": "muhd271c.as4ydx"
     },
-    "live-entry:LINKEUR:1790338952450:exit:1790598118344": {
-      "sentAt": 1790598138237,
-      "messageId": 977,
-      "token": "mul7wdx9.y05ffb"
+    "external-reconcile:ALGOEUR:1790598485161:exit:1790599220280": {
+      "sentAt": 1790599241914,
+      "messageId": 981,
+      "token": "mul8k1iy.1eyvxlj"
     }
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
