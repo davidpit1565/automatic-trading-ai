@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <!-- Background — same deep-neutral gradient as the app shell's own cards,
+       so the icon reads as part of the same design system rather than an
+       older, disconnected mark (previous version used a bright neon green
+       and a blue accent; the app's palette has since moved to a muted
+       sage/dusty-rose pair with no blue anywhere — see styles.css :root). -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1f2a"/>
+      <stop offset="100%" stop-color="#07090d"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="180" rx="36" fill="url(#bg)"/>
+
+  <!-- Main candlestick body (bullish uptrend), the app's hot token -->
+  <rect x="50" y="75" width="24" height="65" fill="#4cd787" rx="2"/>
+
+  <!-- Candlestick wick (high) -->
+  <line x1="62" y1="40" x2="62" y2="75" stroke="#4cd787" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Candlestick wick (low) -->
+  <line x1="62" y1="140" x2="62" y2="160" stroke="#4cd787" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Agent accent: three ascending dots with connecting lines, in the same
+       bright-neutral tone the app uses for text-only emphasis (the
+       accent-text token) instead of a tinted primary. -->
+  <circle cx="95" cy="125" r="4" fill="#dbdfe8"/>
+  <circle cx="110" cy="105" r="4" fill="#dbdfe8"/>
+  <circle cx="125" cy="85" r="4" fill="#dbdfe8"/>
+
+  <!-- Connecting lines between dots (neural network style) -->
+  <line x1="95" y1="125" x2="110" y2="105" stroke="#dbdfe8" stroke-width="1.5" opacity="0.5" stroke-linecap="round"/>
+  <line x1="110" y1="105" x2="125" y2="85" stroke="#dbdfe8" stroke-width="1.5" opacity="0.5" stroke-linecap="round"/>
+  <line x1="95" y1="125" x2="125" y2="85" stroke="#dbdfe8" stroke-width="1" opacity="0.3" stroke-linecap="round"/>
+
+  <!-- Corner accent glow effect -->
+  <circle cx="125" cy="85" r="12" fill="none" stroke="#dbdfe8" stroke-width="1" opacity="0.3"/>
+</svg>
