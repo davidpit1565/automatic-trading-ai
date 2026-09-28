@@ -2637,7 +2637,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790609494304,
+    "at": 1790609863482,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2653,10 +2653,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788299971239,
-      "equity": 10195.85
-    },
     {
       "at": 1788300281234,
       "equity": 10195.85
@@ -22652,6 +22648,10 @@
     {
       "at": 1790609494304,
       "equity": 10695.01
+    },
+    {
+      "at": 1790609863482,
+      "equity": 10708.38
     }
   ],
   "trade-journal": [
@@ -24895,7 +24895,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -22.61% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -22.77% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24993,13 +24993,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1790609494304,
+    "at": 1790609863482,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / AUTOPILOT_TRAILING / 4h gate / whale-flow)",
-        "equity": 11618.723537147232,
-        "returnPct": 16.187235371472326,
+        "equity": 11634.506950486139,
+        "returnPct": 16.345069504861385,
         "trades": 66,
         "winRatePct": 56.060606060606055,
         "profitFactor": 1.9758262544796346,
@@ -25009,8 +25009,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11528.418045559401,
-        "returnPct": 15.284180455594015,
+        "equity": 11544.692132064327,
+        "returnPct": 15.44692132064327,
         "trades": 64,
         "winRatePct": 57.8125,
         "profitFactor": 1.9441673688990642,
@@ -25020,8 +25020,8 @@
       {
         "key": "trailing-forward-test",
         "label": "Trailing stop 1.5R/1.5R vs current no-trail production (forward test since 2026-09-22)",
-        "equity": 10233.722858662219,
-        "returnPct": 2.3372285866221865,
+        "equity": 10247.901042219217,
+        "returnPct": 2.479010422192168,
         "trades": 8,
         "winRatePct": 37.5,
         "profitFactor": 2.080982474969805,
@@ -25042,8 +25042,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9234.101730405851,
-        "returnPct": -7.658982695941486,
+        "equity": 9258.639111431508,
+        "returnPct": -7.4136088856849165,
         "trades": 116,
         "winRatePct": 40.51724137931034,
         "profitFactor": 0.8981629912566741,
@@ -25053,8 +25053,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10424.419829892406,
-        "returnPct": 4.244198298924057,
+        "equity": 10441.728387539422,
+        "returnPct": 4.417283875394223,
         "trades": 279,
         "winRatePct": 43.01075268817204,
         "profitFactor": 1.2974430947347053,
@@ -25075,8 +25075,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11319.75798948367,
-        "returnPct": 13.197579894836709,
+        "equity": 11335.737521107842,
+        "returnPct": 13.357375211078415,
         "trades": 52,
         "winRatePct": 57.692307692307686,
         "profitFactor": 1.9251319740666355,
@@ -25086,8 +25086,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10587.318549113199,
-        "returnPct": 5.87318549113199,
+        "equity": 10602.11044445514,
+        "returnPct": 6.021104444551402,
         "trades": 23,
         "winRatePct": 60.86956521739131,
         "profitFactor": 1.9932437764073607,
@@ -38626,7 +38626,7 @@
       "takeProfit": 1.599439785001763,
       "feesPaid": 5.266379178137835,
       "realizedPnl": 0,
-      "highestPrice": 1.4987,
+      "highestPrice": 1.5037,
       "lowestPrice": 1.4831,
       "confidence": 34.560527408027326,
       "validationVerdict": null,
@@ -65374,6 +65374,13 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1790609883658,
+      "intentId": "external-reconcile:ALGOEUR:1790606205804:exit:1790608395162",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -84027,6 +84034,10 @@
     {
       "at": 1790609494304,
       "equity": 58.25
+    },
+    {
+      "at": 1790609863482,
+      "equity": 58.29
     }
   ],
   "live:revolut-x-order-map": {
@@ -84567,22 +84578,12 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905037,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "external-reconcile:ALGOEUR:1790606205804": {
-      "reason": "stop-loss",
-      "queuedAt": 1790608395162
-    }
-  },
+  "live:live-exit-pending": {},
   "live:confirmation-gate-pending": {
     "live-entry:ATOMEUR:1790340349162:exit:1790364916886": {
       "sentAt": 1790364942624,
       "messageId": 947,
       "token": "muhd271c.as4ydx"
-    },
-    "external-reconcile:ALGOEUR:1790606205804:exit:1790608395162": {
-      "sentAt": 1790608415510,
-      "messageId": 998,
-      "token": "mule0nx2.12v0dci"
     }
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
@@ -84597,13 +84598,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790609494304,
+    "at": 1790609863482,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "55 candidates, production defaults (forward test only — not real trading)",
-        "equity": 9922.253913660623,
-        "returnPct": -0.7774608633937714,
+        "equity": 9993.238657171238,
+        "returnPct": -0.0676134282876228,
         "trades": 59,
         "winRatePct": 40.67796610169492,
         "profitFactor": 1.0498670591999884,
