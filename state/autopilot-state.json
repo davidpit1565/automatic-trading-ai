@@ -1,9 +1,9 @@
 {
   "portfolio-engine": {
-    "cash": 6447.54419716076,
+    "cash": 8714.652353770703,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 970.6483863148164,
+    "closedRealizedPnl": 1122.8006434107167,
     "dayAnchor": {
       "day": "2026-09-28",
       "equity": 10633.649318773765
@@ -24,25 +24,6 @@
       "highestPrice": 12.64681,
       "lowestPrice": 11.94184,
       "confidence": 49.9906584923515,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "ALGOEUR:1790351065658:3",
-      "symbol": "ALGOEUR",
-      "openedAt": 1790351065658,
-      "entryPrice": 0.10204,
-      "quantity": 20726.733629106668,
-      "initialQuantity": 20726.733629106668,
-      "stopLoss": 0.09891146237949405,
-      "takeProfit": 0.1082970752410119,
-      "feesPaid": 6.344867698542134,
-      "realizedPnl": 0,
-      "highestPrice": 0.10821,
-      "lowestPrice": 0.09898,
-      "confidence": 63.45699576533356,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -2646,13 +2627,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 1194.841463443643 @ 0.216636 (stop-loss)"
+    },
+    {
+      "timestamp": 1790586951992,
+      "intentId": "ALGOEUR:1790351065658:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ALGOEUR: 20726.733629106668 @ 0.10971 (take-profit)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1790586601989,
+    "at": 1790586951992,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "daily-summary-last-day": "2026-07-14",
@@ -2665,10 +2653,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788292832780,
-      "equity": 10195.85
-    },
     {
       "at": 1788293143903,
       "equity": 10195.85
@@ -22664,6 +22648,10 @@
     {
       "at": 1790586601989,
       "equity": 10579.99
+    },
+    {
+      "at": 1790586951992,
+      "equity": 10620.19
     }
   ],
   "trade-journal": [
@@ -24759,6 +24747,29 @@
       "validationVerdict": null,
       "confidence": 56.677391368927445,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "ALGOEUR:1790351065658:3",
+      "symbol": "ALGOEUR",
+      "entryTimestamp": 1790351065658,
+      "exitTimestamp": 1790586951992,
+      "entryPrice": 0.10204,
+      "exitPrice": 0.10970999999999999,
+      "positionSize": 20726.733629106668,
+      "stopLoss": 0.09891146237949405,
+      "takeProfit": 0.1082970752410119,
+      "exitReason": "take-profit",
+      "fees": 13.16665753789001,
+      "slippage": 0,
+      "holdingDurationMs": 235886334,
+      "mfePct": 7.5166601332810625,
+      "maePct": 2.9988239905919314,
+      "realizedPnl": 152.15225709590018,
+      "returnPct": 7.194110152881218,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 63.45699576533356,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "alerted-trade-ids": [
@@ -24869,7 +24880,7 @@
       {
         "key": "trades",
         "ok": true,
-        "detail": "91 / 20 closed trades"
+        "detail": "92 / 20 closed trades"
       },
       {
         "key": "days",
@@ -24879,12 +24890,12 @@
       {
         "key": "profitable",
         "ok": true,
-        "detail": "after-fee return +9.71%"
+        "detail": "after-fee return +11.23%"
       },
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -22.96% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -22.93% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24894,7 +24905,7 @@
       {
         "key": "consistency",
         "ok": true,
-        "detail": "profit factor 1.38 (needs ≥ 1.2)"
+        "detail": "profit factor 1.44 (needs ≥ 1.2)"
       }
     ],
     "summary": "READY — the paper record clears every safety threshold (not a profit guarantee).",
@@ -24982,13 +24993,13 @@
     }
   },
   "shadow-standings": {
-    "at": 1790586601989,
+    "at": 1790586951992,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / AUTOPILOT_TRAILING / 4h gate / whale-flow)",
-        "equity": 11511.098998386398,
-        "returnPct": 15.110989983863984,
+        "equity": 11530.393572188817,
+        "returnPct": 15.303935721888173,
         "trades": 66,
         "winRatePct": 56.060606060606055,
         "profitFactor": 1.9758262544796346,
@@ -24998,8 +25009,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11376.647164868446,
-        "returnPct": 13.766471648684456,
+        "equity": 11396.943080917037,
+        "returnPct": 13.969430809170372,
         "trades": 64,
         "winRatePct": 57.8125,
         "profitFactor": 1.9441673688990642,
@@ -25009,8 +25020,8 @@
       {
         "key": "trailing-forward-test",
         "label": "Trailing stop 1.5R/1.5R vs current no-trail production (forward test since 2026-09-22)",
-        "equity": 10137.044121748768,
-        "returnPct": 1.3704412174876779,
+        "equity": 10154.37636814888,
+        "returnPct": 1.5437636814887992,
         "trades": 8,
         "winRatePct": 37.5,
         "profitFactor": 2.080982474969805,
@@ -25031,8 +25042,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9267.082340531408,
-        "returnPct": -7.329176594685924,
+        "equity": 9295.471553837599,
+        "returnPct": -7.045284461624014,
         "trades": 114,
         "winRatePct": 41.228070175438596,
         "profitFactor": 0.9277195483553461,
@@ -25042,8 +25053,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10292.887556214264,
-        "returnPct": 2.9288755621426388,
+        "equity": 10321.810093343356,
+        "returnPct": 3.2181009334335613,
         "trades": 278,
         "winRatePct": 42.805755395683455,
         "profitFactor": 1.2630053629806484,
@@ -25064,8 +25075,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11170.734104985122,
-        "returnPct": 11.707341049851221,
+        "equity": 11190.662672542006,
+        "returnPct": 11.906626725420065,
         "trades": 52,
         "winRatePct": 57.692307692307686,
         "profitFactor": 1.9251319740666355,
@@ -25075,8 +25086,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10448.875972233262,
-        "returnPct": 4.488759722332616,
+        "equity": 10467.235101494607,
+        "returnPct": 4.672351014946071,
         "trades": 23,
         "winRatePct": 60.86956521739131,
         "profitFactor": 1.9932437764073607,
@@ -25116,7 +25127,7 @@
       "takeProfit": 0.11463867697233251,
       "feesPaid": 6.159023362244008,
       "realizedPnl": 0,
-      "highestPrice": 0.10844,
+      "highestPrice": 0.10972,
       "lowestPrice": 0.10646,
       "confidence": 59.22899051422487,
       "validationVerdict": null,
@@ -38611,7 +38622,7 @@
       "takeProfit": 1.6359162522798456,
       "feesPaid": 5.391576951742183,
       "realizedPnl": 0,
-      "highestPrice": 1.5491,
+      "highestPrice": 1.5567,
       "lowestPrice": 1.5397,
       "confidence": 30.426157401862554,
       "validationVerdict": null,
@@ -44126,6 +44137,20 @@
     {
       "timestamp": 1790586601989,
       "intentId": "UNIEUR:1790586601989",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused UNIEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790586951992,
+      "intentId": "FILEUR:1790586951992",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused FILEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790586951992,
+      "intentId": "UNIEUR:1790586951992",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused UNIEUR: maximum open positions reached (5/5)"
@@ -83611,6 +83636,10 @@
     {
       "at": 1790586601989,
       "equity": 57.53
+    },
+    {
+      "at": 1790586951992,
+      "equity": 57.62
     }
   ],
   "live:revolut-x-order-map": {
@@ -83650,7 +83679,7 @@
       "entryPrice": 0.09777,
       "stopLoss": 0.09630345,
       "takeProfit": 0.1007031,
-      "highestPrice": 0.10823,
+      "highestPrice": 0.10972,
       "lowestPrice": 0.09058,
       "entrySlippage": 0,
       "openedAt": 1790049640921,
@@ -84162,13 +84191,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790586601989,
+    "at": 1790586951992,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "55 candidates, production defaults (forward test only — not real trading)",
-        "equity": 9964.262632704445,
-        "returnPct": -0.3573736729555458,
+        "equity": 9985.434162260652,
+        "returnPct": -0.14565837739348353,
         "trades": 58,
         "winRatePct": 41.37931034482759,
         "profitFactor": 1.065672875231956,
@@ -89949,10 +89978,6 @@
   ],
   "move-alert-buckets": {
     "LINKEUR:1790338952450:0": {
-      "neg": 0,
-      "pos": 0
-    },
-    "ALGOEUR:1790351065658:3": {
       "neg": 0,
       "pos": 0
     }
