@@ -2624,7 +2624,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790704046861,
+    "at": 1790704402539,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2640,10 +2640,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788381180649,
-      "equity": 10195.85
-    },
     {
       "at": 1788381491098,
       "equity": 10195.85
@@ -22639,6 +22635,10 @@
     {
       "at": 1790704046861,
       "equity": 10788.48
+    },
+    {
+      "at": 1790704402539,
+      "equity": 10788.48
     }
   ],
   "trade-journal": [
@@ -24905,7 +24905,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -22.22% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -22.16% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -24993,17 +24993,17 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 6079.465726401231,
+    "cash": 6133.341742233293,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 1656.9127878211377,
+    "closedRealizedPnl": 1656.6952117846713,
     "dayAnchor": {
       "day": "2026-09-29",
       "equity": 10639.273062372231
     }
   },
   "shadow-standings": {
-    "at": 1790704046861,
+    "at": 1790704402539,
     "standings": [
       {
         "key": "live-mirror",
@@ -25052,8 +25052,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9305.471792404887,
-        "returnPct": -6.945282075951127,
+        "equity": 9284.908111893126,
+        "returnPct": -7.150918881068738,
         "trades": 119,
         "winRatePct": 41.17647058823529,
         "profitFactor": 0.9178257124391018,
@@ -25063,12 +25063,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10255.752239983158,
-        "returnPct": 2.5575223998315777,
-        "trades": 286,
-        "winRatePct": 42.65734265734265,
-        "profitFactor": 1.2735397501325947,
-        "openPositions": 3,
+        "equity": 10243.926981966632,
+        "returnPct": 2.4392698196663147,
+        "trades": 287,
+        "winRatePct": 42.508710801393725,
+        "profitFactor": 1.2734940066987832,
+        "openPositions": 2,
         "startedAt": 1785254092443
       },
       {
@@ -25119,7 +25119,7 @@
       "feesPaid": 6.295519919106427,
       "realizedPnl": 0,
       "highestPrice": 13.82602,
-      "lowestPrice": 12.89597,
+      "lowestPrice": 12.82803,
       "confidence": 64.1151940479094,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -25144,35 +25144,9 @@
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
       "exits": []
-    },
-    {
-      "id": "AAVEEUR:1790668115746:4",
-      "symbol": "AAVEEUR",
-      "openedAt": 1790668115746,
-      "entryPrice": 146.3,
-      "quantity": 0.3697443053214502,
-      "initialQuantity": 0.3697443053214502,
-      "stopLoss": 140.68401769324205,
-      "takeProfit": 157.53196461351592,
-      "feesPaid": 0.1622807756055845,
-      "realizedPnl": 0,
-      "highestPrice": 154.88,
-      "lowestPrice": 145.88,
-      "confidence": 70,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1789419167819,
-      "intentId": "HNTEUR:1789419167819",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused HNTEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1789419167819,
       "intentId": "DOTEUR:1789419167819",
@@ -32165,6 +32139,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ALGOEUR: 16984.18041814119 @ 0.11094 (stop-loss)"
+    },
+    {
+      "timestamp": 1790704402539,
+      "intentId": "AAVEEUR:1790668115746:4",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit AAVEEUR: 0.3697443053214502 @ 146.15 (stop-loss)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -38744,6 +38725,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 58.90915836583162,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "AAVEEUR:1790668115746:4",
+      "symbol": "AAVEEUR",
+      "entryTimestamp": 1790668115746,
+      "exitTimestamp": 1790704402539,
+      "entryPrice": 146.3,
+      "exitPrice": 146.15,
+      "positionSize": 0.3697443053214502,
+      "stopLoss": 140.68401769324205,
+      "takeProfit": 157.53196461351592,
+      "exitReason": "stop-loss",
+      "fees": 0.3243951662737743,
+      "slippage": 0,
+      "holdingDurationMs": 36286793,
+      "mfePct": 5.864661654135327,
+      "maePct": 0.2870813397129295,
+      "realizedPnl": -0.21757603646640947,
+      "returnPct": -0.40222146274778237,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 70,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
@@ -85099,6 +85103,10 @@
     {
       "at": 1790704046861,
       "equity": 53.93
+    },
+    {
+      "at": 1790704402539,
+      "equity": 53.92
     }
   ],
   "live:revolut-x-order-map": {
@@ -85169,7 +85177,7 @@
       "stopLoss": 0.11547155,
       "takeProfit": 0.1207469,
       "highestPrice": 0.1234,
-      "lowestPrice": 0.10976,
+      "lowestPrice": 0.10974,
       "entrySlippage": 0,
       "openedAt": 1790606205804,
       "entryAssessment": {
@@ -85629,7 +85637,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790704046861,
+    "at": 1790704402539,
     "standings": [
       {
         "key": "candidate-watch",
