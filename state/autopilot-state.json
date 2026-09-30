@@ -2638,7 +2638,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790792637639,
+    "at": 1790793024108,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2654,10 +2654,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788474451850,
-      "equity": 10309.11
-    },
     {
       "at": 1788474790551,
       "equity": 10300.87
@@ -22653,6 +22649,10 @@
     {
       "at": 1790792637639,
       "equity": 10694.3
+    },
+    {
+      "at": 1790793024108,
+      "equity": 10694.3
     }
   ],
   "trade-journal": [
@@ -24942,7 +24942,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -24.22% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -24.31% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25040,7 +25040,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1790792637639,
+    "at": 1790793024108,
     "standings": [
       {
         "key": "live-mirror",
@@ -25089,8 +25089,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9313.989472780719,
-        "returnPct": -6.860105272192814,
+        "equity": 9310.889209647707,
+        "returnPct": -6.891107903522935,
         "trades": 119,
         "winRatePct": 41.17647058823529,
         "profitFactor": 0.9178257124391018,
@@ -25100,8 +25100,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10287.700266297961,
-        "returnPct": 2.877002662979612,
+        "equity": 10303.337927218061,
+        "returnPct": 3.033379272180609,
         "trades": 289,
         "winRatePct": 42.56055363321799,
         "profitFactor": 1.2793488225303158,
@@ -25232,7 +25232,7 @@
       "feesPaid": 0.20227770855993732,
       "realizedPnl": 0,
       "highestPrice": 1.5519,
-      "lowestPrice": 1.5302,
+      "lowestPrice": 1.527,
       "confidence": 70,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -25241,13 +25241,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1789419838931,
-      "intentId": "AAVEEUR:1789418493530:1",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper exit AAVEEUR: 17.1661918443506 @ 112.9 (stop-loss)"
-    },
     {
       "timestamp": 1789420174501,
       "intentId": "ETHEUR:1789420174501:4",
@@ -32240,6 +32233,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ATOMEUR: 43.44732447536081 @ 1.5519 (stop 1.5153849022594545, target 1.6249301954810909, confidence 70)"
+    },
+    {
+      "timestamp": 1790793024108,
+      "intentId": "VELOEUR:1790793024108",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused VELOEUR: maximum open positions reached (5/5)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -66107,6 +66107,13 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1790793047819,
+      "intentId": "live-entry:AVAXEUR:1790715063388:exit:1790791486160",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -66122,10 +66129,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1788474451850,
-      "equity": 103.22
-    },
     {
       "at": 1788474790551,
       "equity": 103.08
@@ -86121,6 +86124,10 @@
     {
       "at": 1790792637639,
       "equity": 53.59
+    },
+    {
+      "at": 1790793024108,
+      "equity": 53.58
     }
   ],
   "live:revolut-x-order-map": {
@@ -86666,22 +86673,12 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905041,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "live-entry:AVAXEUR:1790715063388": {
-      "reason": "stop-loss",
-      "queuedAt": 1790791486160
-    }
-  },
+  "live:live-exit-pending": {},
   "live:confirmation-gate-pending": {
     "live-entry:ATOMEUR:1790340349162:exit:1790364916886": {
       "sentAt": 1790364942624,
       "messageId": 947,
       "token": "muhd271c.as4ydx"
-    },
-    "live-entry:AVAXEUR:1790715063388:exit:1790791486160": {
-      "sentAt": 1790791510144,
-      "messageId": 1033,
-      "token": "muof10n4.10fi6cy"
     }
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
@@ -86696,13 +86693,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790792637639,
+    "at": 1790793024108,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "66 candidates, production defaults (forward test only — not real trading)",
-        "equity": 10324.477193797344,
-        "returnPct": 3.2447719379734368,
+        "equity": 10328.33549316523,
+        "returnPct": 3.283354931652302,
         "trades": 65,
         "winRatePct": 43.07692307692308,
         "profitFactor": 1.22049498273609,
@@ -90328,503 +90325,503 @@
   "state-merge-collisions": [
     {
       "key": "telegram-unclaimed-callbacks",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "autopilot-last-run",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "move-alert-buckets",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "live:live-cash-eur",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "live:live-equity-history",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "live:trade-journal",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "live:live-open-positions",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:breakout:open-positions",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:breakout:trade-journal",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:breakout:portfolio-engine",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:breakout:audit-log",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow-standings",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:candidate-watch:open-positions",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:candidate-watch:trade-journal",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:candidate-watch:portfolio-engine",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:candidate-watch:audit-log",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "candidate-watch-standings",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "equity-history",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "real-money-readiness",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "daily-summary",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "live:live-exit-pending",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "live:audit-log",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "live:confirmation-gate-pending",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:live-mirror:open-positions",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:live-mirror:trade-journal",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:live-mirror:portfolio-engine",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:live-mirror:audit-log",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:no-confirm:open-positions",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:no-confirm:trade-journal",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:no-confirm:portfolio-engine",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:no-confirm:audit-log",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:trailing-forward-test:open-positions",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:trailing-forward-test:trade-journal",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:trailing-forward-test:portfolio-engine",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:trailing-forward-test:audit-log",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:ai-judgment:open-positions",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:ai-judgment:trade-journal",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:ai-judgment:portfolio-engine",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:ai-judgment:audit-log",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:correlation-capped:open-positions",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:correlation-capped:trade-journal",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:correlation-capped:portfolio-engine",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:correlation-capped:audit-log",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "open-positions",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "trade-journal",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "portfolio-engine",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "daily-loss",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "audit-log",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "shadow:mean-reversion:open-positions",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "telegram-shared-update-offset",
-      "at": 1790792336162,
-      "label": "cycle 41/70"
+      "at": 1790792722007,
+      "label": "cycle 42/70"
     },
     {
       "key": "telegram-unclaimed-callbacks",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "autopilot-last-run",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "move-alert-buckets",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "live:live-cash-eur",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "live:live-equity-history",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "live:trade-journal",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "live:live-open-positions",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:breakout:open-positions",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:breakout:trade-journal",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:breakout:portfolio-engine",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:breakout:audit-log",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow-standings",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:candidate-watch:open-positions",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:candidate-watch:trade-journal",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:candidate-watch:portfolio-engine",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:candidate-watch:audit-log",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "candidate-watch-standings",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "equity-history",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "real-money-readiness",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "daily-summary",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "live:live-exit-pending",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "live:audit-log",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "live:confirmation-gate-pending",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:live-mirror:open-positions",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:live-mirror:trade-journal",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:live-mirror:portfolio-engine",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:live-mirror:audit-log",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:no-confirm:open-positions",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:no-confirm:trade-journal",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:no-confirm:portfolio-engine",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:no-confirm:audit-log",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:trailing-forward-test:open-positions",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:trailing-forward-test:trade-journal",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:trailing-forward-test:portfolio-engine",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:trailing-forward-test:audit-log",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:ai-judgment:open-positions",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:ai-judgment:trade-journal",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:ai-judgment:portfolio-engine",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:ai-judgment:audit-log",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:correlation-capped:open-positions",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:correlation-capped:trade-journal",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:correlation-capped:portfolio-engine",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:correlation-capped:audit-log",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "open-positions",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "trade-journal",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "portfolio-engine",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "daily-loss",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "audit-log",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "shadow:mean-reversion:open-positions",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     },
     {
       "key": "telegram-shared-update-offset",
-      "at": 1790792722007,
-      "label": "cycle 42/70"
+      "at": 1790793092325,
+      "label": "cycle 43/70"
     }
   ],
   "shadow:correlation-capped:open-positions": [
