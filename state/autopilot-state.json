@@ -2638,7 +2638,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790803151435,
+    "at": 1790803524549,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2654,10 +2654,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788466716071,
-      "equity": 10309.11
-    },
     {
       "at": 1788467034559,
       "equity": 10309.11
@@ -22653,6 +22649,10 @@
     {
       "at": 1790803151435,
       "equity": 10694.3
+    },
+    {
+      "at": 1790803524549,
+      "equity": 10694.3
     }
   ],
   "trade-journal": [
@@ -24942,7 +24942,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -24.05% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -23.98% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25030,17 +25030,17 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 4110.251430896913,
+    "cash": 6074.8043477417505,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 1718.5901669201473,
+    "closedRealizedPnl": 1608.4715268393068,
     "dayAnchor": {
       "day": "2026-09-30",
       "equity": 10243.885948105286
     }
   },
   "shadow-standings": {
-    "at": 1790803151435,
+    "at": 1790803524549,
     "standings": [
       {
         "key": "live-mirror",
@@ -25089,8 +25089,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9324.737714483006,
-        "returnPct": -6.752622855169939,
+        "equity": 9309.065308560448,
+        "returnPct": -6.909346914395519,
         "trades": 119,
         "winRatePct": 41.17647058823529,
         "profitFactor": 0.9178257124391018,
@@ -25100,12 +25100,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10278.34259794519,
-        "returnPct": 2.7834259794518945,
-        "trades": 289,
-        "winRatePct": 42.56055363321799,
-        "profitFactor": 1.2793488225303158,
-        "openPositions": 5,
+        "equity": 10246.022697602359,
+        "returnPct": 2.460226976023587,
+        "trades": 290,
+        "winRatePct": 42.41379310344828,
+        "profitFactor": 1.2568520854875251,
+        "openPositions": 4,
         "startedAt": 1785254092443
       },
       {
@@ -25202,25 +25202,6 @@
       "exits": []
     },
     {
-      "id": "ENAEUR:1790777749813:3",
-      "symbol": "ENAEUR",
-      "openedAt": 1790777749813,
-      "entryPrice": 0.2409,
-      "quantity": 8612.169186075875,
-      "initialQuantity": 8612.169186075875,
-      "stopLoss": 0.22998398201920398,
-      "takeProfit": 0.26273203596159206,
-      "feesPaid": 6.224014670777034,
-      "realizedPnl": 0,
-      "highestPrice": 0.2417,
-      "lowestPrice": 0.2301,
-      "confidence": 60.51108319342867,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
       "id": "VELOEUR:1790798342790:4",
       "symbol": "VELOEUR",
       "openedAt": 1790798342790,
@@ -25241,13 +25222,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1789419838931,
-      "intentId": "AAVEEUR:1789418493530:1",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper exit AAVEEUR: 17.1661918443506 @ 112.9 (stop-loss)"
-    },
     {
       "timestamp": 1789420174501,
       "intentId": "ETHEUR:1789420174501:4",
@@ -32240,6 +32214,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry VELOEUR: 22134.40108655527 @ 0.004693 (stop 0.004589971581093793, target 0.0048990568378124155, confidence 67)"
+    },
+    {
+      "timestamp": 1790803524549,
+      "intentId": "ENAEUR:1790777749813:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ENAEUR: 8612.169186075875 @ 0.2288 (stop-loss)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -38888,6 +38869,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 61.134784498340714,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "ENAEUR:1790777749813:3",
+      "symbol": "ENAEUR",
+      "entryTimestamp": 1790777749813,
+      "exitTimestamp": 1790803524549,
+      "entryPrice": 0.2409,
+      "exitPrice": 0.2288,
+      "positionSize": 8612.169186075875,
+      "stopLoss": 0.22998398201920398,
+      "takeProfit": 0.26273203596159206,
+      "exitReason": "stop-loss",
+      "fees": 12.135407600099516,
+      "slippage": 0,
+      "holdingDurationMs": 25774736,
+      "mfePct": 0.332088003320878,
+      "maePct": 5.0228310502283104,
+      "realizedPnl": -110.11864008084055,
+      "returnPct": -5.307762557077625,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 60.51108319342867,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
@@ -66123,10 +66127,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1788466716071,
-      "equity": 103.5
-    },
-    {
       "at": 1788467034559,
       "equity": 103.44
     },
@@ -86121,6 +86121,10 @@
     {
       "at": 1790803151435,
       "equity": 53.56
+    },
+    {
+      "at": 1790803524549,
+      "equity": 53.56
     }
   ],
   "live:revolut-x-order-map": {
@@ -86696,13 +86700,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790803151435,
+    "at": 1790803524549,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "66 candidates, production defaults (forward test only — not real trading)",
-        "equity": 10367.696751550395,
-        "returnPct": 3.6769675155039474,
+        "equity": 10370.177207824987,
+        "returnPct": 3.701772078249869,
         "trades": 65,
         "winRatePct": 43.07692307692308,
         "profitFactor": 1.22049498273609,
