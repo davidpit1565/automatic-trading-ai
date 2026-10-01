@@ -2635,10 +2635,17 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit AVAXEUR: 163.21519421236286 @ 9.584 (stop-loss)"
+    },
+    {
+      "timestamp": 1790891191079,
+      "intentId": "HNTEUR:1790891191079",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused HNTEUR: large trades show heavy net selling"
     }
   ],
   "autopilot-last-run": {
-    "at": 1790890801714,
+    "at": 1790891191079,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2654,10 +2661,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788595467470,
-      "equity": 10233.4
-    },
     {
       "at": 1788595807123,
       "equity": 10233.4
@@ -22653,6 +22656,10 @@
     {
       "at": 1790890801714,
       "equity": 10694.3
+    },
+    {
+      "at": 1790891191079,
+      "equity": 10694.3
     }
   ],
   "trade-journal": [
@@ -24942,7 +24949,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -26.23% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -26.33% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25040,7 +25047,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1790890801714,
+    "at": 1790891191079,
     "standings": [
       {
         "key": "live-mirror",
@@ -25056,8 +25063,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11617.898924123016,
-        "returnPct": 16.178989241230155,
+        "equity": 11648.596930608323,
+        "returnPct": 16.485969306083227,
         "trades": 67,
         "winRatePct": 58.2089552238806,
         "profitFactor": 1.9336109908090982,
@@ -25089,8 +25096,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9364.258802836855,
-        "returnPct": -6.3574119716314454,
+        "equity": 9360.336626898674,
+        "returnPct": -6.396633731013263,
         "trades": 119,
         "winRatePct": 41.17647058823529,
         "profitFactor": 0.9178257124391018,
@@ -25100,8 +25107,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10075.63458703724,
-        "returnPct": 0.7563458703724064,
+        "equity": 10069.891391135272,
+        "returnPct": 0.6989139113527199,
         "trades": 297,
         "winRatePct": 42.42424242424242,
         "profitFactor": 1.2227498158461172,
@@ -25111,8 +25118,8 @@
       {
         "key": "top-trader",
         "label": "Refuses entries while OKX top traders are net-short",
-        "equity": 9377.858461265709,
-        "returnPct": -6.221415387342913,
+        "equity": 9405.752651527851,
+        "returnPct": -5.942473484721486,
         "trades": 12,
         "winRatePct": 16.666666666666664,
         "profitFactor": 0.12152774773404784,
@@ -25122,8 +25129,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11407.619297602752,
-        "returnPct": 14.076192976027524,
+        "equity": 11437.761681648857,
+        "returnPct": 14.377616816488569,
         "trades": 55,
         "winRatePct": 58.18181818181818,
         "profitFactor": 1.914280240364965,
@@ -25133,8 +25140,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10667.416878027216,
-        "returnPct": 6.674168780272158,
+        "equity": 10695.483769205977,
+        "returnPct": 6.954837692059773,
         "trades": 26,
         "winRatePct": 61.53846153846154,
         "profitFactor": 1.9586625452979671,
@@ -25241,20 +25248,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1789619375052,
-      "intentId": "VELOEUR:1789619375052",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused VELOEUR: maximum open positions reached (5/5)"
-    },
-    {
-      "timestamp": 1789619718047,
-      "intentId": "VELOEUR:1789619718047",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused VELOEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1789620059516,
       "intentId": "VELOEUR:1789620059516",
@@ -32237,6 +32230,20 @@
     {
       "timestamp": 1790890429088,
       "intentId": "LTCEUR:1790890429088",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LTCEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790891191079,
+      "intentId": "HNTEUR:1790891191079",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused HNTEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790891191079,
+      "intentId": "LTCEUR:1790891191079",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused LTCEUR: maximum open positions reached (5/5)"
@@ -46401,6 +46408,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit AVAXEUR: 232.2128686393833 @ 9.688 (stop-loss)"
+    },
+    {
+      "timestamp": 1790891191079,
+      "intentId": "HNTEUR:1790891191079",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused HNTEUR: large trades show heavy net selling"
     }
   ],
   "shadow:no-confirm:open-positions": [
@@ -66613,10 +66627,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1788595467470,
-      "equity": 116.61
-    },
-    {
       "at": 1788595807123,
       "equity": 116.58
     },
@@ -86611,6 +86621,10 @@
     {
       "at": 1790890801714,
       "equity": 58.39
+    },
+    {
+      "at": 1790891191079,
+      "equity": 58.4
     }
   ],
   "live:revolut-x-order-map": {
@@ -87194,7 +87208,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790890801714,
+    "at": 1790891191079,
     "standings": [
       {
         "key": "candidate-watch",
@@ -93225,6 +93239,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit AVAXEUR: 204.57035205499514 @ 9.688 (stop-loss)"
+    },
+    {
+      "timestamp": 1790891191079,
+      "intentId": "HNTEUR:1790891191079",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused HNTEUR: large trades show heavy net selling"
     }
   ],
   "shadow:trailing-forward-test:open-positions": [],
