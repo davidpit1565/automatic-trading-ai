@@ -2638,7 +2638,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790814240491,
+    "at": 1790814613227,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2654,10 +2654,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788502766223,
-      "equity": 10325.11
-    },
     {
       "at": 1788503095609,
       "equity": 10318.77
@@ -22653,6 +22649,10 @@
     {
       "at": 1790814240491,
       "equity": 10694.3
+    },
+    {
+      "at": 1790814613227,
+      "equity": 10694.3
     }
   ],
   "trade-journal": [
@@ -24942,7 +24942,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -23.59% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -23.51% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25040,7 +25040,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1790814240491,
+    "at": 1790814613227,
     "standings": [
       {
         "key": "live-mirror",
@@ -25089,8 +25089,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9346.712800038582,
-        "returnPct": -6.53287199961418,
+        "equity": 9336.895479810411,
+        "returnPct": -6.631045201895885,
         "trades": 119,
         "winRatePct": 41.17647058823529,
         "profitFactor": 0.9178257124391018,
@@ -25100,8 +25100,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10136.300625940481,
-        "returnPct": 1.3630062594048105,
+        "equity": 10136.99370347523,
+        "returnPct": 1.3699370347522926,
         "trades": 294,
         "winRatePct": 42.517006802721085,
         "profitFactor": 1.2360572931670768,
@@ -66275,6 +66275,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "rejected via Telegram (button)"
+    },
+    {
+      "timestamp": 1790814633838,
+      "intentId": "live-entry:AVAXEUR:1790715063388:exit:1790814613227",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -66290,10 +66297,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1788502766223,
-      "equity": 103.1
-    },
     {
       "at": 1788503095609,
       "equity": 102.94
@@ -86289,6 +86292,10 @@
     {
       "at": 1790814240491,
       "equity": 53.62
+    },
+    {
+      "at": 1790814613227,
+      "equity": 53.61
     }
   ],
   "live:revolut-x-order-map": {
@@ -86838,12 +86845,22 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905047,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
+  "live:live-exit-pending": {
+    "live-entry:AVAXEUR:1790715063388": {
+      "reason": "stop-loss",
+      "queuedAt": 1790814613227
+    }
+  },
   "live:confirmation-gate-pending": {
     "live-entry:ATOMEUR:1790340349162:exit:1790364916886": {
       "sentAt": 1790364942624,
       "messageId": 947,
       "token": "muhd271c.as4ydx"
+    },
+    "live-entry:AVAXEUR:1790715063388:exit:1790814613227": {
+      "sentAt": 1790814633702,
+      "messageId": 1047,
+      "token": "muossmw6.xx4604"
     }
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
@@ -86858,13 +86875,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790814240491,
+    "at": 1790814613227,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "66 candidates, production defaults (forward test only — not real trading)",
-        "equity": 10284.42491396421,
-        "returnPct": 2.8442491396421063,
+        "equity": 10287.64640664031,
+        "returnPct": 2.876464066403096,
         "trades": 65,
         "winRatePct": 43.07692307692308,
         "profitFactor": 1.22049498273609,
