@@ -2656,10 +2656,17 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused HNTEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1790930088136,
+      "intentId": "AAVEEUR:1790930088136",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused AAVEEUR: large trades show heavy net selling"
     }
   ],
   "autopilot-last-run": {
-    "at": 1790929714807,
+    "at": 1790930088136,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2675,10 +2682,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788611494172,
-      "equity": 10220.5
-    },
     {
       "at": 1788611833522,
       "equity": 10228.55
@@ -22674,6 +22677,10 @@
     {
       "at": 1790929714807,
       "equity": 10694.3
+    },
+    {
+      "at": 1790930088136,
+      "equity": 10694.3
     }
   ],
   "trade-journal": [
@@ -24963,7 +24970,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -29.11% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -29.01% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25007,7 +25014,7 @@
   },
   "shadow:no-confirm:shadow-started-at": 1785254092443,
   "shadow:no-confirm:portfolio-engine": {
-    "cash": 10291.62582839852,
+    "cash": 7957.308748235366,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 1946.3685256401739,
@@ -25061,7 +25068,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1790929714807,
+    "at": 1790930088136,
     "standings": [
       {
         "key": "live-mirror",
@@ -25077,12 +25084,12 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11636.675374691698,
-        "returnPct": 16.366753746916984,
+        "equity": 11629.693369466884,
+        "returnPct": 16.29693369466884,
         "trades": 67,
         "winRatePct": 58.2089552238806,
         "profitFactor": 1.9336109908090982,
-        "openPositions": 1,
+        "openPositions": 2,
         "startedAt": 1785254092443
       },
       {
@@ -25110,8 +25117,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9531.790777281913,
-        "returnPct": -4.682092227180874,
+        "equity": 9531.902185295952,
+        "returnPct": -4.680978147040478,
         "trades": 121,
         "winRatePct": 42.14876033057851,
         "profitFactor": 0.9648922280989692,
@@ -25121,8 +25128,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10228.2372574672,
-        "returnPct": 2.2823725746720083,
+        "equity": 10214.891189186965,
+        "returnPct": 2.148911891869648,
         "trades": 300,
         "winRatePct": 43,
         "profitFactor": 1.2385772697243604,
@@ -25132,34 +25139,34 @@
       {
         "key": "top-trader",
         "label": "Refuses entries while OKX top traders are net-short",
-        "equity": 9394.919956280417,
-        "returnPct": -6.05080043719583,
+        "equity": 9389.28300430665,
+        "returnPct": -6.107169956933503,
         "trades": 12,
         "winRatePct": 16.666666666666664,
         "profitFactor": 0.12152774773404784,
-        "openPositions": 1,
+        "openPositions": 2,
         "startedAt": 1786965153850
       },
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11426.055901436777,
-        "returnPct": 14.260559014367773,
+        "equity": 11419.200267895914,
+        "returnPct": 14.192002678959142,
         "trades": 55,
         "winRatePct": 58.18181818181818,
         "profitFactor": 1.914280240364965,
-        "openPositions": 1,
+        "openPositions": 2,
         "startedAt": 1787242347381
       },
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10684.584005641409,
-        "returnPct": 6.84584005641409,
+        "equity": 10678.173255238024,
+        "returnPct": 6.781732552380236,
         "trades": 26,
         "winRatePct": 61.53846153846154,
         "profitFactor": 1.9586625452979671,
-        "openPositions": 1,
+        "openPositions": 2,
         "startedAt": 1788970622093
       }
     ]
@@ -25253,7 +25260,7 @@
       "feesPaid": 0.03991428313735833,
       "realizedPnl": 0,
       "highestPrice": 0.227973,
-      "lowestPrice": 0.227571,
+      "lowestPrice": 0.227279,
       "confidence": 68.55704691346693,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -25262,20 +25269,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1789648170744,
-      "intentId": "ETHEUR:1789648170744",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused ETHEUR: maximum open positions reached (5/5)"
-    },
-    {
-      "timestamp": 1789648506611,
-      "intentId": "ETHEUR:1789648506611",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused ETHEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1789648844083,
       "intentId": "DOTEUR:1789648844083",
@@ -32261,6 +32254,20 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ETHEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790930088136,
+      "intentId": "ETHEUR:1790930088136",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ETHEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790930088136,
+      "intentId": "ALGOEUR:1790930088136",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ALGOEUR: maximum open positions reached (5/5)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -46481,6 +46488,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused HNTEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1790930088136,
+      "intentId": "AAVEEUR:1790930088136",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused AAVEEUR: large trades show heavy net selling"
     }
   ],
   "shadow:no-confirm:open-positions": [
@@ -46498,6 +46512,25 @@
       "highestPrice": 0.4797,
       "lowestPrice": 0.3906,
       "confidence": 40.538688241158965,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "AAVEEUR:1790930088136:1",
+      "symbol": "AAVEEUR",
+      "openedAt": 1790930088136,
+      "entryPrice": 161.59,
+      "quantity": 14.402717216030322,
+      "initialQuantity": 14.402717216030322,
+      "stopLoss": 154.99551302650352,
+      "takeProfit": 174.77897394699298,
+      "feesPaid": 6.98200522481502,
+      "realizedPnl": 0,
+      "highestPrice": 161.59,
+      "lowestPrice": 161.59,
+      "confidence": 42.30915966953079,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -47820,6 +47853,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit AVAXEUR: 230.79407669962507 @ 9.688 (stop-loss)"
+    },
+    {
+      "timestamp": 1790930088136,
+      "intentId": "AAVEEUR:1790930088136:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry AAVEEUR: 14.402717216030322 @ 161.59 (stop 154.99551302650352, target 174.77897394699298, confidence 42)"
     }
   ],
   "shadow:fixed-stop:open-positions": [
@@ -56080,7 +56120,7 @@
   },
   "shadow:top-trader:shadow-started-at": 1786965153850,
   "shadow:top-trader:portfolio-engine": {
-    "cash": 8172.721114988656,
+    "cash": 6288.100171758804,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -606.7810159204978,
@@ -56869,6 +56909,25 @@
       "highestPrice": 0.4797,
       "lowestPrice": 0.3906,
       "confidence": 40.538688241158965,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "AAVEEUR:1790930088136:1",
+      "symbol": "AAVEEUR",
+      "openedAt": 1790930088136,
+      "entryPrice": 161.59,
+      "quantity": 11.62809574389556,
+      "initialQuantity": 11.62809574389556,
+      "stopLoss": 154.99551302650352,
+      "takeProfit": 174.77897394699298,
+      "feesPaid": 5.636951973768251,
+      "realizedPnl": 0,
+      "highestPrice": 161.59,
+      "lowestPrice": 161.59,
+      "confidence": 50.30915966953079,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -59451,6 +59510,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused AVAXEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1790930088136,
+      "intentId": "AAVEEUR:1790930088136:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry AAVEEUR: 11.62809574389556 @ 161.59 (stop 154.99551302650352, target 174.77897394699298, confidence 50)"
     }
   ],
   "shadow:whale-flow:open-positions": [],
@@ -60403,7 +60469,7 @@
   ],
   "shadow:ai-judgment:shadow-started-at": 1787242347381,
   "shadow:ai-judgment:portfolio-engine": {
-    "cash": 10105.35124900892,
+    "cash": 7813.284435180702,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 1659.6022413315136,
@@ -60427,6 +60493,25 @@
       "highestPrice": 0.4797,
       "lowestPrice": 0.3906,
       "confidence": 40.538688241158965,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "AAVEEUR:1790930088136:1",
+      "symbol": "AAVEEUR",
+      "openedAt": 1790930088136,
+      "entryPrice": 161.59,
+      "quantity": 14.142033419687824,
+      "initialQuantity": 14.142033419687824,
+      "stopLoss": 154.99551302650352,
+      "takeProfit": 174.77897394699298,
+      "feesPaid": 6.855633540862067,
+      "realizedPnl": 0,
+      "highestPrice": 161.59,
+      "lowestPrice": 161.59,
+      "confidence": 50.30915966953079,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -61616,6 +61701,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit AVAXEUR: 226.61679020673628 @ 9.688 (stop-loss)"
+    },
+    {
+      "timestamp": 1790930088136,
+      "intentId": "AAVEEUR:1790930088136:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry AAVEEUR: 14.142033419687824 @ 161.59 (stop 154.99551302650352, target 174.77897394699298, confidence 50)"
     }
   ],
   "shadow:ai-judgment:trade-journal": [
@@ -66745,10 +66837,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1788611494172,
-      "equity": 116.62
-    },
     {
       "at": 1788611833522,
       "equity": 116.74
@@ -86744,6 +86832,10 @@
     {
       "at": 1790929714807,
       "equity": 58.85
+    },
+    {
+      "at": 1790930088136,
+      "equity": 58.84
     }
   ],
   "live:revolut-x-order-map": {
@@ -87321,13 +87413,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790929714807,
+    "at": 1790930088136,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "66 candidates, production defaults (forward test only — not real trading)",
-        "equity": 10325.497745775105,
-        "returnPct": 3.2549774577510475,
+        "equity": 10324.025137378618,
+        "returnPct": 3.2402513737861773,
         "trades": 68,
         "winRatePct": 42.64705882352941,
         "profitFactor": 1.1971973216513803,
@@ -91052,7 +91144,7 @@
   ],
   "shadow:correlation-capped:shadow-started-at": 1788970622093,
   "shadow:correlation-capped:portfolio-engine": {
-    "cash": 9454.81818146911,
+    "cash": 7311.490629937443,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 743.0715911472915,
@@ -91578,6 +91670,25 @@
       "highestPrice": 0.4797,
       "lowestPrice": 0.3906,
       "confidence": 40.538688241158965,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "AAVEEUR:1790930088136:1",
+      "symbol": "AAVEEUR",
+      "openedAt": 1790930088136,
+      "entryPrice": 161.59,
+      "quantity": 13.22431339271169,
+      "initialQuantity": 13.22431339271169,
+      "stopLoss": 154.99551302650352,
+      "takeProfit": 174.77897394699298,
+      "feesPaid": 6.410750403384846,
+      "realizedPnl": 0,
+      "highestPrice": 161.59,
+      "lowestPrice": 161.59,
+      "confidence": 50.30915966953079,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -92165,6 +92276,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit AVAXEUR: 211.91781423278297 @ 9.688 (stop-loss)"
+    },
+    {
+      "timestamp": 1790930088136,
+      "intentId": "AAVEEUR:1790930088136:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry AAVEEUR: 13.22431339271169 @ 161.59 (stop 154.99551302650352, target 174.77897394699298, confidence 50)"
     }
   ],
   "shadow:correlation-capped:trade-journal": [
@@ -93392,6 +93510,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused HNTEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1790930088136,
+      "intentId": "AAVEEUR:1790930088136",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused AAVEEUR: large trades show heavy net selling"
     }
   ],
   "shadow:trailing-forward-test:open-positions": [],
