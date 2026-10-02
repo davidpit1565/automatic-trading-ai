@@ -2659,7 +2659,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790904718504,
+    "at": 1790905107600,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2675,10 +2675,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788608096580,
-      "equity": 10205.7
-    },
     {
       "at": 1788608436780,
       "equity": 10211.93
@@ -22674,6 +22670,10 @@
     {
       "at": 1790904718504,
       "equity": 10694.3
+    },
+    {
+      "at": 1790905107600,
+      "equity": 10694.3
     }
   ],
   "trade-journal": [
@@ -25061,7 +25061,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1790904718504,
+    "at": 1790905107600,
     "standings": [
       {
         "key": "live-mirror",
@@ -25110,8 +25110,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9378.804502547784,
-        "returnPct": -6.211954974522159,
+        "equity": 9373.435058460887,
+        "returnPct": -6.265649415391127,
         "trades": 119,
         "winRatePct": 41.17647058823529,
         "profitFactor": 0.9178257124391018,
@@ -25121,8 +25121,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10084.185094147811,
-        "returnPct": 0.8418509414781147,
+        "equity": 10077.855563037998,
+        "returnPct": 0.7785556303799785,
         "trades": 298,
         "winRatePct": 42.61744966442953,
         "profitFactor": 1.2383179695273978,
@@ -25215,7 +25215,7 @@
       "feesPaid": 5.675355756628129,
       "realizedPnl": 0,
       "highestPrice": 8.186,
-      "lowestPrice": 7.929,
+      "lowestPrice": 7.9267,
       "confidence": 70,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -25262,13 +25262,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1789623821956,
-      "intentId": "VELOEUR:1789623821956",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused VELOEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1789624164214,
       "intentId": "VELOEUR:1789624164214",
@@ -32261,6 +32254,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused SOLEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1790905107600,
+      "intentId": "AAVEEUR:1790905107600",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused AAVEEUR: maximum open positions reached (5/5)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -66669,6 +66669,13 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1790905131704,
+      "intentId": "live-entry:AVAXEUR:1790715063388:exit:1790903555455",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -66684,10 +66691,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1788608096580,
-      "equity": 116.53
-    },
     {
       "at": 1788608436780,
       "equity": 116.55
@@ -86683,6 +86686,10 @@
     {
       "at": 1790904718504,
       "equity": 58.53
+    },
+    {
+      "at": 1790905107600,
+      "equity": 58.51
     }
   ],
   "live:revolut-x-order-map": {
@@ -87236,22 +87243,12 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905050,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "live-entry:AVAXEUR:1790715063388": {
-      "reason": "stop-loss",
-      "queuedAt": 1790903555455
-    }
-  },
+  "live:live-exit-pending": {},
   "live:confirmation-gate-pending": {
     "live-entry:ATOMEUR:1790340349162:exit:1790364916886": {
       "sentAt": 1790364942624,
       "messageId": 947,
       "token": "muhd271c.as4ydx"
-    },
-    "live-entry:AVAXEUR:1790715063388:exit:1790903555455": {
-      "sentAt": 1790903579718,
-      "messageId": 1069,
-      "token": "muq9r22u.v5abet"
     }
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
@@ -87266,7 +87263,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790904718504,
+    "at": 1790905107600,
     "standings": [
       {
         "key": "candidate-watch",
