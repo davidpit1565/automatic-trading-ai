@@ -2728,7 +2728,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1790977164148,
+    "at": 1790977530742,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2744,10 +2744,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788633880220,
-      "equity": 10216.61
-    },
     {
       "at": 1788634215353,
       "equity": 10216.61
@@ -22743,6 +22739,10 @@
     {
       "at": 1790977164148,
       "equity": 10464.19
+    },
+    {
+      "at": 1790977530742,
+      "equity": 10464.19
     }
   ],
   "trade-journal": [
@@ -25078,7 +25078,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -28.59% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -28.60% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25176,7 +25176,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1790977164148,
+    "at": 1790977530742,
     "standings": [
       {
         "key": "live-mirror",
@@ -25225,8 +25225,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9300.684116746077,
-        "returnPct": -6.99315883253923,
+        "equity": 9301.888757786524,
+        "returnPct": -6.981112422134757,
         "trades": 122,
         "winRatePct": 41.80327868852459,
         "profitFactor": 0.9402244089035539,
@@ -67463,10 +67463,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1788633880220,
-      "equity": 117.4
-    },
-    {
       "at": 1788634215353,
       "equity": 117.34
     },
@@ -87461,6 +87457,10 @@
     {
       "at": 1790977164148,
       "equity": 58.6
+    },
+    {
+      "at": 1790977530742,
+      "equity": 58.6
     }
   ],
   "live:revolut-x-order-map": {
@@ -87998,51 +87998,32 @@
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
-    "cash": 8450.287006218881,
+    "cash": 9859.713018897173,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 294.87442928232923,
+    "closedRealizedPnl": 176.50209201333337,
     "dayAnchor": {
       "day": "2026-10-02",
       "equity": 10197.813145673435
     }
   },
   "candidate-watch-standings": {
-    "at": 1790977164148,
+    "at": 1790977530742,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "66 candidates, production defaults (forward test only — not real trading)",
-        "equity": 9896.35676967454,
-        "returnPct": -1.0364323032546054,
-        "trades": 73,
-        "winRatePct": 41.0958904109589,
-        "profitFactor": 1.0925770957811394,
-        "openPositions": 2,
+        "equity": 9861.347380310692,
+        "returnPct": -1.3865261968930827,
+        "trades": 74,
+        "winRatePct": 40.54054054054054,
+        "profitFactor": 1.0534280187734966,
+        "openPositions": 1,
         "startedAt": 1788551468687
       }
     ]
   },
   "shadow:candidate-watch:open-positions": [
-    {
-      "id": "PHAEUR:1790783869556:1",
-      "symbol": "PHAEUR",
-      "openedAt": 1790783869556,
-      "entryPrice": 0.06653,
-      "quantity": 22964.051554896843,
-      "initialQuantity": 22964.051554896843,
-      "stopLoss": 0.06203974840619343,
-      "takeProfit": 0.07551050318761315,
-      "feesPaid": 4.583395049841862,
-      "realizedPnl": 0,
-      "highestPrice": 0.07046,
-      "lowestPrice": 0.0629,
-      "confidence": 43.29330949946534,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
     {
       "id": "MINAEUR:1790958330356:4",
       "symbol": "MINAEUR",
@@ -90065,6 +90046,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit APTEUR: 758.4460107222574 @ 0.6932 (stop-loss)"
+    },
+    {
+      "timestamp": 1790977530742,
+      "intentId": "PHAEUR:1790783869556:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit PHAEUR: 22964.051554896843 @ 0.06156 (stop-loss)"
     }
   ],
   "live:live-blackout-queue": {},
@@ -91750,6 +91738,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 45.034746584164125,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "PHAEUR:1790783869556:1",
+      "symbol": "PHAEUR",
+      "entryTimestamp": 1790783869556,
+      "exitTimestamp": 1790977530742,
+      "entryPrice": 0.06653,
+      "exitPrice": 0.06156,
+      "positionSize": 22964.051554896843,
+      "stopLoss": 0.06203974840619343,
+      "takeProfit": 0.07551050318761315,
+      "exitReason": "stop-loss",
+      "fees": 8.82439609100021,
+      "slippage": 0,
+      "holdingDurationMs": 193661186,
+      "mfePct": 5.90710957462797,
+      "maePct": 7.470314143995203,
+      "realizedPnl": -118.37233726899588,
+      "returnPct": -7.747903201563218,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 43.29330949946534,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
