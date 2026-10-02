@@ -1,6 +1,6 @@
 {
   "portfolio-engine": {
-    "cash": 9156.686336447503,
+    "cash": 7382.179355754035,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 1177.1642079143978,
@@ -24,6 +24,25 @@
       "highestPrice": 165.93,
       "lowestPrice": 160.9,
       "confidence": 49.01873181428898,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "HNTEUR:1790943594763:1",
+      "symbol": "HNTEUR",
+      "openedAt": 1790943594763,
+      "entryPrice": 0.4745,
+      "quantity": 3728.5550738584407,
+      "initialQuantity": 3728.5550738584407,
+      "stopLoss": 0.4576868003926964,
+      "takeProfit": 0.5081263992146071,
+      "feesPaid": 5.30759814763749,
+      "realizedPnl": 0,
+      "highestPrice": 0.4745,
+      "lowestPrice": 0.4745,
+      "confidence": 48.48525745986793,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -2690,12 +2709,19 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry AAVEEUR: 9.527740956616903 @ 160.9 (stop 154.27551302650352, target 174.14897394699298, confidence 49)"
+    },
+    {
+      "timestamp": 1790943594763,
+      "intentId": "HNTEUR:1790943594763:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry HNTEUR: 3728.5550738584407 @ 0.4745 (stop 0.4576868003926964, target 0.5081263992146071, confidence 48)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1790943224047,
+    "at": 1790943594763,
     "source": "Kraken public market data (read-only)",
-    "opened": 0,
+    "opened": 1,
     "closed": 0,
     "halted": false
   },
@@ -2709,10 +2735,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788624817699,
-      "equity": 10220.24
-    },
     {
       "at": 1788625153786,
       "equity": 10220.24
@@ -22708,6 +22730,10 @@
     {
       "at": 1790943224047,
       "equity": 10709.14
+    },
+    {
+      "at": 1790943594763,
+      "equity": 10713.45
     }
   ],
   "trade-journal": [
@@ -24997,7 +25023,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -29.34% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -29.61% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25030,7 +25056,7 @@
   },
   "shadow:live-mirror:shadow-started-at": 1785254092443,
   "shadow:live-mirror:portfolio-engine": {
-    "cash": 9288.348021844331,
+    "cash": 6950.108660120242,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 2011.9993629567355,
@@ -25095,24 +25121,24 @@
     }
   },
   "shadow-standings": {
-    "at": 1790943224047,
+    "at": 1790943594763,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / AUTOPILOT_TRAILING / 4h gate / whale-flow)",
-        "equity": 11641.64100071353,
-        "returnPct": 16.41641000713529,
+        "equity": 11649.234387373152,
+        "returnPct": 16.492343873731517,
         "trades": 68,
         "winRatePct": 55.88235294117647,
         "profitFactor": 1.9599170687221985,
-        "openPositions": 1,
+        "openPositions": 2,
         "startedAt": 1785254092443
       },
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11693.544833497952,
-        "returnPct": 16.93544833497952,
+        "equity": 11732.828806413137,
+        "returnPct": 17.328288064131375,
         "trades": 67,
         "winRatePct": 58.2089552238806,
         "profitFactor": 1.9336109908090982,
@@ -25122,12 +25148,12 @@
       {
         "key": "trailing-forward-test",
         "label": "Trailing stop 1.5R/1.5R vs current no-trail production (forward test since 2026-09-22)",
-        "equity": 10255.825234699869,
-        "returnPct": 2.5582523469986884,
+        "equity": 10262.514707989401,
+        "returnPct": 2.6251470798940133,
         "trades": 10,
         "winRatePct": 40,
         "profitFactor": 1.9620967658384485,
-        "openPositions": 1,
+        "openPositions": 2,
         "startedAt": 1790108791371
       },
       {
@@ -25144,8 +25170,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9515.981109874434,
-        "returnPct": -4.840188901255661,
+        "equity": 9521.040618233568,
+        "returnPct": -4.789593817664318,
         "trades": 121,
         "winRatePct": 42.14876033057851,
         "profitFactor": 0.9648922280989692,
@@ -25155,8 +25181,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 10202.388240084936,
-        "returnPct": 2.023882400849361,
+        "equity": 10215.585744262593,
+        "returnPct": 2.1558574426259294,
         "trades": 300,
         "winRatePct": 43,
         "profitFactor": 1.2385772697243604,
@@ -25166,8 +25192,8 @@
       {
         "key": "top-trader",
         "label": "Refuses entries while OKX top traders are net-short",
-        "equity": 9445.3327233576,
-        "returnPct": -5.546672766423999,
+        "equity": 9479.55494269736,
+        "returnPct": -5.204450573026406,
         "trades": 12,
         "winRatePct": 16.666666666666664,
         "profitFactor": 0.12152774773404784,
@@ -25177,8 +25203,8 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11481.896044302488,
-        "returnPct": 14.818960443024881,
+        "equity": 11520.468991996438,
+        "returnPct": 15.204689919964384,
         "trades": 55,
         "winRatePct": 58.18181818181818,
         "profitFactor": 1.914280240364965,
@@ -25188,8 +25214,8 @@
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10736.627697596197,
-        "returnPct": 7.3662769759619735,
+        "equity": 10772.601263519313,
+        "returnPct": 7.726012635193129,
         "trades": 26,
         "winRatePct": 61.53846153846154,
         "profitFactor": 1.9586625452979671,
@@ -45042,6 +45068,25 @@
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
       "exits": []
+    },
+    {
+      "id": "HNTEUR:1790943594763:1",
+      "symbol": "HNTEUR",
+      "openedAt": 1790943594763,
+      "entryPrice": 0.4745,
+      "quantity": 4913.057165120211,
+      "initialQuantity": 4913.057165120211,
+      "stopLoss": 0.4576868003926964,
+      "takeProfit": 0.5081263992146071,
+      "feesPaid": 6.99373687454862,
+      "realizedPnl": 0,
+      "highestPrice": 0.4745,
+      "lowestPrice": 0.4745,
+      "confidence": 48.48525745986793,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
     }
   ],
   "shadow:live-mirror:audit-log": [
@@ -46549,6 +46594,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry AAVEEUR: 14.442696568486545 @ 160.9 (stop 154.27551302650352, target 174.14897394699298, confidence 49)"
+    },
+    {
+      "timestamp": 1790943594763,
+      "intentId": "HNTEUR:1790943594763:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry HNTEUR: 4913.057165120211 @ 0.4745 (stop 0.4576868003926964, target 0.5081263992146071, confidence 48)"
     }
   ],
   "shadow:no-confirm:open-positions": [
@@ -66890,6 +66942,20 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1790943619674,
+      "intentId": "verify-symbol-exists",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "'HNT/EUR' not found among 384 tradable pairs from revolut-x; no pair with base 'HNT/EUR' listed at all"
+    },
+    {
+      "timestamp": 1790943619696,
+      "intentId": "live-entry:HNTEUR:1790943594763",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "could not verify 'HNT/EUR' as a currently tradable instrument on revolut-x (either it doesn't exist there, or the check itself failed) — refusing rather than guessing a symbol mapping"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -66905,10 +66971,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1788624817699,
-      "equity": 117.03
-    },
     {
       "at": 1788625153786,
       "equity": 117.07
@@ -86904,6 +86966,10 @@
     {
       "at": 1790943224047,
       "equity": 58.88
+    },
+    {
+      "at": 1790943594763,
+      "equity": 58.91
     }
   ],
   "live:revolut-x-order-map": {
@@ -87481,13 +87547,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1790943224047,
+    "at": 1790943594763,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "66 candidates, production defaults (forward test only — not real trading)",
-        "equity": 10360.539036377439,
-        "returnPct": 3.6053903637743865,
+        "equity": 10366.849468247548,
+        "returnPct": 3.6684946824754845,
         "trades": 69,
         "winRatePct": 43.47826086956522,
         "profitFactor": 1.2443574980549708,
@@ -93214,7 +93280,7 @@
   ],
   "shadow:trailing-forward-test:shadow-started-at": 1790108791371,
   "shadow:trailing-forward-test:portfolio-engine": {
-    "cash": 8182.6672051875785,
+    "cash": 6122.770816931951,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 291.022645592249,
@@ -93629,6 +93695,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry AAVEEUR: 12.723444393717257 @ 160.9 (stop 154.27551302650352, target 174.14897394699298, confidence 49)"
+    },
+    {
+      "timestamp": 1790943594763,
+      "intentId": "HNTEUR:1790943594763:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry HNTEUR: 4328.209025727092 @ 0.4745 (stop 0.4576868003926964, target 0.5081263992146071, confidence 48)"
     }
   ],
   "shadow:trailing-forward-test:open-positions": [
@@ -93646,6 +93719,25 @@
       "highestPrice": 165.54,
       "lowestPrice": 160.9,
       "confidence": 49.01873181428898,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "HNTEUR:1790943594763:1",
+      "symbol": "HNTEUR",
+      "openedAt": 1790943594763,
+      "entryPrice": 0.4745,
+      "quantity": 4328.209025727092,
+      "initialQuantity": 4328.209025727092,
+      "stopLoss": 0.4576868003926964,
+      "takeProfit": 0.5081263992146071,
+      "feesPaid": 6.161205548122515,
+      "realizedPnl": 0,
+      "highestPrice": 0.4745,
+      "lowestPrice": 0.4745,
+      "confidence": 48.48525745986793,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -93886,6 +93978,10 @@
   ],
   "move-alert-buckets": {
     "AAVEEUR:1790931214642:0": {
+      "neg": 0,
+      "pos": 0
+    },
+    "HNTEUR:1790943594763:1": {
       "neg": 0,
       "pos": 0
     }
