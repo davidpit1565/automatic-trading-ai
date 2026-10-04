@@ -69,6 +69,12 @@ export interface ShadowCandidate {
    */
   readonly useTopTraderCheck?: boolean;
   /**
+   * Opts into `ShadowRunOptions.fundingCheck` for this candidate only —
+   * see `signal/fundingGate.ts` (David's 2026-10-04 "predict, don't just
+   * look back" request).
+   */
+  readonly useFundingCheck?: boolean;
+  /**
    * Opts into `ShadowRunOptions.aiJudgmentCheck` for this candidate only.
    * An LLM's read of the technical snapshot can NEVER be backtested (it may
    * carry hindsight of what a real historical chart actually did next), so
@@ -148,6 +154,11 @@ export interface ShadowRunOptions {
    * get it wired in. Omit when unavailable (e.g. a fetch failure).
    */
   readonly topTraderCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+  /**
+   * Built from OKX's public funding-rate history (see `data/okxFunding.ts`).
+   * Only candidates with `useFundingCheck: true` get it wired in.
+   */
+  readonly fundingCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
   /**
    * Built from an LLM call (see `signal/aiJudgment.ts`). Only candidates
    * with `useAiJudgmentCheck: true` get it wired in. Omit when no model API
@@ -242,6 +253,9 @@ async function runOne(
       : {}),
     ...(candidate.useTopTraderCheck && options.topTraderCheck
       ? { topTraderCheck: options.topTraderCheck }
+      : {}),
+    ...(candidate.useFundingCheck && options.fundingCheck
+      ? { fundingCheck: options.fundingCheck }
       : {}),
     ...(candidate.useAiJudgmentCheck && options.aiJudgmentCheck
       ? { aiJudgmentCheck: options.aiJudgmentCheck }
@@ -423,5 +437,22 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     // Same 2026-10-04 whale-flow parity fix as 'ai-judgment' above.
     useWhaleFlowCheck: true,
     correlationCap: { threshold: 0.7, maxExposurePct: 30 },
+  },
+  // Identical to live-mirror plus ONE change: refuse new longs while OKX
+  // funding shows leveraged longs unusually crowded (signal/fundingGate.ts).
+  // David's 2026-10-04 request for leading ("predict the future") signals,
+  // not just price history. Gate parameters (24h avg in the top 20% of the
+  // coin's own ~33-day history and above its median) were picked by firing
+  // rate (~13% of checks), never by profitability — whether blocking those
+  // entries helps is what this candidate exists to measure.
+  {
+    key: 'funding-crowding',
+    label: 'Refuses entries while leveraged longs are unusually crowded (OKX funding)',
+    minConfidence: 40,
+    maxRsiForLong: 65,
+    trailing: AUTOPILOT_TRAILING,
+    confirmationTimeframe: '4h',
+    useWhaleFlowCheck: true,
+    useFundingCheck: true,
   },
 ];

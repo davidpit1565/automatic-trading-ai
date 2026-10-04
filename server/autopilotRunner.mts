@@ -35,6 +35,8 @@ import { buildDailyRegimeFilter } from '../src/core/signal/regimeFilter';
 import { isWhaleFlowBearish } from '../src/core/signal/whaleFlow';
 import { buildTopTraderGate } from '../src/core/signal/topTraderGate';
 import { getTopTraderPositionRatio, toOkxSwapInstId } from '../src/core/data/okxPositioning';
+import { getFundingRateHistory } from '../src/core/data/okxFunding';
+import { buildFundingGate } from '../src/core/signal/fundingGate';
 import { isAiJudgmentBearish, type AiJudgmentInput } from '../src/core/signal/aiJudgment';
 import { scanCandles } from '../src/core/scan/marketScanner';
 import { MAX_CONFIDENCE } from '../src/core/signal/signalEngine';
@@ -503,6 +505,25 @@ async function buildTopTraderCheck(
     if (!instId) continue;
     const ratios = await getTopTraderPositionRatio(instId, '1D', 100);
     if (ratios.ok) gates.set(symbol, buildTopTraderGate(ratios.value));
+  }
+  return async (symbol, timestamp) => gates.get(symbol)?.(timestamp) ?? true;
+}
+
+/**
+ * Builds the funding-crowding gate for shadow evaluation ONLY (see
+ * `signal/fundingGate.ts`). One OKX request per symbol per cycle, same
+ * cost shape as `buildTopTraderCheck`; fails OPEN for a symbol whose fetch
+ * failed or has no recognizable OKX perpetual.
+ */
+async function buildFundingCheck(
+  symbols: readonly string[],
+): Promise<(symbol: string, timestamp: number) => Promise<boolean>> {
+  const gates = new Map<string, (atTimestamp: number) => boolean>();
+  for (const symbol of symbols) {
+    const instId = toOkxSwapInstId(symbol);
+    if (!instId) continue;
+    const history = await getFundingRateHistory(instId, 100);
+    if (history.ok) gates.set(symbol, buildFundingGate(history.value));
   }
   return async (symbol, timestamp) => gates.get(symbol)?.(timestamp) ?? true;
 }
@@ -1413,6 +1434,7 @@ async function runShadows(
     // (see `buildProductionAutopilot`).
     const whaleFlowCheck = buildWhaleFlowCheck(source) ?? undefined;
     const topTraderCheck = await buildTopTraderCheck(symbols);
+    const fundingCheck = await buildFundingCheck(symbols);
     // Reads through the shared CachingSource — the AI check's candle fetch
     // costs nothing extra beyond what the other shadow candidates already do.
     const aiJudgmentCheck = buildAiJudgmentCheck(caching, ENTRY_TF) ?? undefined;
@@ -1428,6 +1450,7 @@ async function runShadows(
       prices,
       whaleFlowCheck,
       topTraderCheck,
+      fundingCheck,
       aiJudgmentCheck,
       correlationBetween,
     });

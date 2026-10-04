@@ -278,6 +278,13 @@ export interface AutoPilotOptions {
    */
   readonly topTraderCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
   /**
+   * Funding-crowding gate (see `signal/fundingGate.ts`): returns false to
+   * block a new long entry while leveraged longs on that asset are unusually
+   * crowded (OKX perpetual funding well above its own recent history).
+   * Checked at entry time only — never blocks an exit. Omit to leave off.
+   */
+  readonly fundingCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+  /**
    * AI second-opinion gate (see `signal/aiJudgment.ts`): returns false to
    * block a new long entry when an LLM's read of the technical snapshot is
    * bearish enough to avoid. UNLIKE every other gate above, this can NEVER
@@ -619,6 +626,19 @@ export class PaperAutoPilot {
         continue;
       }
 
+      // Funding-crowding gate: see the option's doc comment.
+      if (this.options.fundingCheck && !(await this.options.fundingCheck(scanResult.symbol, timestamp))) {
+        skipped.push({ symbol: scanResult.symbol, reason: 'funding crowding: leveraged longs unusually crowded' });
+        audit.append({
+          timestamp,
+          intentId: `${scanResult.symbol}:${timestamp}`,
+          event: 'rejected',
+          mode: this.mode,
+          detail: `funding-crowding gate refused ${scanResult.symbol}: OKX funding unusually high`,
+        });
+        continue;
+      }
+
       // Top-trader positioning gate: see the option's doc comment.
       if (this.options.topTraderCheck && !(await this.options.topTraderCheck(scanResult.symbol, timestamp))) {
         skipped.push({ symbol: scanResult.symbol, reason: 'top-trader positioning: OKX top traders are net-short' });
@@ -809,6 +829,10 @@ export class PaperAutoPilot {
       }
       if (this.options.whaleFlowCheck && !(await this.options.whaleFlowCheck(scanResult.symbol, timestamp))) {
         miss('whale flow filter: large trades show heavy net selling');
+        continue;
+      }
+      if (this.options.fundingCheck && !(await this.options.fundingCheck(scanResult.symbol, timestamp))) {
+        miss('funding crowding: leveraged longs unusually crowded');
         continue;
       }
       if (this.options.topTraderCheck && !(await this.options.topTraderCheck(scanResult.symbol, timestamp))) {
