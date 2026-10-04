@@ -1,5 +1,39 @@
 # PROJECT_STATE
 
+## New forward test: funding-crowding gate (leading signal, not price history) (2026-10-04)
+
+David: "we look at the past too much — we need to predict where coins go."
+Honest framing given to him: nobody can know exact direction; the
+achievable thing is a small, measurable edge, and leading inputs (ones that
+change BEFORE price) are the most promising place to look for it — the
+whale-flow filter, the only one so far to earn promotion, is exactly that.
+
+Added the next one as a shadow candidate (paper money, isolated portfolio,
+nothing on the real-money path): **'funding-crowding'** = live-mirror plus
+one change — refuse a new long while leveraged longs on that coin are
+unusually crowded, measured from OKX's public perpetual funding-rate history
+(`src/core/data/okxFunding.ts`, 100 settled 8h points ≈ 33 days, no auth;
+pure gate `src/core/signal/fundingGate.ts`: last-24h average > 0, ≥ the
+coin's own 80th percentile AND > its median, no look-ahead, fails open).
+Wired as a `fundingCheck` option on `PaperAutoPilot` (entry-only, never
+blocks an exit — same shape as `topTraderCheck`), built per cycle in
+`runShadows` (`buildFundingCheck`, one OKX call per symbol, like the
+top-trader gate). HNT/VELO have no OKX perpetual → always allowed.
+
+**Parameter choice was by firing rate only, never profitability:** first
+draft ("strictly above p90") would have blocked just 1.7% of checks over
+the past month on real data — OKX funding clusters at the 0.01% baseline,
+so it would never diverge from live-mirror enough to produce evidence.
+Final definition fires on 13.3% of checks (1 of 18 coins blocked at the
+time of writing). Decision rule: promote only if it clears
+`SHADOW_MEANINGFUL_TRADES` with a forward record ahead of live-mirror on
+return, PF and win rate over the same window (the whale-flow precedent).
+
+Tests: gate (fail-open, crowded spike blocks, flat baseline never blocks,
+negative funding allows, no look-ahead), fetcher (ordering, HTTP/OKX/network
+errors never throw), `PaperAutoPilot` honors it and audits why, and the
+whale-flow parity test now covers this candidate too.
+
 ## System review — full measured pass; most candidate changes REJECTED on evidence, two measurement bugs fixed (2026-10-04)
 
 David asked for a full review: add/remove coins, improve strategy, "upgrade

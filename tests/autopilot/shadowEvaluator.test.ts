@@ -200,7 +200,7 @@ describe('shadow evaluation', () => {
   // own feature with "no whale-flow". Same drift class as the trailing bug
   // above, on a different field.
   it('keeps whale-flow on every candidate that isolates one change against live-mirror', () => {
-    const productionRelative = ['live-mirror', 'ai-judgment', 'correlation-capped', 'trailing-forward-test'];
+    const productionRelative = ['live-mirror', 'ai-judgment', 'correlation-capped', 'trailing-forward-test', 'funding-crowding'];
     for (const key of productionRelative) {
       const c = SHADOW_CANDIDATES.find((x) => x.key === key);
       if (!c) continue; // a retired candidate is fine; a present one must match production

@@ -68,6 +68,7 @@ function makePilot(
     marketRegimeCheck?: (timestamp: number) => Promise<boolean>;
     whaleFlowCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     topTraderCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+    fundingCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     aiJudgmentCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     confidenceRisk?: { floorPct: number; ceilingPct: number };
     trailing?: import('../../src/core/risk/trailingStop').TrailingConfig;
@@ -102,6 +103,7 @@ function makePilot(
     marketRegimeCheck: opts.marketRegimeCheck,
     whaleFlowCheck: opts.whaleFlowCheck,
     topTraderCheck: opts.topTraderCheck,
+    fundingCheck: opts.fundingCheck,
     aiJudgmentCheck: opts.aiJudgmentCheck,
     confidenceRisk: opts.confidenceRisk,
     trailing: opts.trailing,
@@ -648,6 +650,26 @@ describe('whale-flow gate', () => {
     expect(cycle.closed[0]!.reason).toBe('stop-loss');
     expect(portfolio.openPositions()).toHaveLength(0);
     expect(journal.entries()[0]!.exitReason).toBe('stop-loss');
+  });
+});
+
+describe('funding-crowding gate', () => {
+  it('refuses a qualifying entry while longs are crowded, and audits why', async () => {
+    const { pilot, portfolio, audit } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { fundingCheck: async () => false },
+    );
+    const cycle = await pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(cycle.skipped.some((s) => s.reason.includes('funding crowding'))).toBe(true);
+    expect(audit.entries().some((e) => e.event === 'rejected' && e.detail.includes('funding-crowding'))).toBe(true);
+  });
+
+  it('opens normally when funding is not crowded', async () => {
+    const { pilot, portfolio } = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { fundingCheck: async () => true });
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
   });
 });
 
