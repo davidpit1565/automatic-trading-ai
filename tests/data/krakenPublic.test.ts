@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CANDIDATE_INSTRUMENTS, CURATED_INSTRUMENTS, KrakenPublicSource } from '../../src/core/data/krakenPublic';
+import { CANDIDATE_INSTRUMENTS, CURATED_INSTRUMENTS, ENTRY_PAUSED_SYMBOLS, KrakenPublicSource } from '../../src/core/data/krakenPublic';
 
 const NOW = 1_700_000_000_000;
 // Mirrors the curated-majors order in src/core/data/krakenPublic.ts — the
@@ -589,5 +589,23 @@ describe('CANDIDATE_INSTRUMENTS (forward-test-only, never real trading)', () => 
   it('never overlaps the curated real-trading universe', () => {
     const curatedSymbols = new Set(CURATED_INSTRUMENTS.map((i) => i.symbol));
     expect(CANDIDATE_INSTRUMENTS.every((i) => !curatedSymbols.has(i.symbol))).toBe(true);
+  });
+});
+
+describe('ENTRY_PAUSED_SYMBOLS (curated, but no new automatic entries)', () => {
+  it('only pauses real curated symbols — a typo would silently pause nothing', () => {
+    const curatedSymbols = new Set(CURATED_INSTRUMENTS.map((i) => i.symbol));
+    for (const symbol of ENTRY_PAUSED_SYMBOLS) expect(curatedSymbols.has(symbol)).toBe(true);
+  });
+
+  it('never pauses the whole universe, and keeps the original majors entry-active', () => {
+    expect(ENTRY_PAUSED_SYMBOLS.size).toBeLessThan(CURATED_INSTRUMENTS.length);
+    for (const major of ['XBTEUR', 'ETHEUR', 'SOLEUR', 'LTCEUR', 'DOTEUR', 'LINKEUR', 'ADAEUR']) {
+      expect(ENTRY_PAUSED_SYMBOLS.has(major)).toBe(false);
+    }
+  });
+
+  it('never overlaps the candidate list (paused coins are watched via a separate append)', () => {
+    expect(CANDIDATE_INSTRUMENTS.every((i) => !ENTRY_PAUSED_SYMBOLS.has(i.symbol))).toBe(true);
   });
 });

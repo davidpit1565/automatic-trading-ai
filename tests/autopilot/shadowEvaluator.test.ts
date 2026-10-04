@@ -193,6 +193,20 @@ describe('shadow evaluation', () => {
       expect(c.trailing, `${c.key} should reference AUTOPILOT_TRAILING`).toBe(AUTOPILOT_TRAILING);
     }
   });
+
+  // Real bug, 2026-10-04: whale-flow was promoted into production (and
+  // 'live-mirror') on 2026-09-09, but 'ai-judgment' and 'correlation-capped'
+  // never got it — each one's "beats live-mirror" record silently mixed its
+  // own feature with "no whale-flow". Same drift class as the trailing bug
+  // above, on a different field.
+  it('keeps whale-flow on every candidate that isolates one change against live-mirror', () => {
+    const productionRelative = ['live-mirror', 'ai-judgment', 'correlation-capped', 'trailing-forward-test'];
+    for (const key of productionRelative) {
+      const c = SHADOW_CANDIDATES.find((x) => x.key === key);
+      if (!c) continue; // a retired candidate is fine; a present one must match production
+      expect(c.useWhaleFlowCheck, `${key} must use whale-flow like production`).toBe(true);
+    }
+  });
 });
 
 /** Small helper: a candidate's persisted portfolio blob, for comparison. */

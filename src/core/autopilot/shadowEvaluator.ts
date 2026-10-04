@@ -400,6 +400,11 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     maxRsiForLong: 65,
     trailing: AUTOPILOT_TRAILING,
     confirmationTimeframe: '4h',
+    // Added 2026-10-04: production has run whale-flow since 2026-09-09, and
+    // this candidate was missing it — so its record vs 'live-mirror' mixed
+    // "add AI check" with "drop whale-flow". Records before this date are
+    // confounded; only trades from 2026-10-04 on isolate the AI check alone.
+    useWhaleFlowCheck: true,
     useAiJudgmentCheck: true,
   },
   // Otherwise identical to live-mirror — isolates what capping exposure to a
@@ -415,6 +420,8 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     maxRsiForLong: 65,
     trailing: AUTOPILOT_TRAILING,
     confirmationTimeframe: '4h',
+    // Same 2026-10-04 whale-flow parity fix as 'ai-judgment' above.
+    useWhaleFlowCheck: true,
     correlationCap: { threshold: 0.7, maxExposurePct: 30 },
   },
 ];
