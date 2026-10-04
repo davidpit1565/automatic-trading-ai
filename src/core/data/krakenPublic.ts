@@ -100,35 +100,6 @@ export const CURATED_INSTRUMENTS: Instrument[] = [
 ];
 
 /**
- * Curated coins production no longer OPENS new positions on (2026-10-04).
- * They stay in `CURATED_INSTRUMENTS` on purpose: manual Revolut X trades in
- * them keep being reconciled (`liveManualTradeSync.mts`), any open position
- * keeps its stop/target exits (exits iterate open positions, never this
- * list), and the UI badge is unchanged — only automatic entries stop.
- *
- * Measured, not guessed: since the 2026-09-03 batch was added, it lost on
- * every independent forward record over the same window — production PF
- * 0.59 / 29% win (21 trades), live-mirror shadow PF 0.73 / 35% (20),
- * ai-judgment and no-confirm shadows PF 0.73 / 40% (20 each) — while the
- * original 10 majors made PF 2.23-3.31 / 56-67% win on the same records.
- * See PROJECT_STATE.md (2026-10-04) for the historical backtest cross-check.
- * They keep a forward record in `shadow:candidate-watch`, so any of them can
- * earn entries back the same way a new candidate is promoted.
- */
-export const ENTRY_PAUSED_SYMBOLS: ReadonlySet<string> = new Set([
-  'UNIEUR',
-  'FILEUR',
-  'AAVEEUR',
-  'ATOMEUR',
-  'XLMEUR',
-  'ALGOEUR',
-  'HNTEUR',
-  'VELOEUR',
-  'AEROEUR',
-  'ENAEUR',
-]);
-
-/**
  * Candidates under LIVE FORWARD TEST only (`shadow:candidate-watch` in
  * `server/autopilotRunner.mts`) — NEVER included in `CURATED_INSTRUMENTS`
  * and NEVER read by the real-trading symbol slice. Measured net-positive on

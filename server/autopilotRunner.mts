@@ -15,7 +15,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CANDIDATE_INSTRUMENTS, CURATED_INSTRUMENTS, ENTRY_PAUSED_SYMBOLS, KrakenPublicSource } from '../src/core/data/krakenPublic';
+import { CANDIDATE_INSTRUMENTS, CURATED_INSTRUMENTS, KrakenPublicSource } from '../src/core/data/krakenPublic';
 import { CoinbasePublicSource } from '../src/core/data/coinbasePublic';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import { PersistedAuditLog } from '../src/core/autopilot/auditLog';
@@ -655,11 +655,7 @@ async function latestPrices(
 
 export interface ProductionAutopilot {
   readonly autopilot: PaperAutoPilot;
-  /** Every curated symbol — used for valuation (anything held is priced). */
   readonly symbols: readonly string[];
-  /** Curated minus `ENTRY_PAUSED_SYMBOLS` — the universe new entries (and
-   * the strategy-comparison shadows, which must mirror production) scan. */
-  readonly entrySymbols: readonly string[];
   readonly portfolio: PortfolioEngine;
   readonly journal: TradeJournal;
 }
@@ -690,7 +686,6 @@ export async function buildProductionAutopilot(
   // excluded from real trading while the UI's "TRADED" badge (CURATED_BASES,
   // the same source array) kept claiming it traded.
   const symbols = instruments.slice(0, CURATED_INSTRUMENTS.length).map((i) => i.symbol);
-  const entrySymbols = symbols.filter((s) => !ENTRY_PAUSED_SYMBOLS.has(s));
 
   const journal = new TradeJournal(store);
   const positions = new PositionEngine(store, journal);
@@ -698,11 +693,11 @@ export async function buildProductionAutopilot(
     initialCash: INITIAL_CASH,
     baseCurrency: 'EUR',
   });
-  const regimeCheck = await buildRegimeCheck(source, entrySymbols);
+  const regimeCheck = await buildRegimeCheck(source, symbols);
   const marketRegimeCheck = await buildMarketRegimeCheck(source, instruments);
   const autopilot = new PaperAutoPilot({
     source,
-    symbols: entrySymbols,
+    symbols,
     timeframe: ENTRY_TF,
     confirmationTimeframe: CONFIRMATION_TF,
     // Never open a long while the larger daily trend is down, even when the
@@ -751,7 +746,7 @@ export async function buildProductionAutopilot(
     whaleFlowCheck: buildWhaleFlowCheck(source) ?? undefined,
   });
 
-  return { autopilot, symbols, entrySymbols, portfolio, journal };
+  return { autopilot, symbols, portfolio, journal };
 }
 
 async function main(): Promise<void> {
@@ -768,7 +763,7 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  const { autopilot, symbols, entrySymbols, portfolio, journal } = await buildProductionAutopilot(store, source, instruments.value);
+  const { autopilot, symbols, portfolio, journal } = await buildProductionAutopilot(store, source, instruments.value);
 
   const telegram = {
     token: process.env['TELEGRAM_BOT_TOKEN'] ?? '',
@@ -786,7 +781,7 @@ async function main(): Promise<void> {
     if (i > 0) await sleep(LOOP_INTERVAL_MS);
     let traded = false;
     try {
-      traded = await runCycle(store, source, autopilot, portfolio, journal, telegram, symbols, entrySymbols, instruments.value);
+      traded = await runCycle(store, source, autopilot, portfolio, journal, telegram, symbols, instruments.value);
     } catch (cause) {
       // Never let one bad cycle kill the whole run — log and keep looping.
       console.error('Cycle failed:', cause instanceof Error ? cause.message : cause);
@@ -821,7 +816,6 @@ async function runCycle(
   journal: TradeJournal,
   telegram: { token: string; chatId: string },
   symbols: readonly string[],
-  entrySymbols: readonly string[],
   instruments: readonly Instrument[],
 ): Promise<boolean> {
   const now = Date.now();
@@ -935,7 +929,7 @@ async function runCycle(
   // each fetching its own would double the requests for identical data.
   const cyclePrices = await latestPrices(source, symbols);
   await runLiveMirror(store, source, instruments, telegram, cycle.opened, cyclePrices, now);
-  await runShadows(store, source, entrySymbols, now, cyclePrices);
+  await runShadows(store, source, symbols, now, cyclePrices);
   await runLongTermShadow(store, source, symbols, now);
   await runCandidateWatch(store, source, now);
   await recordEquity(store, source, portfolio, journal, now, cyclePrices);
@@ -1478,14 +1472,11 @@ async function runShadows(
  * tracking if it ever becomes a bottleneck against the 30-minute cron budget.
  */
 const CANDIDATE_WATCH_STANDINGS_KEY = 'candidate-watch-standings';
-// Entry-paused curated coins (2026-10-04) are watched here too, so each keeps
-// a forward record and can earn automatic entries back — same path as any
-// new candidate (`scripts/candidateReadiness.mts`).
-const CANDIDATE_WATCH_SYMBOLS = [...CANDIDATE_INSTRUMENTS.map((i) => i.symbol), ...ENTRY_PAUSED_SYMBOLS];
+const CANDIDATE_WATCH_SYMBOLS = CANDIDATE_INSTRUMENTS.map((i) => i.symbol);
 const CANDIDATE_WATCH_CANDIDATES: readonly ShadowCandidate[] = [
   {
     key: 'candidate-watch',
-    label: `${CANDIDATE_WATCH_SYMBOLS.length} candidates, production defaults (forward test only — not real trading)`,
+    label: `${CANDIDATE_INSTRUMENTS.length} candidates, production defaults (forward test only — not real trading)`,
     minConfidence: AUTOPILOT_MIN_CONFIDENCE,
     maxRsiForLong: AUTOPILOT_MAX_RSI_FOR_LONG,
     trailing: AUTOPILOT_TRAILING,
