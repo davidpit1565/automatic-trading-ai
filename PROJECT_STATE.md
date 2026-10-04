@@ -59,7 +59,18 @@ candidate basket ran PF 0.95 / 39% win / -€168 over 79 trades since
 per-cycle fetch list (66 symbols). New bar: ≥10 trades AND PF ≥1.5 AND return
 ≥+2%, capped at 80 entries.
 
-**6. Entry-confidence inversion — see below.** CONFIDENCE_PLACEHOLDER
+**6. Entry-confidence inversion — measured, NOT acted on.** Forward, the
+55+ confidence bucket was worst in both production and live-mirror (~12
+trades each, ~17% win, ≈ -€440) while 45-50 made most of the profit — and
+confidence-scaled risk gives those trades the BIGGEST size. Historical
+check (same production-faithful harness): only partial — on 1h/30d 50+
+lost, but on 4h/120d (20 coins) 55+ was the MOST profitable bucket (10
+trades, 60% win, +€709; OOS 67%, +€823). Capping entries at confidence 55
+cut 4h/120d return 10.4%→4.7% and 1h OOS PF 0.39→0.18 on 20 coins. Flat
+risk (everyone at the weakest setup's size) lowered drawdown 5-20% in all 6
+window/universe runs but also return (4h/120d: 10.4%→7.5%) — a risk/return
+tradeoff, not an improvement, so left as is. Tracked weekly by the win-rate
+check-in: revisit if 55+ is still clearly worst with ≥25 trades per record.
 
 Gate: tsc clean, 1425 vitest passed, build ok. Only `shadowEvaluator.ts` (2
 candidates), its test, and one comment in `autopilotRunner.mts` changed —
