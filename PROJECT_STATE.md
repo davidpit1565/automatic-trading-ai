@@ -1,5 +1,81 @@
 # PROJECT_STATE
 
+## System review — full measured pass; most candidate changes REJECTED on evidence, two measurement bugs fixed (2026-10-04)
+
+David asked for a full review: add/remove coins, improve strategy, "upgrade
+everything." Mapped current state from real data first, then measured every
+candidate change on real Kraken history (3 research agents in parallel)
+before touching production. Outcome: **production strategy and coin list
+unchanged** — every lever that looked good on one data source was
+contradicted or neutral on another, and this project only ships measured,
+consistent improvements.
+
+**Current state (fresh `origin/main` state):** production paper since
+2026-08-21: 60 trades, 48% win, PF 1.39, +€842; last 14 days weaker (24
+trades, 42% win, PF 1.20, +€200). Real account tiny (5 closed trades, PF
+0.97, ~€0; €49 cash). Readiness gate: ready.
+
+**1. Pause the 10 alts added 2026-09-03? — measured, NOT done.** Forward
+records since 09-03 all agree the added 10 lost (production PF 0.59/29% win
+over 21 trades; live-mirror, ai-judgment, no-confirm shadows PF 0.73 over 20
+each) while the original 10 made PF 2.2-3.3. But the historical backtest
+(`sweepAutopilot.mts` copy, exact production config, same candles for all
+universes) disagrees on the only independent window with a usable sample:
+4h/120d — all 20: +10.46%, PF 2.07, OOS +14.50%/PF 3.03 (23 trades) vs
+original 10 only: +2.11%, PF 1.60 (9 trades). 1h/30d overlaps the forward
+period (not independent; every universe lost there, -3.2% to -3.6%); 1d/2y
+too thin (3-7 trades). The alts look regime-dependent (profit source in the
+stronger 120-day trend, losers in the last month) — pausing them would be a
+single-regime decision. Implemented, then reverted before merge. Now tracked
+weekly by the win-rate check-in Routine: revisit if the added group is still
+clearly worse with ≥40 trades in both production and live-mirror.
+
+**2. Turn on the correlation cap? — measured, NOT done.** The
+'correlation-capped' shadow looked better (PF 1.75 vs 1.56, 28 trades) but
+was confounded (see 4). Clean backtest (production config ± cap only,
+correlation recomputed per cycle from trailing 150 candles — no lookahead):
+0.7 neutral on 1h, worse on 4h (PF 2.07→1.94, no drawdown reduction), no
+effect on 1d; 0.6/0.8 mixed. The cap triggered 0-4 times per window —
+existing limits (5 positions, 20%/position, regime filters) already bound
+concentration. Stays off.
+
+**3. Trailing stop / ai-judgment — not promoted.** trailing-forward-test:
+12 trades, PF 1.22 vs live-mirror 1.81 over the same window (consistent
+with keeping it off). ai-judgment: PF 1.81 vs 1.70 over 57 trades — marginal,
+confounded (see 4), and costs an AI call per entry check.
+
+**4. Real bug fixed: shadow config drift (whale-flow).** Production has run
+whale-flow since 2026-09-09, but 'ai-judgment' and 'correlation-capped' never
+got `useWhaleFlowCheck` — each one's "beats live-mirror" record silently mixed
+its own feature with "no whale-flow" (same drift class as the 2026-09-22
+trailing bug). Both now carry it; new regression test asserts every
+candidate isolating one change against live-mirror keeps whale-flow. Their
+records before 2026-10-04 are confounded.
+
+**5. Candidate-watch add bar tightened (weekly Routine prompt).** The pooled
+candidate basket ran PF 0.95 / 39% win / -€168 over 79 trades since
+2026-09-04 vs live-mirror PF 1.69 over the same window — the loose
+">5 trades, PF>1 on one 30-day scan" bar admits mostly noise and bloats the
+per-cycle fetch list (66 symbols). New bar: ≥10 trades AND PF ≥1.5 AND return
+≥+2%, capped at 80 entries.
+
+**6. Entry-confidence inversion — measured, NOT acted on.** Forward, the
+55+ confidence bucket was worst in both production and live-mirror (~12
+trades each, ~17% win, ≈ -€440) while 45-50 made most of the profit — and
+confidence-scaled risk gives those trades the BIGGEST size. Historical
+check (same production-faithful harness): only partial — on 1h/30d 50+
+lost, but on 4h/120d (20 coins) 55+ was the MOST profitable bucket (10
+trades, 60% win, +€709; OOS 67%, +€823). Capping entries at confidence 55
+cut 4h/120d return 10.4%→4.7% and 1h OOS PF 0.39→0.18 on 20 coins. Flat
+risk (everyone at the weakest setup's size) lowered drawdown 5-20% in all 6
+window/universe runs but also return (4h/120d: 10.4%→7.5%) — a risk/return
+tradeoff, not an improvement, so left as is. Tracked weekly by the win-rate
+check-in: revisit if 55+ is still clearly worst with ≥25 trades per record.
+
+Gate: tsc clean, 1425 vitest passed, build ok. Only `shadowEvaluator.ts` (2
+candidates), its test, and one comment in `autopilotRunner.mts` changed —
+nothing on the real-money path.
+
 ## Weekly coin review #2 — 11 new shadow candidates; fixed a real bug where the recurring Routine silently failed to run at all (2026-09-28)
 
 The first scheduled firing of the weekly coin-review Routine (2026-09-25's

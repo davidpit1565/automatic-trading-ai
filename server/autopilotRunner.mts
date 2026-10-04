@@ -1408,8 +1408,9 @@ async function runShadows(
     const caching = new CachingSource(source);
     // Built from the REAL source (not the caching wrapper — CachingSource
     // only proxies candles/instruments). Passed to every candidate with
-    // `useWhaleFlowCheck: true` — currently just 'live-mirror', matching
-    // what real production now does (see this file's `main()`).
+    // `useWhaleFlowCheck: true` — 'live-mirror' plus every candidate that
+    // isolates one change against it, matching what real production does
+    // (see `buildProductionAutopilot`).
     const whaleFlowCheck = buildWhaleFlowCheck(source) ?? undefined;
     const topTraderCheck = await buildTopTraderCheck(symbols);
     // Reads through the shared CachingSource — the AI check's candle fetch
