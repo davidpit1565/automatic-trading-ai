@@ -1,5 +1,18 @@
 # PROJECT_STATE
 
+## Weekly coin review #3 — 3 new shadow candidates under the stricter bar, nothing promoted (2026-10-05)
+
+First run of the weekly Routine under the add bar tightened 2026-10-04
+(>=10 trades AND PF >=1.5 AND return >=+2%). Scan: 43 symbols passed the
+basic bar; 10 were genuinely new (untracked); only **SAND (+3.32%, PF 2.75,
+10t), ORCA (+2.38%, PF 1.87, 12t), GALA (+3.10%, PF 1.88, 13t)** met the
+strict bar and were added to `CANDIDATE_INSTRUMENTS` (shadow-watch, 66 → 69,
+cap 80). The other 7 (SENT, SKR, MOVR, KSM, 2Z, GLMR, FUN) missed on PF or
+trade count. Per-symbol readiness: busiest symbol MINAEUR has 7 own trades,
+far below 20 — nothing promoted to `CURATED_INSTRUMENTS`. Revolut X
+tradability of the new three unverified. Gate: tsc clean, vitest green,
+build ok.
+
 ## New forward test: funding-crowding gate (leading signal, not price history) (2026-10-04)
 
 David: "we look at the past too much — we need to predict where coins go."
