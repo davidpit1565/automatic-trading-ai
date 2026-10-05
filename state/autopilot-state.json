@@ -2754,7 +2754,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1791212122994,
+    "at": 1791212490247,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -68352,10 +68352,32 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1791212509146,
+      "intentId": "live-entry:ATOMEUR:1791212490247",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1791212522396,
+      "intentId": "live-entry:ATOMEUR:1791212490247",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram (button)"
+    },
+    {
+      "timestamp": 1791212523436,
+      "intentId": "live-entry:ATOMEUR:1791212490247",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "Revolut X order de093547-d768-e26d-02c0-07b979ceff82: new"
     }
   ],
   "live:live-entry-outstanding-symbols": [
-    "LTCEUR"
+    "LTCEUR",
+    "ATOMEUR"
   ],
   "live:kill-switch-keyboard-sent": true,
   "education-tip-last-sent-at": 1791066090104,
@@ -68366,10 +68388,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1788813729727,
-      "equity": 113.23
-    },
     {
       "at": 1788814070983,
       "equity": 113.18
@@ -88365,6 +88383,10 @@
     {
       "at": 1791212122994,
       "equity": 58.87
+    },
+    {
+      "at": 1791212490247,
+      "equity": 58.85
     }
   ],
   "live:revolut-x-order-map": {
@@ -88395,7 +88417,8 @@
     "live-entry:DOTEUR:1790346962182": "9d906dee-3cdf-46cb-8bad-502370b1c5d8",
     "live-entry:ATOMEUR:1790340349162:exit:1790364916886": "3ecf7dae-ad7c-4afe-b6fe-17ce09b95909",
     "live-entry:AVAXEUR:1790715063388": "9de632e4-9f02-41ac-8173-28840a12680d",
-    "live-entry:LTCEUR:1790254633004:exit:1791125788874": "30fbee75-e1f1-e2b7-02c0-07d6ac8ad05d"
+    "live-entry:LTCEUR:1790254633004:exit:1791125788874": "30fbee75-e1f1-e2b7-02c0-07d6ac8ad05d",
+    "live-entry:ATOMEUR:1791212490247": "de093547-d768-e26d-02c0-07b979ceff82"
   },
   "live:live-open-positions": {
     "external-reconcile:ALGOEUR:1790606205804": {
@@ -88896,7 +88919,7 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447905052,
+  "telegram-shared-update-offset": 447905060,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
   "live:confirmation-gate-pending": {
@@ -95315,7 +95338,38 @@
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
-  "live:live-resting-entry-intents": {},
+  "live:live-resting-entry-intents": {
+    "ATOMEUR": {
+      "id": "live-entry:ATOMEUR:1791212490247",
+      "createdAt": 1791212490247,
+      "mode": "live",
+      "symbol": "ATOM/EUR",
+      "side": "buy",
+      "quantity": 7.410948395536805,
+      "limitPrice": 1.5881,
+      "stopLoss": 1.5642785000000001,
+      "takeProfit": 1.6357430000000002,
+      "assessment": {
+        "approved": true,
+        "asset": "ATOMEUR",
+        "entry": 1.5881,
+        "stopLoss": 1.5642785000000001,
+        "takeProfit": 1.6357430000000002,
+        "positionSize": 7.410948395536805,
+        "positionValue": 11.769327146952001,
+        "riskAmount": 0.17653990720427956,
+        "riskPercentage": 0.29999999999999927,
+        "rewardRiskRatio": 2.0000000000000093,
+        "portfolioExposure": 36.7666946658293,
+        "reasons": [
+          "risking 0.18 (0.30% of equity) for a 2.0:1 reward/risk — within every configured limit"
+        ],
+        "warnings": [
+          "size capped by the 20% single-position limit"
+        ]
+      }
+    }
+  },
   "shadow:high-conviction:open-positions": [],
   "shadow:high-conviction:audit-log": [
     {
