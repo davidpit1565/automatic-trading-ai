@@ -571,8 +571,8 @@ describe('transient failure handling', () => {
 });
 
 describe('CANDIDATE_INSTRUMENTS (forward-test-only, never real trading)', () => {
-  it('lists exactly the 66 measured candidates, each a valid EUR pair', () => {
-    expect(CANDIDATE_INSTRUMENTS).toHaveLength(66);
+  it('lists exactly the 69 measured candidates, each a valid EUR pair', () => {
+    expect(CANDIDATE_INSTRUMENTS).toHaveLength(69);
     for (const i of CANDIDATE_INSTRUMENTS) {
       expect(i.quote).toBe('EUR');
       expect(i.symbol).toBe(`${i.base}EUR`); // no Kraken alias needed for any of these
@@ -583,6 +583,7 @@ describe('CANDIDATE_INSTRUMENTS (forward-test-only, never real trading)', () => 
       'FARTCOIN', 'NIL', 'CC', 'RAY', 'W', 'MEGA', 'PHA', 'SAGA', 'SYN', 'DRV', 'ETC', 'MANA', 'PROVE',
       'QNT', 'SEI', 'APT', 'WIF', 'SNX', 'GRT', 'ASTER', 'AKT', 'PYTH', 'PEAQ', 'VIRTUAL', 'CAKE', 'GRASS',
       'MON', 'WLD', 'INJ', 'TON', 'NIGHT', 'LDO', 'APE', 'IMX', 'SHX', 'RUNE', 'SUPER',
+      'SAND', 'ORCA', 'GALA',
     ]);
   });
 

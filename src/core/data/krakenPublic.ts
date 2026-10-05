@@ -234,6 +234,18 @@ export const CANDIDATE_INSTRUMENTS: Instrument[] = [
   { symbol: 'SHXEUR', base: 'SHX', quote: 'EUR' },
   { symbol: 'RUNEEUR', base: 'RUNE', quote: 'EUR' },
   { symbol: 'SUPEREUR', base: 'SUPER', quote: 'EUR' },
+  // Added 2026-10-05 from that week's scan (top 80 EUR pairs by 24h volume,
+  // real Kraken history, ~720 1h candles, 4h confirmation): 43 passed the
+  // basic bar; under the STRICTER add bar introduced 2026-10-04 (>=10 trades
+  // AND PF >=1.5 AND return >=+2%) only these 3 genuinely new symbols
+  // qualified: SAND +3.32%/PF 2.75/10t, ORCA +2.38%/PF 1.87/12t, GALA
+  // +3.10%/PF 1.88/13t. Revolut X tradability NOT verified (required before
+  // any promotion to `CURATED_INSTRUMENTS`). Per-symbol readiness re-checked:
+  // busiest single symbol (MINAEUR) has 7 of its own closed trades, far
+  // below `SHADOW_MEANINGFUL_TRADES` (20) — nothing promoted.
+  { symbol: 'SANDEUR', base: 'SAND', quote: 'EUR' },
+  { symbol: 'ORCAEUR', base: 'ORCA', quote: 'EUR' },
+  { symbol: 'GALAEUR', base: 'GALA', quote: 'EUR' },
 ];
 
 /** Base asset codes (BTC, ETH, …) actually traded by the agent — for the UI's
