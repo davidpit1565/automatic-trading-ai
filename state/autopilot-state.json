@@ -2756,7 +2756,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1791287952712,
+    "at": 1791288322249,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -68693,12 +68693,8 @@
     "engaged": false,
     "reason": null
   },
-  "live:live-external-btc-qty": 0,
+  "live:live-external-btc-qty": 0.00000761,
   "live:live-equity-history": [
-    {
-      "at": 1788855635771,
-      "equity": 103.37
-    },
     {
       "at": 1788856044731,
       "equity": 103.5
@@ -88694,6 +88690,10 @@
     {
       "at": 1791287952712,
       "equity": 58.81
+    },
+    {
+      "at": 1791288322249,
+      "equity": 59.34
     }
   ],
   "live:revolut-x-order-map": {
@@ -88818,6 +88818,36 @@
         ],
         "warnings": [
           "size capped by the 20% single-position limit"
+        ]
+      }
+    },
+    "external-reconcile:XBTEUR:1791288322249": {
+      "id": "external-reconcile:XBTEUR:1791288322249",
+      "symbol": "BTC/EUR",
+      "quantity": 0.00000761,
+      "initialQuantity": 0.00000761,
+      "entryPrice": 76566.7,
+      "stopLoss": 75418.1995,
+      "takeProfit": 78863.701,
+      "highestPrice": 76566.7,
+      "lowestPrice": 76566.7,
+      "entrySlippage": 0,
+      "openedAt": 1791288322249,
+      "entryAssessment": {
+        "approved": true,
+        "asset": "XBTEUR",
+        "entry": 76566.7,
+        "stopLoss": 75418.1995,
+        "takeProfit": 78863.701,
+        "positionSize": 0.00000761,
+        "positionValue": 0.582672587,
+        "riskAmount": 0.008740088804999959,
+        "riskPercentage": 0,
+        "rewardRiskRatio": 2,
+        "portfolioExposure": 0,
+        "reasons": [],
+        "warnings": [
+          "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
         ]
       }
     }
