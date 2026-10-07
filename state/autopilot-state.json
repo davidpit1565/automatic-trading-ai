@@ -2750,7 +2750,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1791376305006,
+    "at": 1791376693953,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2766,10 +2766,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788888671856,
-      "equity": 10400.07
-    },
     {
       "at": 1788889011649,
       "equity": 10400.07
@@ -22765,6 +22761,10 @@
     {
       "at": 1791376305006,
       "equity": 10447.54
+    },
+    {
+      "at": 1791376693953,
+      "equity": 10447.54
     }
   ],
   "trade-journal": [
@@ -25146,7 +25146,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -28.09% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -28.22% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25244,7 +25244,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1791376305006,
+    "at": 1791376693953,
     "standings": [
       {
         "key": "live-mirror",
@@ -25293,8 +25293,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9221.296914393977,
-        "returnPct": -7.787030856060229,
+        "equity": 9232.597437884877,
+        "returnPct": -7.674025621151231,
         "trades": 131,
         "winRatePct": 41.221374045801525,
         "profitFactor": 0.9023691860004907,
@@ -70331,6 +70331,20 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1791376717477,
+      "intentId": "live-entry:ATOMEUR:1791212490247:exit:1791376693953",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1791376734569,
+      "intentId": "external-reconcile:XBTEUR:1791290817568:exit:1791376693953",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -70346,10 +70360,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1788888671856,
-      "equity": 75.99
-    },
     {
       "at": 1788889011649,
       "equity": 76.01
@@ -90345,6 +90355,10 @@
     {
       "at": 1791376305006,
       "equity": 60.19
+    },
+    {
+      "at": 1791376693953,
+      "equity": 60.21
     }
   ],
   "live:revolut-x-order-map": {
@@ -90979,6 +90993,14 @@
     "external-reconcile:XBTEUR:1791319479861": {
       "reason": "stop-loss",
       "queuedAt": 1791376305006
+    },
+    "live-entry:ATOMEUR:1791212490247": {
+      "reason": "stop-loss",
+      "queuedAt": 1791376693953
+    },
+    "external-reconcile:XBTEUR:1791290817568": {
+      "reason": "stop-loss",
+      "queuedAt": 1791376693953
     }
   },
   "live:confirmation-gate-pending": {
@@ -90991,11 +91013,21 @@
       "sentAt": 1791376330099,
       "messageId": 1181,
       "token": "muy37qlv.typxca"
+    },
+    "live-entry:ATOMEUR:1791212490247:exit:1791376693953": {
+      "sentAt": 1791376717284,
+      "messageId": 1183,
+      "token": "muy3g1d0.huqb3g"
+    },
+    "external-reconcile:XBTEUR:1791290817568:exit:1791376693953": {
+      "sentAt": 1791376734366,
+      "messageId": 1184,
+      "token": "muy3geji.1472nc9"
     }
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
-    "cash": 5583.117501821056,
+    "cash": 7451.417658914205,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -263.2306962809498,
@@ -91005,13 +91037,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1791376305006,
+    "at": 1791376693953,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "69 candidates, production defaults (forward test only — not real trading)",
-        "equity": 9296.19297352737,
-        "returnPct": -7.0380702647263025,
+        "equity": 9308.735901921706,
+        "returnPct": -6.912640980782944,
         "trades": 90,
         "winRatePct": 37.77777777777778,
         "profitFactor": 0.9364825078565823,
@@ -93470,13 +93502,6 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit RENDEREUR: 991.3025924606707 @ 1.833 (stop-loss)"
-    },
-    {
-      "timestamp": 1791368893735,
-      "intentId": "SANDEUR:1791368893735:1",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper entry SANDEUR: 28657.108015847065 @ 0.065 (stop 0.06197131488248968, target 0.07105737023502065, confidence 54)"
     }
   ],
   "live:live-blackout-queue": {},
@@ -95738,6 +95763,81 @@
   },
   "state-merge-collisions": [
     {
+      "key": "shadow:mean-reversion:portfolio-engine",
+      "at": 1790881704523,
+      "label": "cycle 47/70"
+    },
+    {
+      "key": "shadow:mean-reversion:audit-log",
+      "at": 1790881704523,
+      "label": "cycle 47/70"
+    },
+    {
+      "key": "shadow:candidate-watch:trade-journal",
+      "at": 1790881704523,
+      "label": "cycle 47/70"
+    },
+    {
+      "key": "shadow:breakout:trade-journal",
+      "at": 1790881704523,
+      "label": "cycle 47/70"
+    },
+    {
+      "key": "live:live-open-positions",
+      "at": 1790881704523,
+      "label": "cycle 47/70"
+    },
+    {
+      "key": "autopilot-last-run",
+      "at": 1790882079678,
+      "label": "cycle 48/70"
+    },
+    {
+      "key": "live:live-equity-history",
+      "at": 1790882079678,
+      "label": "cycle 48/70"
+    },
+    {
+      "key": "live:audit-log",
+      "at": 1790882079678,
+      "label": "cycle 48/70"
+    },
+    {
+      "key": "shadow:breakout:open-positions",
+      "at": 1790882079678,
+      "label": "cycle 48/70"
+    },
+    {
+      "key": "shadow-standings",
+      "at": 1790882079678,
+      "label": "cycle 48/70"
+    },
+    {
+      "key": "candidate-watch-standings",
+      "at": 1790882079678,
+      "label": "cycle 48/70"
+    },
+    {
+      "key": "equity-history",
+      "at": 1790882079678,
+      "label": "cycle 48/70"
+    },
+    {
+      "key": "real-money-readiness",
+      "at": 1790882079678,
+      "label": "cycle 48/70"
+    },
+    {
+      "key": "shadow:breakout:portfolio-engine",
+      "at": 1790882079678,
+      "label": "cycle 48/70"
+    },
+    {
+      "key": "shadow:breakout:audit-log",
+      "at": 1790882079678,
+      "label": "cycle 48/70"
+    },
+    {
       "key": "shadow:candidate-watch:open-positions",
       "at": 1790882079678,
       "label": "cycle 48/70"
@@ -96161,81 +96261,6 @@
       "key": "live:live-open-positions",
       "at": 1790883573059,
       "label": "cycle 52/70"
-    },
-    {
-      "key": "autopilot-last-run",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
-    },
-    {
-      "key": "live:live-equity-history",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
-    },
-    {
-      "key": "live:live-open-positions",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
-    },
-    {
-      "key": "live:confirmation-gate-pending",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
-    },
-    {
-      "key": "live:audit-log",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
-    },
-    {
-      "key": "live:live-exit-pending",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
-    },
-    {
-      "key": "shadow:mean-reversion:open-positions",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
-    },
-    {
-      "key": "shadow:mean-reversion:trade-journal",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
-    },
-    {
-      "key": "shadow:mean-reversion:portfolio-engine",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
-    },
-    {
-      "key": "shadow:mean-reversion:audit-log",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
-    },
-    {
-      "key": "shadow-standings",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
-    },
-    {
-      "key": "shadow:candidate-watch:open-positions",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
-    },
-    {
-      "key": "candidate-watch-standings",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
-    },
-    {
-      "key": "equity-history",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
-    },
-    {
-      "key": "real-money-readiness",
-      "at": 1791376392478,
-      "label": "cycle 1/70"
     }
   ],
   "shadow:correlation-capped:open-positions": [],
