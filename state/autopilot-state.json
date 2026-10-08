@@ -2750,7 +2750,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1791422533537,
+    "at": 1791422898107,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -66173,7 +66173,7 @@
     ]
   },
   "longterm-shadow-last-run-day": "2026-10-08",
-  "live:live-cash-eur": 48.41,
+  "live:live-cash-eur": 50.77,
   "live:telegram-shared-update-offset": 447904572,
   "live:telegram-unclaimed-messages": [
     {
@@ -70927,10 +70927,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1788916924214,
-      "equity": 50.31
-    },
     {
       "at": 1788917266977,
       "equity": 50.31
@@ -90926,6 +90922,10 @@
     {
       "at": 1791422533537,
       "equity": 59.98
+    },
+    {
+      "at": 1791422898107,
+      "equity": 62.35
     }
   ],
   "live:revolut-x-order-map": {
@@ -91020,66 +91020,6 @@
         "warnings": []
       },
       "outstandingExitSubmittedAt": 1791125788874
-    },
-    "external-reconcile:XBTEUR:1791290817568": {
-      "id": "external-reconcile:XBTEUR:1791290817568",
-      "symbol": "BTC/EUR",
-      "quantity": 0.00002001,
-      "initialQuantity": 0.00002001,
-      "entryPrice": 76567.7,
-      "stopLoss": 75419.1845,
-      "takeProfit": 78864.731,
-      "highestPrice": 77000,
-      "lowestPrice": 74150.7,
-      "entrySlippage": 0,
-      "openedAt": 1791290817568,
-      "entryAssessment": {
-        "approved": true,
-        "asset": "XBTEUR",
-        "entry": 76567.7,
-        "stopLoss": 75419.1845,
-        "takeProfit": 78864.731,
-        "positionSize": 0.00002001,
-        "positionValue": 1.5321196769999998,
-        "riskAmount": 0.02298179515499988,
-        "riskPercentage": 0,
-        "rewardRiskRatio": 2,
-        "portfolioExposure": 0,
-        "reasons": [],
-        "warnings": [
-          "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
-        ]
-      }
-    },
-    "external-reconcile:XBTEUR:1791319479861": {
-      "id": "external-reconcile:XBTEUR:1791319479861",
-      "symbol": "BTC/EUR",
-      "quantity": 0.000011939999999999997,
-      "initialQuantity": 0.000011939999999999997,
-      "entryPrice": 76080,
-      "stopLoss": 74938.8,
-      "takeProfit": 78362.40000000001,
-      "highestPrice": 76080.1,
-      "lowestPrice": 74151.8,
-      "entrySlippage": 0,
-      "openedAt": 1791319479861,
-      "entryAssessment": {
-        "approved": true,
-        "asset": "XBTEUR",
-        "entry": 76080,
-        "stopLoss": 74938.8,
-        "takeProfit": 78362.40000000001,
-        "positionSize": 0.000011939999999999997,
-        "positionValue": 0.9083951999999998,
-        "riskAmount": 0.013625927999999963,
-        "riskPercentage": 0,
-        "rewardRiskRatio": 2,
-        "portfolioExposure": 0,
-        "reasons": [],
-        "warnings": [
-          "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
-        ]
-      }
     }
   },
   "telegram-unclaimed-messages": [
@@ -94039,8 +93979,8 @@
   ],
   "live:live-blackout-queue": {},
   "live:daily-loss": {
-    "day": "2026-10-07",
-    "loss": 0.46244265600000006
+    "day": "2026-10-08",
+    "loss": 0.06643178700000003
   },
   "shadow:candidate-watch:trade-journal": [
     {
@@ -98481,6 +98421,52 @@
       "maePct": 5.1508091430010765,
       "realizedPnl": -0.5316712109160003,
       "returnPct": -4.51743592972735,
+      "strategyVersion": null,
+      "validationVerdict": null,
+      "confidence": null,
+      "notes": "live trade — fees are a cost-rate ESTIMATE (Revolut X reports no real fee figure); slippage is REAL (signal price vs actual broker fill, entry + exit)"
+    },
+    {
+      "id": "external-reconcile:XBTEUR:1791290817568",
+      "symbol": "BTC/EUR",
+      "entryTimestamp": 1791290817568,
+      "exitTimestamp": 1791422898107,
+      "entryPrice": 76567.7,
+      "exitPrice": 74306.2,
+      "positionSize": 0.00002001,
+      "stopLoss": 75419.1845,
+      "takeProfit": 78864.731,
+      "exitReason": "manual",
+      "fees": 0.009056960216999999,
+      "slippage": 0,
+      "holdingDurationMs": 132080539,
+      "mfePct": 0.5645983880931553,
+      "maePct": 3.156683562389885,
+      "realizedPnl": -0.05430957521699988,
+      "returnPct": -3.544734529050754,
+      "strategyVersion": null,
+      "validationVerdict": null,
+      "confidence": null,
+      "notes": "live trade — fees are a cost-rate ESTIMATE (Revolut X reports no real fee figure); slippage is REAL (signal price vs actual broker fill, entry + exit)"
+    },
+    {
+      "id": "external-reconcile:XBTEUR:1791319479861",
+      "symbol": "BTC/EUR",
+      "entryTimestamp": 1791319479861,
+      "exitTimestamp": 1791422898107,
+      "entryPrice": 76080,
+      "exitPrice": 74306.2,
+      "positionSize": 0.000011939999999999997,
+      "stopLoss": 74938.8,
+      "takeProfit": 78362.40000000001,
+      "exitReason": "manual",
+      "fees": 0.005386833683999999,
+      "slippage": 0,
+      "holdingDurationMs": 103418246,
+      "mfePct": 0.00013144058886148892,
+      "maePct": 2.5344374342797016,
+      "realizedPnl": -0.02656600568400008,
+      "returnPct": -2.924498685594121,
       "strategyVersion": null,
       "validationVerdict": null,
       "confidence": null,
