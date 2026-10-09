@@ -2750,7 +2750,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1791519440986,
+    "at": 1791519798363,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2766,10 +2766,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1788972631535,
-      "equity": 10302.61
-    },
     {
       "at": 1788972966718,
       "equity": 10298.83
@@ -22765,6 +22761,10 @@
     {
       "at": 1791519440986,
       "equity": 10447.54
+    },
+    {
+      "at": 1791519798363,
+      "equity": 10447.54
     }
   ],
   "trade-journal": [
@@ -25146,7 +25146,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -25.79% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -25.69% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25244,7 +25244,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1791519440986,
+    "at": 1791519798363,
     "standings": [
       {
         "key": "live-mirror",
@@ -25293,8 +25293,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9082.271043103148,
-        "returnPct": -9.177289568968519,
+        "equity": 9081.024254529193,
+        "returnPct": -9.189757454708069,
         "trades": 135,
         "winRatePct": 40.74074074074074,
         "profitFactor": 0.8509705432840291,
@@ -71057,10 +71057,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1788972631535,
-      "equity": 79.55
-    },
-    {
       "at": 1788972966718,
       "equity": 79.52
     },
@@ -91055,6 +91051,10 @@
     {
       "at": 1791519440986,
       "equity": 61.32
+    },
+    {
+      "at": 1791519798363,
+      "equity": 61.33
     }
   ],
   "live:revolut-x-order-map": {
@@ -91667,7 +91667,7 @@
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
-    "cash": 8844.958637738637,
+    "cash": 7249.688299962463,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -747.7750355256394,
@@ -91677,22 +91677,42 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1791519440986,
+    "at": 1791519798363,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "69 candidates, production defaults (forward test only — not real trading)",
-        "equity": 8844.958637738637,
-        "returnPct": -11.550413622613632,
+        "equity": 8840.18714121488,
+        "returnPct": -11.598128587851205,
         "trades": 93,
         "winRatePct": 36.55913978494624,
         "profitFactor": 0.8384505273870606,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1788551468687
       }
     ]
   },
-  "shadow:candidate-watch:open-positions": [],
+  "shadow:candidate-watch:open-positions": [
+    {
+      "id": "PYTHEUR:1791519798363:0",
+      "symbol": "PYTHEUR",
+      "openedAt": 1791519798363,
+      "entryPrice": 0.07509,
+      "quantity": 21181.233736215432,
+      "initialQuantity": 21181.233736215432,
+      "stopLoss": 0.07091415323493852,
+      "takeProfit": 0.08344169353012298,
+      "feesPaid": 4.771496523757251,
+      "realizedPnl": 0,
+      "highestPrice": 0.07509,
+      "lowestPrice": 0.07509,
+      "confidence": 48.98126823413954,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:candidate-watch:audit-log": [
     {
       "timestamp": 1788598183187,
@@ -94157,6 +94177,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit CRVEUR: 5288.291901194274 @ 0.29299 (stop-loss)"
+    },
+    {
+      "timestamp": 1791519798363,
+      "intentId": "PYTHEUR:1791519798363:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry PYTHEUR: 21181.233736215432 @ 0.07509 (stop 0.07091415323493852, target 0.08344169353012298, confidence 49)"
     }
   ],
   "live:live-blackout-queue": {},
