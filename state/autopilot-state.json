@@ -2754,10 +2754,17 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused ATOMEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1791750323197,
+      "intentId": "XLMEUR:1791750323197",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused XLMEUR: large trades show heavy net selling"
     }
   ],
   "autopilot-last-run": {
-    "at": 1791749952381,
+    "at": 1791750323197,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2773,10 +2780,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1789150529315,
-      "equity": 10260.77
-    },
     {
       "at": 1789150872706,
       "equity": 10260.77
@@ -22772,6 +22775,10 @@
     {
       "at": 1791749952381,
       "equity": 10447.54
+    },
+    {
+      "at": 1791750323197,
+      "equity": 10447.54
     }
   ],
   "trade-journal": [
@@ -25197,7 +25204,7 @@
   },
   "shadow:no-confirm:shadow-started-at": 1785254092443,
   "shadow:no-confirm:portfolio-engine": {
-    "cash": 11146.968474222791,
+    "cash": 8910.886598293699,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 1587.390291789958,
@@ -25251,7 +25258,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1791749952381,
+    "at": 1791750323197,
     "standings": [
       {
         "key": "live-mirror",
@@ -25267,12 +25274,12 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11146.968474222791,
-        "returnPct": 11.469684742227908,
+        "equity": 11140.280293138258,
+        "returnPct": 11.402802931382576,
         "trades": 77,
         "winRatePct": 53.246753246753244,
         "profitFactor": 1.5883661413697299,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1785254092443
       },
       {
@@ -25311,8 +25318,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9461.89131832131,
-        "returnPct": -5.381086816786902,
+        "equity": 9462.59899286901,
+        "returnPct": -5.374010071309895,
         "trades": 338,
         "winRatePct": 41.42011834319527,
         "profitFactor": 1.1205562495437191,
@@ -48849,9 +48856,36 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused ATOMEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1791750323197,
+      "intentId": "XLMEUR:1791750323197",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused XLMEUR: large trades show heavy net selling"
     }
   ],
-  "shadow:no-confirm:open-positions": [],
+  "shadow:no-confirm:open-positions": [
+    {
+      "id": "XLMEUR:1791750323197:0",
+      "symbol": "XLMEUR",
+      "openedAt": 1791750323197,
+      "entryPrice": 0.181226,
+      "quantity": 12301.732062974179,
+      "initialQuantity": 12301.732062974179,
+      "stopLoss": 0.17874855077546478,
+      "takeProfit": 0.1861808984490704,
+      "feesPaid": 6.688181084533675,
+      "realizedPnl": 0,
+      "highestPrice": 0.181226,
+      "lowestPrice": 0.181226,
+      "confidence": 46.65375555701861,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:no-confirm:audit-log": [
     {
       "timestamp": 1785347897947,
@@ -50301,6 +50335,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ATOMEUR: 1238.2006926082156 @ 1.7272 (stop-loss)"
+    },
+    {
+      "timestamp": 1791750323197,
+      "intentId": "XLMEUR:1791750323197:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry XLMEUR: 12301.732062974179 @ 0.181226 (stop 0.17874855077546478, target 0.1861808984490704, confidence 47)"
     }
   ],
   "shadow:fixed-stop:open-positions": [
@@ -62871,6 +62912,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "top-trader positioning refused ATOMEUR: OKX top traders are net-short"
+    },
+    {
+      "timestamp": 1791750323197,
+      "intentId": "XLMEUR:1791750323197",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "top-trader positioning refused XLMEUR: OKX top traders are net-short"
     }
   ],
   "shadow:whale-flow:open-positions": [],
@@ -65204,6 +65252,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused ATOMEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1791750323197,
+      "intentId": "XLMEUR:1791750323197",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused XLMEUR: large trades show heavy net selling"
     }
   ],
   "shadow:ai-judgment:trade-journal": [
@@ -71431,10 +71486,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1789150529315,
-      "equity": 51.28
-    },
     {
       "at": 1789150872706,
       "equity": 51.28
@@ -91430,6 +91481,10 @@
     {
       "at": 1791749952381,
       "equity": 62.51
+    },
+    {
+      "at": 1791750323197,
+      "equity": 62.51
     }
   ],
   "live:revolut-x-order-map": {
@@ -92112,13 +92167,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1791749952381,
+    "at": 1791750323197,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "69 candidates, production defaults (forward test only — not real trading)",
-        "equity": 8589.87071816812,
-        "returnPct": -14.101292818318797,
+        "equity": 8590.384183704984,
+        "returnPct": -14.096158162950159,
         "trades": 102,
         "winRatePct": 36.27450980392157,
         "profitFactor": 0.8164358582163669,
@@ -92196,7 +92251,7 @@
       "takeProfit": 0.1367836605376092,
       "feesPaid": 0.03688524308190972,
       "realizedPnl": 0,
-      "highestPrice": 0.1297,
+      "highestPrice": 0.13,
       "lowestPrice": 0.1271,
       "confidence": 55.41184503198079,
       "validationVerdict": null,
@@ -95010,6 +95065,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry NILEUR: 20448.528694123896 @ 0.0846 (stop 0.08170728660774285, target 0.09038542678451428, confidence 43)"
+    },
+    {
+      "timestamp": 1791750323197,
+      "intentId": "ONDOEUR:1791750323197",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ONDOEUR: maximum open positions reached (5/5)"
     }
   ],
   "live:live-blackout-queue": {},
@@ -98748,6 +98810,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused ATOMEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1791750323197,
+      "intentId": "XLMEUR:1791750323197",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused XLMEUR: large trades show heavy net selling"
     }
   ],
   "shadow:correlation-capped:trade-journal": [
@@ -100391,6 +100460,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused ATOMEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1791750323197,
+      "intentId": "XLMEUR:1791750323197",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused XLMEUR: large trades show heavy net selling"
     }
   ],
   "shadow:trailing-forward-test:open-positions": [],
@@ -100832,6 +100908,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused ATOMEUR: large trades show heavy net selling"
+    },
+    {
+      "timestamp": 1791750323197,
+      "intentId": "XLMEUR:1791750323197",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "whale flow filter refused XLMEUR: large trades show heavy net selling"
     }
   ],
   "shadow:funding-crowding:trade-journal": [
