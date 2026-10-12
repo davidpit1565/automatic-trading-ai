@@ -1,5 +1,15 @@
 # PROJECT_STATE
 
+## Weekly coin review #4 — 2 new shadow candidates, nothing promoted (2026-10-12)
+
+Scan (top 80 EUR pairs by 24h volume, real Kraken history): 41 passed the
+basic bar; under the stricter add bar (>=10 trades AND PF >=1.5 AND
+return >=+2%) only **S (+7.60%, PF 3.31, 13t) and ZK (+5.16%, PF 2.75, 12t)**
+were genuinely new and were added to `CANDIDATE_INSTRUMENTS` (shadow-watch,
+69 -> 71, cap 80). Per-symbol readiness: busiest symbol MINAEUR has 8 own
+trades, below `SHADOW_MEANINGFUL_TRADES` (20) — nothing promoted to
+`CURATED_INSTRUMENTS`. Revolut X tradability of the new two unverified.
+
 ## Weekly coin review #3 — 3 new shadow candidates under the stricter bar, nothing promoted (2026-10-05)
 
 First run of the weekly Routine under the add bar tightened 2026-10-04
