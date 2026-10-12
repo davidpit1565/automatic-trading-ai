@@ -246,6 +246,14 @@ export const CANDIDATE_INSTRUMENTS: Instrument[] = [
   { symbol: 'SANDEUR', base: 'SAND', quote: 'EUR' },
   { symbol: 'ORCAEUR', base: 'ORCA', quote: 'EUR' },
   { symbol: 'GALAEUR', base: 'GALA', quote: 'EUR' },
+  // Added 2026-10-12 from that week's scan (top 80 EUR pairs by 24h volume,
+  // real Kraken history, ~720 1h candles, 4h confirmation): 41 passed the
+  // basic bar; under the stricter add bar (>=10 trades AND PF >=1.5 AND
+  // return >=+2%) only these 2 genuinely new symbols qualified: S
+  // +7.60%/PF 3.31/13t, ZK +5.16%/PF 2.75/12t. Revolut X tradability NOT
+  // verified (required before any promotion to `CURATED_INSTRUMENTS`).
+  { symbol: 'SEUR', base: 'S', quote: 'EUR' },
+  { symbol: 'ZKEUR', base: 'ZK', quote: 'EUR' },
 ];
 
 /** Base asset codes (BTC, ETH, …) actually traded by the agent — for the UI's
