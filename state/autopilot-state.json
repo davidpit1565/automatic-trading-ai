@@ -1,35 +1,15 @@
 {
   "portfolio-engine": {
-    "cash": 8771.361697556678,
+    "cash": 10376.612181669858,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 954.1309462253914,
+    "closedRealizedPnl": 888.2178749362135,
     "dayAnchor": {
       "day": "2026-10-12",
       "equity": 10447.538743625242
     }
   },
-  "open-positions": [
-    {
-      "id": "ENAEUR:1791766506487:0",
-      "symbol": "ENAEUR",
-      "openedAt": 1791766506487,
-      "entryPrice": 0.2134,
-      "quantity": 7831.131937218165,
-      "initialQuantity": 7831.131937218165,
-      "stopLoss": 0.20597089281715122,
-      "takeProfit": 0.22825821436569757,
-      "feesPaid": 5.013490666207069,
-      "realizedPnl": 0,
-      "highestPrice": 0.2202,
-      "lowestPrice": 0.207,
-      "confidence": 45.68614766815058,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "open-positions": [],
   "audit-log": [
     {
       "timestamp": 1784042069348,
@@ -2781,13 +2761,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ENAEUR: 7831.131937218165 @ 0.2134 (stop 0.20597089281715122, target 0.22825821436569757, confidence 46)"
+    },
+    {
+      "timestamp": 1791805390156,
+      "intentId": "ENAEUR:1791766506487:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ENAEUR: 7831.131937218165 @ 0.2056 (stop-loss)"
     }
   ],
   "autopilot-last-run": {
-    "at": 1791805023034,
+    "at": 1791805390156,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
-    "closed": 0,
+    "closed": 1,
     "halted": false
   },
   "daily-summary-last-day": "2026-07-14",
@@ -2800,10 +2787,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1789190191196,
-      "equity": 10260.77
-    },
     {
       "at": 1789190523356,
       "equity": 10260.77
@@ -22799,6 +22782,10 @@
     {
       "at": 1791805023034,
       "equity": 10392.41
+    },
+    {
+      "at": 1791805390156,
+      "equity": 10376.61
     }
   ],
   "trade-journal": [
@@ -25055,6 +25042,29 @@
       "validationVerdict": null,
       "confidence": 49.01873181428898,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "ENAEUR:1791766506487:0",
+      "symbol": "ENAEUR",
+      "entryTimestamp": 1791766506487,
+      "exitTimestamp": 1791805390156,
+      "entryPrice": 0.2134,
+      "exitPrice": 0.2056,
+      "positionSize": 7831.131937218165,
+      "stopLoss": 0.20597089281715122,
+      "takeProfit": 0.22825821436569757,
+      "exitReason": "stop-loss",
+      "fees": 9.843732845083235,
+      "slippage": 0,
+      "holdingDurationMs": 38883669,
+      "mfePct": 3.1865042174320526,
+      "maePct": 3.6551077788191195,
+      "realizedPnl": -65.91307128917786,
+      "returnPct": -3.9441424554826625,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 45.68614766815058,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "alerted-trade-ids": [
@@ -25165,7 +25175,7 @@
       {
         "key": "trades",
         "ok": true,
-        "detail": "98 / 20 closed trades"
+        "detail": "99 / 20 closed trades"
       },
       {
         "key": "days",
@@ -25175,22 +25185,22 @@
       {
         "key": "profitable",
         "ok": true,
-        "detail": "after-fee return +9.54%"
+        "detail": "after-fee return +8.88%"
       },
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -28.28% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -28.36% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
         "ok": true,
-        "detail": "max drawdown 4.7% (limit 10%)"
+        "detail": "max drawdown 4.8% (limit 10%)"
       },
       {
         "key": "consistency",
         "ok": true,
-        "detail": "profit factor 1.32 (needs ≥ 1.2)"
+        "detail": "profit factor 1.30 (needs ≥ 1.2)"
       }
     ],
     "summary": "READY — the paper record clears every safety threshold (not a profit guarantee).",
@@ -25208,15 +25218,15 @@
   },
   "monthly-report-last": "2026-08-19",
   "daily-loss": {
-    "day": "2026-10-07",
-    "loss": 75.36776567617468
+    "day": "2026-10-12",
+    "loss": 65.91307128917786
   },
   "shadow:live-mirror:shadow-started-at": 1785254092443,
   "shadow:live-mirror:portfolio-engine": {
-    "cash": 8933.765346306564,
+    "cash": 11079.721193443705,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 1602.8013695700733,
+    "closedRealizedPnl": 1513.6395418744496,
     "dayAnchor": {
       "day": "2026-10-12",
       "equity": 11175.588374163828
@@ -25224,10 +25234,10 @@
   },
   "shadow:no-confirm:shadow-started-at": 1785254092443,
   "shadow:no-confirm:portfolio-engine": {
-    "cash": 8910.886598293699,
+    "cash": 11051.346802645272,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 1587.390291789958,
+    "closedRealizedPnl": 1498.4568012969737,
     "dayAnchor": {
       "day": "2026-10-12",
       "equity": 11146.968474222791
@@ -25278,39 +25288,39 @@
     }
   },
   "shadow-standings": {
-    "at": 1791805023034,
+    "at": 1791805390156,
     "standings": [
       {
         "key": "live-mirror",
         "label": "Mirror of production (40 / 65 / AUTOPILOT_TRAILING / 4h gate / whale-flow)",
-        "equity": 11100.83494204606,
-        "returnPct": 11.008349420460599,
-        "trades": 74,
-        "winRatePct": 52.702702702702695,
-        "profitFactor": 1.6397825836911024,
-        "openPositions": 1,
+        "equity": 11079.721193443705,
+        "returnPct": 10.797211934437055,
+        "trades": 75,
+        "winRatePct": 52,
+        "profitFactor": 1.5834279065957981,
+        "openPositions": 0,
         "startedAt": 1785254092443
       },
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 11072.406480414651,
-        "returnPct": 10.72406480414651,
-        "trades": 77,
-        "winRatePct": 53.246753246753244,
-        "profitFactor": 1.5883661413697299,
-        "openPositions": 1,
+        "equity": 11051.346802645272,
+        "returnPct": 10.51346802645272,
+        "trades": 78,
+        "winRatePct": 52.56410256410257,
+        "profitFactor": 1.5376793191795106,
+        "openPositions": 0,
         "startedAt": 1785254092443
       },
       {
         "key": "trailing-forward-test",
         "label": "Trailing stop 1.5R/1.5R vs current no-trail production (forward test since 2026-09-22)",
-        "equity": 9885.356930297774,
-        "returnPct": -1.1464306970222606,
-        "trades": 16,
-        "winRatePct": 37.5,
-        "profitFactor": 1.0707434733217998,
-        "openPositions": 1,
+        "equity": 9866.555016553402,
+        "returnPct": -1.334449834465977,
+        "trades": 17,
+        "winRatePct": 35.294117647058826,
+        "profitFactor": 0.9475383871043088,
+        "openPositions": 0,
         "startedAt": 1790108791371
       },
       {
@@ -25338,8 +25348,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9419.780674380952,
-        "returnPct": -5.802193256190476,
+        "equity": 9413.326607333103,
+        "returnPct": -5.866733926668967,
         "trades": 340,
         "winRatePct": 41.17647058823529,
         "profitFactor": 1.1071287636777596,
@@ -25360,23 +25370,23 @@
       {
         "key": "ai-judgment",
         "label": "Refuses entries an AI second opinion reads as bearish",
-        "equity": 11182.934127245284,
-        "returnPct": 11.829341272452838,
-        "trades": 62,
-        "winRatePct": 54.83870967741935,
-        "profitFactor": 1.7530568300916771,
-        "openPositions": 1,
+        "equity": 11161.6642262845,
+        "returnPct": 11.616642262844998,
+        "trades": 63,
+        "winRatePct": 53.96825396825397,
+        "profitFactor": 1.6819470034541364,
+        "openPositions": 0,
         "startedAt": 1787242347381
       },
       {
         "key": "correlation-capped",
         "label": "Caps exposure to a correlated cluster (threshold 0.7, cap 30% of equity)",
-        "equity": 10456.418233107768,
-        "returnPct": 4.5641823310776815,
-        "trades": 33,
-        "winRatePct": 54.54545454545454,
-        "profitFactor": 1.6445466660621455,
-        "openPositions": 1,
+        "equity": 10436.530162795263,
+        "returnPct": 4.365301627952631,
+        "trades": 34,
+        "winRatePct": 52.94117647058824,
+        "profitFactor": 1.524283766193618,
+        "openPositions": 0,
         "startedAt": 1788970622093
       },
       {
@@ -47259,27 +47269,7 @@
       "detail": "paper exit VELOEUR: 434324.1614716303 @ 0.004395 (take-profit)"
     }
   ],
-  "shadow:live-mirror:open-positions": [
-    {
-      "id": "ENAEUR:1791766506487:0",
-      "symbol": "ENAEUR",
-      "openedAt": 1791766506487,
-      "entryPrice": 0.2135,
-      "quantity": 10468.93524511834,
-      "initialQuantity": 10468.93524511834,
-      "stopLoss": 0.2060708928171512,
-      "takeProfit": 0.22835821436569756,
-      "feesPaid": 6.705353024498297,
-      "realizedPnl": 0,
-      "highestPrice": 0.2202,
-      "lowestPrice": 0.2064,
-      "confidence": 46.56031443171531,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "shadow:live-mirror:open-positions": [],
   "shadow:live-mirror:audit-log": [
     {
       "timestamp": 1785347897947,
@@ -48911,29 +48901,16 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ENAEUR: 10468.93524511834 @ 0.2135 (stop 0.2060708928171512, target 0.22835821436569756, confidence 47)"
-    }
-  ],
-  "shadow:no-confirm:open-positions": [
+    },
     {
-      "id": "ENAEUR:1791766506487:0",
-      "symbol": "ENAEUR",
-      "openedAt": 1791766506487,
-      "entryPrice": 0.2135,
-      "quantity": 10442.125034400742,
-      "initialQuantity": 10442.125034400742,
-      "stopLoss": 0.2060708928171512,
-      "takeProfit": 0.22835821436569756,
-      "feesPaid": 6.688181084533675,
-      "realizedPnl": 0,
-      "highestPrice": 0.2202,
-      "lowestPrice": 0.2064,
-      "confidence": 46.56031443171531,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
+      "timestamp": 1791805390156,
+      "intentId": "ENAEUR:1791766506487:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ENAEUR: 10468.93524511834 @ 0.2056 (stop-loss)"
     }
   ],
+  "shadow:no-confirm:open-positions": [],
   "shadow:no-confirm:audit-log": [
     {
       "timestamp": 1785347897947,
@@ -50390,6 +50367,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ENAEUR: 10442.125034400742 @ 0.2135 (stop 0.2060708928171512, target 0.22835821436569756, confidence 47)"
+    },
+    {
+      "timestamp": 1791805390156,
+      "intentId": "ENAEUR:1791766506487:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ENAEUR: 10442.125034400742 @ 0.2056 (stop-loss)"
     }
   ],
   "shadow:fixed-stop:open-positions": [
@@ -53201,6 +53185,29 @@
       "validationVerdict": null,
       "confidence": 49.01873181428898,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "ENAEUR:1791766506487:0",
+      "symbol": "ENAEUR",
+      "entryTimestamp": 1791766506487,
+      "exitTimestamp": 1791805390156,
+      "entryPrice": 0.2135,
+      "exitPrice": 0.20560000000000003,
+      "positionSize": 10468.93524511834,
+      "stopLoss": 0.2060708928171512,
+      "takeProfit": 0.22835821436569756,
+      "exitReason": "stop-loss",
+      "fees": 13.16259228368729,
+      "slippage": 0,
+      "holdingDurationMs": 38883669,
+      "mfePct": 3.1381733021077336,
+      "maePct": 3.700234192037466,
+      "realizedPnl": -89.16182769562378,
+      "returnPct": -3.9891334894613535,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 46.56031443171531,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "shadow:no-confirm:trade-journal": [
@@ -54973,6 +54980,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 40.643830261267894,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "ENAEUR:1791766506487:0",
+      "symbol": "ENAEUR",
+      "entryTimestamp": 1791766506487,
+      "exitTimestamp": 1791805390156,
+      "entryPrice": 0.2135,
+      "exitPrice": 0.2056,
+      "positionSize": 10442.125034400742,
+      "stopLoss": 0.2060708928171512,
+      "takeProfit": 0.22835821436569756,
+      "exitReason": "stop-loss",
+      "fees": 13.128883805752054,
+      "slippage": 0,
+      "holdingDurationMs": 38883669,
+      "mfePct": 3.1381733021077336,
+      "maePct": 3.700234192037466,
+      "realizedPnl": -88.93349049298413,
+      "returnPct": -3.9891334894613535,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 46.56031443171531,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
@@ -63988,36 +64018,16 @@
   ],
   "shadow:ai-judgment:shadow-started-at": 1787242347381,
   "shadow:ai-judgment:portfolio-engine": {
-    "cash": 8999.837390393515,
+    "cash": 11161.6642262845,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 1599.8877876298002,
+    "closedRealizedPnl": 1510.0665398596595,
     "dayAnchor": {
       "day": "2026-10-12",
       "equity": 11258.240418305624
     }
   },
-  "shadow:ai-judgment:open-positions": [
-    {
-      "id": "ENAEUR:1791766506487:0",
-      "symbol": "ENAEUR",
-      "openedAt": 1791766506487,
-      "entryPrice": 0.2135,
-      "quantity": 10546.361047593091,
-      "initialQuantity": 10546.361047593091,
-      "stopLoss": 0.2060708928171512,
-      "takeProfit": 0.22835821436569756,
-      "feesPaid": 6.754944250983375,
-      "realizedPnl": 0,
-      "highestPrice": 0.2202,
-      "lowestPrice": 0.2064,
-      "confidence": 46.56031443171531,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "shadow:ai-judgment:open-positions": [],
   "shadow:ai-judgment:audit-log": [
     {
       "timestamp": 1787242970406,
@@ -65327,6 +65337,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ENAEUR: 10546.361047593091 @ 0.2135 (stop 0.2060708928171512, target 0.22835821436569756, confidence 47)"
+    },
+    {
+      "timestamp": 1791805390156,
+      "intentId": "ENAEUR:1791766506487:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ENAEUR: 10546.361047593091 @ 0.2056 (stop-loss)"
     }
   ],
   "shadow:ai-judgment:trade-journal": [
@@ -66754,6 +66771,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 50.30915966953079,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "ENAEUR:1791766506487:0",
+      "symbol": "ENAEUR",
+      "entryTimestamp": 1791766506487,
+      "exitTimestamp": 1791805390156,
+      "entryPrice": 0.2135,
+      "exitPrice": 0.2056,
+      "positionSize": 10546.361047593091,
+      "stopLoss": 0.2060708928171512,
+      "takeProfit": 0.22835821436569756,
+      "exitReason": "stop-loss",
+      "fees": 13.259939745138794,
+      "slippage": 0,
+      "holdingDurationMs": 38883669,
+      "mfePct": 3.1381733021077336,
+      "maePct": 3.700234192037466,
+      "realizedPnl": -89.82124777014074,
+      "returnPct": -3.9891334894613544,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 46.56031443171531,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
@@ -71554,10 +71594,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1789190191196,
-      "equity": 51.28
-    },
     {
       "at": 1789190523356,
       "equity": 51.28
@@ -91553,6 +91589,10 @@
     {
       "at": 1791805023034,
       "equity": 62.54
+    },
+    {
+      "at": 1791805390156,
+      "equity": 62.52
     }
   ],
   "live:revolut-x-order-map": {
@@ -92225,27 +92265,27 @@
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
-    "cash": 5083.478750988642,
+    "cash": 6719.876808023822,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -1083.987809884145,
+    "closedRealizedPnl": -1149.974429795704,
     "dayAnchor": {
       "day": "2026-10-12",
       "equity": 8524.024955365026
     }
   },
   "candidate-watch-standings": {
-    "at": 1791805023034,
+    "at": 1791805390156,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 8428.677970741886,
-        "returnPct": -15.713220292581138,
-        "trades": 106,
-        "winRatePct": 34.90566037735849,
-        "profitFactor": 0.7910100316524258,
-        "openPositions": 3,
+        "equity": 8424.371213561331,
+        "returnPct": -15.756287864386687,
+        "trades": 107,
+        "winRatePct": 34.57943925233645,
+        "profitFactor": 0.7810731835282211,
+        "openPositions": 2,
         "startedAt": 1788551468687
       }
     ]
@@ -92284,25 +92324,6 @@
       "highestPrice": 0.1808,
       "lowestPrice": 0.1724,
       "confidence": 45.177023727118815,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "APTEUR:1791760919351:4",
-      "symbol": "APTEUR",
-      "openedAt": 1791760919351,
-      "entryPrice": 0.8085,
-      "quantity": 2105.608753180878,
-      "initialQuantity": 2105.608753180878,
-      "stopLoss": 0.7800358832299703,
-      "takeProfit": 0.8654282335400595,
-      "feesPaid": 5.10715403084022,
-      "realizedPnl": 0,
-      "highestPrice": 0.8128,
-      "lowestPrice": 0.7816,
-      "confidence": 55.657737638902645,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -95242,6 +95263,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit OPEUR: 95.45870362813075 @ 0.1246 (stop-loss)"
+    },
+    {
+      "timestamp": 1791805390156,
+      "intentId": "APTEUR:1791760919351:4",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit APTEUR: 2105.608753180878 @ 0.7795 (stop-loss)"
     }
   ],
   "live:live-blackout-queue": {},
@@ -97687,6 +97715,29 @@
       "validationVerdict": null,
       "confidence": 55.41184503198079,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "APTEUR:1791760919351:4",
+      "symbol": "APTEUR",
+      "entryTimestamp": 1791760919351,
+      "exitTimestamp": 1791805390156,
+      "entryPrice": 0.8085,
+      "exitPrice": 0.7795,
+      "positionSize": 2105.608753180878,
+      "stopLoss": 0.7800358832299703,
+      "takeProfit": 0.8654282335400595,
+      "exitReason": "stop-loss",
+      "fees": 10.031120100153704,
+      "slippage": 0,
+      "holdingDurationMs": 44470805,
+      "mfePct": 0.5318491032776711,
+      "maePct": 3.586889301175019,
+      "realizedPnl": -65.986619911559,
+      "returnPct": -3.876128633271494,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 55.657737638902645,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "shadow:long-term:open-positions": [
@@ -97860,10 +97911,10 @@
   ],
   "shadow:correlation-capped:shadow-started-at": 1788970622093,
   "shadow:correlation-capped:portfolio-engine": {
-    "cash": 8415.149612179386,
+    "cash": 10436.530162795263,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 686.1116315381663,
+    "closedRealizedPnl": 602.1257542882976,
     "dayAnchor": {
       "day": "2026-10-12",
       "equity": 10526.83213932873
@@ -98371,27 +98422,7 @@
       "label": "cycle 15/70"
     }
   ],
-  "shadow:correlation-capped:open-positions": [
-    {
-      "id": "ENAEUR:1791766506487:0",
-      "symbol": "ENAEUR",
-      "openedAt": 1791766506487,
-      "entryPrice": 0.2135,
-      "quantity": 9861.201067286867,
-      "initialQuantity": 9861.201067286867,
-      "stopLoss": 0.2060708928171512,
-      "takeProfit": 0.22835821436569756,
-      "feesPaid": 6.3160992835972385,
-      "realizedPnl": 0,
-      "highestPrice": 0.2202,
-      "lowestPrice": 0.2064,
-      "confidence": 46.56031443171531,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "shadow:correlation-capped:open-positions": [],
   "shadow:correlation-capped:audit-log": [
     {
       "timestamp": 1789420174501,
@@ -99099,6 +99130,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ENAEUR: 9861.201067286867 @ 0.2135 (stop 0.2060708928171512, target 0.22835821436569756, confidence 47)"
+    },
+    {
+      "timestamp": 1791805390156,
+      "intentId": "ENAEUR:1791766506487:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ENAEUR: 9861.201067286867 @ 0.2056 (stop-loss)"
     }
   ],
   "shadow:correlation-capped:trade-journal": [
@@ -99860,6 +99898,29 @@
       "validationVerdict": null,
       "confidence": 50.30915966953079,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "ENAEUR:1791766506487:0",
+      "symbol": "ENAEUR",
+      "entryTimestamp": 1791766506487,
+      "exitTimestamp": 1791805390156,
+      "entryPrice": 0.2135,
+      "exitPrice": 0.2056,
+      "positionSize": 9861.201067286867,
+      "stopLoss": 0.2060708928171512,
+      "takeProfit": 0.22835821436569756,
+      "exitReason": "stop-loss",
+      "fees": 12.39848810189978,
+      "slippage": 0,
+      "holdingDurationMs": 38883669,
+      "mfePct": 3.1381733021077336,
+      "maePct": 3.700234192037466,
+      "realizedPnl": -83.98587724986871,
+      "returnPct": -3.9891334894613544,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 46.56031443171531,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "shadow:long-term:trade-journal": [
@@ -100215,10 +100276,10 @@
   ],
   "shadow:trailing-forward-test:shadow-started-at": 1790108791371,
   "shadow:trailing-forward-test:portfolio-engine": {
-    "cash": 7955.569075733695,
+    "cash": 9866.555016553402,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 43.19865520625545,
+    "closedRealizedPnl": -36.200461700755795,
     "dayAnchor": {
       "day": "2026-10-12",
       "equity": 9951.925288633594
@@ -100749,29 +100810,16 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ENAEUR: 9322.646640406178 @ 0.2135 (stop 0.2060708928171512, target 0.22835821436569756, confidence 47)"
-    }
-  ],
-  "shadow:trailing-forward-test:open-positions": [
+    },
     {
-      "id": "ENAEUR:1791766506487:0",
-      "symbol": "ENAEUR",
-      "openedAt": 1791766506487,
-      "entryPrice": 0.2135,
-      "quantity": 9322.646640406178,
-      "initialQuantity": 9322.646640406178,
-      "stopLoss": 0.2060708928171512,
-      "takeProfit": 0.22835821436569756,
-      "feesPaid": 5.971155173180157,
-      "realizedPnl": 0,
-      "highestPrice": 0.2202,
-      "lowestPrice": 0.2064,
-      "confidence": 46.56031443171531,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
+      "timestamp": 1791805390156,
+      "intentId": "ENAEUR:1791766506487:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ENAEUR: 9322.646640406178 @ 0.2056 (stop-loss)"
     }
   ],
+  "shadow:trailing-forward-test:open-positions": [],
   "shadow:trailing-forward-test:trade-journal": [
     {
       "id": "AEROEUR:1790153213674:0",
@@ -101140,6 +101188,29 @@
       "validationVerdict": null,
       "confidence": 49.01873181428898,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "ENAEUR:1791766506487:0",
+      "symbol": "ENAEUR",
+      "entryTimestamp": 1791766506487,
+      "exitTimestamp": 1791805390156,
+      "entryPrice": 0.2135,
+      "exitPrice": 0.2056,
+      "positionSize": 9322.646640406178,
+      "stopLoss": 0.2060708928171512,
+      "takeProfit": 0.22835821436569756,
+      "exitReason": "stop-loss",
+      "fees": 11.721363620982688,
+      "slippage": 0,
+      "holdingDurationMs": 38883669,
+      "mfePct": 3.1381733021077336,
+      "maePct": 3.700234192037466,
+      "realizedPnl": -79.39911690701125,
+      "returnPct": -3.9891334894613535,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 46.56031443171531,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "shadow:funding-crowding:shadow-started-at": 1791162808135,
@@ -101266,11 +101337,5 @@
       "confidence": 41.994603555921174,
       "notes": "opened autonomously by the paper autopilot"
     }
-  ],
-  "move-alert-buckets": {
-    "ENAEUR:1791766506487:0": {
-      "neg": 0,
-      "pos": 0
-    }
-  }
+  ]
 }
