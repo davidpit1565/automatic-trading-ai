@@ -2771,7 +2771,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1791851720495,
+    "at": 1791852080388,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2787,10 +2787,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1789230856758,
-      "equity": 10260.77
-    },
     {
       "at": 1789231190271,
       "equity": 10260.77
@@ -22786,6 +22782,10 @@
     {
       "at": 1791851720495,
       "equity": 10376.61
+    },
+    {
+      "at": 1791852080388,
+      "equity": 10376.61
     }
   ],
   "trade-journal": [
@@ -25190,7 +25190,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -25.69% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -25.48% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25288,7 +25288,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1791851720495,
+    "at": 1791852080388,
     "standings": [
       {
         "key": "live-mirror",
@@ -25337,8 +25337,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8938.217250768283,
-        "returnPct": -10.617827492317174,
+        "equity": 8926.983272274723,
+        "returnPct": -10.730167277252766,
         "trades": 147,
         "winRatePct": 39.455782312925166,
         "profitFactor": 0.8711799941678693,
@@ -40305,7 +40305,7 @@
       "feesPaid": 5.442170941719086,
       "realizedPnl": 0,
       "highestPrice": 0.0737162,
-      "lowestPrice": 0.0730845,
+      "lowestPrice": 0.0727796,
       "confidence": 39.265278806970485,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -40343,7 +40343,7 @@
       "feesPaid": 5.378766487948779,
       "realizedPnl": 0,
       "highestPrice": 0.10606,
-      "lowestPrice": 0.10577,
+      "lowestPrice": 0.1054,
       "confidence": 30.245032990933822,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -40371,20 +40371,6 @@
     }
   ],
   "shadow:mean-reversion:audit-log": [
-    {
-      "timestamp": 1786318356595,
-      "intentId": "LTCEUR:1786318356595:0",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper entry LTCEUR: 49.39260986819809 @ 39.31 (stop 38.98883985751925, target 39.9523202849615, confidence 31)"
-    },
-    {
-      "timestamp": 1786318356595,
-      "intentId": "DOGEEUR:1786318356595:1",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper entry DOGEEUR: 32340.436323103215 @ 0.060001 (stop 0.05949179539779831, target 0.06101940920440339, confidence 33)"
-    },
     {
       "timestamp": 1786320196664,
       "intentId": "ADAEUR:1786320196664:2",
@@ -47367,6 +47353,20 @@
     {
       "timestamp": 1791851720495,
       "intentId": "ADAEUR:1791851720495",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ADAEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1791852080388,
+      "intentId": "LINKEUR:1791852080388",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LINKEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1791852080388,
+      "intentId": "ADAEUR:1791852080388",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ADAEUR: maximum open positions reached (5/5)"
@@ -71858,6 +71858,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1791852100404,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1791852080388",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -71872,10 +71879,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1789230856758,
-      "equity": 51.28
-    },
     {
       "at": 1789231190271,
       "equity": 51.28
@@ -91871,6 +91874,10 @@
     {
       "at": 1791851720495,
       "equity": 61.92
+    },
+    {
+      "at": 1791852080388,
+      "equity": 61.88
     }
   ],
   "live:revolut-x-order-map": {
@@ -91944,7 +91951,7 @@
       "stopLoss": 56.143109770096245,
       "takeProfit": 63.723780459807514,
       "highestPrice": 64.24,
-      "lowestPrice": 54.19,
+      "lowestPrice": 54.01,
       "entrySlippage": 0,
       "openedAt": 1790734286485,
       "entryAssessment": {
@@ -92533,12 +92540,22 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905075,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
+  "live:live-exit-pending": {
+    "external-reconcile:XBTEUR:1791659014817": {
+      "reason": "stop-loss",
+      "queuedAt": 1791852080388
+    }
+  },
   "live:confirmation-gate-pending": {
     "live-entry:ATOMEUR:1790340349162:exit:1790364916886": {
       "sentAt": 1790364942624,
       "messageId": 947,
       "token": "muhd271c.as4ydx"
+    },
+    "external-reconcile:XBTEUR:1791659014817:exit:1791852080388": {
+      "sentAt": 1791852100226,
+      "messageId": 1297,
+      "token": "mv5yh56q.a02ofh"
     }
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
@@ -92553,13 +92570,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1791851720495,
+    "at": 1791852080388,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 8270.489614502165,
-        "returnPct": -17.295103854978354,
+        "equity": 8274.058429842129,
+        "returnPct": -17.25941570157871,
         "trades": 109,
         "winRatePct": 33.94495412844037,
         "profitFactor": 0.7706471040445257,
