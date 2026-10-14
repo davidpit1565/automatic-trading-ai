@@ -2771,7 +2771,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1791986068149,
+    "at": 1791986441997,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2787,10 +2787,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1789341465562,
-      "equity": 10260.77
-    },
     {
       "at": 1789341798326,
       "equity": 10260.77
@@ -22786,6 +22782,10 @@
     {
       "at": 1791986068149,
       "equity": 10376.61
+    },
+    {
+      "at": 1791986441997,
+      "equity": 10376.61
     }
   ],
   "trade-journal": [
@@ -25190,7 +25190,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -28.01% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -27.62% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25278,17 +25278,17 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 7308.93111705227,
+    "cash": 9095.9096412763,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 700.8980540710579,
+    "closedRealizedPnl": 642.4216707990514,
     "dayAnchor": {
       "day": "2026-10-14",
       "equity": 9246.82822066336
     }
   },
   "shadow-standings": {
-    "at": 1791986068149,
+    "at": 1791986441997,
     "standings": [
       {
         "key": "live-mirror",
@@ -25337,8 +25337,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 9086.210961844128,
-        "returnPct": -9.137890381558718,
+        "equity": 9050.052616924482,
+        "returnPct": -9.499473830755178,
         "trades": 152,
         "winRatePct": 40.78947368421053,
         "profitFactor": 0.9005656475816163,
@@ -25348,12 +25348,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 9116.337151260796,
-        "returnPct": -8.836628487392046,
-        "trades": 346,
-        "winRatePct": 40.7514450867052,
-        "profitFactor": 1.0883469304424922,
-        "openPositions": 1,
+        "equity": 9095.9096412763,
+        "returnPct": -9.040903587237008,
+        "trades": 347,
+        "winRatePct": 40.63400576368876,
+        "profitFactor": 1.0803835934433887,
+        "openPositions": 0,
         "startedAt": 1785254092443
       },
       {
@@ -25402,35 +25402,8 @@
       }
     ]
   },
-  "shadow:breakout:open-positions": [
-    {
-      "id": "ALGOEUR:1791956959348:0",
-      "symbol": "ALGOEUR",
-      "openedAt": 1791956959348,
-      "entryPrice": 0.10913,
-      "quantity": 16910.61035000491,
-      "initialQuantity": 16910.61035000491,
-      "stopLoss": 0.10663214202253714,
-      "takeProfit": 0.11412571595492572,
-      "feesPaid": 5.536364722488108,
-      "realizedPnl": 0,
-      "highestPrice": 0.10913,
-      "lowestPrice": 0.10668,
-      "confidence": 60.33365829972709,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "shadow:breakout:open-positions": [],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1790131504108,
-      "intentId": "AEROEUR:1790131504108",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused AEROEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1790131853317,
       "intentId": "AEROEUR:1790131853317",
@@ -32423,6 +32396,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit XRPEUR: 1492.8872416589109 @ 1.2135 (stop-loss)"
+    },
+    {
+      "timestamp": 1791986441997,
+      "intentId": "ALGOEUR:1791956959348:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ALGOEUR: 16910.61035000491 @ 0.10599 (stop-loss)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -40382,6 +40362,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 70,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "ALGOEUR:1791956959348:0",
+      "symbol": "ALGOEUR",
+      "entryTimestamp": 1791956959348,
+      "exitTimestamp": 1791986441997,
+      "entryPrice": 0.10913,
+      "exitPrice": 0.10599,
+      "positionSize": 16910.61035000491,
+      "stopLoss": 0.10663214202253714,
+      "takeProfit": 0.11412571595492572,
+      "exitReason": "stop-loss",
+      "fees": 10.91343149547917,
+      "slippage": 0,
+      "holdingDurationMs": 29482649,
+      "mfePct": 0,
+      "maePct": 2.8773023000091666,
+      "realizedPnl": -58.47638327200655,
+      "returnPct": -3.1686703931091396,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 60.33365829972709,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
@@ -72109,10 +72112,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1789341465562,
-      "equity": 51.28
-    },
-    {
       "at": 1789341798326,
       "equity": 51.28
     },
@@ -92107,6 +92106,10 @@
     {
       "at": 1791986068149,
       "equity": 61.93
+    },
+    {
+      "at": 1791986441997,
+      "equity": 61.84
     }
   ],
   "live:revolut-x-order-map": {
@@ -92793,13 +92796,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1791986068149,
+    "at": 1791986441997,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 8102.895469373992,
-        "returnPct": -18.971045306260084,
+        "equity": 8091.025951941448,
+        "returnPct": -19.089740480585522,
         "trades": 111,
         "winRatePct": 33.33333333333333,
         "profitFactor": 0.7468067593273923,
