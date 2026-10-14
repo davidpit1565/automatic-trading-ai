@@ -2771,7 +2771,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792020719684,
+    "at": 1792021080508,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -72153,6 +72153,27 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1792021100637,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792021080508",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1792021116898,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792021080508",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram (button)"
+    },
+    {
+      "timestamp": 1792021117477,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792021080508",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "Revolut X order 57c2af84-e143-e2ed-02c0-077910d786a6: new"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -72167,10 +72188,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1789364982428,
-      "equity": 51.28
-    },
     {
       "at": 1789365321809,
       "equity": 51.28
@@ -92166,6 +92183,10 @@
     {
       "at": 1792020719684,
       "equity": 61.74
+    },
+    {
+      "at": 1792021080508,
+      "equity": 61.73
     }
   ],
   "live:revolut-x-order-map": {
@@ -92197,7 +92218,8 @@
     "live-entry:ATOMEUR:1790340349162:exit:1790364916886": "3ecf7dae-ad7c-4afe-b6fe-17ce09b95909",
     "live-entry:AVAXEUR:1790715063388": "9de632e4-9f02-41ac-8173-28840a12680d",
     "live-entry:LTCEUR:1790254633004:exit:1791125788874": "30fbee75-e1f1-e2b7-02c0-07d6ac8ad05d",
-    "live-entry:ATOMEUR:1791212490247": "de093547-d768-e26d-02c0-07b979ceff82"
+    "live-entry:ATOMEUR:1791212490247": "de093547-d768-e26d-02c0-07b979ceff82",
+    "external-reconcile:XBTEUR:1791659014817:exit:1792021080508": "57c2af84-e143-e2ed-02c0-077910d786a6"
   },
   "live:live-open-positions": {
     "external-reconcile:ALGOEUR:1790606205804": {
@@ -92379,7 +92401,8 @@
         "warnings": [
           "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
         ]
-      }
+      },
+      "outstandingExitSubmittedAt": 1792021080508
     }
   },
   "telegram-unclaimed-messages": [
@@ -92736,6 +92759,14 @@
     {
       "id": "7383943996676002148",
       "data": "confirm:reject:muqawb6s.1o2lesu"
+    },
+    {
+      "id": "7383943996331963479",
+      "data": "confirm:approve:mv8r3em9.2oh3w0"
+    },
+    {
+      "id": "7383943996500222827",
+      "data": "confirm:approve:mv8r3em9.2oh3w0"
     }
   ],
   "live:blackout-windows-cache": {
@@ -92834,7 +92865,7 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447905080,
+  "telegram-shared-update-offset": 447905083,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
   "live:confirmation-gate-pending": {
