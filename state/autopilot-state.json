@@ -2771,7 +2771,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792009311163,
+    "at": 1792009688460,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2787,10 +2787,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1789360231822,
-      "equity": 10260.77
-    },
     {
       "at": 1789360571299,
       "equity": 10260.77
@@ -22786,6 +22782,10 @@
     {
       "at": 1792009311163,
       "equity": 10376.61
+    },
+    {
+      "at": 1792009688460,
+      "equity": 10376.61
     }
   ],
   "trade-journal": [
@@ -25190,7 +25190,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -26.35% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -26.27% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25288,7 +25288,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792009311163,
+    "at": 1792009688460,
     "standings": [
       {
         "key": "live-mirror",
@@ -25337,8 +25337,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8960.964459771727,
-        "returnPct": -10.390355402282731,
+        "equity": 8956.70064645915,
+        "returnPct": -10.432993535408496,
         "trades": 153,
         "winRatePct": 41.17647058823529,
         "profitFactor": 0.9023570068315905,
@@ -72154,10 +72154,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1789360231822,
-      "equity": 51.28
-    },
-    {
       "at": 1789360571299,
       "equity": 51.28
     },
@@ -92152,6 +92148,10 @@
     {
       "at": 1792009311163,
       "equity": 61.86
+    },
+    {
+      "at": 1792009688460,
+      "equity": 61.83
     }
   ],
   "live:revolut-x-order-map": {
@@ -92828,52 +92828,32 @@
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
-    "cash": 6457.454523333121,
+    "cash": 8044.590537860249,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -1390.9925909939725,
+    "closedRealizedPnl": -1471.8728791931412,
     "dayAnchor": {
       "day": "2026-10-14",
       "equity": 8141.064113666877
     }
   },
   "candidate-watch-standings": {
-    "at": 1792009311163,
+    "at": 1792009688460,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 8057.512020367207,
-        "returnPct": -19.424879796327932,
-        "trades": 111,
-        "winRatePct": 33.33333333333333,
-        "profitFactor": 0.7468067593273923,
-        "openPositions": 1,
+        "equity": 8044.590537860249,
+        "returnPct": -19.554094621397507,
+        "trades": 112,
+        "winRatePct": 33.035714285714285,
+        "profitFactor": 0.7359717048669563,
+        "openPositions": 0,
         "startedAt": 1788551468687
       }
     ]
   },
-  "shadow:candidate-watch:open-positions": [
-    {
-      "id": "INJEUR:1791877391935:1",
-      "symbol": "INJEUR",
-      "openedAt": 1791877391935,
-      "entryPrice": 7.167,
-      "quantity": 232.73563593223062,
-      "initialQuantity": 232.73563593223062,
-      "stopLoss": 6.84570154300376,
-      "takeProfit": 7.809596913992479,
-      "feesPaid": 5.00404890817889,
-      "realizedPnl": 0,
-      "highestPrice": 7.51,
-      "lowestPrice": 6.857,
-      "confidence": 48.39202158024104,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "shadow:candidate-watch:open-positions": [],
   "shadow:candidate-watch:audit-log": [
     {
       "timestamp": 1788598183187,
@@ -95863,6 +95843,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit TIAEUR: 3004.4874254996344 @ 0.5113 (stop-loss)"
+    },
+    {
+      "timestamp": 1792009688460,
+      "intentId": "INJEUR:1791877391935:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit INJEUR: 232.73563593223062 @ 6.84 (stop-loss)"
     }
   ],
   "live:live-blackout-queue": {},
@@ -98422,6 +98409,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 48.58171550709647,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "INJEUR:1791877391935:1",
+      "symbol": "INJEUR",
+      "entryTimestamp": 1791877391935,
+      "exitTimestamp": 1792009688460,
+      "entryPrice": 7.167,
+      "exitPrice": 6.84,
+      "positionSize": 232.73563593223062,
+      "stopLoss": 6.84570154300376,
+      "takeProfit": 7.809596913992479,
+      "exitReason": "stop-loss",
+      "fees": 9.779784157508264,
+      "slippage": 0,
+      "holdingDurationMs": 132296525,
+      "mfePct": 4.785823915166736,
+      "maePct": 4.56257848472164,
+      "realizedPnl": -80.88028819916877,
+      "returnPct": -4.8488907492674755,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 48.39202158024104,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
