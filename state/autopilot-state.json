@@ -2771,7 +2771,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792070500627,
+    "at": 1792070895656,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2787,10 +2787,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1789418832707,
-      "equity": 10260.77
-    },
     {
       "at": 1789419167819,
       "equity": 10260.77
@@ -22786,6 +22782,10 @@
     {
       "at": 1792070500627,
       "equity": 10376.61
+    },
+    {
+      "at": 1792070895656,
+      "equity": 10376.61
     }
   ],
   "trade-journal": [
@@ -25190,7 +25190,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -23.22% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -22.97% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25267,10 +25267,10 @@
   },
   "shadow:mean-reversion:shadow-started-at": 1785254092443,
   "shadow:mean-reversion:portfolio-engine": {
-    "cash": 3448.5213494152913,
+    "cash": 5124.290502052354,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -621.9567699167367,
+    "closedRealizedPnl": -683.4926085752955,
     "dayAnchor": {
       "day": "2026-10-15",
       "equity": 8927.494926433093
@@ -25288,7 +25288,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792070500627,
+    "at": 1792070895656,
     "standings": [
       {
         "key": "live-mirror",
@@ -25337,12 +25337,12 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8609.438409880644,
-        "returnPct": -13.90561590119356,
-        "trades": 161,
-        "winRatePct": 39.130434782608695,
-        "profitFactor": 0.8060427995892333,
-        "openPositions": 5,
+        "equity": 8578.562310670664,
+        "returnPct": -14.214376893293357,
+        "trades": 162,
+        "winRatePct": 38.88888888888889,
+        "profitFactor": 0.7908661187283221,
+        "openPositions": 4,
         "startedAt": 1785254092443
       },
       {
@@ -40401,27 +40401,8 @@
       "feesPaid": 5.215044000287037,
       "realizedPnl": 0,
       "highestPrice": 72700.7,
-      "lowestPrice": 71650,
+      "lowestPrice": 71549.3,
       "confidence": 45.20659524050433,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "DOTEUR:1792031198268:1",
-      "symbol": "DOTEUR",
-      "openedAt": 1792031198268,
-      "entryPrice": 0.981,
-      "quantity": 1770.9531001994105,
-      "initialQuantity": 1770.9531001994105,
-      "stopLoss": 0.9520308756715927,
-      "takeProfit": 1.0389382486568144,
-      "feesPaid": 5.2119149738868655,
-      "realizedPnl": 0,
-      "highestPrice": 0.9912,
-      "lowestPrice": 0.9559,
-      "confidence": 35.18654795825685,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -40477,7 +40458,7 @@
       "feesPaid": 0.01476940129977993,
       "realizedPnl": 0,
       "highestPrice": 8.616,
-      "lowestPrice": 8.456,
+      "lowestPrice": 8.448,
       "confidence": 33.23379598523812,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -40486,13 +40467,6 @@
     }
   ],
   "shadow:mean-reversion:audit-log": [
-    {
-      "timestamp": 1789294946193,
-      "intentId": "ETHEUR:1789294946193",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused ETHEUR: no exposure headroom: 5421.76 already deployed of the 60% total-exposure limit"
-    },
     {
       "timestamp": 1789295283731,
       "intentId": "SOLEUR:1789295283731",
@@ -47485,6 +47459,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused VELOEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1792070895656,
+      "intentId": "DOTEUR:1792031198268:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit DOTEUR: 1770.9531001994105 @ 0.9491 (stop-loss)"
     }
   ],
   "shadow:live-mirror:open-positions": [],
@@ -60171,6 +60152,29 @@
       "validationVerdict": null,
       "confidence": 31.662098512301554,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "DOTEUR:1792031198268:1",
+      "symbol": "DOTEUR",
+      "entryTimestamp": 1792031198268,
+      "exitTimestamp": 1792070895656,
+      "entryPrice": 0.981,
+      "exitPrice": 0.9491,
+      "positionSize": 1770.9531001994105,
+      "stopLoss": 0.9520308756715927,
+      "takeProfit": 1.0389382486568144,
+      "exitReason": "stop-loss",
+      "fees": 10.254349736084649,
+      "slippage": 0,
+      "holdingDurationMs": 39697388,
+      "mfePct": 1.0397553516819558,
+      "maePct": 3.2517838939857215,
+      "realizedPnl": -61.535838658558845,
+      "returnPct": -3.5420285423037643,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 35.18654795825685,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "shadow:whale-flow:shadow-started-at": 1786561343790,
@@ -72393,10 +72397,6 @@
   },
   "live:live-external-btc-qty": 7.999999999999585e-8,
   "live:live-equity-history": [
-    {
-      "at": 1789418832707,
-      "equity": 51.28
-    },
     {
       "at": 1789419167819,
       "equity": 51.28
@@ -92392,6 +92392,10 @@
     {
       "at": 1792070500627,
       "equity": 61.5
+    },
+    {
+      "at": 1792070895656,
+      "equity": 61.49
     }
   ],
   "live:revolut-x-order-map": {
@@ -92497,7 +92501,7 @@
       "stopLoss": 71848.264,
       "takeProfit": 75130.67199999999,
       "highestPrice": 75146,
-      "lowestPrice": 71640.1,
+      "lowestPrice": 71518.6,
       "entrySlippage": 0,
       "openedAt": 1791504336956,
       "entryAssessment": {
@@ -92527,7 +92531,7 @@
       "stopLoss": 73057.5485,
       "takeProfit": 76395.20300000001,
       "highestPrice": 75127.4,
-      "lowestPrice": 71650,
+      "lowestPrice": 71522.2,
       "entrySlippage": 0,
       "openedAt": 1791552197602,
       "entryAssessment": {
@@ -92557,7 +92561,7 @@
       "stopLoss": 73006.624,
       "takeProfit": 76341.95199999999,
       "highestPrice": 75127.4,
-      "lowestPrice": 71650,
+      "lowestPrice": 71522.2,
       "entrySlippage": 0,
       "openedAt": 1791659014817,
       "entryAssessment": {
@@ -93076,7 +93080,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1792070500627,
+    "at": 1792070895656,
     "standings": [
       {
         "key": "candidate-watch",
