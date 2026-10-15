@@ -2771,7 +2771,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792044899009,
+    "at": 1792045274742,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2787,10 +2787,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1789388418004,
-      "equity": 10260.77
-    },
     {
       "at": 1789388750580,
       "equity": 10260.77
@@ -22786,6 +22782,10 @@
     {
       "at": 1792044899009,
       "equity": 10376.61
+    },
+    {
+      "at": 1792045274742,
+      "equity": 10376.61
     }
   ],
   "trade-journal": [
@@ -25190,7 +25190,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -24.01% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -23.95% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25288,7 +25288,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792044899009,
+    "at": 1792045274742,
     "standings": [
       {
         "key": "live-mirror",
@@ -25337,8 +25337,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8631.571057265699,
-        "returnPct": -13.68428942734301,
+        "equity": 8650.024855445714,
+        "returnPct": -13.49975144554286,
         "trades": 161,
         "winRatePct": 39.130434782608695,
         "profitFactor": 0.8060427995892333,
@@ -40487,13 +40487,6 @@
   ],
   "shadow:mean-reversion:audit-log": [
     {
-      "timestamp": 1789149124371,
-      "intentId": "ATOMEUR:1789149124371:0",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper entry ATOMEUR: 1281.2945983694603 @ 1.4216 (stop 1.3695904679840445, target 1.525619064031911, confidence 40)"
-    },
-    {
       "timestamp": 1789238522280,
       "intentId": "HNTEUR:1789238522280:1",
       "event": "filled",
@@ -47482,6 +47475,13 @@
     {
       "timestamp": 1792044899009,
       "intentId": "ATOMEUR:1792044899009",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ATOMEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1792045274742,
+      "intentId": "ATOMEUR:1792045274742",
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused ATOMEUR: maximum open positions reached (5/5)"
@@ -72365,6 +72365,13 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1792045294688,
+      "intentId": "external-reconcile:XBTEUR:1791504336956:exit:1792043766686",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -72379,10 +72386,6 @@
   },
   "live:live-external-btc-qty": 7.999999999999585e-8,
   "live:live-equity-history": [
-    {
-      "at": 1789388418004,
-      "equity": 51.28
-    },
     {
       "at": 1789388750580,
       "equity": 51.28
@@ -92378,6 +92381,10 @@
     {
       "at": 1792044899009,
       "equity": 61.44
+    },
+    {
+      "at": 1792045274742,
+      "equity": 61.47
     }
   ],
   "live:revolut-x-order-map": {
@@ -93032,22 +93039,12 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905084,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "external-reconcile:XBTEUR:1791504336956": {
-      "reason": "stop-loss",
-      "queuedAt": 1792043766686
-    }
-  },
+  "live:live-exit-pending": {},
   "live:confirmation-gate-pending": {
     "live-entry:ATOMEUR:1790340349162:exit:1790364916886": {
       "sentAt": 1790364942624,
       "messageId": 947,
       "token": "muhd271c.as4ydx"
-    },
-    "external-reconcile:XBTEUR:1791504336956:exit:1792043766686": {
-      "sentAt": 1792043786397,
-      "messageId": 1323,
-      "token": "mv94ln6l.929jk0"
     }
   },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
@@ -93062,7 +93059,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1792044899009,
+    "at": 1792045274742,
     "standings": [
       {
         "key": "candidate-watch",
