@@ -2771,7 +2771,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792029402527,
+    "at": 1792029761345,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2787,10 +2787,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1789380444532,
-      "equity": 10260.77
-    },
     {
       "at": 1789380776508,
       "equity": 10260.77
@@ -22786,6 +22782,10 @@
     {
       "at": 1792029402527,
       "equity": 10376.61
+    },
+    {
+      "at": 1792029761345,
+      "equity": 10376.61
     }
   ],
   "trade-journal": [
@@ -25190,7 +25190,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -25.31% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -25.15% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25267,10 +25267,10 @@
   },
   "shadow:mean-reversion:shadow-started-at": 1785254092443,
   "shadow:mean-reversion:portfolio-engine": {
-    "cash": 5280.869558602252,
+    "cash": 5305.973363856514,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -436.93803059140197,
+    "closedRealizedPnl": -437.45817920118674,
     "dayAnchor": {
       "day": "2026-10-15",
       "equity": 8927.494926433093
@@ -25288,7 +25288,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792029402527,
+    "at": 1792029761345,
     "standings": [
       {
         "key": "live-mirror",
@@ -25337,12 +25337,12 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8859.537000572247,
-        "returnPct": -11.40462999427753,
-        "trades": 156,
-        "winRatePct": 40.38461538461539,
-        "profitFactor": 0.8553976063110461,
-        "openPositions": 3,
+        "equity": 8855.308376040775,
+        "returnPct": -11.446916239592246,
+        "trades": 157,
+        "winRatePct": 40.12738853503185,
+        "profitFactor": 0.8552503830766179,
+        "openPositions": 2,
         "startedAt": 1785254092443
       },
       {
@@ -40390,25 +40390,6 @@
   ],
   "shadow:mean-reversion:open-positions": [
     {
-      "id": "HNTEUR:1791984220460:3",
-      "symbol": "HNTEUR",
-      "openedAt": 1791984220460,
-      "entryPrice": 0.3919,
-      "quantity": 65.38390881359172,
-      "initialQuantity": 65.38390881359172,
-      "stopLoss": 0.3855856757174261,
-      "takeProfit": 0.4045286485651479,
-      "feesPaid": 0.07687186159213978,
-      "realizedPnl": 0,
-      "highestPrice": 0.3954,
-      "lowestPrice": 0.3869,
-      "confidence": 34.30292186361905,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
       "id": "LINKEUR:1791986813873:3",
       "symbol": "LINKEUR",
       "openedAt": 1791986813873,
@@ -40420,7 +40401,7 @@
       "feesPaid": 5.410067255322493,
       "realizedPnl": 0,
       "highestPrice": 11.32292,
-      "lowestPrice": 11.00872,
+      "lowestPrice": 11.00054,
       "confidence": 30.923786034164635,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -40448,13 +40429,6 @@
     }
   ],
   "shadow:mean-reversion:audit-log": [
-    {
-      "timestamp": 1786762492102,
-      "intentId": "DOTEUR:1786693323251:1",
-      "event": "filled",
-      "mode": "paper",
-      "detail": "paper exit DOTEUR: 2920.079291166661 @ 0.672 (take-profit)"
-    },
     {
       "timestamp": 1786837430345,
       "intentId": "AVAXEUR:1786837430345:3",
@@ -47447,6 +47421,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ENAEUR: 9933.647607848276 @ 0.1724 (stop-loss)"
+    },
+    {
+      "timestamp": 1792029761345,
+      "intentId": "HNTEUR:1791984220460:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit HNTEUR: 65.38390881359172 @ 0.3851 (stop-loss)"
     }
   ],
   "shadow:live-mirror:open-positions": [],
@@ -60018,6 +59999,29 @@
       "validationVerdict": null,
       "confidence": 31.301833461992487,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "HNTEUR:1791984220460:3",
+      "symbol": "HNTEUR",
+      "entryTimestamp": 1791984220460,
+      "exitTimestamp": 1792029761345,
+      "entryPrice": 0.3919,
+      "exitPrice": 0.3851,
+      "positionSize": 65.38390881359172,
+      "stopLoss": 0.3855856757174261,
+      "takeProfit": 0.4045286485651479,
+      "exitReason": "stop-loss",
+      "fees": 0.1524098914444823,
+      "slippage": 0,
+      "holdingDurationMs": 45540885,
+      "mfePct": 0.8930849706557661,
+      "maePct": 1.7351365144169504,
+      "realizedPnl": -0.5201486097847681,
+      "returnPct": -2.0299311048736994,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 34.30292186361905,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "shadow:whale-flow:shadow-started-at": 1786561343790,
@@ -72219,10 +72223,6 @@
   },
   "live:live-external-btc-qty": 7.999999999999585e-8,
   "live:live-equity-history": [
-    {
-      "at": 1789380444532,
-      "equity": 51.28
-    },
     {
       "at": 1789380776508,
       "equity": 51.28
@@ -92218,6 +92218,10 @@
     {
       "at": 1792029402527,
       "equity": 61.69
+    },
+    {
+      "at": 1792029761345,
+      "equity": 61.66
     }
   ],
   "live:revolut-x-order-map": {
@@ -92292,7 +92296,7 @@
       "stopLoss": 56.143109770096245,
       "takeProfit": 63.723780459807514,
       "highestPrice": 64.24,
-      "lowestPrice": 52.77,
+      "lowestPrice": 52.68,
       "entrySlippage": 0,
       "openedAt": 1790734286485,
       "entryAssessment": {
@@ -92892,7 +92896,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1792029402527,
+    "at": 1792029761345,
     "standings": [
       {
         "key": "candidate-watch",
