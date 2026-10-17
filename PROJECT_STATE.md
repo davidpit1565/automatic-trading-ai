@@ -1,5 +1,16 @@
 # PROJECT_STATE
 
+## On-demand health ping to Telegram (2026-10-17)
+
+David asked for a Telegram message as "a sign that everything works".
+`.github/workflows/health-ping.yml` (workflow_dispatch only, no inputs) runs
+`scripts/healthPing.mts`, which fills a FIXED Hebrew template
+(`server/healthReport.mts`, pure, tested) from the committed state: bot alive
+(last cycle age, warns after 15 min), code version, kill switch, real open
+positions vs dust, pending confirmations, real and paper equity, F2 standing.
+No free-text input, read-only — not a general "send any text" capability.
+Trigger it any time: Actions -> "Health ping (on-demand)" -> Run workflow.
+
 ## INCIDENT 2026-10-17: stale typed "/אשר" auto-approved a real exit — fixed
 
 At 22:09:28 UTC a confirmation request for selling LTC was sent and at
