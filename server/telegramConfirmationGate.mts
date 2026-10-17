@@ -266,6 +266,28 @@ export function clearPendingConfirmation(store: KeyValueStore, intentId: string)
   }
 }
 
+/**
+ * Removes confirmation records far past their own 20-minute expiry. The gate
+ * only re-evaluates (and so only deletes) a record when something calls
+ * `requestConfirmation` for that exact intent again; when the position or
+ * order it was for is gone, nothing ever does. A forgotten 09-25 record made
+ * the typed-/אשר "exactly one pending" rule false forever. Returns how many
+ * were removed. A record this old can never be approved anyway (the gate
+ * would auto-expire it on its next call).
+ */
+export function reapExpiredConfirmations(store: KeyValueStore, now: number): number {
+  const pendingAll = store.get<Record<string, PendingRecord>>(STORAGE_KEY) ?? {};
+  let removed = 0;
+  for (const [intentId, record] of Object.entries(pendingAll)) {
+    if (now - record.sentAt > 2 * MAX_PENDING_MS) {
+      delete pendingAll[intentId];
+      removed++;
+    }
+  }
+  if (removed > 0) store.set(STORAGE_KEY, pendingAll);
+  return removed;
+}
+
 /** Real, network-backed ConfirmationGate. Every order still waits for an
  * explicit human tap; there is no code path in this class that can resolve
  * `approved: true` on its own. */

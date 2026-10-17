@@ -966,9 +966,9 @@ describe('buildLiveEntryResultMessage (the post-decision follow-up David asked f
     expect(message).toContain('BTC-EUR');
   });
 
-  it('stays silent for outcomes that never reached a human decision (unchanged, audit-log-only)', () => {
+  it('stays silent for outcomes that never reached a human decision (audit-log-only; not-approved now has its own message)', () => {
     expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'entry-already-outstanding' })).toBeNull();
-    expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'not-approved', reasons: ['x'] })).toBeNull();
+    expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'not-approved', reasons: ['x'] })).toContain('לא נשלחה');
     expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'no-broker-symbol' })).toBeNull();
     expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'unknown-symbol', detail: 'x' })).toBeNull();
     expect(buildLiveEntryResultMessage({ symbol: 'BTC-EUR', outcome: 'missing-symbol-check' })).toBeNull();

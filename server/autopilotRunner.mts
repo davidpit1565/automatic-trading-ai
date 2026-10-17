@@ -15,7 +15,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CANDIDATE_INSTRUMENTS, CURATED_INSTRUMENTS, KrakenPublicSource } from '../src/core/data/krakenPublic';
+import { CANDIDATE_INSTRUMENTS, CURATED_INSTRUMENTS, ENTRY_PAUSED_SYMBOLS, KrakenPublicSource } from '../src/core/data/krakenPublic';
 import { CoinbasePublicSource } from '../src/core/data/coinbasePublic';
 import type { MarketDataSource } from '../src/core/data/revolutClient';
 import { PersistedAuditLog } from '../src/core/autopilot/auditLog';
@@ -71,8 +71,8 @@ import { checkManualSellRequests } from './manualSellCommand.mts';
 import { checkManualBuyRequests } from './manualBuyCommand.mts';
 import { checkTipRequests } from './manualTipCommand.mts';
 import { checkDiscoverRequests } from './manualDiscoverCommand.mts';
-import { mirrorApprovedEntries, type LiveEntryOutcome } from './liveEntryMirror.mts';
-import { checkAutomaticExits, reapOrphanedExitConfirmations } from './liveExitMirror.mts';
+import { expireStaleEntryOrders, mirrorApprovedEntries, type LiveEntryOutcome } from './liveEntryMirror.mts';
+import { checkAutomaticExits, expireStaleExitOrders, reapOrphanedExitConfirmations } from './liveExitMirror.mts';
 import {
   hasLiveAccount,
   initLiveCash,
@@ -87,7 +87,7 @@ import { syncManualTradesFromBroker } from './liveManualTradeSync.mts';
 import { ensureBlackoutWindows, isBlackout } from './blackoutCalendar.mts';
 import { buildBlackoutSummaryMessage, drainBlackoutQueue, queueBlackoutEntries } from './liveBlackoutQueue.mts';
 import { RevolutXBrokerAdapter, type RevolutXCredentials } from './revolutXBrokerAdapter.mts';
-import { TelegramConfirmationGate } from './telegramConfirmationGate.mts';
+import { TelegramConfirmationGate, reapExpiredConfirmations } from './telegramConfirmationGate.mts';
 import {
   buildAllClearMessage,
   buildCycleMessage,
@@ -721,6 +721,8 @@ export async function buildProductionAutopilot(
     symbols,
     timeframe: ENTRY_TF,
     confirmationTimeframe: CONFIRMATION_TF,
+    // The 10 coins added 2026-09-03 lost on the forward record — see ENTRY_PAUSED_SYMBOLS.
+    entryPausedSymbols: ENTRY_PAUSED_SYMBOLS,
     // Never open a long while the larger daily trend is down, even when the
     // entry-timeframe setup and the 4h confirmation above both pass —
     // measured to help most in exactly that scenario. See AUTOPILOT_REGIME_PERIOD.
@@ -1002,6 +1004,9 @@ async function runCycle(
  * stay audit-log-only, same as before.
  */
 export function buildLiveEntryResultMessage(o: LiveEntryOutcome): string | null {
+  if (o.outcome === 'not-approved') {
+    return `⚠️ הכניסה ל-${o.symbol} לא נשלחה לאישור שלך — ${o.reasons.join('; ')}`;
+  }
   if (o.outcome === 'rejected') {
     return `❌ דחית את העסקה ${o.symbol} — ההזמנה לא בוצעה.`;
   }
@@ -1138,6 +1143,7 @@ export async function runLiveMirror(
   // close a position out from under a still-pending exit confirmation —
   // see `reapOrphanedExitConfirmations`'s own doc comment.
   reapOrphanedExitConfirmations(liveStore);
+  reapExpiredConfirmations(liveStore, now);
   // Read AFTER syncManualTradesFromBroker, not before — an external sell it
   // just detected can itself add to today's realized loss (recordLiveRealizedPnl
   // above), and every entry sized below (manual /buy, mirrored) must see that
@@ -1264,6 +1270,18 @@ export async function runLiveMirror(
     const newlyApproved = cycleOpened
       .map((o) => o.opportunity)
       .filter((o): o is NonNullable<typeof o> => o !== undefined);
+    // Unfilled buy limit orders are cancelled after an hour — see
+    // `expireStaleEntryOrders` (a stale resting buy only fills if price falls).
+    // Isolated: a failure here must never skip this cycle's stop-loss checks.
+    try {
+      const expiredEntries = await expireStaleEntryOrders(liveStore, flowParams.brokerAdapter, flowParams.killSwitch, flowParams.audit, now);
+      for (const symbol of expiredEntries) {
+        await sendTelegramMessage(`⌛ הזמנת הקנייה ל-${symbol} לא התמלאה תוך שעה ובוטלה (כדי שלא תתמלא באיחור במחיר שכבר לא רלוונטי). בקשה חדשה תגיע רק אם יופיע סיגנל חדש.`, telegram);
+      }
+      if (expiredEntries.length > 0) persistStateToGit(store, 'live-mirror: after cancelling stale entry orders');
+    } catch (cause) {
+      console.error('expireStaleEntryOrders failed:', cause instanceof Error ? cause.message : cause);
+    }
     const mirroredOutcomes = await mirrorApprovedEntries(
       liveStore,
       newlyApproved,
@@ -1300,6 +1318,15 @@ export async function runLiveMirror(
     // auto-approves instead of waiting on a tap. See
     // `LiveOrderFlowParams.autoApprove`'s doc comment for the full
     // reasoning (a real ~40h incident this is meant to prevent).
+    // A resting exit order the market ran away from (e.g. a stop-loss limit
+    // sell price fell through) is cancelled after 2h so the exit can be
+    // re-proposed at the current price — see `expireStaleExitOrders`.
+    try {
+      const expiredExits = await expireStaleExitOrders(liveStore, flowParams.brokerAdapter, flowParams.killSwitch, flowParams.audit, now);
+      if (expiredExits > 0) persistStateToGit(store, 'live-mirror: after cancelling stale exit orders');
+    } catch (cause) {
+      console.error('expireStaleExitOrders failed:', cause instanceof Error ? cause.message : cause);
+    }
     const exitOutcomes = await checkAutomaticExits(
       liveStore,
       source,
@@ -1448,6 +1475,7 @@ async function runShadows(
       store,
       now,
       prices,
+      entryPausedSymbols: ENTRY_PAUSED_SYMBOLS,
       whaleFlowCheck,
       topTraderCheck,
       fundingCheck,

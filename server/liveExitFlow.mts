@@ -303,6 +303,43 @@ export function markExitSubmitted(store: KeyValueStore, positionId: string, now:
   store.set(LIVE_OPEN_POSITIONS_KEY, positions);
 }
 
+const STALE_CANCEL_ADVISORY_KEY = 'live-stale-cancel-advisory';
+const STALE_CANCEL_ADVISORY_EVERY_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * Rate-limits the audit row written when cancelling a stale resting order
+ * keeps failing (retried every ~6 min cycle), so it cannot flood the capped
+ * audit log. True at most once per intent per 6h.
+ */
+export function shouldAuditStaleCancelFailure(store: KeyValueStore, intentId: string, now: number): boolean {
+  const map = store.get<Record<string, number>>(STALE_CANCEL_ADVISORY_KEY) ?? {};
+  const last = map[intentId];
+  if (last !== undefined && now - last < STALE_CANCEL_ADVISORY_EVERY_MS) return false;
+  map[intentId] = now;
+  store.set(STALE_CANCEL_ADVISORY_KEY, map);
+  return true;
+}
+
+/** True when a cancel report means the order is simply not open any more
+ * (HTTP 404 from the venue), as opposed to a transient failure. */
+export function cancelMeansOrderGone(report: { state: string; detail: string }): boolean {
+  return report.state === 'rejected' && /HTTP 404/.test(report.detail);
+}
+
+/**
+ * Reverse of `markExitSubmitted`: forgets that an exit order is resting at the
+ * broker. Only call once that order is KNOWN to be gone (cancelled) — see
+ * `expireStaleExitOrders`. No-ops for an untracked position id.
+ */
+export function clearExitSubmitted(store: KeyValueStore, positionId: string): void {
+  const positions = readPositions(store);
+  const existing = positions[positionId];
+  if (!existing || existing.outstandingExitSubmittedAt === undefined) return;
+  const { outstandingExitSubmittedAt: _gone, ...rest } = existing;
+  positions[positionId] = rest;
+  store.set(LIVE_OPEN_POSITIONS_KEY, positions);
+}
+
 /** Pure pass-through to the shared exit-decision logic — paper and live
  * must decide exits identically given the same inputs. */
 export function decideLiveExit(

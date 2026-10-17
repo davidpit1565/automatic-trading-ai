@@ -285,6 +285,11 @@ export interface AutoPilotOptions {
    */
   readonly fundingCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
   /**
+   * Symbols that are still monitored (open positions keep their stops/targets)
+   * but never get a NEW entry. See `ENTRY_PAUSED_SYMBOLS` for why.
+   */
+  readonly entryPausedSymbols?: ReadonlySet<string>;
+  /**
    * AI second-opinion gate (see `signal/aiJudgment.ts`): returns false to
    * block a new long entry when an LLM's read of the technical snapshot is
    * bearish enough to avoid. UNLIKE every other gate above, this can NEVER
@@ -543,6 +548,10 @@ export class PaperAutoPilot {
     for (const scanResult of scan.results) {
       if (held.has(scanResult.symbol)) {
         skipped.push({ symbol: scanResult.symbol, reason: 'already holding a position' });
+        continue;
+      }
+      if (this.options.entryPausedSymbols?.has(scanResult.symbol)) {
+        skipped.push({ symbol: scanResult.symbol, reason: 'new entries paused for this symbol (measured losing forward record)' });
         continue;
       }
       // ORDER IS DELIBERATE AND MEASURED: the confidence floor is applied HERE,

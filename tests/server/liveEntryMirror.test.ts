@@ -17,8 +17,11 @@ import { recordLiveEntryFill, forgetLivePosition, openLivePositions } from '../.
 import {
   clearOutstandingEntry,
   clearRestingEntryIntent,
+  STALE_ENTRY_ORDER_MS,
+  expireStaleEntryOrders,
   mirrorApprovedEntries,
   readRestingEntryIntent,
+  rememberRestingEntryIntent,
 } from '../../server/liveEntryMirror.mts';
 import { ConfirmationPendingError } from '../../server/telegramConfirmationGate.mts';
 
@@ -348,6 +351,50 @@ describe('mirrorApprovedEntries', () => {
       1000,
     );
     expect(outcomes).toEqual([{ symbol: 'UNKNOWNCOIN', outcome: 'no-broker-symbol' }]);
+  });
+
+  it('does not let a dust lot (worth cents) block a new entry or fill a capacity slot (red-team finding, 2026-10-17)', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    // 1e-5 units at 100 EUR = 0.001 EUR: far below DUST_NOTIONAL_EUR.
+    recordLiveEntryFill(
+      store,
+      { id: 'dust-1', createdAt: 0, mode: 'live', symbol: 'BTC-EUR', side: 'buy', quantity: 1e-5, limitPrice: 100, stopLoss: 95, takeProfit: 115, assessment: { approved: true, asset: 'XBTEUR', entry: 100, stopLoss: 95, takeProfit: 115, positionSize: 1e-5, positionValue: 0.001, riskAmount: 0, riskPercentage: 0, rewardRiskRatio: 3, portfolioExposure: 0, reasons: [], warnings: [] } },
+      { intentId: 'dust-1', state: 'filled', filledQuantity: 1e-5, avgFillPrice: 100, detail: 'ok' },
+      500,
+    );
+
+    const outcomes = await mirrorApprovedEntries(
+      store,
+      [opportunity()],
+      [XBT],
+      { XBTEUR: 100 },
+      flowParams({ intentId: 'x', state: 'filled', filledQuantity: 0.1, avgFillPrice: 100, detail: 'ok' }, killSwitch, audit),
+      1000,
+      { riskLimits: { maxRiskPerTradePct: 1, maxPositionPct: 20, maxTotalExposurePct: 60, maxOpenPositions: 1, maxExposurePerAssetPct: 20, dailyLossLimitPct: 3, minRewardRisk: 1.5, maxRewardRisk: 20, minStopDistancePct: 0.25 } },
+    );
+    expect(outcomes).toHaveLength(1);
+    expect(outcomes[0]!.outcome).toBe('submitted');
+  });
+
+  it('writes an audit row when a live entry is refused (previously silent)', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const outcomes = await mirrorApprovedEntries(
+      store,
+      [opportunity()],
+      [XBT],
+      { XBTEUR: 100 },
+      flowParams({ intentId: 'x', state: 'filled', filledQuantity: 0, avgFillPrice: null, detail: '' }, killSwitch, audit),
+      1000,
+      { riskLimits: { maxRiskPerTradePct: 1, maxPositionPct: 20, maxTotalExposurePct: 60, maxOpenPositions: 0, maxExposurePerAssetPct: 20, dailyLossLimitPct: 3, minRewardRisk: 1.5, maxRewardRisk: 20, minStopDistancePct: 0.25 } },
+    );
+    expect(outcomes[0]!.outcome).toBe('not-approved');
+    expect(audit.entries().some((e) => e.detail.includes('live entry refused for XBTEUR'))).toBe(true);
   });
 
   it('does not queue a symbol that already has a tracked open live position', async () => {
@@ -717,5 +764,58 @@ describe('mirrorApprovedEntries', () => {
       1000,
     );
     expect(outcomes).toEqual([{ symbol: 'XBTEUR', outcome: 'blocked-by-kill-switch' }]);
+  });
+});
+
+describe('expireStaleEntryOrders (red-team finding, 2026-10-17: a resting buy limit filled 133h later into a falling market)', () => {
+  function restingIntent(id: string, createdAt: number) {
+    return { id, createdAt, mode: 'live', symbol: 'BTC-EUR', side: 'buy', quantity: 0.1, limitPrice: 100, stopLoss: 95, takeProfit: 115, assessment: { approved: true, asset: 'XBTEUR', entry: 100, stopLoss: 95, takeProfit: 115, positionSize: 0.1, positionValue: 10, riskAmount: 0.5, riskPercentage: 1, rewardRiskRatio: 3, portfolioExposure: 10, reasons: [], warnings: [] } } as unknown as OrderIntent;
+  }
+  function broker(report: 'throw' | { state: OrderStatusReport['state']; detail: string }) {
+    const calls: string[] = [];
+    const adapter = {
+      name: 'fake-broker',
+      mode: 'live',
+      async submit(): Promise<OrderStatusReport> { throw new Error('not used'); },
+      async cancel(intentId: string): Promise<OrderStatusReport> {
+        calls.push(intentId);
+        if (report === 'throw') throw new Error('no known venue order id');
+        return { intentId, filledQuantity: 0, avgFillPrice: null, ...report };
+      },
+      async fetchPositions(): Promise<BrokerPosition[]> { return []; },
+    } as BrokerAdapter;
+    return { adapter, calls };
+  }
+
+  it('cancels an old resting entry and frees the symbol; leaves a young one', async () => {
+    const store = new MemoryStore();
+    rememberRestingEntryIntent(store, 'XBTEUR', restingIntent('live-entry:XBTEUR:1', 1000));
+    store.set('live-entry-outstanding-symbols', ['XBTEUR']);
+    const { adapter, calls } = broker({ state: 'cancelled', detail: 'ok' });
+    const ks = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    expect(await expireStaleEntryOrders(store, adapter, ks, audit, 1000 + STALE_ENTRY_ORDER_MS - 1)).toEqual([]);
+    expect(calls).toEqual([]);
+    expect(await expireStaleEntryOrders(store, adapter, ks, audit, 1000 + STALE_ENTRY_ORDER_MS)).toEqual(['XBTEUR']);
+    expect(calls).toEqual(['live-entry:XBTEUR:1']);
+    expect(readRestingEntryIntent(store, 'XBTEUR')).toBeNull();
+    expect(store.get<string[]>('live-entry-outstanding-symbols')).toEqual([]);
+  });
+
+  it('keeps everything when the cancel fails, throws, or the kill switch is engaged', async () => {
+    for (const report of ['throw', { state: 'rejected', detail: 'cancel failed: HTTP 409' }] as const) {
+      const store = new MemoryStore();
+      rememberRestingEntryIntent(store, 'XBTEUR', restingIntent('live-entry:XBTEUR:1', 1000));
+      const { adapter } = broker(report);
+      expect(await expireStaleEntryOrders(store, adapter, new PersistedKillSwitch(store), new PersistedAuditLog(store), 1000 + STALE_ENTRY_ORDER_MS)).toEqual([]);
+      expect(readRestingEntryIntent(store, 'XBTEUR')).not.toBeNull();
+    }
+    const store = new MemoryStore();
+    rememberRestingEntryIntent(store, 'XBTEUR', restingIntent('live-entry:XBTEUR:1', 1000));
+    const ks = new PersistedKillSwitch(store);
+    ks.engage('test');
+    const { adapter, calls } = broker({ state: 'cancelled', detail: 'ok' });
+    expect(await expireStaleEntryOrders(store, adapter, ks, new PersistedAuditLog(store), 1000 + STALE_ENTRY_ORDER_MS)).toEqual([]);
+    expect(calls).toEqual([]);
   });
 });

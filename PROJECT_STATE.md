@@ -1,5 +1,67 @@
 # PROJECT_STATE
 
+## Red-team fixes: live-path blockers + paused losing coins (2026-10-17)
+
+Three read-only red-team audits (opportunity/exposure, paper realism + statistics,
+live execution path) found the bot is mostly idle (16% average exposure, 56% of
+the time flat), its edge is statistically indistinguishable from zero (mean
++0.10%/trade net, 95% CI [-0.81, +1.00], n=100), and the REAL-money side could
+not take any entry. Fixed here (all behind the unchanged Telegram confirmation
+gate; no new order path, no unattended real order):
+
+- **Dust no longer fills capacity slots** (`liveEntryMirror.mts`,
+  `DUST_NOTIONAL_EUR` 0.5): ALGO/BTC dust lots (cents) counted toward
+  `maxOpenPositions` (5/5) and the `alreadyOpen` guard, silently refusing every
+  new entry (also explains 3 of 6 paper entries that never became live ones).
+- **Refused live entries are no longer silent**: audit row + a Hebrew Telegram
+  line (`buildLiveEntryResultMessage` now answers `not-approved`).
+- **Ghost confirmation record**: blackout auto-approve skipped the gate, leaving
+  a stale `confirmation-gate-pending` record that made the typed `/אשר`
+  "exactly one pending" rule false forever; `proposeLiveExit` now clears it.
+- **Stale resting EXIT orders** (`expireStaleExitOrders`, 2h): a stop-loss limit
+  sell that price fell through blocked all later exits for that position forever
+  (`outstandingExitSubmittedAt`; LTC ended ~10% below its stop). Cancels via the
+  broker, clears the flag ONLY on a confirmed cancel, never while the kill switch
+  is engaged, never on a failed cancel.
+- **Stale resting ENTRY orders** (`expireStaleEntryOrders`, 1h): a buy limit that
+  does not fill immediately only fills if price falls back (adverse selection;
+  LTC rested 133h). Same cancel-then-clear rule; Telegram notice sent.
+- **Exit re-ask cooldown** (2h; a further 1.5% drop re-asks at once; never for a
+  human `/sell` or a Shabbat/Yom Tov protective auto-exit): 182 exit requests since
+  09-16, 124 expired unanswered.
+- **`ENTRY_PAUSED_SYMBOLS`**: no NEW entries in the 10 coins added 2026-09-03
+  (forward record 25 trades PF 0.48 vs 75 trades PF 1.52 for the originals,
+  bootstrap P(difference<=0)=0.015; they were chosen on the same window used to
+  judge them). Still monitored/exited normally. Applies to production and the
+  shadow candidates (not candidate-watch / long-term). This is FORWARD evidence
+  and contradicts the earlier in-sample 120-day backtest, which is exactly what
+  selection bias predicts. Revisit only on a window that did not pick them.
+
+Second red-team pass on this diff (adversarial review + dry-run replay on the real
+snapshot) added: HTTP 404 on a stale-order cancel counts as "order no longer
+open" (cleared; other failures keep the flag and audit at most once per 6h);
+`cancel()` now returns 'rejected' (not 'cancelled') when it sends nothing because
+the kill switch is engaged; a declined MANUAL `/sell` no longer starts the
+automatic-exit cooldown; `reapExpiredConfirmations` deletes gate records older
+than 40 min (the 09-25 ghost for a long-closed ATOM exit); both expiry calls are
+isolated so they can never skip a cycle's stop-loss checks; and a cancel is
+persisted to git at once. Expected FIRST cycle after deploy (from the replay):
+the resting LTC sell (317h old) and the BTC lot sell (68h old) are cancelled and
+re-proposed at the current price, i.e. the owner gets two confirmation requests
+(LTC ~EUR -0.9, BTC lot ~EUR -0.02).
+
+NOT done (needs measurement first, not guessing): deciding on closed bars only
+(live scans use the still-forming candle, backtests only closed ones),
+chasing entries at the current price, wider/ATR-based stops, a trend-filtered
+passive core (EW20 MA100 over 720d measured -6.8%, MA20/MA50 -29%/-33%).
+The workflow-coverage concern did not reproduce: 12.8 days of state commits show
+~99.7% coverage (one 46 min gap); timed-out jobs report 'cancelled' but are
+harmless. Real fee on Revolut X (maker 0%, taker 0.09% per its published
+schedule) is below the 0.30%/side the paper charges, so paper costs are
+conservative on majors; slippage on the small alts is unverified.
+
+Gate: tsc clean, 1451 vitest, build ok.
+
 ## Red-team finding #1 FIXED: journal P&L left out the entry fee (2026-10-17)
 
 David asked for a red-team review ("we are not growing, show real evidence").

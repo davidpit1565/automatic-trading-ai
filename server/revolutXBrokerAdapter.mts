@@ -44,6 +44,15 @@ import type { Instrument } from '../src/core/types';
 const API_BASE = 'https://revx.revolut.com';
 const API_PREFIX = '/api/1.0';
 const ORDER_MAP_KEY = 'revolut-x-order-map';
+
+/**
+ * Intent ids that have a known Revolut X venue order, filtered by prefix —
+ * lets a caller find the resting exit order for a position
+ * (`${positionId}:exit:`) without knowing its queue timestamp.
+ */
+export function knownOrderIntentIds(store: KeyValueStore, prefix: string): string[] {
+  return Object.keys(store.get<Record<string, string>>(ORDER_MAP_KEY) ?? {}).filter((k) => k.startsWith(prefix));
+}
 const DEFAULT_TIMEOUT_MS = 15_000;
 /** Retries after ~0.5s, 1s, 2s — same backoff as krakenPublic.ts's transient retry. */
 const ORDER_DETAIL_MAX_RETRIES = 3;
@@ -486,7 +495,9 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
     // submit()'s own kill-switch check, so a future caller can never issue a
     // real cancel request while the kill switch is engaged.
     if (this.killSwitch.isEngaged()) {
-      return this.reportAndAudit(intentId, 'cancelled', 'kill switch engaged — cancel request not sent');
+      // 'rejected', not 'cancelled': nothing was sent, so the order may still be
+      // live — a caller must never read this as a confirmed cancel.
+      return this.reportAndAudit(intentId, 'rejected', 'kill switch engaged — cancel request not sent');
     }
     const venueOrderId = this.orderMap()[intentId];
     if (!venueOrderId) {

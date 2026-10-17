@@ -256,6 +256,21 @@ export const CANDIDATE_INSTRUMENTS: Instrument[] = [
   { symbol: 'ZKEUR', base: 'ZK', quote: 'EUR' },
 ];
 
+/**
+ * Coins that stay in `CURATED_INSTRUMENTS` (so any position already open in
+ * them is still monitored and exited normally) but get NO NEW entries.
+ * Measured 2026-10-17 on the forward record: the 10 coins added 2026-09-03
+ * (chosen because they looked profitable on the SAME 30 days of history that
+ * was then used to judge them — selection bias) went 25 trades, PF 0.48,
+ * 28% win, while the 10 original coins went 75 trades, PF 1.52 (difference in
+ * mean return per trade +2.3 points, bootstrap 95% CI [0.2, 4.2], P(<=0)
+ * = 0.015). Revisit only with a forward sample on a window that did not
+ * choose them.
+ */
+export const ENTRY_PAUSED_SYMBOLS: ReadonlySet<string> = new Set([
+  'UNIEUR', 'FILEUR', 'AAVEEUR', 'ATOMEUR', 'XLMEUR', 'ALGOEUR', 'HNTEUR', 'VELOEUR', 'AEROEUR', 'ENAEUR',
+]);
+
 /** Base asset codes (BTC, ETH, …) actually traded by the agent — for the UI's
  * "TRADED" badge (Markets list, Home's Markets rail widget). Compared by
  * base rather than symbol since the display data source can be Kraken,

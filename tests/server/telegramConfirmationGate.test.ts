@@ -5,6 +5,7 @@ import type { OrderIntent } from '../../src/core/execution/types';
 import type { TradeRiskAssessment } from '../../src/core/risk/riskEngine';
 import {
   clearPendingConfirmation,
+  reapExpiredConfirmations,
   ConfirmationPendingError,
   confirmationToken,
   parseApprovalCommand,
@@ -712,5 +713,20 @@ describe('clearPendingConfirmation', () => {
     clearPendingConfirmation(store, 'never-pending');
 
     expect(store.get('confirmation-gate-pending')).toEqual({ other: { sentAt: 1 } });
+  });
+});
+
+describe('reapExpiredConfirmations (red-team finding, 2026-10-17: a 09-25 ghost record disabled typed /אשר)', () => {
+  it('removes only records far past the 20-minute expiry', () => {
+    const store = new MemoryStore();
+    const MIN = 60_000;
+    store.set('confirmation-gate-pending', {
+      ghost: { sentAt: 0, messageId: 1, token: 'a' },
+      'recently-expired': { sentAt: 100 * MIN - 30 * MIN, messageId: 2, token: 'b' },
+      live: { sentAt: 100 * MIN - 5 * MIN, messageId: 3, token: 'c' },
+    });
+    expect(reapExpiredConfirmations(store, 100 * MIN)).toBe(1);
+    expect(Object.keys(store.get('confirmation-gate-pending') ?? {}).sort()).toEqual(['live', 'recently-expired']);
+    expect(reapExpiredConfirmations(store, 100 * MIN)).toBe(0);
   });
 });
