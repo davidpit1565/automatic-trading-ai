@@ -1,5 +1,24 @@
 # PROJECT_STATE
 
+## INCIDENT 2026-10-17: stale typed "/אשר" auto-approved a real exit — fixed
+
+At 22:09:28 UTC a confirmation request for selling LTC was sent and at
+22:09:29 it was recorded "approved via Telegram (text command)" — before the
+owner could tap. Cause: `telegram-unclaimed-messages` held typed commands from
+days earlier ("/אשר", "/approve", "/דחה"), stashed with no timestamp. They had
+been inert only because a ghost record from 09-25 kept the "exactly one
+confirmation pending" rule false; the PR #278 reaper (`reapExpiredConfirmations`)
+correctly removed the ghost, which re-enabled the typed path, and the gate took
+an OLD message as the answer to a NEW request. The sale itself was a legitimate
+stop-loss exit (LTC 52.76 < stop 56.14, about -EUR 1.09) but the confirmation
+contract (no real order without a fresh human decision) was broken.
+
+Fix: `TelegramTextMessage.date` (Telegram's send time) is now carried through
+`pollAllTelegramUpdates`; the typed-approval path only matches a message whose
+`date` is at or after the request's `sentAt`, and a message with no date (all
+those already stashed) is never matched. Buttons were never affected (their
+callback token is bound to the request). Regression test fails without the fix.
+
 ## New forward test: F2 sentiment-trend on BTC, paper only (2026-10-17)
 
 After the red-team review found the 1h strategy has no measurable edge, a

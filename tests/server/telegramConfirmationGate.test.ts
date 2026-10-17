@@ -65,11 +65,14 @@ function sellIntent(id = 'BTCEUR:1:0:exit', exitPrice = 110): OrderIntent {
   };
 }
 
+/** A Telegram `date` (unix seconds) comfortably AFTER any request sent during a test. */
+const AFTER_REQUEST = Math.floor(Date.now() / 1000) + 3600;
+
 /** Routes the one fetchFn Telegram's client uses across sendMessage /
  * getUpdates / answerCallbackQuery, based on the endpoint in the URL —
  * mirrors how one real bot token talks to all three. */
 function fakeTelegram(
-  getUpdatesResponses: { update_id: number; callback_query?: { id: string; data: string }; message?: { text: string } }[][],
+  getUpdatesResponses: { update_id: number; callback_query?: { id: string; data: string }; message?: { text: string; date?: number } }[][],
 ) {
   let updatesCallIndex = 0;
   const sent: string[] = [];
@@ -394,7 +397,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     });
 
     it('resolves approved: true on a bare "/אשר" text reply when it is the only confirmation pending', async () => {
-      const { fetchFn, edited } = fakeTelegram([[{ update_id: 10, message: { text: '/אשר' } }]]);
+      const { fetchFn, edited } = fakeTelegram([[{ update_id: 10, message: { text: '/אשר', date: AFTER_REQUEST } }]]);
       const store = new MemoryStore();
       const audit = new PersistedAuditLog(store);
       const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
@@ -407,7 +410,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     });
 
     it('resolves approved: false on a bare "/דחה" text reply', async () => {
-      const { fetchFn } = fakeTelegram([[{ update_id: 10, message: { text: '/דחה' } }]]);
+      const { fetchFn } = fakeTelegram([[{ update_id: 10, message: { text: '/דחה', date: AFTER_REQUEST } }]]);
       const store = new MemoryStore();
       const audit = new PersistedAuditLog(store);
       const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
@@ -418,7 +421,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     });
 
     it('resolves approved: true on a bare "אשר" (no leading slash) — real incident, 2026-09-21: David typed exactly this during the ALGOEUR kill-switch confusion and it sat unrecognized', async () => {
-      const { fetchFn } = fakeTelegram([[{ update_id: 10, message: { text: 'אשר' } }]]);
+      const { fetchFn } = fakeTelegram([[{ update_id: 10, message: { text: 'אשר', date: AFTER_REQUEST } }]]);
       const store = new MemoryStore();
       const audit = new PersistedAuditLog(store);
       const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
@@ -429,7 +432,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     });
 
     it('accepts the English /approve synonym too', async () => {
-      const { fetchFn } = fakeTelegram([[{ update_id: 10, message: { text: '/approve' } }]]);
+      const { fetchFn } = fakeTelegram([[{ update_id: 10, message: { text: '/approve', date: AFTER_REQUEST } }]]);
       const store = new MemoryStore();
       const audit = new PersistedAuditLog(store);
       const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
@@ -438,7 +441,7 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     });
 
     it('accepts the English "deny" synonym for reject too (David asked 2026-09-22)', async () => {
-      const { fetchFn } = fakeTelegram([[{ update_id: 10, message: { text: 'deny' } }]]);
+      const { fetchFn } = fakeTelegram([[{ update_id: 10, message: { text: 'deny', date: AFTER_REQUEST } }]]);
       const store = new MemoryStore();
       const audit = new PersistedAuditLog(store);
       const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
@@ -461,6 +464,28 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
       await assertion;
       expect(sent).toHaveLength(1);
       expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation']);
+    });
+
+    // Real incident, 2026-10-17: stale typed commands stashed days earlier
+    // (no timestamp) approved a brand-new exit one second after it was sent.
+    it('ignores a typed "/אשר" sent BEFORE the request, or carrying no date at all (stale messages never approve a new request)', async () => {
+      const BEFORE_REQUEST = Math.floor(Date.now() / 1000) - 3600;
+      const { fetchFn } = fakeTelegram([
+        [
+          { update_id: 10, message: { text: '/אשר', date: BEFORE_REQUEST } },
+          { update_id: 11, message: { text: '/approve' } }, // stashed before dates existed
+        ],
+        [], [], [], [],
+      ]);
+      const store = new MemoryStore();
+      const audit = new PersistedAuditLog(store);
+      const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+      const promise = gate.requestConfirmation(intent());
+      const assertion = expect(promise).rejects.toThrow(ConfirmationPendingError);
+      await vi.runAllTimersAsync();
+      await assertion;
+      expect(audit.entries().map((e) => e.event)).toEqual(['awaiting-confirmation']); // no decision was made
+      expect(Object.keys(store.get('confirmation-gate-pending') ?? {})).toEqual(['BTCEUR:1:0']);
     });
 
     // The critical safety case: a bare "/אשר" carries no information about

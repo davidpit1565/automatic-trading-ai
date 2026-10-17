@@ -745,6 +745,12 @@ export interface TelegramCallbackQuery {
 export interface TelegramTextMessage {
   readonly updateId: number;
   readonly text: string;
+  /**
+   * Telegram's own send time for the message (unix SECONDS). Absent on
+   * messages stashed before this field existed — those are treated as stale by
+   * the typed-approval path (see `TelegramConfirmationGate`), never matched.
+   */
+  readonly date?: number;
 }
 
 export interface TelegramUpdates {
@@ -808,7 +814,7 @@ export async function pollAllTelegramUpdates(
       const payload = (await response.json()) as {
         result?: readonly {
           update_id: number;
-          message?: { text?: string; chat?: { id?: number | string } };
+          message?: { text?: string; date?: number; chat?: { id?: number | string } };
           callback_query?: { id: string; data?: string; message?: { chat?: { id?: number | string } } };
         }[];
       };
@@ -816,7 +822,11 @@ export async function pollAllTelegramUpdates(
       for (const u of payload.result ?? []) {
         nextOffset = Math.max(nextOffset, u.update_id + 1);
         if (u.message?.text && String(u.message.chat?.id ?? '') === String(config.chatId)) {
-          freshMessages.push({ updateId: u.update_id, text: u.message.text });
+          freshMessages.push({
+            updateId: u.update_id,
+            text: u.message.text,
+            ...(typeof u.message.date === 'number' ? { date: u.message.date } : {}),
+          });
         }
         // A button tap's callback_query carries the chat of the message the
         // button is attached to — checked for the same reason text messages
