@@ -2785,7 +2785,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792274938261,
+    "at": 1792275327652,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -67992,7 +67992,7 @@
     ]
   },
   "longterm-shadow-last-run-day": "2026-10-18",
-  "live:live-cash-eur": 51.57,
+  "live:live-cash-eur": 59.66,
   "live:telegram-shared-update-offset": 447904572,
   "live:telegram-unclaimed-messages": [
     {
@@ -72916,9 +72916,7 @@
       "detail": "Revolut X order 465fcd27-37ec-e271-02c0-07aecd1e972f: new"
     }
   ],
-  "live:live-entry-outstanding-symbols": [
-    "LTCEUR"
-  ],
+  "live:live-entry-outstanding-symbols": [],
   "live:kill-switch-keyboard-sent": true,
   "education-tip-last-sent-at": 1792112893561,
   "education-tip-index": 22,
@@ -72928,10 +72926,6 @@
   },
   "live:live-external-btc-qty": 7.999999999999585e-8,
   "live:live-equity-history": [
-    {
-      "at": 1789592488145,
-      "equity": 51.82
-    },
     {
       "at": 1789592826638,
       "equity": 51.84
@@ -92927,6 +92921,10 @@
     {
       "at": 1792274938261,
       "equity": 61.52
+    },
+    {
+      "at": 1792275327652,
+      "equity": 69.63
     }
   ],
   "live:revolut-x-order-map": {
@@ -92992,37 +92990,6 @@
           "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
         ]
       }
-    },
-    "live-entry:LTCEUR:1790254633004": {
-      "id": "live-entry:LTCEUR:1790254633004",
-      "symbol": "LTC/EUR",
-      "quantity": 0.1558956,
-      "initialQuantity": 0.1558956,
-      "entryPrice": 58.67,
-      "stopLoss": 56.143109770096245,
-      "takeProfit": 63.723780459807514,
-      "highestPrice": 64.24,
-      "lowestPrice": 51.17,
-      "entrySlippage": 0,
-      "openedAt": 1790734286485,
-      "entryAssessment": {
-        "approved": true,
-        "asset": "LTCEUR",
-        "entry": 58.67,
-        "stopLoss": 56.143109770096245,
-        "takeProfit": 63.723780459807514,
-        "positionSize": 0.15589564691657604,
-        "positionValue": 9.146397604595517,
-        "riskAmount": 0.39393118707802166,
-        "riskPercentage": 0.699203352426723,
-        "rewardRiskRatio": 2,
-        "portfolioExposure": 16.234291443837627,
-        "reasons": [
-          "risking 0.39 (0.70% of equity) for a 2.0:1 reward/risk — within every configured limit"
-        ],
-        "warnings": []
-      },
-      "outstandingExitSubmittedAt": 1792274938261
     },
     "external-reconcile:XBTEUR:1791504336956": {
       "id": "external-reconcile:XBTEUR:1791504336956",
@@ -96664,8 +96631,8 @@
   ],
   "live:live-blackout-queue": {},
   "live:daily-loss": {
-    "day": "2026-10-15",
-    "loss": 0.0066857700000000015
+    "day": "2026-10-17",
+    "loss": 1.041382608
   },
   "shadow:candidate-watch:trade-journal": [
     {
@@ -101876,6 +101843,29 @@
       "maePct": 2.2225697017492654,
       "realizedPnl": -0.011629708830000005,
       "returnPct": -1.4194743390146243,
+      "strategyVersion": null,
+      "validationVerdict": null,
+      "confidence": null,
+      "notes": "live trade — fees are a cost-rate ESTIMATE (Revolut X reports no real fee figure); slippage is REAL (signal price vs actual broker fill, entry + exit)"
+    },
+    {
+      "id": "live-entry:LTCEUR:1790254633004",
+      "symbol": "LTC/EUR",
+      "entryTimestamp": 1790734286485,
+      "exitTimestamp": 1792275327652,
+      "entryPrice": 58.67,
+      "exitPrice": 51.99,
+      "positionSize": 0.1558956,
+      "stopLoss": 56.143109770096245,
+      "takeProfit": 63.723780459807514,
+      "exitReason": "manual",
+      "fees": 0.051754221288,
+      "slippage": 0,
+      "holdingDurationMs": 1541041167,
+      "mfePct": 9.493778762570297,
+      "maePct": 12.783364581557866,
+      "realizedPnl": -1.093136829288001,
+      "returnPct": -11.951559570478961,
       "strategyVersion": null,
       "validationVerdict": null,
       "confidence": null,
