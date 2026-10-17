@@ -65,6 +65,8 @@ export interface ConfirmationDecision {
  */
 export interface KillSwitch {
   isEngaged(): boolean;
+  /** When it was engaged (ms), if known — lets a caller ignore a stale /resume. */
+  engagedAt?(): number | null;
   engage(reason: string): void;
   /** Disengaging DOES require explicit human action; never automatic. */
   disengage(confirmedBy: string): void;

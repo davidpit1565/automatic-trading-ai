@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryStore } from '../../src/core/data/storage';
-import { ensureBlackoutWindows, isBlackout, parseBlackoutWindows } from '../../server/blackoutCalendar.mts';
+import { MAX_BLACKOUT_WINDOW_MS, ensureBlackoutWindows, isBlackout, parseBlackoutWindows } from '../../server/blackoutCalendar.mts';
 
 const CANDLES = (date: string) => ({ category: 'candles', date, title: 'Candle lighting' });
 const HAVDALAH = (date: string) => ({ category: 'havdalah', date, title: 'Havdalah' });
@@ -120,5 +120,14 @@ describe('ensureBlackoutWindows', () => {
 
     const windows = await ensureBlackoutWindows(store, Date.parse('2026-09-01T00:00:00Z'), fetchFn);
     expect(windows).toEqual([]);
+  });
+});
+
+describe('isBlackout sanity cap (red-team F4, 2026-10-17)', () => {
+  it('ignores an implausibly long window (bad calendar data must fail closed to human confirmation)', () => {
+    const bad = [{ start: 0, end: MAX_BLACKOUT_WINDOW_MS + 1, label: 'שבת' }];
+    expect(isBlackout(bad, 1000)).toBeNull();
+    const ok = [{ start: 0, end: MAX_BLACKOUT_WINDOW_MS, label: 'חג' }];
+    expect(isBlackout(ok, 1000)).toEqual(ok[0]);
   });
 });

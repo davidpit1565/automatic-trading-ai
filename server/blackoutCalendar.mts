@@ -109,6 +109,14 @@ export async function ensureBlackoutWindows(
   return fetched;
 }
 
+/**
+ * Longest window ever trusted. The real maximum is Yom Tov + Shabbat back to
+ * back (~75h); a window much longer than that means the calendar data is wrong
+ * (e.g. a missing havdalah item merged two windows), and auto-approving exits
+ * for days on bad data must fail closed to the normal human confirmation.
+ */
+export const MAX_BLACKOUT_WINDOW_MS = 80 * 60 * 60 * 1000;
+
 export function isBlackout(windows: readonly BlackoutWindow[], now: number): BlackoutWindow | null {
-  return windows.find((w) => now >= w.start && now < w.end) ?? null;
+  return windows.find((w) => w.end - w.start <= MAX_BLACKOUT_WINDOW_MS && now >= w.start && now < w.end) ?? null;
 }

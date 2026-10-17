@@ -516,6 +516,22 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     });
   });
 
+  it('rejects when BOTH ✅ and ❌ for the same request arrive in one poll (ambiguous intent fails safe)', async () => {
+    const token = confirmationToken(0, 'BTCEUR:1:0');
+    const { fetchFn } = fakeTelegram([
+      [
+        { update_id: 10, callback_query: { id: 'cb-yes', data: `confirm:approve:${token}` } },
+        { update_id: 11, callback_query: { id: 'cb-no', data: `confirm:reject:${token}` } },
+      ],
+    ]);
+    const store = new MemoryStore();
+    const audit = new PersistedAuditLog(store);
+    store.set('confirmation-gate-pending', { 'BTCEUR:1:0': { sentAt: 0, messageId: 1, token } });
+    const gate = new TelegramConfirmationGate(store, { token: 'T', chatId: 'C', fetchFn }, audit);
+    const decision = await gate.requestConfirmation(intent());
+    expect(decision.approved).toBe(false);
+  });
+
   it('ignores a callback tap for a different intent and keeps polling for the right one', async () => {
     const { fetchFn } = fakeTelegram([
       [{ update_id: 10, callback_query: { id: 'cb-other', data: 'confirm:approve:SOMETHING-ELSE' } }],
