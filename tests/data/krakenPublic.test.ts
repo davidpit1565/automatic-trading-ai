@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CANDIDATE_INSTRUMENTS, CURATED_INSTRUMENTS, KrakenPublicSource } from '../../src/core/data/krakenPublic';
+import { CANDIDATE_INSTRUMENTS, CURATED_INSTRUMENTS, ENTRY_PAUSED_SYMBOLS, KrakenPublicSource } from '../../src/core/data/krakenPublic';
 
 const NOW = 1_700_000_000_000;
 // Mirrors the curated-majors order in src/core/data/krakenPublic.ts — the
@@ -591,5 +591,17 @@ describe('CANDIDATE_INSTRUMENTS (forward-test-only, never real trading)', () => 
   it('never overlaps the curated real-trading universe', () => {
     const curatedSymbols = new Set(CURATED_INSTRUMENTS.map((i) => i.symbol));
     expect(CANDIDATE_INSTRUMENTS.every((i) => !curatedSymbols.has(i.symbol))).toBe(true);
+  });
+});
+
+describe('ENTRY_PAUSED_SYMBOLS', () => {
+  it('only pauses coins that are in the curated universe (so open positions stay monitored)', () => {
+    const curated = new Set(CURATED_INSTRUMENTS.map((i) => i.symbol));
+    expect(ENTRY_PAUSED_SYMBOLS.size).toBe(10);
+    for (const sym of ENTRY_PAUSED_SYMBOLS) expect(curated.has(sym)).toBe(true);
+    // The 10 original majors are never paused.
+    for (const sym of ['XBTEUR', 'ETHEUR', 'SOLEUR', 'XRPEUR', 'ADAEUR', 'DOGEEUR', 'LTCEUR', 'DOTEUR', 'LINKEUR', 'AVAXEUR']) {
+      expect(ENTRY_PAUSED_SYMBOLS.has(sym)).toBe(false);
+    }
   });
 });

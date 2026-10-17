@@ -303,6 +303,20 @@ export function markExitSubmitted(store: KeyValueStore, positionId: string, now:
   store.set(LIVE_OPEN_POSITIONS_KEY, positions);
 }
 
+/**
+ * Reverse of `markExitSubmitted`: forgets that an exit order is resting at the
+ * broker. Only call once that order is KNOWN to be gone (cancelled) — see
+ * `expireStaleExitOrders`. No-ops for an untracked position id.
+ */
+export function clearExitSubmitted(store: KeyValueStore, positionId: string): void {
+  const positions = readPositions(store);
+  const existing = positions[positionId];
+  if (!existing || existing.outstandingExitSubmittedAt === undefined) return;
+  const { outstandingExitSubmittedAt: _gone, ...rest } = existing;
+  positions[positionId] = rest;
+  store.set(LIVE_OPEN_POSITIONS_KEY, positions);
+}
+
 /** Pure pass-through to the shared exit-decision logic — paper and live
  * must decide exits identically given the same inputs. */
 export function decideLiveExit(

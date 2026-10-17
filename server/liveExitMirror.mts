@@ -32,8 +32,11 @@ import type { Timeframe } from '../src/core/types';
 import type { ExitReason } from '../src/core/position/tradeJournal';
 import { TradeJournal } from '../src/core/position/tradeJournal';
 import type { ExitDecisionOptions } from '../src/core/autopilot/exitDecision';
+import type { AuditLog, BrokerAdapter } from '../src/core/execution/types';
+import { knownOrderIntentIds } from './revolutXBrokerAdapter.mts';
 import {
   buildLiveExitIntent,
+  clearExitSubmitted,
   buildLiveJournalEntry,
   decideLiveExit,
   forgetLivePosition,
@@ -73,6 +76,30 @@ const EXIT_PENDING_KEY = 'live-exit-pending';
  * can never suppress a position actually worth exiting.
  */
 const MIN_EXIT_NOTIONAL_EUR = 0.5;
+
+const EXIT_COOLDOWN_KEY = 'live-exit-cooldown';
+
+/**
+ * Red-team finding, 2026-10-17: a breached stop re-asked for confirmation
+ * every ~30 min (20-min expiry, then a fresh request next cycle) — 182 exit
+ * requests since 09-16, 124 of them expired unanswered, ~40 for AVAX alone,
+ * until the owner sold by hand 3.3% below the stop. After a decline or an
+ * expiry the SAME position is not re-asked for this long, unless price falls
+ * a further `EXIT_ESCALATION_DROP` below where it was declined (a real
+ * escalation) — and never for a human `/sell` or a Shabbat/Yom Tov
+ * protective auto-approval, which are not nagging.
+ */
+export const EXIT_REPROPOSE_COOLDOWN_MS = 2 * 60 * 60 * 1000;
+export const EXIT_ESCALATION_DROP = 0.015;
+
+interface ExitCooldown {
+  readonly at: number;
+  readonly price: number;
+}
+
+function readExitCooldowns(store: KeyValueStore): Record<string, ExitCooldown> {
+  return store.get<Record<string, ExitCooldown>>(EXIT_COOLDOWN_KEY) ?? {};
+}
 
 interface PendingExit {
   readonly reason: ExitReason;
@@ -155,6 +182,16 @@ export async function proposeLiveExit(
   const pending = readPendingExits(store);
   if (!(position.id in pending)) {
     if (reason === null) return { outcome: 'no-exit-signal' };
+    const cooldown = readExitCooldowns(store)[position.id];
+    if (
+      cooldown &&
+      reason !== 'manual' &&
+      !params.flowParams.autoApprove &&
+      now - cooldown.at < EXIT_REPROPOSE_COOLDOWN_MS &&
+      price > cooldown.price * (1 - EXIT_ESCALATION_DROP)
+    ) {
+      return { outcome: 'no-exit-signal' };
+    }
     pending[position.id] = { reason, queuedAt: now };
     store.set(EXIT_PENDING_KEY, pending);
   }
@@ -164,6 +201,18 @@ export async function proposeLiveExit(
   if (result.outcome !== 'pending') {
     delete pending[position.id];
     store.set(EXIT_PENDING_KEY, pending);
+    // A blackout `autoApprove` skips TelegramConfirmationGate entirely, so a
+    // confirmation record the gate had already persisted for this same intent
+    // (sent before the window began) was never cleared — red-team finding,
+    // 2026-10-17: one such ghost record (09-25) made the gate's "exactly one
+    // pending" check false forever, so a typed /אשר never worked again. A
+    // no-op when there is nothing to clear.
+    clearPendingConfirmation(store, intent.id);
+    if (result.outcome === 'rejected') {
+      const cooldowns = readExitCooldowns(store);
+      cooldowns[position.id] = { at: now, price };
+      store.set(EXIT_COOLDOWN_KEY, cooldowns);
+    }
   }
   if (result.outcome === 'submitted') {
     // Only a report that represents REAL, still-live exposure should mark
@@ -274,6 +323,60 @@ export async function proposeLiveExit(
     }
   }
   return result;
+}
+
+/**
+ * A resting exit order older than this is cancelled so the exit can be
+ * re-proposed at the CURRENT price. Red-team finding, 2026-10-17: a
+ * stop-loss limit sell placed 10-04 never filled (price fell through it) and
+ * `outstandingExitSubmittedAt` blocked every later exit for that position
+ * forever — LTC then fell ~10% below its own stop with no exit evaluated.
+ */
+export const STALE_EXIT_ORDER_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * Cancels exit orders that have been resting at the broker longer than
+ * `STALE_EXIT_ORDER_MS` and, ONLY once the broker confirms the cancel, clears
+ * the outstanding flag so the next `checkAutomaticExits` pass re-proposes the
+ * exit with a fresh price (and a fresh confirmation, or an auto-approval during
+ * Shabbat/Yom Tov, exactly as for any exit). Never acts while the kill switch
+ * is engaged, and leaves the flag untouched on any cancel failure or when the
+ * venue order id is unknown — a failed cancel must never allow a second sell.
+ * Returns how many orders were cancelled.
+ */
+export async function expireStaleExitOrders(
+  store: KeyValueStore,
+  brokerAdapter: BrokerAdapter,
+  killSwitch: { isEngaged(): boolean },
+  audit: AuditLog,
+  now: number,
+): Promise<number> {
+  if (killSwitch.isEngaged()) return 0;
+  let cancelled = 0;
+  for (const position of openLivePositions(store)) {
+    const submittedAt = position.outstandingExitSubmittedAt;
+    if (submittedAt === undefined || now - submittedAt < STALE_EXIT_ORDER_MS) continue;
+    const ids = knownOrderIntentIds(store, `${position.id}:exit:`);
+    // Newest attempt last: ids end with the queue timestamp.
+    const intentId = ids.sort((a, b) => Number(a.split(':exit:')[1]) - Number(b.split(':exit:')[1])).at(-1);
+    if (!intentId) {
+      audit.append({ timestamp: now, intentId: position.id, event: 'advisory', mode: 'live', detail: `stale exit order for ${position.symbol} (>${STALE_EXIT_ORDER_MS / 3.6e6}h) has no known venue order id — cannot cancel automatically` });
+      continue;
+    }
+    try {
+      const report = await brokerAdapter.cancel(intentId);
+      if (report.state === 'cancelled') {
+        clearExitSubmitted(store, position.id);
+        cancelled++;
+        audit.append({ timestamp: now, intentId, event: 'cancelled', mode: 'live', detail: `stale resting exit for ${position.symbol} cancelled after ${Math.round((now - submittedAt) / 60000)} min — exit will be re-proposed at the current price` });
+      } else {
+        audit.append({ timestamp: now, intentId, event: 'advisory', mode: 'live', detail: `could not cancel stale exit for ${position.symbol}: ${report.detail}` });
+      }
+    } catch (cause) {
+      audit.append({ timestamp: now, intentId, event: 'advisory', mode: 'live', detail: `could not cancel stale exit for ${position.symbol}: ${cause instanceof Error ? cause.message : String(cause)}` });
+    }
+  }
+  return cancelled;
 }
 
 /**

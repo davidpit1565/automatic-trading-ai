@@ -14,7 +14,7 @@ import { ok, err } from '../../src/core/types';
 import type { MarketDataSource } from '../../src/core/data/revolutClient';
 import { initLiveCash, liveCash } from '../../server/liveLedger.mts';
 import { forgetLivePosition, markExitSubmitted, openLivePositions, recordLiveEntryFill } from '../../server/liveExitFlow.mts';
-import { checkAutomaticExits, reapOrphanedExitConfirmations } from '../../server/liveExitMirror.mts';
+import { EXIT_ESCALATION_DROP, EXIT_REPROPOSE_COOLDOWN_MS, STALE_EXIT_ORDER_MS, checkAutomaticExits, expireStaleExitOrders, reapOrphanedExitConfirmations } from '../../server/liveExitMirror.mts';
 import { TradeJournal } from '../../src/core/position/tradeJournal';
 import { checkManualSellRequests } from '../../server/manualSellCommand.mts';
 import { ConfirmationPendingError } from '../../server/telegramConfirmationGate.mts';
@@ -842,5 +842,156 @@ describe('reapOrphanedExitConfirmations', () => {
     // a DIFFERENT id never touched here) and the unrelated confirmation stay.
     expect(store.get('live-exit-pending')).toEqual({ 'pos-2': { reason: 'take-profit', queuedAt: 2000 } });
     expect(store.get('confirmation-gate-pending')).toEqual({ 'unrelated-intent': { sentAt: 500, messageId: 2, token: 'xyz' } });
+  });
+});
+
+describe('expireStaleExitOrders (red-team finding, 2026-10-17: a resting stop-loss sell blocked every later exit forever)', () => {
+  function cancellingBroker(report: Partial<OrderStatusReport> | 'throw') {
+    const calls: string[] = [];
+    const adapter: BrokerAdapter = {
+      name: 'fake-broker',
+      mode: 'live',
+      async submit() {
+        throw new Error('not used');
+      },
+      async cancel(intentId: string): Promise<OrderStatusReport> {
+        calls.push(intentId);
+        if (report === 'throw') throw new Error('no known venue order id');
+        return { intentId, state: 'cancelled', filledQuantity: 0, avgFillPrice: null, detail: 'cancelled', ...report } as OrderStatusReport;
+      },
+      async fetchPositions(): Promise<BrokerPosition[]> {
+        return [];
+      },
+    };
+    return { adapter, calls };
+  }
+
+  it('cancels a resting exit older than the limit and clears the flag so the exit is re-proposed', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    markExitSubmitted(store, 'entry-1', 1000);
+    store.set('revolut-x-order-map', { 'entry-1:exit:900': 'venue-old', 'entry-1:exit:1000': 'venue-1' });
+    const { adapter, calls } = cancellingBroker({});
+    const audit = new PersistedAuditLog(store);
+    const n = await expireStaleExitOrders(store, adapter, new PersistedKillSwitch(store), audit, 1000 + STALE_EXIT_ORDER_MS + 1);
+    expect(n).toBe(1);
+    expect(calls).toEqual(['entry-1:exit:1000']); // the NEWEST attempt
+    expect(openLivePositions(store)[0]!.outstandingExitSubmittedAt).toBeUndefined();
+    expect(audit.entries().some((e) => e.event === 'cancelled' && e.detail.includes('stale resting exit'))).toBe(true);
+  });
+
+  it('leaves a young resting exit alone', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    markExitSubmitted(store, 'entry-1', 1000);
+    store.set('revolut-x-order-map', { 'entry-1:exit:1000': 'venue-1' });
+    const { adapter, calls } = cancellingBroker({});
+    const n = await expireStaleExitOrders(store, adapter, new PersistedKillSwitch(store), new PersistedAuditLog(store), 1000 + STALE_EXIT_ORDER_MS - 1);
+    expect(n).toBe(0);
+    expect(calls).toEqual([]);
+    expect(openLivePositions(store)[0]!.outstandingExitSubmittedAt).toBe(1000);
+  });
+
+  it('keeps the flag when the broker refuses or fails the cancel — a failed cancel must never allow a second sell', async () => {
+    for (const report of [{ state: 'rejected', detail: 'cancel failed: HTTP 409' } as Partial<OrderStatusReport>, 'throw' as const]) {
+      const store = new MemoryStore();
+      initLiveCash(store, 100);
+      openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+      markExitSubmitted(store, 'entry-1', 1000);
+      store.set('revolut-x-order-map', { 'entry-1:exit:1000': 'venue-1' });
+      const { adapter } = cancellingBroker(report);
+      const n = await expireStaleExitOrders(store, adapter, new PersistedKillSwitch(store), new PersistedAuditLog(store), 1000 + STALE_EXIT_ORDER_MS + 1);
+      expect(n).toBe(0);
+      expect(openLivePositions(store)[0]!.outstandingExitSubmittedAt).toBe(1000);
+    }
+  });
+
+  it('does nothing while the kill switch is engaged, and nothing when no venue order id is known', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    markExitSubmitted(store, 'entry-1', 1000);
+    store.set('revolut-x-order-map', { 'entry-1:exit:1000': 'venue-1' });
+    const { adapter, calls } = cancellingBroker({});
+    const ks = new PersistedKillSwitch(store);
+    ks.engage('test');
+    expect(await expireStaleExitOrders(store, adapter, ks, new PersistedAuditLog(store), 1000 + STALE_EXIT_ORDER_MS + 1)).toBe(0);
+    expect(calls).toEqual([]);
+
+    const store2 = new MemoryStore();
+    initLiveCash(store2, 100);
+    openPosition(store2, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    markExitSubmitted(store2, 'entry-1', 1000);
+    const { adapter: a2, calls: c2 } = cancellingBroker({});
+    expect(await expireStaleExitOrders(store2, a2, new PersistedKillSwitch(store2), new PersistedAuditLog(store2), 1000 + STALE_EXIT_ORDER_MS + 1)).toBe(0);
+    expect(c2).toEqual([]);
+  });
+});
+
+describe('blackout auto-approve clears a ghost confirmation record (red-team finding, 2026-10-17)', () => {
+  it('removes the gate record for the same exit intent once the auto-approved flow resolves', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    // First (non-blackout) cycle queues the exit and leaves a pending gate record.
+    const pendingGate: ConfirmationGate = {
+      async requestConfirmation() {
+        store.set('confirmation-gate-pending', { 'entry-1:exit:1500': { sentAt: 1500, messageId: 1, token: 't' } });
+        throw new ConfirmationPendingError('entry-1:exit:1500');
+      },
+    };
+    const report: OrderStatusReport = { intentId: 'x', state: 'filled', filledQuantity: 0.01, avgFillPrice: 94, detail: 'ok' };
+    const base = { ...flowParams(report, killSwitch, audit), confirmationGate: pendingGate };
+    await checkAutomaticExits(store, fakeSource(ok([candle(94)])), '1h', {}, base, 1500);
+    expect(Object.keys(store.get('confirmation-gate-pending') ?? {})).toEqual(['entry-1:exit:1500']);
+    // Blackout begins: same queued exit auto-approves, skipping the gate entirely.
+    await checkAutomaticExits(store, fakeSource(ok([candle(94)])), '1h', {}, flowParams(report, killSwitch, audit), 2000, 150, undefined, undefined, undefined, true);
+    expect(store.get('confirmation-gate-pending')).toEqual({});
+  });
+});
+
+describe('exit re-ask cooldown (red-team finding, 2026-10-17: ~40 confirmation requests for one breached stop)', () => {
+  const declined = (): ConfirmationDecision => ({ intentId: 'x', approved: false, decidedAt: 1, decidedBy: 'system', note: 'auto-expired' });
+  const report: OrderStatusReport = { intentId: 'x', state: 'filled', filledQuantity: 0.01, avgFillPrice: 94, detail: 'ok' };
+
+  async function declineOnce(store: MemoryStore, killSwitch: PersistedKillSwitch, audit: PersistedAuditLog, gate: ReturnType<typeof fakeConfirmationGate>, now: number, price: number) {
+    return checkAutomaticExits(store, fakeSource(ok([candle(price)])), '1h', {}, { ...flowParams(report, killSwitch, audit), confirmationGate: gate }, now);
+  }
+
+  it('does not re-ask right after a decline/expiry, re-asks after the cooldown, and escalates on a further drop', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const gate = fakeConfirmationGate(declined());
+
+    await declineOnce(store, killSwitch, audit, gate, 1000, 94);
+    expect(gate.calls).toBe(1);
+    // Next cycles, same price, inside the cooldown: no new request.
+    await declineOnce(store, killSwitch, audit, gate, 1000 + 30 * 60_000, 94);
+    await declineOnce(store, killSwitch, audit, gate, 1000 + 90 * 60_000, 93.9);
+    expect(gate.calls).toBe(1);
+    // A real escalation (price falls > 1.5% below the declined price) re-asks immediately.
+    await declineOnce(store, killSwitch, audit, gate, 1000 + 100 * 60_000, 94 * (1 - EXIT_ESCALATION_DROP) - 0.01);
+    expect(gate.calls).toBe(2);
+    // And after the cooldown elapses it asks again even without a further drop.
+    await declineOnce(store, killSwitch, audit, gate, 1000 + 100 * 60_000 + EXIT_REPROPOSE_COOLDOWN_MS + 1, 94);
+    expect(gate.calls).toBe(3);
+  });
+
+  it('never delays a Shabbat/Yom Tov protective auto-exit', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    store.set('live-exit-cooldown', { 'entry-1': { at: 1000, price: 94 } });
+    const outcomes = await checkAutomaticExits(store, fakeSource(ok([candle(94)])), '1h', {}, flowParams(report, killSwitch, audit), 2000, 150, undefined, undefined, undefined, true);
+    expect(outcomes[0]!.outcome).toBe('submitted');
   });
 });

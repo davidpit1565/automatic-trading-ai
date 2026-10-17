@@ -69,6 +69,7 @@ function makePilot(
     whaleFlowCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     topTraderCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     fundingCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+    entryPausedSymbols?: ReadonlySet<string>;
     aiJudgmentCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     confidenceRisk?: { floorPct: number; ceilingPct: number };
     trailing?: import('../../src/core/risk/trailingStop').TrailingConfig;
@@ -104,6 +105,7 @@ function makePilot(
     whaleFlowCheck: opts.whaleFlowCheck,
     topTraderCheck: opts.topTraderCheck,
     fundingCheck: opts.fundingCheck,
+    entryPausedSymbols: opts.entryPausedSymbols,
     aiJudgmentCheck: opts.aiJudgmentCheck,
     confidenceRisk: opts.confidenceRisk,
     trailing: opts.trailing,
@@ -670,6 +672,36 @@ describe('funding-crowding gate', () => {
     const { pilot, portfolio } = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { fundingCheck: async () => true });
     await pilot.runCycleOnce(T);
     expect(portfolio.openPositions()).toHaveLength(1);
+  });
+});
+
+describe('entry-paused symbols', () => {
+  it('opens no NEW entry in a paused symbol but still exits an open position at its stop', async () => {
+    let paused = false;
+    const set = { has: (sym: string) => paused && sym === 'QUAL/USD' } as unknown as ReadonlySet<string>;
+    const market: Record<string, { drift: number; lastPrice?: number }> = { 'QUAL/USD': { drift: 0.001 } };
+    const { pilot, portfolio, journal } = makePilot(market, { entryPausedSymbols: set });
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1); // not paused yet: enters normally
+    const position = portfolio.openPositions()[0]!;
+
+    paused = true;
+    market['QUAL/USD'] = { drift: 0.001, lastPrice: position.stopLoss * 0.99 };
+    const cycle = await pilot.runCycleOnce(T + 3_600_000);
+    expect(cycle.closed).toHaveLength(1);
+    expect(cycle.closed[0]!.reason).toBe('stop-loss');
+    expect(journal.entries()).toHaveLength(1);
+  });
+
+  it('skips a qualifying entry in a paused symbol and says why', async () => {
+    const { pilot, portfolio } = makePilot(
+      { 'QUAL/USD': { drift: 0.001 } },
+      { entryPausedSymbols: new Set(['QUAL/USD']) },
+    );
+    const cycle = await pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(cycle.skipped.some((s) => s.reason.includes('entries paused'))).toBe(true);
   });
 });
 

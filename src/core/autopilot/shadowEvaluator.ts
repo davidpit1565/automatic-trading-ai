@@ -159,6 +159,8 @@ export interface ShadowRunOptions {
    * Only candidates with `useFundingCheck: true` get it wired in.
    */
   readonly fundingCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+  /** Symbols that get no NEW entries in any candidate (see `ENTRY_PAUSED_SYMBOLS`). */
+  readonly entryPausedSymbols?: ReadonlySet<string>;
   /**
    * Built from an LLM call (see `signal/aiJudgment.ts`). Only candidates
    * with `useAiJudgmentCheck: true` get it wired in. Omit when no model API
@@ -254,6 +256,7 @@ async function runOne(
     ...(candidate.useTopTraderCheck && options.topTraderCheck
       ? { topTraderCheck: options.topTraderCheck }
       : {}),
+    ...(options.entryPausedSymbols ? { entryPausedSymbols: options.entryPausedSymbols } : {}),
     ...(candidate.useFundingCheck && options.fundingCheck
       ? { fundingCheck: options.fundingCheck }
       : {}),

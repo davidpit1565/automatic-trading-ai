@@ -30,7 +30,7 @@
 
 import type { KeyValueStore } from '../src/core/data/storage';
 import type { Instrument } from '../src/core/types';
-import type { OrderIntent } from '../src/core/execution/types';
+import type { AuditLog, BrokerAdapter, OrderIntent } from '../src/core/execution/types';
 import type { TradeOpportunity } from '../src/core/signal/signalEngine';
 import { assessTrade, confidenceScaledRiskPct, DEFAULT_RISK_LIMITS, type RiskLimits } from '../src/core/risk/riskEngine';
 import { assessTradeEconomics } from '../src/core/risk/tradeEconomics';
@@ -87,6 +87,52 @@ export function clearRestingEntryIntent(store: KeyValueStore, symbol: string): v
   store.set(RESTING_ENTRY_KEY, map);
 }
 
+/**
+ * A resting entry (limit buy at the signal price that has not filled) older
+ * than this is cancelled. Red-team finding, 2026-10-17: entries are limit
+ * orders at the signal price with no expiry, so one that does not fill
+ * immediately fills only if price later FALLS back to it — adverse selection
+ * (LTC rested 133h, then filled into a falling market and is now ~10% down,
+ * unable to exit). The setup that justified the order is long gone by then.
+ */
+export const STALE_ENTRY_ORDER_MS = 60 * 60 * 1000;
+
+/**
+ * Cancels resting entry orders older than `STALE_ENTRY_ORDER_MS` and, ONLY
+ * once the broker confirms the cancel, forgets the resting intent and the
+ * outstanding flag so a fresh signal for that symbol can be proposed again.
+ * Never acts while the kill switch is engaged; a failed cancel or an unknown
+ * venue order id leaves everything untouched (the order may still be live).
+ * Returns the symbols whose resting order was cancelled.
+ */
+export async function expireStaleEntryOrders(
+  store: KeyValueStore,
+  brokerAdapter: BrokerAdapter,
+  killSwitch: { isEngaged(): boolean },
+  audit: AuditLog,
+  now: number,
+): Promise<readonly string[]> {
+  if (killSwitch.isEngaged()) return [];
+  const cancelled: string[] = [];
+  for (const [symbol, intent] of Object.entries(readRestingEntryIntents(store))) {
+    if (now - intent.createdAt < STALE_ENTRY_ORDER_MS) continue;
+    try {
+      const report = await brokerAdapter.cancel(intent.id);
+      if (report.state === 'cancelled') {
+        clearRestingEntryIntent(store, symbol);
+        clearOutstandingEntry(store, symbol);
+        cancelled.push(symbol);
+        audit.append({ timestamp: now, intentId: intent.id, event: 'cancelled', mode: 'live', detail: `stale resting entry for ${symbol} cancelled after ${Math.round((now - intent.createdAt) / 60000)} min unfilled` });
+      } else {
+        audit.append({ timestamp: now, intentId: intent.id, event: 'advisory', mode: 'live', detail: `could not cancel stale entry for ${symbol}: ${report.detail}` });
+      }
+    } catch (cause) {
+      audit.append({ timestamp: now, intentId: intent.id, event: 'advisory', mode: 'live', detail: `could not cancel stale entry for ${symbol}: ${cause instanceof Error ? cause.message : String(cause)}` });
+    }
+  }
+  return cancelled;
+}
+
 interface PendingEntry {
   readonly opportunity: TradeOpportunity;
   readonly queuedAt: number;
@@ -133,6 +179,21 @@ export function clearOutstandingEntry(store: KeyValueStore, symbol: string): voi
   const outstanding = readOutstanding(store);
   if (!outstanding.delete(symbol)) return;
   writeOutstanding(store, outstanding);
+}
+
+/**
+ * Red-team finding, 2026-10-17: tracked lots worth a few cents (e.g. 2.8e-5
+ * ALGO, ~EUR 0.0001) still counted toward `maxOpenPositions` and the
+ * `alreadyOpen` guard, so three BTC dust lots + ALGO dust + one real LTC
+ * position filled all 5 slots and every new entry was refused — silently.
+ * A lot below this value can neither meaningfully hold risk nor be sold
+ * (`liveExitMirror` already skips exits under EUR 0.5), so it is not a position
+ * for capacity purposes. It stays tracked; it just stops blocking entries.
+ */
+export const DUST_NOTIONAL_EUR = 0.5;
+
+function isDustLot(p: { quantity: number; entryPrice: number; entryAssessment: { asset: string } }, prices: Readonly<Record<string, number>>): boolean {
+  return p.quantity * (prices[p.entryAssessment.asset] ?? p.entryPrice) < DUST_NOTIONAL_EUR;
 }
 
 export type LiveEntryOutcome =
@@ -224,7 +285,11 @@ export async function mirrorApprovedEntries(
 ): Promise<readonly LiveEntryOutcome[]> {
   const riskLimits = options.riskLimits ?? DEFAULT_RISK_LIMITS;
   const outstanding = readOutstanding(store);
-  const alreadyOpen = new Set(openLivePositions(store).map((p) => p.entryAssessment.asset));
+  const alreadyOpen = new Set(
+    openLivePositions(store)
+      .filter((p) => !isDustLot(p, prices))
+      .map((p) => p.entryAssessment.asset),
+  );
   const pending = readPending(store);
   const outcomes: LiveEntryOutcome[] = [];
 
@@ -253,7 +318,7 @@ export async function mirrorApprovedEntries(
       // jointly blow past maxOpenPositions/maxTotalExposurePct/per-asset
       // caps that each looked fine in isolation, and could size a second buy
       // against cash the first buy had already spent.
-      const openPositions = openLivePositions(store).map((p) => ({
+      const openPositions = openLivePositions(store).filter((p) => !isDustLot(p, prices)).map((p) => ({
         symbol: p.entryAssessment.asset,
         quantity: p.quantity,
         entryPrice: p.entryPrice,
@@ -293,6 +358,15 @@ export async function mirrorApprovedEntries(
         }
       }
       if (!assessment.approved) {
+        // Previously silent (no audit row, no message) — the owner could not
+        // tell a refused entry from one that never fired. See 2026-10-17.
+        flowParams.audit.append({
+          timestamp: now,
+          intentId: `entry-refused:${symbol}:${now}`,
+          event: 'rejected',
+          mode: 'live',
+          detail: `live entry refused for ${symbol}: ${assessment.reasons.join('; ')}`,
+        });
         outcomes.push({ symbol, outcome: 'not-approved', reasons: assessment.reasons });
         delete pending[symbol];
         store.set(PENDING_KEY, pending);
@@ -320,6 +394,13 @@ export async function mirrorApprovedEntries(
       // approval and would only be caught later by the broker rejecting it.
       const availableCash = liveCash(store);
       if (assessment.positionValue > availableCash) {
+        flowParams.audit.append({
+          timestamp: now,
+          intentId: `entry-refused:${symbol}:${now}`,
+          event: 'rejected',
+          mode: 'live',
+          detail: `live entry refused for ${symbol}: position value EUR ${assessment.positionValue.toFixed(2)} exceeds available cash EUR ${availableCash.toFixed(2)}`,
+        });
         outcomes.push({
           symbol,
           outcome: 'not-approved',
