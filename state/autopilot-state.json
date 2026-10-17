@@ -2785,7 +2785,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792274440731,
+    "at": 1792274938261,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -72888,6 +72888,34 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1792274962017,
+      "intentId": "live-entry:LTCEUR:1790254633004:exit:1791125788874",
+      "event": "cancelled",
+      "mode": "live",
+      "detail": "Revolut X order 30fbee75-e1f1-e2b7-02c0-07d6ac8ad05d cancelled"
+    },
+    {
+      "timestamp": 1792274938261,
+      "intentId": "live-entry:LTCEUR:1790254633004:exit:1791125788874",
+      "event": "cancelled",
+      "mode": "live",
+      "detail": "stale resting exit for LTC/EUR cleared after 19152 min (cancelled at the broker) — exit will be re-proposed at the current price"
+    },
+    {
+      "timestamp": 1792274962303,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792021080508",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "cancel failed: HTTP 409"
+    },
+    {
+      "timestamp": 1792274938261,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792021080508",
+      "event": "advisory",
+      "mode": "live",
+      "detail": "could not cancel stale exit for BTC/EUR: cancel failed: HTTP 409"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -72902,6 +72930,22 @@
   },
   "live:live-external-btc-qty": 7.999999999999585e-8,
   "live:live-equity-history": [
+    {
+      "at": 1789592488145,
+      "equity": 51.82
+    },
+    {
+      "at": 1789592826638,
+      "equity": 51.84
+    },
+    {
+      "at": 1789593166026,
+      "equity": 51.8
+    },
+    {
+      "at": 1789593504522,
+      "equity": 51.81
+    },
     {
       "at": 1789593841173,
       "equity": 51.8
@@ -92883,23 +92927,7 @@
       "equity": 61.56
     },
     {
-      "at": 1792272952496,
-      "equity": 61.53
-    },
-    {
-      "at": 1792273323989,
-      "equity": 61.5
-    },
-    {
-      "at": 1792273695217,
-      "equity": 61.51
-    },
-    {
-      "at": 1792274069005,
-      "equity": 61.48
-    },
-    {
-      "at": 1792274440731,
+      "at": 1792274938261,
       "equity": 61.52
     }
   ],
@@ -92994,8 +93022,7 @@
           "risking 0.39 (0.70% of equity) for a 2.0:1 reward/risk — within every configured limit"
         ],
         "warnings": []
-      },
-      "outstandingExitSubmittedAt": 1791125788874
+      }
     },
     "external-reconcile:XBTEUR:1791504336956": {
       "id": "external-reconcile:XBTEUR:1791504336956",
@@ -93556,13 +93583,7 @@
   "telegram-shared-update-offset": 447905085,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {
-    "live-entry:ATOMEUR:1790340349162:exit:1790364916886": {
-      "sentAt": 1790364942624,
-      "messageId": 947,
-      "token": "muhd271c.as4ydx"
-    }
-  },
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 7882.949907581821,
@@ -99478,16 +99499,6 @@
   },
   "state-merge-collisions": [
     {
-      "key": "shadow:breakout:portfolio-engine",
-      "at": 1791487853187,
-      "label": "cycle 14/70"
-    },
-    {
-      "key": "shadow:breakout:audit-log",
-      "at": 1791487853187,
-      "label": "cycle 14/70"
-    },
-    {
       "key": "shadow-standings",
       "at": 1791487853187,
       "label": "cycle 14/70"
@@ -99976,6 +99987,16 @@
       "key": "daily-summary",
       "at": 1792161178068,
       "label": "cycle 39/70"
+    },
+    {
+      "key": "autopilot-last-run",
+      "at": 1792274966173,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "live:live-equity-history",
+      "at": 1792274966173,
+      "label": "live-mirror: after cancelling stale exit orders"
     }
   ],
   "shadow:correlation-capped:open-positions": [],
@@ -103050,5 +103071,8 @@
       "confidence": 41.994603555921174,
       "notes": "opened autonomously by the paper autopilot"
     }
-  ]
+  ],
+  "live:live-stale-cancel-advisory": {
+    "external-reconcile:XBTEUR:1791659014817:exit:1792021080508": 1792274938261
+  }
 }
