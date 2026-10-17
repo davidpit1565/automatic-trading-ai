@@ -1,5 +1,25 @@
 # PROJECT_STATE
 
+## Red-team finding #1 FIXED: journal P&L left out the entry fee (2026-10-17)
+
+David asked for a red-team review ("we are not growing, show real evidence").
+Verified from the committed state: `trade-journal` `realizedPnl`/`returnPct`
+(and `PortfolioEngine.closedRealizedPnl`, the dashboard figure) subtracted
+only the EXIT fee; the entry fee left cash but never reached the P&L number.
+Over 100 paper trades the journal said +EUR 826.8 (PF 1.27) while cash rose
+only +EUR 309.4 (PF 1.09) — the EUR 517 gap is exactly the sum of entry fees.
+Every journal-based PF/win-rate/P&L quoted in earlier entries (including the
+weekly check-ins: "+EUR 831, PF 1.37 since 2026-08-21", really about +EUR 364,
+PF 1.14) was inflated the same way; the readiness verdict used the inflated
+number too.
+
+Fix: `PositionEngine.open` now starts `realizedPnl` at `-entryFee`, so the
+journal, `closedRealizedPnl`, the daily-loss tracker and the readiness check all
+equal the real cash change. Tests: updated the lifecycle expectation, added
+`closed realized P&L equals the cash change` in portfolioEngine tests. Old
+journal rows are NOT rewritten (use `(exit-entry)*size - fees` for history).
+Gate: tsc clean, 1437 vitest, build ok.
+
 ## Weekly coin review #4 — 2 new shadow candidates, nothing promoted (2026-10-12)
 
 Scan (top 80 EUR pairs by 24h volume, real Kraken history): 41 passed the

@@ -137,9 +137,11 @@ describe('exits and lifecycle', () => {
     // MFE: (112-100)/100 = 12%; MAE: (100-97)/100 = 3%.
     expect(entry.mfePct).toBeCloseTo(12, 10);
     expect(entry.maePct).toBeCloseTo(3, 10);
-    // Realized: 4*8 + 6*2 = 44, minus exit fees 1.0 = 43 (open fee reported in fees).
-    expect(entry.realizedPnl).toBeCloseTo(43, 10);
-    expect(entry.returnPct).toBeCloseTo((43 / 1000) * 100, 8);
+    // Realized: 4*8 + 6*2 = 44, minus the entry fee 1 and exit fees 1.0 = 42
+    // (all fees count: realizedPnl must equal the actual cash change).
+    expect(entry.fees).toBeCloseTo(2, 10);
+    expect(entry.realizedPnl).toBeCloseTo(42, 10);
+    expect(entry.returnPct).toBeCloseTo((42 / 1000) * 100, 8);
     expect(entry.strategyVersion).toBe('trend-v1');
     expect(entry.validationVerdict).toBe('robust');
     expect(entry.confidence).toBe(60);

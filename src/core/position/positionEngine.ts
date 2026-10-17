@@ -30,7 +30,7 @@ export interface OpenPosition {
   readonly takeProfit: number;
   /** All fees paid so far (open + partial exits). */
   readonly feesPaid: number;
-  /** Realized P&L from partial exits, net of their fees. */
+  /** Realized P&L net of ALL fees paid so far (the entry fee plus every exit leg's fee). */
   readonly realizedPnl: number;
   /** Highest/lowest prices observed since entry (for MFE/MAE). */
   readonly highestPrice: number;
@@ -136,7 +136,9 @@ export class PositionEngine {
       stopLoss: input.stopLoss,
       takeProfit: input.takeProfit,
       feesPaid: input.fee ?? 0,
-      realizedPnl: 0,
+      // The entry fee is already out of cash, so it is a realized cost from
+      // the moment of the fill; exit legs add their own net P&L on top.
+      realizedPnl: -(input.fee ?? 0),
       highestPrice: input.entryPrice,
       lowestPrice: input.entryPrice,
       confidence: input.confidence ?? null,
