@@ -97,6 +97,8 @@ export const EXIT_ESCALATION_DROP = 0.015;
 interface ExitCooldown {
   readonly at: number;
   readonly price: number;
+  /** Who declined: 'system' = the 20-min expiry; anything else is a human's ❌. */
+  readonly decidedBy?: string;
 }
 
 function readExitCooldowns(store: KeyValueStore): Record<string, ExitCooldown> {
@@ -188,7 +190,9 @@ export async function proposeLiveExit(
     if (
       cooldown &&
       reason !== 'manual' &&
-      !params.flowParams.autoApprove &&
+      // A Shabbat/Yom Tov protective auto-exit may override a mere TIMEOUT, but
+      // never an explicit human ❌ (red-team F3, 2026-10-17).
+      !(params.flowParams.autoApprove && cooldown.decidedBy === 'system') &&
       now - cooldown.at < EXIT_REPROPOSE_COOLDOWN_MS &&
       price > cooldown.price * (1 - EXIT_ESCALATION_DROP)
     ) {
@@ -212,7 +216,7 @@ export async function proposeLiveExit(
     clearPendingConfirmation(store, intent.id);
     if (result.outcome === 'rejected' && queued.reason !== 'manual') {
       const cooldowns = readExitCooldowns(store);
-      cooldowns[position.id] = { at: now, price };
+      cooldowns[position.id] = { at: now, price, decidedBy: result.decidedBy };
       store.set(EXIT_COOLDOWN_KEY, cooldowns);
     }
   }
@@ -495,9 +499,20 @@ export async function checkAutomaticExits(
       // Captured BEFORE the call — proposeLiveExit deletes the pending
       // record once it resolves, and a RESUMED attempt (reason === null
       // this cycle) has no reason of its own to fall back on otherwise.
-      const queuedReason = reason ?? readPendingExits(store)[refreshed.id]?.reason ?? null;
+      const queued = readPendingExits(store)[refreshed.id];
+      const queuedReason = reason ?? queued?.reason ?? null;
+      // Shabbat/Yom Tov auto-approval is for a PROTECTIVE exit whose signal is
+      // firing RIGHT NOW. Red-team 2026-10-17 found it also resumed any
+      // already-queued attempt with no signal check, so it could (F1) sell at a
+      // recovered price, override a human's `/sell` tap, or (F2) auto-sell a lot
+      // this bot never opened or confirmed (balances picked up from the broker).
+      const autoApproveAllowed =
+        blackoutActive &&
+        reason !== null &&
+        queued?.reason !== 'manual' &&
+        !refreshed.id.startsWith('external-reconcile:');
       const result = await proposeLiveExit(store, refreshed, reason, price, now, {
-        flowParams: blackoutActive
+        flowParams: autoApproveAllowed
           ? { ...flowParams, autoApprove: { decidedBy: 'system-blackout', note: 'שבת/חג — יציאה הגנתית אושרה אוטומטית ללא אישור טלגרם' } }
           : flowParams,
         onRealizedPnl,
@@ -505,7 +520,7 @@ export async function checkAutomaticExits(
         costRate,
       });
       outcomes.push({ symbol, ...result });
-      if (blackoutActive && result.outcome === 'submitted' && result.report.state === 'filled' && telegram && queuedReason) {
+      if (autoApproveAllowed && result.outcome === 'submitted' && result.report.state === 'filled' && telegram && queuedReason) {
         await sendTelegramMessage(buildBlackoutAutoExitMessage(refreshed, price, queuedReason), telegram);
       }
     } catch (cause) {

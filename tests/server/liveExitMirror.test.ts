@@ -990,7 +990,7 @@ describe('exit re-ask cooldown (red-team finding, 2026-10-17: ~40 confirmation r
     openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
     const killSwitch = new PersistedKillSwitch(store);
     const audit = new PersistedAuditLog(store);
-    store.set('live-exit-cooldown', { 'entry-1': { at: 1000, price: 94 } });
+    store.set('live-exit-cooldown', { 'entry-1': { at: 1000, price: 94, decidedBy: 'system' } });
     const outcomes = await checkAutomaticExits(store, fakeSource(ok([candle(94)])), '1h', {}, flowParams(report, killSwitch, audit), 2000, 150, undefined, undefined, undefined, true);
     expect(outcomes[0]!.outcome).toBe('submitted');
   });
@@ -1046,5 +1046,66 @@ describe('stale-order cancel edge cases (review follow-ups, 2026-10-17)', () => 
     // ...so the automatic stop still asks on the very next cycle.
     await checkAutomaticExits(store, fakeSource(ok([candle(94)])), '1h', {}, { ...flowParams(report, killSwitch, audit), confirmationGate: gate }, 2000);
     expect(gate.calls).toBe(2);
+  });
+});
+
+describe('blackout auto-approval limits (red-team F1/F2/F3, 2026-10-17)', () => {
+  const report: OrderStatusReport = { intentId: 'x', state: 'filled', filledQuantity: 0.01, avgFillPrice: 94, detail: 'ok' };
+
+  async function blackoutCycle(store: MemoryStore, gate: ReturnType<typeof fakeConfirmationGate>, candleClose: number, now: number) {
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    return checkAutomaticExits(store, fakeSource(ok([candle(candleClose)])), '1h', {}, { ...flowParams(report, killSwitch, audit), confirmationGate: gate }, now, 150, undefined, undefined, undefined, true);
+  }
+
+  it('F1: a queued manual /sell is never auto-approved in blackout, even with a stop firing', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    store.set('live-exit-pending', { 'entry-1': { reason: 'manual', queuedAt: 1500 } });
+    const gate = fakeConfirmationGate({ intentId: 'x', approved: false, decidedAt: 1, decidedBy: 'david' });
+    await blackoutCycle(store, gate, 94, 2000);
+    expect(gate.calls).toBe(1); // the human was asked; nothing was auto-sold
+  });
+
+  it('F1: a resumed attempt whose signal is NOT firing now is not auto-approved either', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    store.set('live-exit-pending', { 'entry-1': { reason: 'stop-loss', queuedAt: 1500 } });
+    const gate = fakeConfirmationGate({ intentId: 'x', approved: false, decidedAt: 1, decidedBy: 'david' });
+    const outcomes = await blackoutCycle(store, gate, 100, 2000); // price recovered: no stop firing
+    expect(gate.calls).toBe(1);
+    expect(outcomes[0]!.outcome).toBe('rejected');
+  });
+
+  it('F2: a lot picked up from the broker balance (external-reconcile) is never auto-sold in blackout', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'external-reconcile:XBTEUR:1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    const gate = fakeConfirmationGate({ intentId: 'x', approved: false, decidedAt: 1, decidedBy: 'david' });
+    await blackoutCycle(store, gate, 94, 2000);
+    expect(gate.calls).toBe(1);
+  });
+
+  it('F3: a human ❌ is not overridden by blackout auto-approval within the cooldown', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    store.set('live-exit-cooldown', { 'entry-1': { at: 1000, price: 94, decidedBy: 'david' } });
+    const gate = fakeConfirmationGate({ intentId: 'x', approved: true, decidedAt: 1, decidedBy: 'david' });
+    const outcomes = await blackoutCycle(store, gate, 94, 2000);
+    expect(gate.calls).toBe(0);
+    expect(outcomes[0]!.outcome).toBe('no-exit-signal');
+  });
+
+  it('a normal fresh stop in blackout is still auto-approved (the protection that exists for Shabbat)', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    const gate = fakeConfirmationGate({ intentId: 'x', approved: false, decidedAt: 1, decidedBy: 'david' });
+    const outcomes = await blackoutCycle(store, gate, 94, 2000);
+    expect(gate.calls).toBe(0);
+    expect(outcomes[0]!.outcome).toBe('submitted');
   });
 });

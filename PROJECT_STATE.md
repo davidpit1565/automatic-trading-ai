@@ -1,5 +1,38 @@
 # PROJECT_STATE
 
+## Confirmation-gate hardening from the end-to-end red-team (2026-10-17)
+
+An adversarial audit of every path to a real order (after the stale typed /אשר
+incident) found no way to place a broker order outside `runLiveOrderFlow`, no
+silent double-trade path after a killed run (client_order_id is deterministic and
+fails closed), and sound button-token binding — and these real holes, fixed here:
+
+- **F1 (blocker)**: Shabbat/Yom Tov `autoApprove` resumed ANY queued exit with
+  no signal check, so it could sell at a recovered price, override a human's
+  `/sell` tap, or replay an old `/sell`. Now auto-approval needs a signal firing
+  THIS cycle and a queued reason that is not 'manual'.
+- **F2**: lots created from broker-balance reconciliation (`external-reconcile:`
+  ids — owner's own holdings, never confirmed by him) are never auto-sold.
+- **F3**: a human ❌ is no longer overridden by blackout auto-approval inside
+  the 2h cooldown (only a timeout is); the cooldown records `decidedBy`.
+- **F6 (partial)**: the typed-approval window opens when the send FINISHED
+  (`readyAt`), not before it started.
+- Both ✅ and ❌ for one request in a single poll now reject.
+- **F4**: blackout windows longer than 80h are ignored (bad calendar data fails
+  closed to human confirmation).
+- **F7**: `/resume` must be newer than the kill-switch engage time (the state now
+  records `at`), so a replayed old `/resume` cannot disengage a switch the broker
+  adapter engaged on an uncertain order.
+
+NOT done: **F5** — a tap approves the order as REBUILT this cycle (current price
+and quantity for exits, fresh sizing for entries), not a snapshot of what the
+message showed; and a typed /אשר is still not bound to a specific message (it
+needs exactly one pending request plus the freshness rules above); `from.id` is
+not checked (matters only if the chat were a group). Tracked here so they are
+not forgotten.
+
+Gate: tsc clean, 1477 vitest, build ok.
+
 ## On-demand health ping to Telegram (2026-10-17)
 
 David asked for a Telegram message as "a sign that everything works".

@@ -13,6 +13,8 @@ import type { KeyValueStore } from '../data/storage';
 interface KillSwitchState {
   engaged: boolean;
   reason: string | null;
+  /** When it was engaged (ms). Absent on state persisted before this field existed. */
+  at?: number;
 }
 
 const STORAGE_KEY = 'kill-switch';
@@ -32,8 +34,13 @@ export class PersistedKillSwitch implements KillSwitch {
     return this.state.reason;
   }
 
+  /** When the switch was engaged, or null when it is off or the time is unknown. */
+  engagedAt(): number | null {
+    return this.state.engaged ? (this.state.at ?? null) : null;
+  }
+
   engage(reason: string): void {
-    this.state = { engaged: true, reason };
+    this.state = { engaged: true, reason, at: Date.now() };
     this.store.set(STORAGE_KEY, this.state);
   }
 

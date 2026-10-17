@@ -6,7 +6,10 @@ import { checkManualKillSwitchCommands, parseKillSwitchCommand } from '../../ser
 import { checkManualSellRequests } from '../../server/manualSellCommand.mts';
 import type { MarketDataSource } from '../../src/core/data/revolutClient';
 
-function seedTelegram(messages: { update_id: number; message?: { text?: string; chat?: { id: string } } }[]) {
+/** A Telegram `date` (unix seconds) comfortably after any kill switch engaged during a test. */
+const AFTER_ENGAGE = Math.floor(Date.now() / 1000) + 3600;
+
+function seedTelegram(messages: { update_id: number; message?: { text?: string; date?: number; chat?: { id: string } } }[]) {
   return (async () =>
     new Response(JSON.stringify({ ok: true, result: messages }), { status: 200 })) as unknown as typeof fetch;
 }
@@ -83,7 +86,7 @@ describe('checkManualKillSwitchCommands', () => {
     const audit = new PersistedAuditLog(store);
     const killSwitch = new PersistedKillSwitch(store);
     killSwitch.engage('test');
-    const fetchFn = seedTelegram([{ update_id: 1, message: { text: '/resume', chat: { id: 'C' } } }]);
+    const fetchFn = seedTelegram([{ update_id: 1, message: { text: '/resume', date: AFTER_ENGAGE, chat: { id: 'C' } } }]);
     const outcomes = await checkManualKillSwitchCommands(
       store,
       { token: 'T', chatId: 'C', fetchFn },
@@ -101,7 +104,7 @@ describe('checkManualKillSwitchCommands', () => {
     const store = new MemoryStore();
     const audit = new PersistedAuditLog(store);
     const killSwitch = new PersistedKillSwitch(store);
-    const fetchFn = seedTelegram([{ update_id: 1, message: { text: '/resume', chat: { id: 'C' } } }]);
+    const fetchFn = seedTelegram([{ update_id: 1, message: { text: '/resume', date: AFTER_ENGAGE, chat: { id: 'C' } } }]);
     const outcomes = await checkManualKillSwitchCommands(
       store,
       { token: 'T', chatId: 'C', fetchFn },
@@ -137,7 +140,7 @@ describe('checkManualKillSwitchCommands', () => {
     const killSwitch = new PersistedKillSwitch(store);
     const fetchFn = seedTelegram([
       { update_id: 1, message: { text: '/pause', chat: { id: 'C' } } },
-      { update_id: 2, message: { text: '/resume', chat: { id: 'C' } } },
+      { update_id: 2, message: { text: '/resume', date: AFTER_ENGAGE, chat: { id: 'C' } } },
     ]);
     const outcomes = await checkManualKillSwitchCommands(
       store,
@@ -205,5 +208,20 @@ describe('checkManualKillSwitchCommands', () => {
     );
     expect(outcomes).toEqual([{ command: 'pause', applied: true }]);
     expect(killSwitch.isEngaged()).toBe(true);
+  });
+});
+
+describe('stale /resume (red-team F7, 2026-10-17)', () => {
+  it('ignores a /resume sent BEFORE the kill switch engaged, or with no date, and keeps the switch engaged', async () => {
+    for (const date of [Math.floor(Date.now() / 1000) - 3600, undefined]) {
+      const store = new MemoryStore();
+      const audit = new PersistedAuditLog(store);
+      const killSwitch = new PersistedKillSwitch(store);
+      killSwitch.engage('broker uncertainty');
+      const fetchFn = seedTelegram([{ update_id: 1, message: { text: '/resume', ...(date !== undefined ? { date } : {}), chat: { id: 'C' } } }]);
+      const outcomes = await checkManualKillSwitchCommands(store, { token: 'T', chatId: 'C', fetchFn }, killSwitch, audit, 'C', 1000);
+      expect(outcomes).toEqual([{ command: 'resume', applied: false }]);
+      expect(killSwitch.isEngaged()).toBe(true);
+    }
   });
 });

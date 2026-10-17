@@ -81,7 +81,7 @@ export async function checkManualKillSwitchCommands(
   stashUnclaimedTelegramUpdates(store, { messages: unclaimedMessages, callbacks: polled.callbacks });
 
   const outcomes: ManualKillSwitchOutcome[] = [];
-  for (const { command } of commands) {
+  for (const { message, command } of commands) {
     if (command === 'pause') {
       const applied = !killSwitch.isEngaged();
       if (applied) {
@@ -96,7 +96,14 @@ export async function checkManualKillSwitchCommands(
       }
       outcomes.push({ command, applied });
     } else {
-      const applied = killSwitch.isEngaged();
+      // A /resume must be NEWER than the engage it would undo (red-team F7,
+      // 2026-10-17): after a killed run the Telegram offset can replay an old
+      // /resume, which would otherwise silently disengage a switch the broker
+      // adapter engaged on an uncertain order state. Unknown engage time (state
+      // saved before it was recorded) keeps the previous behaviour.
+      const engagedAt = killSwitch.engagedAt?.() ?? null;
+      const stale = engagedAt !== null && (message.date === undefined || message.date < Math.floor(engagedAt / 1000));
+      const applied = killSwitch.isEngaged() && !stale;
       if (applied) {
         killSwitch.disengage(decidedBy);
         audit.append({

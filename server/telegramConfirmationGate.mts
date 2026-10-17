@@ -112,6 +112,10 @@ interface PendingRecord {
    * before this fix can still be matched. See `confirmationToken`'s doc
    * comment for why every NEW record gets a short token instead. */
   readonly token?: string;
+  /** Local time when the send FINISHED. A typed reply can only answer a message
+   * that was already delivered, so the typed-approval window opens here, not at
+   * `sentAt` (taken before the send). Absent on older records. */
+  readonly readyAt?: number;
 }
 
 /**
@@ -380,7 +384,7 @@ export class TelegramConfirmationGate implements ConfirmationGate {
       if (!result.sent) {
         throw new ConfirmationPendingError(intent.id);
       }
-      pending = { sentAt, messageId: result.messageId, token };
+      pending = { sentAt, messageId: result.messageId, token, readyAt: Date.now() };
       pendingAll[intent.id] = pending;
       this.store.set(STORAGE_KEY, pendingAll);
     }
@@ -397,9 +401,11 @@ export class TelegramConfirmationGate implements ConfirmationGate {
       // (an in-flight confirmation sent right before this fix deployed) —
       // see PendingRecord's doc comment.
       const token = pending.token ?? `${pending.sentAt}:${intent.id}`;
-      const matchIndex = polled.callbacks.findIndex(
-        (u) => u.data === `${APPROVE_PREFIX}${token}` || u.data === `${REJECT_PREFIX}${token}`,
-      );
+      // If BOTH ✅ and ❌ for this request arrive in one poll, reject wins
+      // (red-team 2026-10-17): the safe direction when intent is ambiguous.
+      const rejectIndex = polled.callbacks.findIndex((u) => u.data === `${REJECT_PREFIX}${token}`);
+      const matchIndex =
+        rejectIndex !== -1 ? rejectIndex : polled.callbacks.findIndex((u) => u.data === `${APPROVE_PREFIX}${token}`);
 
       // A typed "/אשר"/"/דחה" has no token embedded in it the way a button's
       // callback_data does, so it can only ever be resolved to THIS intent
@@ -420,7 +426,10 @@ export class TelegramConfirmationGate implements ConfirmationGate {
       // definition and is never matched.
       if (matchIndex === -1 && Object.keys(pendingAll).length === 1) {
         textMatchIndex = polled.messages.findIndex(
-          (m) => m.date !== undefined && m.date * 1000 >= pending.sentAt && parseApprovalCommand(m.text) !== null,
+          (m) =>
+            m.date !== undefined &&
+            m.date >= Math.floor((pending.readyAt ?? pending.sentAt) / 1000) &&
+            parseApprovalCommand(m.text) !== null,
         );
         if (textMatchIndex !== -1) textDecision = parseApprovalCommand(polled.messages[textMatchIndex]!.text);
       }
