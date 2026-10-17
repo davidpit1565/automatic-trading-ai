@@ -39,6 +39,16 @@ describe('cash accounting', () => {
     expect(portfolio.cash()).toBeCloseTo(8_995 + 1_100 - 11, 10);
   });
 
+  it('closed realized P&L equals the cash change, entry fee included', () => {
+    const { portfolio } = makePortfolio();
+    const opened = portfolio.open({ ...openInput, timestamp: T, fee: 5 });
+    if (!opened.ok) throw new Error('open failed');
+    portfolio.exit(opened.value.id, { quantity: 10, price: 110, timestamp: T + 1, reason: 'take-profit', fee: 11 });
+    // +100 gross - 5 entry fee - 11 exit fee = 84, exactly what cash gained.
+    expect(portfolio.cash() - 10_000).toBeCloseTo(84, 10);
+    expect(portfolio.snapshot({}, T + 2).realizedPnl).toBeCloseTo(84, 10);
+  });
+
   it('opens from an approved trade proposal and refuses rejected ones', () => {
     const { portfolio } = makePortfolio();
     const assessment = {
