@@ -1,0 +1,28 @@
+# On-demand health summary to Telegram (David asked 2026-10-17: "a message as a
+# sign that everything works"). workflow_dispatch only, no inputs: the message
+# is a fixed template filled from the committed state — never free text.
+
+name: Health ping (on-demand)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Send health summary
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: npx tsx scripts/healthPing.mts
