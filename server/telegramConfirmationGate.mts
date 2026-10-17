@@ -411,8 +411,17 @@ export class TelegramConfirmationGate implements ConfirmationGate {
       // never be able to approve/reject the WRONG trade.
       let textMatchIndex = -1;
       let textDecision: 'approve' | 'reject' | null = null;
+      //
+      // A typed command only counts if Telegram timestamped it AFTER this
+      // request was sent. Real incident, 2026-10-17: old unclaimed "/אשר"
+      // messages from days earlier (stashed with no date) were matched the
+      // moment exactly one request was pending, approving a fresh, unrelated
+      // exit one second after it was sent. A message with no `date` is stale by
+      // definition and is never matched.
       if (matchIndex === -1 && Object.keys(pendingAll).length === 1) {
-        textMatchIndex = polled.messages.findIndex((m) => parseApprovalCommand(m.text) !== null);
+        textMatchIndex = polled.messages.findIndex(
+          (m) => m.date !== undefined && m.date * 1000 >= pending.sentAt && parseApprovalCommand(m.text) !== null,
+        );
         if (textMatchIndex !== -1) textDecision = parseApprovalCommand(polled.messages[textMatchIndex]!.text);
       }
 
