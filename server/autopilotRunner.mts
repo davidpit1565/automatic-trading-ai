@@ -36,6 +36,8 @@ import { isWhaleFlowBearish } from '../src/core/signal/whaleFlow';
 import { buildTopTraderGate } from '../src/core/signal/topTraderGate';
 import { getTopTraderPositionRatio, toOkxSwapInstId } from '../src/core/data/okxPositioning';
 import { getFundingRateHistory } from '../src/core/data/okxFunding';
+import { getFearGreedHistory } from '../src/core/data/fearGreed';
+import { stepSentimentShadow } from '../src/core/autopilot/sentimentShadow';
 import { buildFundingGate } from '../src/core/signal/fundingGate';
 import { isAiJudgmentBearish, type AiJudgmentInput } from '../src/core/signal/aiJudgment';
 import { scanCandles } from '../src/core/scan/marketScanner';
@@ -954,6 +956,7 @@ async function runCycle(
   await runLiveMirror(store, source, instruments, telegram, cycle.opened, cyclePrices, now);
   await runShadows(store, source, symbols, now, cyclePrices);
   await runLongTermShadow(store, source, symbols, now);
+  await runSentimentShadow(store, source, now);
   await runCandidateWatch(store, source, now);
   await recordEquity(store, source, portfolio, journal, now, cyclePrices);
   await maybeSendSummaries(store, source, portfolio, journal, telegram, now);
@@ -1428,6 +1431,54 @@ async function runLongTermShadow(
     }
   } catch (cause) {
     console.error('Long-term shadow evaluation skipped:', cause instanceof Error ? cause.message : cause);
+  }
+}
+
+const SENTIMENT_SHADOW_STANDINGS_KEY = 'sentiment-shadow-standings';
+const SENTIMENT_SHADOW_NAMESPACE = 'f2-sentiment';
+
+/**
+ * F2 sentiment-trend forward test (2026-10-17, see `sentimentTrend.ts`): one
+ * paper decision per UTC day on BTC. Purely diagnostic/simulated — no order
+ * path, and a failure is logged and never allowed to affect the real cycle.
+ */
+async function runSentimentShadow(store: FileStore, source: MarketDataSource, now: number): Promise<void> {
+  const day = new Date(now).toISOString().slice(0, 10);
+  const saved = store.get<{ day?: string }>(SENTIMENT_SHADOW_STANDINGS_KEY);
+  // Same cheap once-a-day guard as the long-term shadow, but the position is
+  // still re-marked each cycle only when the day is new (marks are daily here).
+  if (saved?.day === day) return;
+  try {
+    const candles = await source.getCandles('XBTEUR', '1d', 160);
+    if (!candles.ok || candles.value.length < 2) {
+      console.error('Sentiment shadow skipped: no BTC daily candles');
+      return;
+    }
+    const bars = candles.value;
+    const forming = bars[bars.length - 1]!;
+    const todayStart = Date.parse(`${day}T00:00:00Z`);
+    // The last bar must be today's forming bar; otherwise the data is stale
+    // and a decision would run on the wrong day.
+    if (forming.timestamp !== todayStart) {
+      console.error('Sentiment shadow skipped: latest daily bar is not today');
+      return;
+    }
+    const fng = await getFearGreedHistory(60, fetch);
+    if (!fng.ok) {
+      console.error(`Sentiment shadow skipped: ${fng.error}`);
+      return;
+    }
+    const standing = stepSentimentShadow(new PrefixedStore(store, SENTIMENT_SHADOW_NAMESPACE), {
+      day,
+      fng: fng.value.filter((p) => p.timestamp < todayStart).map((p) => p.value),
+      closes: bars.slice(0, -1).map((c) => c.close),
+      todayOpen: forming.open,
+      markPrice: forming.close,
+      initialCash: INITIAL_CASH,
+    });
+    store.set(SENTIMENT_SHADOW_STANDINGS_KEY, { at: now, day, standing });
+  } catch (cause) {
+    console.error('Sentiment shadow skipped:', cause instanceof Error ? cause.message : cause);
   }
 }
 

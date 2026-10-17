@@ -1,5 +1,40 @@
 # PROJECT_STATE
 
+## New forward test: F2 sentiment-trend on BTC, paper only (2026-10-17)
+
+After the red-team review found the 1h strategy has no measurable edge, a
+pre-registered, frozen-rule search was run (David: "a new strategy, I must
+earn from this"): 7 daily trend/momentum/sentiment rules over 2018-2026
+(Coinbase EUR daily, 0.19%/side, random-entry controls, per-year and
+half-sample splits; plus a 2-year Kraken version). NONE met the candidate bar
+(beat buy&hold on return-per-drawdown in the full sample AND both halves,
+positive in >=5 of 8 years, beat >=90% of random controls). The five trend
+rules fell apart from 2022 on (2025: -34% to -69%); "buy fear" lost 73%.
+The only one worth a forward look is **F2**: hold BTC while the 7-day average
+Fear&Greed > 50 AND BTC > its 100-day SMA, else cash — max drawdown 39% vs
+74% for buy&hold, 44 trades, but second-half return/drawdown below buy&hold
+(2.19 vs 3.02) and its edge over BTC is not significant (P(excess<=0)=0.74);
+the benefit came from sitting out two bear markets. Treated as a risk-reduction
+LAYER candidate, not a profit source.
+
+Added (paper only, no order path; the live money path is untouched):
+`src/core/data/fearGreed.ts` (alternative.me, never throws),
+`src/core/signal/sentimentTrend.ts` (frozen rule + constants),
+`src/core/autopilot/sentimentShadow.ts` (isolated 'f2-sentiment' namespace, one
+decision per UTC day executed at the day's open, 0.19%/side, reports return
+next to BTC buy&hold from the same start), wired as `runSentimentShadow` in
+`server/autopilotRunner.mts` (standings in `sentiment-shadow-standings`).
+First live decision (2026-10-17): HOLD (F&G 7d avg 61.3, BTC 72,537 > SMA100
+64,433). Judge only after several months and at least one regime change; do
+NOT tune the constants — add a new candidate instead.
+
+Also measured this session: live scans include the still-forming 1h/4h candle
+(`krakenPublic.ts:532`) while every backtest uses closed bars; 9 of 17
+reconstructable entries would not have passed at bar close, but repainted
+trades did no worse (+0.20%, CI [-4.7,+5.3], n=8 vs 9) so no code change was made.
+
+Gate: tsc clean, 1465 vitest, build ok.
+
 ## Red-team fixes: live-path blockers + paused losing coins (2026-10-17)
 
 Three read-only red-team audits (opportunity/exposure, paper realism + statistics,
