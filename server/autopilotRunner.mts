@@ -87,7 +87,7 @@ import { syncManualTradesFromBroker } from './liveManualTradeSync.mts';
 import { ensureBlackoutWindows, isBlackout } from './blackoutCalendar.mts';
 import { buildBlackoutSummaryMessage, drainBlackoutQueue, queueBlackoutEntries } from './liveBlackoutQueue.mts';
 import { RevolutXBrokerAdapter, type RevolutXCredentials } from './revolutXBrokerAdapter.mts';
-import { TelegramConfirmationGate } from './telegramConfirmationGate.mts';
+import { TelegramConfirmationGate, reapExpiredConfirmations } from './telegramConfirmationGate.mts';
 import {
   buildAllClearMessage,
   buildCycleMessage,
@@ -1143,6 +1143,7 @@ export async function runLiveMirror(
   // close a position out from under a still-pending exit confirmation —
   // see `reapOrphanedExitConfirmations`'s own doc comment.
   reapOrphanedExitConfirmations(liveStore);
+  reapExpiredConfirmations(liveStore, now);
   // Read AFTER syncManualTradesFromBroker, not before — an external sell it
   // just detected can itself add to today's realized loss (recordLiveRealizedPnl
   // above), and every entry sized below (manual /buy, mirrored) must see that
@@ -1271,9 +1272,15 @@ export async function runLiveMirror(
       .filter((o): o is NonNullable<typeof o> => o !== undefined);
     // Unfilled buy limit orders are cancelled after an hour — see
     // `expireStaleEntryOrders` (a stale resting buy only fills if price falls).
-    const expiredEntries = await expireStaleEntryOrders(liveStore, flowParams.brokerAdapter, flowParams.killSwitch, flowParams.audit, now);
-    for (const symbol of expiredEntries) {
-      await sendTelegramMessage(`⌛ הזמנת הקנייה ל-${symbol} לא התמלאה תוך שעה ובוטלה (כדי שלא תתמלא באיחור במחיר שכבר לא רלוונטי). אם הסיגנל עדיין תקף, תתקבל בקשה חדשה.`, telegram);
+    // Isolated: a failure here must never skip this cycle's stop-loss checks.
+    try {
+      const expiredEntries = await expireStaleEntryOrders(liveStore, flowParams.brokerAdapter, flowParams.killSwitch, flowParams.audit, now);
+      for (const symbol of expiredEntries) {
+        await sendTelegramMessage(`⌛ הזמנת הקנייה ל-${symbol} לא התמלאה תוך שעה ובוטלה (כדי שלא תתמלא באיחור במחיר שכבר לא רלוונטי). בקשה חדשה תגיע רק אם יופיע סיגנל חדש.`, telegram);
+      }
+      if (expiredEntries.length > 0) persistStateToGit(store, 'live-mirror: after cancelling stale entry orders');
+    } catch (cause) {
+      console.error('expireStaleEntryOrders failed:', cause instanceof Error ? cause.message : cause);
     }
     const mirroredOutcomes = await mirrorApprovedEntries(
       liveStore,
@@ -1314,7 +1321,12 @@ export async function runLiveMirror(
     // A resting exit order the market ran away from (e.g. a stop-loss limit
     // sell price fell through) is cancelled after 2h so the exit can be
     // re-proposed at the current price — see `expireStaleExitOrders`.
-    await expireStaleExitOrders(liveStore, flowParams.brokerAdapter, flowParams.killSwitch, flowParams.audit, now);
+    try {
+      const expiredExits = await expireStaleExitOrders(liveStore, flowParams.brokerAdapter, flowParams.killSwitch, flowParams.audit, now);
+      if (expiredExits > 0) persistStateToGit(store, 'live-mirror: after cancelling stale exit orders');
+    } catch (cause) {
+      console.error('expireStaleExitOrders failed:', cause instanceof Error ? cause.message : cause);
+    }
     const exitOutcomes = await checkAutomaticExits(
       liveStore,
       source,

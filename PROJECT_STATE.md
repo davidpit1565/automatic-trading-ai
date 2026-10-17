@@ -37,6 +37,19 @@ gate; no new order path, no unattended real order):
   and contradicts the earlier in-sample 120-day backtest, which is exactly what
   selection bias predicts. Revisit only on a window that did not pick them.
 
+Second red-team pass on this diff (adversarial review + dry-run replay on the real
+snapshot) added: HTTP 404 on a stale-order cancel counts as "order no longer
+open" (cleared; other failures keep the flag and audit at most once per 6h);
+`cancel()` now returns 'rejected' (not 'cancelled') when it sends nothing because
+the kill switch is engaged; a declined MANUAL `/sell` no longer starts the
+automatic-exit cooldown; `reapExpiredConfirmations` deletes gate records older
+than 40 min (the 09-25 ghost for a long-closed ATOM exit); both expiry calls are
+isolated so they can never skip a cycle's stop-loss checks; and a cancel is
+persisted to git at once. Expected FIRST cycle after deploy (from the replay):
+the resting LTC sell (317h old) and the BTC lot sell (68h old) are cancelled and
+re-proposed at the current price, i.e. the owner gets two confirmation requests
+(LTC ~EUR -0.9, BTC lot ~EUR -0.02).
+
 NOT done (needs measurement first, not guessing): deciding on closed bars only
 (live scans use the still-forming candle, backtests only closed ones),
 chasing entries at the current price, wider/ATR-based stops, a trend-filtered

@@ -504,7 +504,7 @@ describe('RevolutXBrokerAdapter', () => {
     killSwitch.engage('test');
     const report = await adapter.cancel('to-cancel');
 
-    expect(report.state).toBe('cancelled');
+    expect(report.state).toBe('rejected');
     expect(report.detail).toMatch(/kill switch engaged/);
     expect(calls).toHaveLength(callsBeforeCancel); // no DELETE request was ever sent
   });

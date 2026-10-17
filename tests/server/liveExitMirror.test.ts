@@ -14,7 +14,7 @@ import { ok, err } from '../../src/core/types';
 import type { MarketDataSource } from '../../src/core/data/revolutClient';
 import { initLiveCash, liveCash } from '../../server/liveLedger.mts';
 import { forgetLivePosition, markExitSubmitted, openLivePositions, recordLiveEntryFill } from '../../server/liveExitFlow.mts';
-import { EXIT_ESCALATION_DROP, EXIT_REPROPOSE_COOLDOWN_MS, STALE_EXIT_ORDER_MS, checkAutomaticExits, expireStaleExitOrders, reapOrphanedExitConfirmations } from '../../server/liveExitMirror.mts';
+import { proposeLiveExit, EXIT_ESCALATION_DROP, EXIT_REPROPOSE_COOLDOWN_MS, STALE_EXIT_ORDER_MS, checkAutomaticExits, expireStaleExitOrders, reapOrphanedExitConfirmations } from '../../server/liveExitMirror.mts';
 import { TradeJournal } from '../../src/core/position/tradeJournal';
 import { checkManualSellRequests } from '../../server/manualSellCommand.mts';
 import { ConfirmationPendingError } from '../../server/telegramConfirmationGate.mts';
@@ -993,5 +993,58 @@ describe('exit re-ask cooldown (red-team finding, 2026-10-17: ~40 confirmation r
     store.set('live-exit-cooldown', { 'entry-1': { at: 1000, price: 94 } });
     const outcomes = await checkAutomaticExits(store, fakeSource(ok([candle(94)])), '1h', {}, flowParams(report, killSwitch, audit), 2000, 150, undefined, undefined, undefined, true);
     expect(outcomes[0]!.outcome).toBe('submitted');
+  });
+});
+
+describe('stale-order cancel edge cases (review follow-ups, 2026-10-17)', () => {
+  function brokerReturning(detail: string, state: OrderStatusReport['state'] = 'rejected') {
+    return {
+      name: 'fake-broker',
+      mode: 'live',
+      async submit(): Promise<OrderStatusReport> { throw new Error('not used'); },
+      async cancel(intentId: string): Promise<OrderStatusReport> { return { intentId, state, filledQuantity: 0, avgFillPrice: null, detail }; },
+      async fetchPositions(): Promise<BrokerPosition[]> { return []; },
+    } as BrokerAdapter;
+  }
+  function stuckExit() {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    markExitSubmitted(store, 'entry-1', 1000);
+    store.set('revolut-x-order-map', { 'entry-1:exit:1000': 'venue-1' });
+    return store;
+  }
+
+  it('treats HTTP 404 (order no longer open, e.g. cancelled by hand) as gone and clears the flag', async () => {
+    const store = stuckExit();
+    const n = await expireStaleExitOrders(store, brokerReturning('cancel failed: HTTP 404'), new PersistedKillSwitch(store), new PersistedAuditLog(store), 1000 + STALE_EXIT_ORDER_MS + 1);
+    expect(n).toBe(1);
+    expect(openLivePositions(store)[0]!.outstandingExitSubmittedAt).toBeUndefined();
+  });
+
+  it('keeps the flag on other failures and writes the advisory at most once per 6h', async () => {
+    const store = stuckExit();
+    const audit = new PersistedAuditLog(store);
+    const ks = new PersistedKillSwitch(store);
+    const broker = brokerReturning('cancel failed: HTTP 500');
+    const t = 1000 + STALE_EXIT_ORDER_MS + 1;
+    for (let i = 0; i < 5; i++) await expireStaleExitOrders(store, broker, ks, audit, t + i * 360_000);
+    expect(openLivePositions(store)[0]!.outstandingExitSubmittedAt).toBe(1000);
+    expect(audit.entries().filter((e) => e.detail.includes('could not cancel stale exit'))).toHaveLength(1);
+  });
+
+  it('a declined MANUAL /sell does not start the automatic-exit cooldown', async () => {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    const killSwitch = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const gate = fakeConfirmationGate({ intentId: 'x', approved: false, decidedAt: 1, decidedBy: 'david' });
+    const report: OrderStatusReport = { intentId: 'x', state: 'filled', filledQuantity: 0.01, avgFillPrice: 94, detail: 'ok' };
+    await proposeLiveExit(store, openLivePositions(store)[0]!, 'manual', 94, 1000, { flowParams: { ...flowParams(report, killSwitch, audit), confirmationGate: gate } });
+    expect(store.get('live-exit-cooldown')).toBeUndefined();
+    // ...so the automatic stop still asks on the very next cycle.
+    await checkAutomaticExits(store, fakeSource(ok([candle(94)])), '1h', {}, { ...flowParams(report, killSwitch, audit), confirmationGate: gate }, 2000);
+    expect(gate.calls).toBe(2);
   });
 });

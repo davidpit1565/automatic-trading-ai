@@ -36,7 +36,9 @@ import type { AuditLog, BrokerAdapter } from '../src/core/execution/types';
 import { knownOrderIntentIds } from './revolutXBrokerAdapter.mts';
 import {
   buildLiveExitIntent,
+  cancelMeansOrderGone,
   clearExitSubmitted,
+  shouldAuditStaleCancelFailure,
   buildLiveJournalEntry,
   decideLiveExit,
   forgetLivePosition,
@@ -208,7 +210,7 @@ export async function proposeLiveExit(
     // pending" check false forever, so a typed /אשר never worked again. A
     // no-op when there is nothing to clear.
     clearPendingConfirmation(store, intent.id);
-    if (result.outcome === 'rejected') {
+    if (result.outcome === 'rejected' && queued.reason !== 'manual') {
       const cooldowns = readExitCooldowns(store);
       cooldowns[position.id] = { at: now, price };
       store.set(EXIT_COOLDOWN_KEY, cooldowns);
@@ -365,15 +367,22 @@ export async function expireStaleExitOrders(
     }
     try {
       const report = await brokerAdapter.cancel(intentId);
-      if (report.state === 'cancelled') {
+      if (report.state === 'cancelled' || cancelMeansOrderGone(report)) {
+        // 'cancelled' = the broker confirmed it; HTTP 404 = the order is no
+        // longer open (already filled/cancelled — e.g. cancelled by hand in the
+        // app). Either way nothing is resting any more. If it had in fact
+        // FILLED, the re-proposed sell is refused for insufficient balance and
+        // the existing reconciliation closes the tracked position.
         clearExitSubmitted(store, position.id);
         cancelled++;
-        audit.append({ timestamp: now, intentId, event: 'cancelled', mode: 'live', detail: `stale resting exit for ${position.symbol} cancelled after ${Math.round((now - submittedAt) / 60000)} min — exit will be re-proposed at the current price` });
-      } else {
+        audit.append({ timestamp: now, intentId, event: 'cancelled', mode: 'live', detail: `stale resting exit for ${position.symbol} cleared after ${Math.round((now - submittedAt) / 60000)} min (${report.state === 'cancelled' ? 'cancelled at the broker' : 'order no longer open'}) — exit will be re-proposed at the current price` });
+      } else if (shouldAuditStaleCancelFailure(store, intentId, now)) {
         audit.append({ timestamp: now, intentId, event: 'advisory', mode: 'live', detail: `could not cancel stale exit for ${position.symbol}: ${report.detail}` });
       }
     } catch (cause) {
-      audit.append({ timestamp: now, intentId, event: 'advisory', mode: 'live', detail: `could not cancel stale exit for ${position.symbol}: ${cause instanceof Error ? cause.message : String(cause)}` });
+      if (shouldAuditStaleCancelFailure(store, intentId, now)) {
+        audit.append({ timestamp: now, intentId, event: 'advisory', mode: 'live', detail: `could not cancel stale exit for ${position.symbol}: ${cause instanceof Error ? cause.message : String(cause)}` });
+      }
     }
   }
   return cancelled;

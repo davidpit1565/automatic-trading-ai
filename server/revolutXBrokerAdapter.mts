@@ -495,7 +495,9 @@ export class RevolutXBrokerAdapter implements BrokerAdapter {
     // submit()'s own kill-switch check, so a future caller can never issue a
     // real cancel request while the kill switch is engaged.
     if (this.killSwitch.isEngaged()) {
-      return this.reportAndAudit(intentId, 'cancelled', 'kill switch engaged — cancel request not sent');
+      // 'rejected', not 'cancelled': nothing was sent, so the order may still be
+      // live — a caller must never read this as a confirmed cancel.
+      return this.reportAndAudit(intentId, 'rejected', 'kill switch engaged — cancel request not sent');
     }
     const venueOrderId = this.orderMap()[intentId];
     if (!venueOrderId) {

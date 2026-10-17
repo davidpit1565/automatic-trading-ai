@@ -34,7 +34,7 @@ import type { AuditLog, BrokerAdapter, OrderIntent } from '../src/core/execution
 import type { TradeOpportunity } from '../src/core/signal/signalEngine';
 import { assessTrade, confidenceScaledRiskPct, DEFAULT_RISK_LIMITS, type RiskLimits } from '../src/core/risk/riskEngine';
 import { assessTradeEconomics } from '../src/core/risk/tradeEconomics';
-import { openLivePositions, recordLiveEntryFill } from './liveExitFlow.mts';
+import { cancelMeansOrderGone, openLivePositions, recordLiveEntryFill, shouldAuditStaleCancelFailure } from './liveExitFlow.mts';
 import { debitLiveCash, liveCash, liveEquity } from './liveLedger.mts';
 import { runLiveOrderFlow, buildLiveOrderIntent, type LiveOrderFlowParams, type LiveOrderFlowResult } from './liveOrchestrator.mts';
 import { toRevolutXSymbol } from './revolutXBrokerAdapter.mts';
@@ -118,16 +118,18 @@ export async function expireStaleEntryOrders(
     if (now - intent.createdAt < STALE_ENTRY_ORDER_MS) continue;
     try {
       const report = await brokerAdapter.cancel(intent.id);
-      if (report.state === 'cancelled') {
+      if (report.state === 'cancelled' || cancelMeansOrderGone(report)) {
         clearRestingEntryIntent(store, symbol);
         clearOutstandingEntry(store, symbol);
         cancelled.push(symbol);
-        audit.append({ timestamp: now, intentId: intent.id, event: 'cancelled', mode: 'live', detail: `stale resting entry for ${symbol} cancelled after ${Math.round((now - intent.createdAt) / 60000)} min unfilled` });
-      } else {
+        audit.append({ timestamp: now, intentId: intent.id, event: 'cancelled', mode: 'live', detail: `stale resting entry for ${symbol} cleared after ${Math.round((now - intent.createdAt) / 60000)} min unfilled (${report.state === 'cancelled' ? 'cancelled at the broker' : 'order no longer open'})` });
+      } else if (shouldAuditStaleCancelFailure(store, intent.id, now)) {
         audit.append({ timestamp: now, intentId: intent.id, event: 'advisory', mode: 'live', detail: `could not cancel stale entry for ${symbol}: ${report.detail}` });
       }
     } catch (cause) {
-      audit.append({ timestamp: now, intentId: intent.id, event: 'advisory', mode: 'live', detail: `could not cancel stale entry for ${symbol}: ${cause instanceof Error ? cause.message : String(cause)}` });
+      if (shouldAuditStaleCancelFailure(store, intent.id, now)) {
+        audit.append({ timestamp: now, intentId: intent.id, event: 'advisory', mode: 'live', detail: `could not cancel stale entry for ${symbol}: ${cause instanceof Error ? cause.message : String(cause)}` });
+      }
     }
   }
   return cancelled;
