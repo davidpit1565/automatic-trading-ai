@@ -1,5 +1,33 @@
 # PROJECT_STATE
 
+## Liveness alerts: outage notice + external dead-man's switch (2026-10-18)
+
+David: "alert me automatically if the bot stops; a backup runner elsewhere is a
+good idea (migrate tomorrow at the office)". Findings: the existing system
+monitor runs on GitHub's own scheduler (measured 2-7h between scheduled runs) and
+is itself an Actions workflow, so it cannot alert when Actions/GitHub is down.
+
+Added (`server/heartbeat.mts`, wired in `autopilotRunner.mts` `main()`):
+- **Outage notice**: when a run starts and the previous cycle was >30 min ago,
+  a Hebrew Telegram line says the bot is back and for how long it was silent
+  (stops were not checked, no confirmations sent in that window).
+- **External dead-man's switch** `pingHealthcheck`: after every cycle that
+  completed without throwing, GET `HEALTHCHECK_PING_URL` (repo secret, passed in
+  `autopilot.yml`). INERT until the secret exists. The external service (e.g.
+  healthchecks.io free tier, period 10 min + grace 10 min, Telegram integration)
+  alerts when pings stop — works even if GitHub is down. A bot that loops but
+  fails every cycle also stops pinging.
+
+TO DO at the office (needs David): create the healthchecks.io check + Telegram
+integration, add the ping URL as repo secret `HEALTHCHECK_PING_URL`. Backup
+runner elsewhere (free VM) is still to be designed: it must be a warm standby
+that acts ONLY when the primary heartbeat is stale (two runners trading at once
+would double confirmations/orders), reading/writing the same git state with the
+existing key-level merge. GitHub Actions on this PUBLIC repo is already free and
+unlimited, so the backup buys independence from a GitHub outage, not minutes.
+
+Gate: tsc clean, 1481 vitest, build ok.
+
 ## Confirmation-gate hardening from the end-to-end red-team (2026-10-17)
 
 An adversarial audit of every path to a real order (after the stale typed /אשר
