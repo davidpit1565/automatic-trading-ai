@@ -2785,7 +2785,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792330690620,
+    "at": 1792331062023,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2801,10 +2801,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1789637771197,
-      "equity": 10021.32
-    },
     {
       "at": 1789638105715,
       "equity": 10021.1
@@ -22800,6 +22796,10 @@
     {
       "at": 1792330690620,
       "equity": 10309.36
+    },
+    {
+      "at": 1792331062023,
+      "equity": 10309.36
     }
   ],
   "trade-journal": [
@@ -25227,7 +25227,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -25.33% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -25.29% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25304,10 +25304,10 @@
   },
   "shadow:mean-reversion:shadow-started-at": 1785254092443,
   "shadow:mean-reversion:portfolio-engine": {
-    "cash": 6785.850220713701,
+    "cash": 8453.114315184921,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -768.9448323479505,
+    "closedRealizedPnl": -813.7050978008966,
     "dayAnchor": {
       "day": "2026-10-18",
       "equity": 8519.782871606709
@@ -25325,7 +25325,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792330690620,
+    "at": 1792331062023,
     "standings": [
       {
         "key": "live-mirror",
@@ -25374,12 +25374,12 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8473.7365448114,
-        "returnPct": -15.262634551886004,
-        "trades": 169,
-        "winRatePct": 39.053254437869825,
-        "profitFactor": 0.7738861328394647,
-        "openPositions": 3,
+        "equity": 8463.635689558234,
+        "returnPct": -15.36364310441766,
+        "trades": 170,
+        "winRatePct": 38.82352941176471,
+        "profitFactor": 0.7638325050062822,
+        "openPositions": 2,
         "startedAt": 1785254092443
       },
       {
@@ -40611,25 +40611,6 @@
   ],
   "shadow:mean-reversion:open-positions": [
     {
-      "id": "ENAEUR:1792253610939:2",
-      "symbol": "ENAEUR",
-      "openedAt": 1792253610939,
-      "entryPrice": 0.168,
-      "quantity": 10190.621190024802,
-      "initialQuantity": 10190.621190024802,
-      "stopLoss": 0.164468582624643,
-      "takeProfit": 0.175062834750714,
-      "feesPaid": 5.136073079772501,
-      "realizedPnl": 0,
-      "highestPrice": 0.1716,
-      "lowestPrice": 0.1646,
-      "confidence": 46.271120133148656,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
       "id": "XLMEUR:1792254723035:3",
       "symbol": "XLMEUR",
       "openedAt": 1792254723035,
@@ -40669,13 +40650,6 @@
     }
   ],
   "shadow:mean-reversion:audit-log": [
-    {
-      "timestamp": 1789306104597,
-      "intentId": "XRPEUR:1789306104597",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused XRPEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1789306104597,
       "intentId": "LINKEUR:1789306104597",
@@ -47668,6 +47642,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 8751.238754278605 @ 0.193199 (stop-loss)"
+    },
+    {
+      "timestamp": 1792331062023,
+      "intentId": "ENAEUR:1792253610939:2",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ENAEUR: 10190.621190024802 @ 0.1641 (stop-loss)"
     }
   ],
   "shadow:live-mirror:open-positions": [],
@@ -60611,6 +60592,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 33.17609888466305,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "ENAEUR:1792253610939:2",
+      "symbol": "ENAEUR",
+      "entryTimestamp": 1792253610939,
+      "exitTimestamp": 1792331062023,
+      "entryPrice": 0.168,
+      "exitPrice": 0.1641,
+      "positionSize": 10190.621190024802,
+      "stopLoss": 0.164468582624643,
+      "takeProfit": 0.175062834750714,
+      "exitReason": "stop-loss",
+      "fees": 10.15291589162171,
+      "slippage": 0,
+      "holdingDurationMs": 77451084,
+      "mfePct": 2.142857142857138,
+      "maePct": 2.32142857142858,
+      "realizedPnl": -44.760265452946086,
+      "returnPct": -2.6144642857142943,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 46.271120133148656,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
@@ -73809,6 +73813,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "cancel failed: HTTP 409"
+    },
+    {
+      "timestamp": 1792331085395,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792021080508",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "cancel failed: HTTP 409"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -73821,10 +73832,6 @@
   },
   "live:live-external-btc-qty": 7.999999999999585e-8,
   "live:live-equity-history": [
-    {
-      "at": 1789637771197,
-      "equity": 51.89
-    },
     {
       "at": 1789638105715,
       "equity": 51.88
@@ -93820,6 +93827,10 @@
     {
       "at": 1792330690620,
       "equity": 61.53
+    },
+    {
+      "at": 1792331062023,
+      "equity": 61.53
     }
   ],
   "live:revolut-x-order-map": {
@@ -94454,7 +94465,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1792330690620,
+    "at": 1792331062023,
     "standings": [
       {
         "key": "candidate-watch",
