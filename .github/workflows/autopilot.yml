@@ -79,6 +79,10 @@ jobs:
           # Variable to follow you when you travel (e.g. Europe/Brussels).
           # Defaults to Asia/Jerusalem when unset.
           SUMMARY_TIMEZONE: ${{ vars.SUMMARY_TIMEZONE }}
+          # External dead-man's switch URL (e.g. a healthchecks.io check). Unset =
+          # no-op. The bot pings it after every completed cycle; the external
+          # service alerts when pings stop, even if GitHub Actions is down.
+          HEALTHCHECK_PING_URL: ${{ secrets.HEALTHCHECK_PING_URL }}
           # ~70 cycles × 5 min ≈ 5h50m of coverage per triggered run, so one
           # sparse GitHub trigger bridges the gap to the next (the free
           # scheduler often fires only every 5–7h). See docs/cloud-autopilot.he.md.

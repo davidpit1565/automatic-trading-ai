@@ -36,6 +36,7 @@ import { isWhaleFlowBearish } from '../src/core/signal/whaleFlow';
 import { buildTopTraderGate } from '../src/core/signal/topTraderGate';
 import { getTopTraderPositionRatio, toOkxSwapInstId } from '../src/core/data/okxPositioning';
 import { getFundingRateHistory } from '../src/core/data/okxFunding';
+import { outageNotice, pingHealthcheck } from './heartbeat.mts';
 import { getFearGreedHistory } from '../src/core/data/fearGreed';
 import { stepSentimentShadow } from '../src/core/autopilot/sentimentShadow';
 import { buildFundingGate } from '../src/core/signal/fundingGate';
@@ -802,15 +803,26 @@ async function main(): Promise<void> {
     console.log(test.sent ? 'Telegram test message sent.' : `Test message not sent: ${test.reason}`);
   }
 
+  // If the previous cycle was long ago, this run is resuming after an outage —
+  // say so once (David asked 2026-10-18 to be told when the bot stops).
+  const outage = outageNotice(store.get<{ at?: number }>('autopilot-last-run')?.at, Date.now());
+  if (outage) await sendTelegramMessage(outage, telegram);
+
   for (let i = 0; i < LOOP_CYCLES; i++) {
     if (i > 0) await sleep(LOOP_INTERVAL_MS);
     let traded = false;
+    let cycleOk = true;
     try {
       traded = await runCycle(store, source, autopilot, portfolio, journal, telegram, symbols, instruments.value);
     } catch (cause) {
       // Never let one bad cycle kill the whole run — log and keep looping.
+      cycleOk = false;
       console.error('Cycle failed:', cause instanceof Error ? cause.message : cause);
     }
+    // External dead-man's switch (no-op unless HEALTHCHECK_PING_URL is set):
+    // only a cycle that completed counts, so a bot that loops but fails every
+    // cycle stops pinging and the external service alerts.
+    if (cycleOk) await pingHealthcheck(process.env['HEALTHCHECK_PING_URL']);
     // Persist mid-run: immediately after any trade, and every N cycles —
     // including the FINAL cycle (found 2026-09-03, full-system audit): this
     // used to be left to the workflow's own end-of-run commit step, whose
