@@ -2785,7 +2785,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792334775475,
+    "at": 1792335145439,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2801,10 +2801,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1789641451379,
-      "equity": 10041.48
-    },
     {
       "at": 1789641785445,
       "equity": 10037.53
@@ -22800,6 +22796,10 @@
     {
       "at": 1792334775475,
       "equity": 10309.36
+    },
+    {
+      "at": 1792335145439,
+      "equity": 10309.36
     }
   ],
   "trade-journal": [
@@ -25227,7 +25227,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -24.82% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -24.76% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25325,7 +25325,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792334775475,
+    "at": 1792335145439,
     "standings": [
       {
         "key": "live-mirror",
@@ -25374,8 +25374,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8463.518491540148,
-        "returnPct": -15.36481508459852,
+        "equity": 8463.522856046846,
+        "returnPct": -15.364771439531541,
         "trades": 171,
         "winRatePct": 38.59649122807017,
         "profitFactor": 0.7637995303980218,
@@ -73894,6 +73894,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "cancel failed: HTTP 409"
+    },
+    {
+      "timestamp": 1792335168536,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792021080508",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "cancel failed: HTTP 409"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -73906,10 +73913,6 @@
   },
   "live:live-external-btc-qty": 7.999999999999585e-8,
   "live:live-equity-history": [
-    {
-      "at": 1789641451379,
-      "equity": 51.86
-    },
     {
       "at": 1789641785445,
       "equity": 51.85
@@ -93905,6 +93908,10 @@
     {
       "at": 1792334775475,
       "equity": 61.52
+    },
+    {
+      "at": 1792335145439,
+      "equity": 61.52
     }
   ],
   "live:revolut-x-order-map": {
@@ -94529,52 +94536,32 @@
   "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
-    "cash": 6496.185315709149,
+    "cash": 7790.1596165893825,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -1619.0261856508612,
+    "closedRealizedPnl": -1711.8164766433001,
     "dayAnchor": {
       "day": "2026-10-18",
       "equity": 7882.949907581821
     }
   },
   "candidate-watch-standings": {
-    "at": 1792334775475,
+    "at": 1792335145439,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 7823.1099644358665,
-        "returnPct": -21.768900355641335,
-        "trades": 116,
-        "winRatePct": 31.896551724137932,
-        "profitFactor": 0.7170440830603004,
-        "openPositions": 1,
+        "equity": 7790.1596165893825,
+        "returnPct": -22.098403834106175,
+        "trades": 117,
+        "winRatePct": 31.62393162393162,
+        "profitFactor": 0.7056014257067579,
+        "openPositions": 0,
         "startedAt": 1788551468687
       }
     ]
   },
-  "shadow:candidate-watch:open-positions": [
-    {
-      "id": "SANDEUR:1792299391773:0",
-      "symbol": "SANDEUR",
-      "openedAt": 1792299391773,
-      "entryPrice": 0.0571,
-      "quantity": 24213.9534439182,
-      "initialQuantity": 24213.9534439182,
-      "stopLoss": 0.053844459790162114,
-      "takeProfit": 0.06361108041967577,
-      "feesPaid": 4.147850224943188,
-      "realizedPnl": -4.147850224943188,
-      "highestPrice": 0.0597,
-      "lowestPrice": 0.0539,
-      "confidence": 40.529871179026685,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "shadow:candidate-watch:open-positions": [],
   "shadow:candidate-watch:audit-log": [
     {
       "timestamp": 1788598183187,
@@ -97634,6 +97621,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry SANDEUR: 24213.9534439182 @ 0.0571 (stop 0.053844459790162114, target 0.06361108041967577, confidence 41)"
+    },
+    {
+      "timestamp": 1792335145439,
+      "intentId": "SANDEUR:1792299391773:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit SANDEUR: 24213.9534439182 @ 0.0536 (stop-loss)"
     }
   ],
   "live:live-blackout-queue": {},
@@ -100308,6 +100302,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 42.31654219742172,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "SANDEUR:1792299391773:0",
+      "symbol": "SANDEUR",
+      "entryTimestamp": 1792299391773,
+      "exitTimestamp": 1792335145439,
+      "entryPrice": 0.0571,
+      "exitPrice": 0.0536,
+      "positionSize": 24213.9534439182,
+      "stopLoss": 0.053844459790162114,
+      "takeProfit": 0.06361108041967577,
+      "exitReason": "stop-loss",
+      "fees": 8.041453938725233,
+      "slippage": 0,
+      "holdingDurationMs": 35753666,
+      "mfePct": 4.553415061295981,
+      "maePct": 6.129597197898418,
+      "realizedPnl": -92.79029099243883,
+      "returnPct": -6.711208406304721,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 40.529871179026685,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
