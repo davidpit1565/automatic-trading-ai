@@ -1,5 +1,22 @@
 # PROJECT_STATE
 
+## Promotion bar (pre-registered) + two new one-change shadows (2026-10-19)
+
+Goal: stop judging strategies by "looks good so far". `src/core/autopilot/promotionBar.ts`
+fixes, BEFORE seeing results, what a candidate must show to be considered for more
+real-money exposure (`PROMOTION_BAR`: >=100 closed trades, net profit factor >=1.3,
+>=2 of 3 time-thirds profitable, bootstrap P(mean<=0) <=10%, max closed-trade drawdown
+<=15%). Net P&L = (exit-entry)*size - fees (both fees). Do NOT change the numbers after
+looking at results. Passing is necessary, not sufficient: it also needs a random-entry
+control (manual gate) and an adjustment for best-of-many selection (we run many shadows).
+Report: `npx tsx scripts/promotionScorecard.mts` (reads the state files; today everything
+is "not testable yet" or fails - nothing is promoted).
+
+New forward-test candidates in `SHADOW_CANDIDATES` (each differs from `live-mirror` by ONE switch):
+- `closed-bars`: entries decided only on settled bars (`ClosedBarSource` drops the forming candle; `entryClosedBarsOnly`).
+- `f2-gated`: entries only while the frozen F2 sentiment-trend rule says risk-on (`marketGate`; cached via `buildSentimentGate`).
+Production behaviour is unchanged (options default off).
+
 ## CORRECTION + data-loss fix: stale checkout of queued runs (2026-10-19)
 
 The "continuity" entry below (PR #284) misread the cause. The equity-history

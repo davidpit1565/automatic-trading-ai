@@ -33,6 +33,7 @@ import {
   type TradeRiskAssessment,
 } from '../risk/riskEngine';
 import type { TrailingConfig } from '../risk/trailingStop';
+import { ClosedBarSource } from '../data/closedBarSource';
 import { scanCandles, scanMarket, type ScanResult } from '../scan/marketScanner';
 import { applyHigherTimeframeGate } from '../signal/multiTimeframe';
 import {
@@ -290,6 +291,19 @@ export interface AutoPilotOptions {
    */
   readonly entryPausedSymbols?: ReadonlySet<string>;
   /**
+   * Decide NEW entries on CLOSED bars only (drop the still-forming 1h/4h
+   * candle from the entry scan and the higher-timeframe gate). Exits are
+   * untouched. Live scans normally include the forming bar; this exists so the
+   * 'closed-bars' shadow candidate can measure that difference forward.
+   */
+  readonly entryClosedBarsOnly?: boolean;
+  /**
+   * Market-wide entry gate (not per symbol): a new long is refused while this
+   * returns false. Used by the 'f2-gated' shadow candidate (F2 sentiment-trend
+   * rule). Fail-open is the caller's responsibility.
+   */
+  readonly marketGate?: (timestamp: number) => Promise<boolean>;
+  /**
    * AI second-opinion gate (see `signal/aiJudgment.ts`): returns false to
    * block a new long entry when an LLM's read of the technical snapshot is
    * bearish enough to avoid. UNLIKE every other gate above, this can NEVER
@@ -416,13 +430,18 @@ export class PaperAutoPilot {
   }
 
   /** Scan the confirmation timeframe for one symbol; null when unavailable. */
-  private async higherTimeframeScan(symbol: string): Promise<ScanResult | null> {
+  private async higherTimeframeScan(symbol: string, source: MarketDataSource = this.options.source): Promise<ScanResult | null> {
     const timeframe = this.options.confirmationTimeframe;
     if (!timeframe) return null;
-    const candles = await this.options.source.getCandles(symbol, timeframe, SCAN_CANDLES);
+    const candles = await source.getCandles(symbol, timeframe, SCAN_CANDLES);
     if (!candles.ok) return null;
     const scan = scanCandles(symbol, timeframe, candles.value);
     return scan.ok ? scan.value : null;
+  }
+
+  /** The source NEW entries are scanned on: closed bars only when configured. */
+  private entrySource(timestamp: number): MarketDataSource {
+    return this.options.entryClosedBarsOnly ? new ClosedBarSource(this.options.source, () => timestamp) : this.options.source;
   }
 
   /** One full autonomous cycle: exits first, then qualified entries. */
@@ -534,8 +553,9 @@ export class PaperAutoPilot {
     }
 
     // --- Entries: scan the universe and act on qualified opportunities. ----
+    const entrySource = this.entrySource(timestamp);
     const scan = await scanMarket(
-      this.options.source,
+      entrySource,
       this.options.symbols,
       this.options.timeframe,
       SCAN_CANDLES,
@@ -576,7 +596,7 @@ export class PaperAutoPilot {
       if (this.options.confirmationTimeframe) {
         decision = applyHigherTimeframeGate(
           decision,
-          await this.higherTimeframeScan(scanResult.symbol),
+          await this.higherTimeframeScan(scanResult.symbol, entrySource),
         );
         if (decision.kind === 'rejected') {
           skipped.push({ symbol: scanResult.symbol, reason: decision.reasons.join('; ') });
@@ -644,6 +664,19 @@ export class PaperAutoPilot {
           event: 'rejected',
           mode: this.mode,
           detail: `funding-crowding gate refused ${scanResult.symbol}: OKX funding unusually high`,
+        });
+        continue;
+      }
+
+      // Market-wide sentiment gate: see the option's doc comment.
+      if (this.options.marketGate && !(await this.options.marketGate(timestamp))) {
+        skipped.push({ symbol: scanResult.symbol, reason: 'market gate: sentiment-trend rule says stay in cash' });
+        audit.append({
+          timestamp,
+          intentId: `${scanResult.symbol}:${timestamp}`,
+          event: 'rejected',
+          mode: this.mode,
+          detail: `market gate refused ${scanResult.symbol}: sentiment-trend rule says stay in cash`,
         });
         continue;
       }
@@ -786,7 +819,8 @@ export class PaperAutoPilot {
    * preview can never affect what actually trades.
    */
   async previewBestOpportunity(timestamp: number): Promise<TipResult> {
-    const scan = await scanMarket(this.options.source, this.options.symbols, this.options.timeframe, SCAN_CANDLES);
+    const previewSource = this.entrySource(timestamp);
+    const scan = await scanMarket(previewSource, this.options.symbols, this.options.timeframe, SCAN_CANDLES);
     const held = new Set(this.options.positions.openPositions().map((p) => p.symbol));
     // Mark held positions to their CURRENT scanned price, not stale entry
     // price — the same mark-to-market fix already applied to runCycleOnce's
@@ -822,7 +856,7 @@ export class PaperAutoPilot {
       const miss = (reason: string): void => void misses.push({ symbol: scanResult.symbol, confidence, reason });
 
       if (this.options.confirmationTimeframe) {
-        decision = applyHigherTimeframeGate(decision, await this.higherTimeframeScan(scanResult.symbol));
+        decision = applyHigherTimeframeGate(decision, await this.higherTimeframeScan(scanResult.symbol, previewSource));
         if (decision.kind === 'rejected') {
           miss(decision.reasons.join('; '));
           continue;
@@ -842,6 +876,10 @@ export class PaperAutoPilot {
       }
       if (this.options.fundingCheck && !(await this.options.fundingCheck(scanResult.symbol, timestamp))) {
         miss('funding crowding: leveraged longs unusually crowded');
+        continue;
+      }
+      if (this.options.marketGate && !(await this.options.marketGate(timestamp))) {
+        miss('market gate: sentiment-trend rule says stay in cash');
         continue;
       }
       if (this.options.topTraderCheck && !(await this.options.topTraderCheck(scanResult.symbol, timestamp))) {

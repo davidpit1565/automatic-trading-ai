@@ -420,3 +420,18 @@ describe('compareToChampion', () => {
     expect(result.challengerAheadOn).not.toContain('winRatePct');
   });
 });
+
+describe('2026-10-19 one-change candidates', () => {
+  it('closed-bars and f2-gated each differ from live-mirror by exactly one switch', () => {
+    const mirror = SHADOW_CANDIDATES.find((c) => c.key === 'live-mirror')!;
+    for (const [key, field] of [['closed-bars', 'closedBarsOnly'], ['f2-gated', 'useSentimentGate']] as const) {
+      const c = SHADOW_CANDIDATES.find((x) => x.key === key)!;
+      expect(c).toBeDefined();
+      expect(c.minConfidence).toBe(mirror.minConfidence);
+      expect(c.maxRsiForLong).toBe(mirror.maxRsiForLong);
+      expect(c.confirmationTimeframe).toBe(mirror.confirmationTimeframe);
+      expect(c.useWhaleFlowCheck).toBe(mirror.useWhaleFlowCheck);
+      expect((c as unknown as Record<string, unknown>)[field]).toBe(true);
+    }
+  });
+});

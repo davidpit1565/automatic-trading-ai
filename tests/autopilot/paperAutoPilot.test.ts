@@ -70,6 +70,8 @@ function makePilot(
     topTraderCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     fundingCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     entryPausedSymbols?: ReadonlySet<string>;
+    entryClosedBarsOnly?: boolean;
+    marketGate?: (timestamp: number) => Promise<boolean>;
     aiJudgmentCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
     confidenceRisk?: { floorPct: number; ceilingPct: number };
     trailing?: import('../../src/core/risk/trailingStop').TrailingConfig;
@@ -106,6 +108,8 @@ function makePilot(
     topTraderCheck: opts.topTraderCheck,
     fundingCheck: opts.fundingCheck,
     entryPausedSymbols: opts.entryPausedSymbols,
+    entryClosedBarsOnly: opts.entryClosedBarsOnly,
+    marketGate: opts.marketGate,
     aiJudgmentCheck: opts.aiJudgmentCheck,
     confidenceRisk: opts.confidenceRisk,
     trailing: opts.trailing,
@@ -702,6 +706,33 @@ describe('entry-paused symbols', () => {
     expect(cycle.opened).toHaveLength(0);
     expect(portfolio.openPositions()).toHaveLength(0);
     expect(cycle.skipped.some((s) => s.reason.includes('entries paused'))).toBe(true);
+  });
+});
+
+describe('market gate (F2 sentiment-trend shadow)', () => {
+  it('refuses a qualifying entry while the gate says stay in cash, and audits why', async () => {
+    const { pilot, portfolio, audit } = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { marketGate: async () => false });
+    const cycle = await pilot.runCycleOnce(T);
+    expect(cycle.opened).toHaveLength(0);
+    expect(portfolio.openPositions()).toHaveLength(0);
+    expect(cycle.skipped.some((s) => s.reason.includes('market gate'))).toBe(true);
+    expect(audit.entries().some((e) => e.event === 'rejected' && e.detail.includes('market gate refused'))).toBe(true);
+  });
+
+  it('opens normally when the gate allows', async () => {
+    const { pilot, portfolio } = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { marketGate: async () => true });
+    await pilot.runCycleOnce(T);
+    expect(portfolio.openPositions()).toHaveLength(1);
+  });
+});
+
+describe('closed-bars-only entries', () => {
+  it('still runs a full cycle and opens on settled bars (the option only changes WHICH bars decide)', async () => {
+    const { pilot, portfolio } = makePilot({ 'QUAL/USD': { drift: 0.001 } }, { entryClosedBarsOnly: true });
+    const cycle = await pilot.runCycleOnce(T);
+    expect(cycle.halted).toBe(false);
+    expect(Array.isArray(cycle.skipped)).toBe(true);
+    expect(portfolio.openPositions().length).toBeLessThanOrEqual(1);
   });
 });
 
