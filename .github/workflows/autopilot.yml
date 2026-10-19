@@ -56,6 +56,14 @@ jobs:
         run: gh workflow run autopilot.yml --ref main --repo "${{ github.repository }}"
       - uses: actions/checkout@v4
         with:
+          # ALWAYS the tip of main as of JOB START — never the commit that existed
+          # when the run was CREATED. A queued/pending run (a dispatched successor,
+          # or a cron run that waited behind a long job) otherwise checks out the
+          # state file from creation time, and its first cycle overwrites hours of
+          # newer state (found 2026-10-19: a successor created at 11:23 started at
+          # 15:52 and erased 4.5h of equity history). The state is the bot's memory,
+          # so a stale checkout is data loss, and for live-money keys a replay risk.
+          ref: main
           # Full history so the state commit can rebase onto an advanced main.
           fetch-depth: 0
       - uses: actions/setup-node@v4
