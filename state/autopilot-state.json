@@ -2785,7 +2785,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792430475419,
+    "at": 1792430872996,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -68231,20 +68231,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788400472368,
-      "intentId": "live-entry:XBTEUR",
-      "event": "rejected",
-      "mode": "live",
-      "detail": "could not verify 'BTC-EUR' as a currently tradable instrument on revolut-x (either it doesn't exist there, or the check itself failed) — refusing rather than guessing a symbol mapping"
-    },
-    {
-      "timestamp": 1788401334312,
-      "intentId": "live-entry:XBTEUR",
-      "event": "rejected",
-      "mode": "live",
-      "detail": "could not verify 'BTC-EUR' as a currently tradable instrument on revolut-x (either it doesn't exist there, or the check itself failed) — refusing rather than guessing a symbol mapping"
-    },
-    {
       "timestamp": 1788402159199,
       "intentId": "live-entry:XBTEUR",
       "event": "rejected",
@@ -75229,6 +75215,20 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1792430897104,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792430475419",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram (button)"
+    },
+    {
+      "timestamp": 1792430897696,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792430475419",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "Revolut X order a3605c96-6641-e205-02c0-07e0635c9277: new"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -75241,10 +75241,6 @@
   },
   "live:live-external-btc-qty": 7.999999999999585e-8,
   "live:live-equity-history": [
-    {
-      "at": 1789705886714,
-      "equity": 45.33
-    },
     {
       "at": 1789706221550,
       "equity": 45.33
@@ -95240,6 +95236,10 @@
     {
       "at": 1792430475419,
       "equity": 61.55
+    },
+    {
+      "at": 1792430872996,
+      "equity": 61.55
     }
   ],
   "live:revolut-x-order-map": {
@@ -95273,7 +95273,8 @@
     "live-entry:LTCEUR:1790254633004:exit:1791125788874": "30fbee75-e1f1-e2b7-02c0-07d6ac8ad05d",
     "live-entry:ATOMEUR:1791212490247": "de093547-d768-e26d-02c0-07b979ceff82",
     "external-reconcile:XBTEUR:1791659014817:exit:1792021080508": "57c2af84-e143-e2ed-02c0-077910d786a6",
-    "live-entry:LTCEUR:1790254633004:exit:1792274938261": "465fcd27-37ec-e271-02c0-07aecd1e972f"
+    "live-entry:LTCEUR:1790254633004:exit:1792274938261": "465fcd27-37ec-e271-02c0-07aecd1e972f",
+    "external-reconcile:XBTEUR:1791659014817:exit:1792430475419": "a3605c96-6641-e205-02c0-07e0635c9277"
   },
   "live:live-open-positions": {
     "external-reconcile:ALGOEUR:1790606205804": {
@@ -95394,7 +95395,8 @@
         "warnings": [
           "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
         ]
-      }
+      },
+      "outstandingExitSubmittedAt": 1792430872996
     }
   },
   "telegram-unclaimed-messages": [
@@ -95425,6 +95427,11 @@
     {
       "updateId": 447905083,
       "text": "/אשר"
+    },
+    {
+      "updateId": 447905091,
+      "text": "/approve",
+      "date": 1792430820
     }
   ],
   "telegram-unclaimed-callbacks": [
@@ -95759,6 +95766,10 @@
     {
       "id": "7383943996500222827",
       "data": "confirm:approve:mv8r3em9.2oh3w0"
+    },
+    {
+      "id": "7383943995514773533",
+      "data": "confirm:approve:mvfiu84w.15776pz"
     }
   ],
   "live:blackout-windows-cache": {
@@ -95857,22 +95868,10 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447905090,
+  "telegram-shared-update-offset": 447905093,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "external-reconcile:XBTEUR:1791659014817": {
-      "reason": "stop-loss",
-      "queuedAt": 1792430475419
-    }
-  },
-  "live:confirmation-gate-pending": {
-    "external-reconcile:XBTEUR:1791659014817:exit:1792430475419": {
-      "sentAt": 1792430498480,
-      "messageId": 1377,
-      "token": "mvfiu84w.15776pz",
-      "readyAt": 1792430498701
-    }
-  },
+  "live:live-exit-pending": {},
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 7722.16894127266,
@@ -101862,106 +101861,6 @@
   },
   "state-merge-collisions": [
     {
-      "key": "real-money-readiness",
-      "at": 1792075199905,
-      "label": "cycle 37/70"
-    },
-    {
-      "key": "shadow:mean-reversion:open-positions",
-      "at": 1792075199905,
-      "label": "cycle 37/70"
-    },
-    {
-      "key": "daily-summary",
-      "at": 1792075199905,
-      "label": "cycle 37/70"
-    },
-    {
-      "key": "live:audit-log",
-      "at": 1792075199905,
-      "label": "cycle 37/70"
-    },
-    {
-      "key": "live:live-open-positions",
-      "at": 1792075199905,
-      "label": "cycle 37/70"
-    },
-    {
-      "key": "shadow:mean-reversion:trade-journal",
-      "at": 1792075199905,
-      "label": "cycle 37/70"
-    },
-    {
-      "key": "shadow:mean-reversion:portfolio-engine",
-      "at": 1792075199905,
-      "label": "cycle 37/70"
-    },
-    {
-      "key": "shadow:mean-reversion:audit-log",
-      "at": 1792075199905,
-      "label": "cycle 37/70"
-    },
-    {
-      "key": "open-positions",
-      "at": 1792161178068,
-      "label": "cycle 39/70"
-    },
-    {
-      "key": "autopilot-last-run",
-      "at": 1792161178068,
-      "label": "cycle 39/70"
-    },
-    {
-      "key": "live:live-equity-history",
-      "at": 1792161178068,
-      "label": "cycle 39/70"
-    },
-    {
-      "key": "shadow:live-mirror:open-positions",
-      "at": 1792161178068,
-      "label": "cycle 39/70"
-    },
-    {
-      "key": "shadow:no-confirm:open-positions",
-      "at": 1792161178068,
-      "label": "cycle 39/70"
-    },
-    {
-      "key": "shadow:trailing-forward-test:open-positions",
-      "at": 1792161178068,
-      "label": "cycle 39/70"
-    },
-    {
-      "key": "shadow:breakout:open-positions",
-      "at": 1792161178068,
-      "label": "cycle 39/70"
-    },
-    {
-      "key": "shadow:breakout:portfolio-engine",
-      "at": 1792161178068,
-      "label": "cycle 39/70"
-    },
-    {
-      "key": "shadow:breakout:audit-log",
-      "at": 1792161178068,
-      "label": "cycle 39/70"
-    },
-    {
-      "key": "shadow:ai-judgment:open-positions",
-      "at": 1792161178068,
-      "label": "cycle 39/70"
-    },
-    {
-      "key": "shadow:correlation-capped:open-positions",
-      "at": 1792161178068,
-      "label": "cycle 39/70"
-    },
-    {
-      "key": "shadow-standings",
-      "at": 1792161178068,
-      "label": "cycle 39/70"
-    },
-    {
       "key": "candidate-watch-standings",
       "at": 1792161178068,
       "label": "cycle 39/70"
@@ -102360,6 +102259,106 @@
       "key": "live:live-open-positions",
       "at": 1792430571314,
       "label": "cycle 15/52"
+    },
+    {
+      "key": "autopilot-last-run",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:live-equity-history",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "telegram-shared-update-offset",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:live-stale-cancel-state",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:audit-log",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow-standings",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow:candidate-watch:open-positions",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow:candidate-watch:trade-journal",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow:candidate-watch:portfolio-engine",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow:candidate-watch:audit-log",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "candidate-watch-standings",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "equity-history",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "real-money-readiness",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "daily-summary",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow:breakout:open-positions",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow:breakout:portfolio-engine",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow:breakout:audit-log",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:live-open-positions",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:live-exit-pending",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:confirmation-gate-pending",
+      "at": 1792430901759,
+      "label": "live-mirror: after automatic exits"
     }
   ],
   "shadow:correlation-capped:open-positions": [],
