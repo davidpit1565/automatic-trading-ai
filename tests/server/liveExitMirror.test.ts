@@ -1109,3 +1109,56 @@ describe('blackout auto-approval limits (red-team F1/F2/F3, 2026-10-17)', () => 
     expect(outcomes[0]!.outcome).toBe('submitted');
   });
 });
+
+describe('stale-cancel retry throttle and repeated 409 (follow-up, 2026-10-19)', () => {
+  function counting409Broker(detail = 'cancel failed: HTTP 409') {
+    const calls: string[] = [];
+    const adapter = {
+      name: 'fake-broker',
+      mode: 'live',
+      async submit(): Promise<OrderStatusReport> { throw new Error('not used'); },
+      async cancel(intentId: string): Promise<OrderStatusReport> {
+        calls.push(intentId);
+        return { intentId, state: 'rejected', filledQuantity: 0, avgFillPrice: null, detail };
+      },
+      async fetchPositions(): Promise<BrokerPosition[]> { return []; },
+    } as BrokerAdapter;
+    return { adapter, calls };
+  }
+  function stuck() {
+    const store = new MemoryStore();
+    initLiveCash(store, 100);
+    openPosition(store, 'entry-1', 'XBTEUR', { stopLoss: 95, takeProfit: 115 });
+    markExitSubmitted(store, 'entry-1', 1000);
+    store.set('revolut-x-order-map', { 'entry-1:exit:1000': 'venue-1' });
+    return store;
+  }
+  const HOUR = 60 * 60 * 1000;
+
+  it('retries a failing cancel at most once per hour, not every cycle', async () => {
+    const store = stuck();
+    const { adapter, calls } = counting409Broker('cancel failed: HTTP 500');
+    const ks = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const t = 1000 + STALE_EXIT_ORDER_MS + 1;
+    for (let i = 0; i < 10; i++) await expireStaleExitOrders(store, adapter, ks, audit, t + i * 6 * 60_000); // 1h of 6-min cycles
+    expect(calls).toHaveLength(1);
+    await expireStaleExitOrders(store, adapter, ks, audit, t + HOUR + 1);
+    expect(calls).toHaveLength(2);
+    expect(openLivePositions(store)[0]!.outstandingExitSubmittedAt).toBe(1000); // a 500 never clears the flag
+  });
+
+  it('treats a repeated HTTP 409 as already-final and frees the position after the second answer', async () => {
+    const store = stuck();
+    const { adapter, calls } = counting409Broker();
+    const ks = new PersistedKillSwitch(store);
+    const audit = new PersistedAuditLog(store);
+    const t = 1000 + STALE_EXIT_ORDER_MS + 1;
+    expect(await expireStaleExitOrders(store, adapter, ks, audit, t)).toBe(0); // first 409: keep
+    expect(openLivePositions(store)[0]!.outstandingExitSubmittedAt).toBe(1000);
+    expect(await expireStaleExitOrders(store, adapter, ks, audit, t + HOUR + 1)).toBe(1); // second 409: gone
+    expect(openLivePositions(store)[0]!.outstandingExitSubmittedAt).toBeUndefined();
+    expect(calls).toHaveLength(2);
+    expect(audit.entries().some((e) => e.detail.includes('409 — treated as already final'))).toBe(true);
+  });
+});

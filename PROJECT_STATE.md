@@ -1,5 +1,34 @@
 # PROJECT_STATE
 
+## Continuity fix: queue the successor run + end the loop before the timeout; 409 cancel loop (2026-10-19)
+
+David: "I see no real trades for days — verify nothing is wrong and fix everything."
+Findings (real data, 2026-10-19):
+- **No trades is the market, not a fault.** A live funnel over all 20 traded coins:
+  13 bearish (score < 0), 7 below the entry score of 30 (BTC +5, ETH +7, SOL +10);
+  `previewBestOpportunity` finds no qualified setup and no near miss. The last paper
+  entry was 10-15. Entry rules were NOT loosened: forcing entries into a market with no
+  bullish setup is the measured way to lose money here.
+- **Real hole: ~4 coverage gaps a day (30-250 min, mostly ~100-120).** equity-history
+  shows one at every job handoff (10-12..10-19: 30 gaps > 20 min). Cause: jobs always
+  end by the 355-min TIMEOUT (LOOP_CYCLES 70 x ~6.1 min = 427 min) and the next run
+  then waits for GitHub's unreliable cron. This CORRECTS the earlier audit note that
+  said ~99.7% coverage (that was measured on a window with state commits only; the
+  equity-history gaps are authoritative). During a gap no stops are checked.
+  Fix in `autopilot.yml`: first step queues the successor with
+  `gh workflow run autopilot.yml` (needs `actions: write`; the concurrency group
+  keeps one running + one pending, so no overlap; best effort,
+  `continue-on-error`), and `LOOP_CYCLES` 70 -> 52 (~328 min) so the loop ends cleanly,
+  the final state commit runs and the pending successor starts at once. Verify at the
+  next handoff: gap in equity-history should be ~1-2 min instead of ~100.
+- **409 loop**: a BTC lot's stale exit-cancel answered HTTP 409 every ~6 min for 12h
+  (297 audit rows, the audit log was ~997/1000). Now a stale cancel is attempted at
+  most once an hour and a second 409 is treated as "already final" (the flag clears; a
+  still-live order would make the next sell fail with insufficient balance, which the
+  existing reconcile handles).
+
+Gate: tsc clean, 1483 vitest, build ok.
+
 ## Liveness alerts: outage notice + external dead-man's switch (2026-10-18)
 
 David: "alert me automatically if the bot stops; a backup runner elsewhere is a

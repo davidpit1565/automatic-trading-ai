@@ -31,6 +31,8 @@ concurrency:
 
 permissions:
   contents: write
+  # Needed ONLY by the first job step, which queues the next run (see below).
+  actions: write
 
 jobs:
   run:
@@ -41,6 +43,17 @@ jobs:
     # external clock. Headroom under the 6h cap.
     timeout-minutes: 355
     steps:
+      # Keep the bot running without multi-hour holes (found 2026-10-19: ~4
+      # gaps a day of 30-250 min, one at every job handoff, because the next run
+      # waited for GitHub's unreliable cron). Queue the SUCCESSOR right away: the
+      # concurrency group runs one job at a time and holds one pending run, so the
+      # successor starts the moment this job ends (loop finished or timed out).
+      # Best effort — if this step fails the old schedule-only behaviour remains.
+      - name: Queue the next run
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run autopilot.yml --ref main --repo "${{ github.repository }}"
       - uses: actions/checkout@v4
         with:
           # Full history so the state commit can rebase onto an advanced main.
@@ -86,7 +99,10 @@ jobs:
           # ~70 cycles × 5 min ≈ 5h50m of coverage per triggered run, so one
           # sparse GitHub trigger bridges the gap to the next (the free
           # scheduler often fires only every 5–7h). See docs/cloud-autopilot.he.md.
-          LOOP_CYCLES: '70'
+          # 52 cycles x ~6.3 min ~= 328 min: the loop now ENDS on its own before
+          # the 355-min timeout, so the final state commit runs and the queued
+          # successor starts immediately (was 70, which always hit the timeout).
+          LOOP_CYCLES: '52'
           # Persist state to git after EVERY cycle, not every 6. Measured
           # 2026-08-17: the cron actually fires reliably every ~30 min (not
           # the sparse 5-7h the comment above describes), and concurrency
