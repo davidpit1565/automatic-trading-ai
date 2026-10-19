@@ -320,6 +320,42 @@ export function shouldAuditStaleCancelFailure(store: KeyValueStore, intentId: st
   return true;
 }
 
+const STALE_CANCEL_STATE_KEY = 'live-stale-cancel-state';
+/** A stale resting order is retried at most this often (and not every ~6 min cycle). */
+export const STALE_CANCEL_RETRY_MS = 60 * 60 * 1000;
+/** After this many HTTP 409 answers the venue is treated as saying "not cancellable (already final)". */
+export const STALE_CANCEL_CONFLICTS_BEFORE_GONE = 2;
+
+interface StaleCancelState {
+  lastAttemptAt: number;
+  conflicts: number;
+}
+
+/**
+ * Decides whether to attempt a cancel for `intentId` now (false = tried within
+ * the last hour). Red-team follow-up, 2026-10-19: a BTC lot's exit cancel
+ * answered HTTP 409 every ~6 min cycle for 12h (≈60 audit rows, a request per
+ * cycle) with no way out. Records the attempt time when it returns true.
+ */
+export function shouldAttemptStaleCancel(store: KeyValueStore, intentId: string, now: number): boolean {
+  const map = store.get<Record<string, StaleCancelState>>(STALE_CANCEL_STATE_KEY) ?? {};
+  const prior = map[intentId];
+  if (prior && now - prior.lastAttemptAt < STALE_CANCEL_RETRY_MS) return false;
+  map[intentId] = { lastAttemptAt: now, conflicts: prior?.conflicts ?? 0 };
+  store.set(STALE_CANCEL_STATE_KEY, map);
+  return true;
+}
+
+/** Records an HTTP 409 for `intentId`; returns the running count. */
+export function recordStaleCancelConflict(store: KeyValueStore, intentId: string): number {
+  const map = store.get<Record<string, StaleCancelState>>(STALE_CANCEL_STATE_KEY) ?? {};
+  const prior = map[intentId] ?? { lastAttemptAt: 0, conflicts: 0 };
+  const next = { ...prior, conflicts: prior.conflicts + 1 };
+  map[intentId] = next;
+  store.set(STALE_CANCEL_STATE_KEY, map);
+  return next.conflicts;
+}
+
 /** True when a cancel report means the order is simply not open any more
  * (HTTP 404 from the venue), as opposed to a transient failure. */
 export function cancelMeansOrderGone(report: { state: string; detail: string }): boolean {

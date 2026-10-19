@@ -36,8 +36,11 @@ import type { AuditLog, BrokerAdapter } from '../src/core/execution/types';
 import { knownOrderIntentIds } from './revolutXBrokerAdapter.mts';
 import {
   buildLiveExitIntent,
+  STALE_CANCEL_CONFLICTS_BEFORE_GONE,
   cancelMeansOrderGone,
   clearExitSubmitted,
+  recordStaleCancelConflict,
+  shouldAttemptStaleCancel,
   shouldAuditStaleCancelFailure,
   buildLiveJournalEntry,
   decideLiveExit,
@@ -369,9 +372,14 @@ export async function expireStaleExitOrders(
       audit.append({ timestamp: now, intentId: position.id, event: 'advisory', mode: 'live', detail: `stale exit order for ${position.symbol} (>${STALE_EXIT_ORDER_MS / 3.6e6}h) has no known venue order id — cannot cancel automatically` });
       continue;
     }
+    if (!shouldAttemptStaleCancel(store, intentId, now)) continue; // tried within the last hour
     try {
       const report = await brokerAdapter.cancel(intentId);
-      if (report.state === 'cancelled' || cancelMeansOrderGone(report)) {
+      const conflictGone =
+        report.state === 'rejected' &&
+        /HTTP 409/.test(report.detail) &&
+        recordStaleCancelConflict(store, intentId) >= STALE_CANCEL_CONFLICTS_BEFORE_GONE;
+      if (report.state === 'cancelled' || cancelMeansOrderGone(report) || conflictGone) {
         // 'cancelled' = the broker confirmed it; HTTP 404 = the order is no
         // longer open (already filled/cancelled — e.g. cancelled by hand in the
         // app). Either way nothing is resting any more. If it had in fact
@@ -379,7 +387,7 @@ export async function expireStaleExitOrders(
         // the existing reconciliation closes the tracked position.
         clearExitSubmitted(store, position.id);
         cancelled++;
-        audit.append({ timestamp: now, intentId, event: 'cancelled', mode: 'live', detail: `stale resting exit for ${position.symbol} cleared after ${Math.round((now - submittedAt) / 60000)} min (${report.state === 'cancelled' ? 'cancelled at the broker' : 'order no longer open'}) — exit will be re-proposed at the current price` });
+        audit.append({ timestamp: now, intentId, event: 'cancelled', mode: 'live', detail: `stale resting exit for ${position.symbol} cleared after ${Math.round((now - submittedAt) / 60000)} min (${report.state === 'cancelled' ? 'cancelled at the broker' : conflictGone ? 'broker keeps answering 409 — treated as already final' : 'order no longer open'}) — exit will be re-proposed at the current price` });
       } else if (shouldAuditStaleCancelFailure(store, intentId, now)) {
         audit.append({ timestamp: now, intentId, event: 'advisory', mode: 'live', detail: `could not cancel stale exit for ${position.symbol}: ${report.detail}` });
       }
