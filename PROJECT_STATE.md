@@ -1,6 +1,6 @@
 # PROJECT_STATE
 
-## Pre-registered promotion bar + two new one-change shadows (2026-10-19)
+## Promotion bar (pre-registered) + two new one-change shadows (2026-10-19)
 
 Goal: stop judging strategies by "looks good so far". `src/core/autopilot/promotionBar.ts`
 fixes, BEFORE seeing results, what a candidate must show to be considered for more
