@@ -2785,7 +2785,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792441817907,
+    "at": 1792442191258,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -68235,20 +68235,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788402759097,
-      "intentId": "live-entry:XBTEUR",
-      "event": "rejected",
-      "mode": "live",
-      "detail": "could not verify 'BTC-EUR' as a currently tradable instrument on revolut-x (either it doesn't exist there, or the check itself failed) — refusing rather than guessing a symbol mapping"
-    },
-    {
-      "timestamp": 1788403328124,
-      "intentId": "list-tradable-pairs",
-      "event": "rejected",
-      "mode": "live",
-      "detail": "GET /configuration/pairs returned HTTP 200 but 0 parseable symbols — raw shape: {\"LINK/USD\":{\"base\":\"LINK\",\"quote\":\"USD\",\"base_step\":\"0.000001\",\"quote_step\":\"0.001\",\"min_order_size\":\"0.000001\",\"max_order_size\":\"100000\",\"min_order_size_quote\":\"0.1\",\"max_order_size_quote\":\"1000000\",\"status\":\"active\",\"slippage\":5},\"UNI/USD\":{\"base\":\"UNI\",\"quote\":\"USD\",\"base_step\":\"0.00001\",\"quote_step\":\"0.0001\",\"min_order_size\":\"0.00001\",\"max_order_size\":\"100000\",\"min_order_size_quote\":\"0.1\",\"max_order_size_quote\":\"1000000\",\"status\":\"active\",\"slippage\":5},\"TAIKO/USD\":{\"base\":\"TAIKO\",\"quote\":\"U"
-    },
-    {
       "timestamp": 1788403328134,
       "intentId": "verify-symbol-exists",
       "event": "rejected",
@@ -75233,6 +75219,20 @@
       "event": "advisory",
       "mode": "live",
       "detail": "could not cancel stale exit for BTC/EUR: cancel failed: HTTP 409"
+    },
+    {
+      "timestamp": 1792442213999,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792430475419",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "cancel failed: HTTP 409"
+    },
+    {
+      "timestamp": 1792442191258,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792430475419",
+      "event": "cancelled",
+      "mode": "live",
+      "detail": "stale resting exit for BTC/EUR cleared after 189 min (broker keeps answering 409 — treated as already final) — exit will be re-proposed at the current price"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -75245,10 +75245,6 @@
   },
   "live:live-external-btc-qty": 6.599999999999971e-7,
   "live:live-equity-history": [
-    {
-      "at": 1789720453291,
-      "equity": 45.42
-    },
     {
       "at": 1789720787313,
       "equity": 45.41
@@ -95244,6 +95240,10 @@
     {
       "at": 1792441817907,
       "equity": 61.54
+    },
+    {
+      "at": 1792442191258,
+      "equity": 61.54
     }
   ],
   "live:revolut-x-order-map": {
@@ -95369,8 +95369,7 @@
         "warnings": [
           "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
         ]
-      },
-      "outstandingExitSubmittedAt": 1792430872996
+      }
     }
   },
   "telegram-unclaimed-messages": [
@@ -105491,8 +105490,8 @@
       "conflicts": 2
     },
     "external-reconcile:XBTEUR:1791659014817:exit:1792430475419": {
-      "lastAttemptAt": 1792438434715,
-      "conflicts": 1
+      "lastAttemptAt": 1792442191258,
+      "conflicts": 2
     }
   }
 }
