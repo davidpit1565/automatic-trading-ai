@@ -2785,7 +2785,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792428579198,
+    "at": 1792428956816,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -75215,6 +75215,20 @@
       "event": "rejected",
       "mode": "live",
       "detail": "cancel failed: HTTP 409"
+    },
+    {
+      "timestamp": 1792428979929,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792021080508",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "cancel failed: HTTP 409"
+    },
+    {
+      "timestamp": 1792428956816,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792021080508",
+      "event": "cancelled",
+      "mode": "live",
+      "detail": "stale resting exit for BTC/EUR cleared after 6798 min (broker keeps answering 409 — treated as already final) — exit will be re-proposed at the current price"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -75227,10 +75241,6 @@
   },
   "live:live-external-btc-qty": 7.999999999999585e-8,
   "live:live-equity-history": [
-    {
-      "at": 1789704200948,
-      "equity": 45.34
-    },
     {
       "at": 1789704537352,
       "equity": 45.32
@@ -95226,6 +95236,10 @@
     {
       "at": 1792428579198,
       "equity": 61.55
+    },
+    {
+      "at": 1792428956816,
+      "equity": 61.55
     }
   ],
   "live:revolut-x-order-map": {
@@ -95380,8 +95394,7 @@
         "warnings": [
           "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
         ]
-      },
-      "outstandingExitSubmittedAt": 1792021080508
+      }
     }
   },
   "telegram-unclaimed-messages": [
@@ -101837,91 +101850,6 @@
   },
   "state-merge-collisions": [
     {
-      "key": "shadow:mean-reversion:audit-log",
-      "at": 1791488216235,
-      "label": "cycle 15/70"
-    },
-    {
-      "key": "shadow:breakout:open-positions",
-      "at": 1791488216235,
-      "label": "cycle 15/70"
-    },
-    {
-      "key": "shadow:breakout:trade-journal",
-      "at": 1791488216235,
-      "label": "cycle 15/70"
-    },
-    {
-      "key": "shadow:breakout:portfolio-engine",
-      "at": 1791488216235,
-      "label": "cycle 15/70"
-    },
-    {
-      "key": "shadow:breakout:audit-log",
-      "at": 1791488216235,
-      "label": "cycle 15/70"
-    },
-    {
-      "key": "shadow-standings",
-      "at": 1791488216235,
-      "label": "cycle 15/70"
-    },
-    {
-      "key": "shadow:candidate-watch:open-positions",
-      "at": 1791488216235,
-      "label": "cycle 15/70"
-    },
-    {
-      "key": "shadow:candidate-watch:trade-journal",
-      "at": 1791488216235,
-      "label": "cycle 15/70"
-    },
-    {
-      "key": "shadow:candidate-watch:portfolio-engine",
-      "at": 1791488216235,
-      "label": "cycle 15/70"
-    },
-    {
-      "key": "shadow:candidate-watch:audit-log",
-      "at": 1791488216235,
-      "label": "cycle 15/70"
-    },
-    {
-      "key": "candidate-watch-standings",
-      "at": 1791488216235,
-      "label": "cycle 15/70"
-    },
-    {
-      "key": "equity-history",
-      "at": 1791488216235,
-      "label": "cycle 15/70"
-    },
-    {
-      "key": "real-money-readiness",
-      "at": 1791488216235,
-      "label": "cycle 15/70"
-    },
-    {
-      "key": "open-positions",
-      "at": 1791809131801,
-      "label": "cycle 18/70"
-    },
-    {
-      "key": "autopilot-last-run",
-      "at": 1791809131801,
-      "label": "cycle 18/70"
-    },
-    {
-      "key": "move-alert-buckets",
-      "at": 1791809131801,
-      "label": "cycle 18/70"
-    },
-    {
-      "key": "live:live-equity-history",
-      "at": 1791809131801,
-      "label": "cycle 18/70"
-    },
-    {
       "key": "shadow:live-mirror:open-positions",
       "at": 1791809131801,
       "label": "cycle 18/70"
@@ -102335,6 +102263,91 @@
       "key": "shadow:breakout:audit-log",
       "at": 1792428655052,
       "label": "cycle 10/52"
+    },
+    {
+      "key": "autopilot-last-run",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "live:live-equity-history",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "telegram-shared-update-offset",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "live:live-stale-cancel-state",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "live:audit-log",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "shadow-standings",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "shadow:candidate-watch:open-positions",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "shadow:candidate-watch:trade-journal",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "shadow:candidate-watch:portfolio-engine",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "shadow:candidate-watch:audit-log",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "candidate-watch-standings",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "equity-history",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "real-money-readiness",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "daily-summary",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "shadow:breakout:open-positions",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "shadow:breakout:portfolio-engine",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
+    },
+    {
+      "key": "shadow:breakout:audit-log",
+      "at": 1792428984106,
+      "label": "live-mirror: after cancelling stale exit orders"
     }
   ],
   "shadow:correlation-capped:open-positions": [],
@@ -105465,8 +105478,8 @@
   },
   "live:live-stale-cancel-state": {
     "external-reconcile:XBTEUR:1791659014817:exit:1792021080508": {
-      "lastAttemptAt": 1792425190557,
-      "conflicts": 1
+      "lastAttemptAt": 1792428956816,
+      "conflicts": 2
     }
   }
 }
