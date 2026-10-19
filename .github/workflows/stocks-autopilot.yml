@@ -36,6 +36,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # Tip of main at JOB START, not the commit at run creation (a queued run
+          # would otherwise overwrite newer state — see autopilot.yml).
+          ref: main
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:

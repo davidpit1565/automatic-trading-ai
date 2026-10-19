@@ -1,5 +1,26 @@
 # PROJECT_STATE
 
+## CORRECTION + data-loss fix: stale checkout of queued runs (2026-10-19)
+
+The "continuity" entry below (PR #284) misread the cause. The equity-history
+"gaps" (30-250 min, ~4/day) were NOT downtime: job logs show a cycle every ~6 min
+through each job (e.g. cycles 47-59 between 14:33 and 15:47 on 10-19) and state
+commits landed every cycle; the earlier audit that measured ~99.7% coverage from
+state-commit times was RIGHT. The gaps are LOST DATA: a run's `actions/checkout`
+uses the commit that existed when the run was CREATED, so a run that waited in the
+queue starts from an old state file and its first cycle overwrites hours of newer
+state (observed: the run created 11:23 started 15:52 and erased equity-history
+11:20-15:47). Harm measured on the 15:47 -> now diff: only equity-history/audit rows
+(no trades, positions, kill switch or confirmations were affected, because nothing
+happened in that window) — but the same mechanism could revert live-money keys.
+
+Fix: `ref: main` on the checkout in `autopilot.yml` and `stocks-autopilot.yml`, so
+every job starts from the tip of main AT JOB START. This also makes the
+queue-the-successor step (#284) safe (a successor created at the start of a 5.5h job
+would otherwise start 5.5h stale — the pending run 1195 had exactly that
+problem and was replaced). Lost equity points are not rebuilt (cosmetic; the flat
+equity series is recoverable from the per-cycle state commits if ever needed).
+
 ## Continuity fix: queue the successor run + end the loop before the timeout; 409 cancel loop (2026-10-19)
 
 David: "I see no real trades for days — verify nothing is wrong and fix everything."
