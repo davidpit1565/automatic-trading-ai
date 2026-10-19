@@ -37,6 +37,7 @@ import { buildTopTraderGate } from '../src/core/signal/topTraderGate';
 import { getTopTraderPositionRatio, toOkxSwapInstId } from '../src/core/data/okxPositioning';
 import { getFundingRateHistory } from '../src/core/data/okxFunding';
 import { outageNotice, pingHealthcheck } from './heartbeat.mts';
+import { decideSentimentTrend } from '../src/core/signal/sentimentTrend';
 import { getFearGreedHistory } from '../src/core/data/fearGreed';
 import { stepSentimentShadow } from '../src/core/autopilot/sentimentShadow';
 import { buildFundingGate } from '../src/core/signal/fundingGate';
@@ -529,6 +530,36 @@ async function buildFundingCheck(
     if (history.ok) gates.set(symbol, buildFundingGate(history.value));
   }
   return async (symbol, timestamp) => gates.get(symbol)?.(timestamp) ?? true;
+}
+
+/**
+ * F2 sentiment-trend as a market-wide entry gate for the 'f2-gated' shadow.
+ * Resolved once per UTC day (it only changes daily): Fear & Greed readings
+ * from BEFORE today plus CLOSED BTC daily closes, through the frozen
+ * `decideSentimentTrend`. Fails OPEN (allows) when either input is unavailable,
+ * same as every other gate here, so a data outage never silently freezes the
+ * candidate in cash.
+ */
+let sentimentGateCache: { day: string; hold: boolean } | null = null; // survives across the loop's cycles
+
+function buildSentimentGate(source: MarketDataSource): (timestamp: number) => Promise<boolean> {
+  return async (timestamp) => {
+    const day = new Date(timestamp).toISOString().slice(0, 10);
+    if (sentimentGateCache?.day === day) return sentimentGateCache.hold;
+    try {
+      const todayStart = Date.parse(`${day}T00:00:00Z`);
+      const candles = await source.getCandles('XBTEUR', '1d', 160);
+      const fng = await getFearGreedHistory(60, fetch);
+      if (!candles.ok || !fng.ok) return true;
+      const closes = candles.value.filter((c) => c.timestamp < todayStart).map((c) => c.close);
+      const readings = fng.value.filter((p) => p.timestamp < todayStart).map((p) => p.value);
+      const hold = decideSentimentTrend(readings, closes).hold;
+      sentimentGateCache = { day, hold };
+      return hold;
+    } catch {
+      return true;
+    }
+  };
 }
 
 /**
@@ -1539,6 +1570,7 @@ async function runShadows(
       now,
       prices,
       entryPausedSymbols: ENTRY_PAUSED_SYMBOLS,
+      sentimentGate: buildSentimentGate(caching),
       whaleFlowCheck,
       topTraderCheck,
       fundingCheck,

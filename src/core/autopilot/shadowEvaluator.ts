@@ -82,6 +82,16 @@ export interface ShadowCandidate {
    */
   readonly useAiJudgmentCheck?: boolean;
   /**
+   * Decide NEW entries on closed bars only — see `PaperAutoPilotOptions.entryClosedBarsOnly`.
+   * The forward test of the "live entries repaint on the forming candle" finding (2026-10-19).
+   */
+  readonly closedBarsOnly?: boolean;
+  /**
+   * Opts into `ShadowRunOptions.sentimentGate` for this candidate only — the F2
+   * sentiment-trend rule (`signal/sentimentTrend.ts`) used as a market-wide entry gate.
+   */
+  readonly useSentimentGate?: boolean;
+  /**
    * Hold-through-trend exit (see `paperAutoPilot.ts`'s own doc comment) —
    * lets a candidate represent a genuinely different HOLDING STYLE (weeks/
    * months via a slow EMA on daily bars) rather than another tight-stop
@@ -159,6 +169,8 @@ export interface ShadowRunOptions {
    * Only candidates with `useFundingCheck: true` get it wired in.
    */
   readonly fundingCheck?: (symbol: string, timestamp: number) => Promise<boolean>;
+  /** Market-wide entry gate for candidates with `useSentimentGate` (F2 rule says hold BTC). */
+  readonly sentimentGate?: (timestamp: number) => Promise<boolean>;
   /** Symbols that get no NEW entries in any candidate (see `ENTRY_PAUSED_SYMBOLS`). */
   readonly entryPausedSymbols?: ReadonlySet<string>;
   /**
@@ -257,6 +269,8 @@ async function runOne(
       ? { topTraderCheck: options.topTraderCheck }
       : {}),
     ...(options.entryPausedSymbols ? { entryPausedSymbols: options.entryPausedSymbols } : {}),
+    ...(candidate.closedBarsOnly ? { entryClosedBarsOnly: true } : {}),
+    ...(candidate.useSentimentGate && options.sentimentGate ? { marketGate: options.sentimentGate } : {}),
     ...(candidate.useFundingCheck && options.fundingCheck
       ? { fundingCheck: options.fundingCheck }
       : {}),
@@ -457,5 +471,34 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     confirmationTimeframe: '4h',
     useWhaleFlowCheck: true,
     useFundingCheck: true,
+  },
+  // 2026-10-19 (David: "justified hope, not a promise"). Two candidates that
+  // each change exactly ONE thing against 'live-mirror', so the forward record
+  // says what that thing is worth:
+  //  - closed-bars: live entries are decided on the still-forming candle while
+  //    every backtest uses closed bars; 9 of 17 reconstructable live entries
+  //    would not have passed at bar close, but the sample (n=17) could not show
+  //    whether that hurts. This measures it forward.
+  //  - f2-gated: the F2 rule (7-day Fear&Greed avg > 50 and BTC > SMA100) as a
+  //    market-wide entry gate — it cut max drawdown 74% -> 39% over 2018-2026.
+  {
+    key: 'closed-bars',
+    label: 'Mirror of production, entries decided on CLOSED bars only (tests the forming-candle repaint)',
+    minConfidence: 40,
+    maxRsiForLong: 65,
+    trailing: AUTOPILOT_TRAILING,
+    confirmationTimeframe: '4h',
+    useWhaleFlowCheck: true,
+    closedBarsOnly: true,
+  },
+  {
+    key: 'f2-gated',
+    label: 'Mirror of production, entries only while the F2 sentiment-trend rule says hold',
+    minConfidence: 40,
+    maxRsiForLong: 65,
+    trailing: AUTOPILOT_TRAILING,
+    confirmationTimeframe: '4h',
+    useWhaleFlowCheck: true,
+    useSentimentGate: true,
   },
 ];
