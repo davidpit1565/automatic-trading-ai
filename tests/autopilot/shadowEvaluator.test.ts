@@ -1,3 +1,4 @@
+import { DEFAULT_RISK_LIMITS } from '../../src/core/risk/riskEngine';
 /**
  * Shadow evaluation (TDD).
  *
@@ -433,5 +434,24 @@ describe('2026-10-19 one-change candidates', () => {
       expect(c.useWhaleFlowCheck).toBe(mirror.useWhaleFlowCheck);
       expect((c as unknown as Record<string, unknown>)[field]).toBe(true);
     }
+  });
+});
+
+describe('2026-10-20 high-risk demo candidates', () => {
+  it('risk-3x / risk-6x keep the live-mirror signal and only raise the size caps', () => {
+    const mirror = SHADOW_CANDIDATES.find((c) => c.key === 'live-mirror')!;
+    for (const key of ['risk-3x', 'risk-6x']) {
+      const c = SHADOW_CANDIDATES.find((x) => x.key === key)!;
+      expect(c).toBeDefined();
+      expect(c.minConfidence).toBe(mirror.minConfidence);
+      expect(c.maxRsiForLong).toBe(mirror.maxRsiForLong);
+      expect(c.confirmationTimeframe).toBe(mirror.confirmationTimeframe);
+      expect(c.useWhaleFlowCheck).toBe(mirror.useWhaleFlowCheck);
+      expect(c.riskLimits!.maxRiskPerTradePct!).toBeGreaterThan(DEFAULT_RISK_LIMITS.maxRiskPerTradePct);
+      expect(c.riskLimits!.maxPositionPct!).toBeGreaterThan(DEFAULT_RISK_LIMITS.maxPositionPct);
+      // Never beyond fully invested: no leverage in a cash account.
+      expect(c.riskLimits!.maxTotalExposurePct!).toBeLessThanOrEqual(100);
+    }
+    expect(SHADOW_CANDIDATES.map((c) => c.key)).toEqual([...new Set(SHADOW_CANDIDATES.map((c) => c.key))]);
   });
 });

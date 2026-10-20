@@ -8,7 +8,7 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { PROMOTION_BAR, assessPromotion, type PromotionTrade } from '../src/core/autopilot/promotionBar';
+import { HIGH_RISK_MAX_DRAWDOWN_PCT, PROMOTION_BAR, assessPromotion, type PromotionTrade } from '../src/core/autopilot/promotionBar';
 
 const STATE_PATH = process.env['AUTOPILOT_STATE_PATH'] ?? 'state/autopilot-state.json';
 const state = JSON.parse(readFileSync(STATE_PATH, 'utf8')) as Record<string, unknown>;
@@ -26,11 +26,12 @@ const yn = (b: boolean): string => (b ? 'ok ' : 'NO ');
 console.log(
   `Promotion bar: >=${PROMOTION_BAR.minTrades} trades, PF>=${PROMOTION_BAR.minProfitFactor}, ` +
     `>=${PROMOTION_BAR.minPartsProfitable}/${PROMOTION_BAR.parts} parts profitable, ` +
-    `P(mean<=0)<=${PROMOTION_BAR.maxProbabilityMeanNotPositive}, maxDD<${PROMOTION_BAR.maxDrawdownPct}% (NET of fees)\n`,
+    `P(mean<=0)<=${PROMOTION_BAR.maxProbabilityMeanNotPositive}, maxDD<${PROMOTION_BAR.maxDrawdownPct}% (NET of fees); risk-* candidates: maxDD<${HIGH_RISK_MAX_DRAWDOWN_PCT}%\n`,
 );
 console.log('candidate'.padEnd(24), 'trades  PF    parts  P(<=0)  maxDD   net EUR   verdict');
 for (const { name, journal } of rows.sort((a, b) => b.journal.length - a.journal.length)) {
-  const v = assessPromotion(journal, INITIAL);
+  const highRisk = name.startsWith('risk-');
+  const v = assessPromotion(journal, INITIAL, highRisk ? HIGH_RISK_MAX_DRAWDOWN_PCT : undefined);
   const verdict = v.passes ? 'PASSES (still needs the random-entry control)' : v.testable ? 'fails' : `not testable yet (${v.trades}/${PROMOTION_BAR.minTrades})`;
   console.log(
     name.padEnd(24),
