@@ -2785,7 +2785,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792465241399,
+    "at": 1792465613137,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -68260,20 +68260,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788407658621,
-      "intentId": "live-entry:XBTEUR",
-      "event": "awaiting-confirmation",
-      "mode": "live",
-      "detail": "confirmation request sent to Telegram"
-    },
-    {
-      "timestamp": 1788407661856,
-      "intentId": "live-entry:XBTEUR",
-      "event": "confirmed",
-      "mode": "live",
-      "detail": "approved via Telegram"
-    },
-    {
       "timestamp": 1788407662077,
       "intentId": "live-entry:XBTEUR",
       "event": "rejected",
@@ -75258,6 +75244,20 @@
       "event": "advisory",
       "mode": "live",
       "detail": "could not cancel stale exit for BTC/EUR: cancel failed: HTTP 409"
+    },
+    {
+      "timestamp": 1792465640530,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792454452561",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "cancel failed: HTTP 409"
+    },
+    {
+      "timestamp": 1792465613137,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792454452561",
+      "event": "cancelled",
+      "mode": "live",
+      "detail": "stale resting exit for BTC/EUR cleared after 186 min (broker keeps answering 409 — treated as already final) — exit will be re-proposed at the current price"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -75270,10 +75270,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1789749431763,
-      "equity": 45.41
-    },
     {
       "at": 1789749771580,
       "equity": 45.41
@@ -95269,6 +95265,10 @@
     {
       "at": 1792465241399,
       "equity": 61.53
+    },
+    {
+      "at": 1792465613137,
+      "equity": 61.53
     }
   ],
   "live:revolut-x-order-map": {
@@ -95365,8 +95365,7 @@
         "warnings": [
           "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
         ]
-      },
-      "outstandingExitSubmittedAt": 1792454452561
+      }
     }
   },
   "telegram-unclaimed-messages": [
@@ -105542,8 +105541,8 @@
       "conflicts": 2
     },
     "external-reconcile:XBTEUR:1791659014817:exit:1792454452561": {
-      "lastAttemptAt": 1792461799508,
-      "conflicts": 1
+      "lastAttemptAt": 1792465613137,
+      "conflicts": 2
     }
   },
   "shadow:closed-bars:shadow-started-at": 1792444562905,
