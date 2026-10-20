@@ -2785,7 +2785,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792461435010,
+    "at": 1792461799508,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2801,10 +2801,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1789745654508,
-      "equity": 10347.3
-    },
     {
       "at": 1789745998956,
       "equity": 10347.3
@@ -22800,6 +22796,10 @@
     {
       "at": 1792461435010,
       "equity": 10309.36
+    },
+    {
+      "at": 1792461799508,
+      "equity": 10309.36
     }
   ],
   "trade-journal": [
@@ -25227,7 +25227,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -25.98% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -25.79% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25325,7 +25325,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792461435010,
+    "at": 1792461799508,
     "standings": [
       {
         "key": "live-mirror",
@@ -68260,20 +68260,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788404087893,
-      "intentId": "live-entry:XBTEUR",
-      "event": "confirmed",
-      "mode": "live",
-      "detail": "approved via Telegram"
-    },
-    {
-      "timestamp": 1788404088075,
-      "intentId": "live-entry:XBTEUR",
-      "event": "rejected",
-      "mode": "live",
-      "detail": "Revolut X rejected the order: HTTP 400"
-    },
-    {
       "timestamp": 1788407658621,
       "intentId": "live-entry:XBTEUR",
       "event": "awaiting-confirmation",
@@ -75258,6 +75244,20 @@
       "event": "submitted",
       "mode": "live",
       "detail": "Revolut X order 0609277d-31f5-e2d2-02c0-077d2bc2cccd: new"
+    },
+    {
+      "timestamp": 1792461820484,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792454452561",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "cancel failed: HTTP 409"
+    },
+    {
+      "timestamp": 1792461799508,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792454452561",
+      "event": "advisory",
+      "mode": "live",
+      "detail": "could not cancel stale exit for BTC/EUR: cancel failed: HTTP 409"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -75270,10 +75270,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1789745654508,
-      "equity": 45.41
-    },
     {
       "at": 1789745998956,
       "equity": 45.41
@@ -95269,6 +95265,10 @@
     {
       "at": 1792461435010,
       "equity": 61.53
+    },
+    {
+      "at": 1792461799508,
+      "equity": 61.53
     }
   ],
   "live:revolut-x-order-map": {
@@ -95854,13 +95854,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1792461435010,
+    "at": 1792461799508,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 7714.063051288999,
-        "returnPct": -22.85936948711001,
+        "equity": 7710.590462670102,
+        "returnPct": -22.894095373298978,
         "trades": 118,
         "winRatePct": 31.35593220338983,
         "profitFactor": 0.6974461520712337,
@@ -105502,7 +105502,8 @@
   ],
   "live:live-stale-cancel-advisory": {
     "external-reconcile:XBTEUR:1791659014817:exit:1792021080508": 1792405578808,
-    "external-reconcile:XBTEUR:1791659014817:exit:1792430475419": 1792438434715
+    "external-reconcile:XBTEUR:1791659014817:exit:1792430475419": 1792438434715,
+    "external-reconcile:XBTEUR:1791659014817:exit:1792454452561": 1792461799508
   },
   "f2-sentiment:state": {
     "startedAt": "2026-10-17",
@@ -105539,6 +105540,10 @@
     "external-reconcile:XBTEUR:1791659014817:exit:1792430475419": {
       "lastAttemptAt": 1792442191258,
       "conflicts": 2
+    },
+    "external-reconcile:XBTEUR:1791659014817:exit:1792454452561": {
+      "lastAttemptAt": 1792461799508,
+      "conflicts": 1
     }
   },
   "shadow:closed-bars:shadow-started-at": 1792444562905,
