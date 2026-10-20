@@ -2785,7 +2785,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792500282246,
+    "at": 1792500646533,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -75290,12 +75290,8 @@
     "engaged": false,
     "reason": null
   },
-  "live:live-external-btc-qty": 0,
+  "live:live-external-btc-qty": 0.00000372,
   "live:live-equity-history": [
-    {
-      "at": 1789875484312,
-      "equity": 54.81
-    },
     {
       "at": 1789875818598,
       "equity": 54.75
@@ -95291,6 +95287,10 @@
     {
       "at": 1792500282246,
       "equity": 61.26
+    },
+    {
+      "at": 1792500646533,
+      "equity": 61.53
     }
   ],
   "live:revolut-x-order-map": {
@@ -95328,7 +95328,68 @@
     "external-reconcile:XBTEUR:1791659014817:exit:1792430475419": "a3605c96-6641-e205-02c0-07e0635c9277",
     "external-reconcile:XBTEUR:1791659014817:exit:1792454452561": "0609277d-31f5-e2d2-02c0-077d2bc2cccd"
   },
-  "live:live-open-positions": {},
+  "live:live-open-positions": {
+    "external-reconcile:XBTEUR:1792500646533": {
+      "id": "external-reconcile:XBTEUR:1792500646533",
+      "symbol": "BTC/EUR",
+      "quantity": 0.00000372,
+      "initialQuantity": 0.00000372,
+      "entryPrice": 72590,
+      "stopLoss": 71501.15,
+      "takeProfit": 74767.7,
+      "highestPrice": 72590,
+      "lowestPrice": 72590,
+      "entrySlippage": 0,
+      "openedAt": 1792500646533,
+      "entryAssessment": {
+        "approved": true,
+        "asset": "XBTEUR",
+        "entry": 72590,
+        "stopLoss": 71501.15,
+        "takeProfit": 74767.7,
+        "positionSize": 0.00000372,
+        "positionValue": 0.2700348,
+        "riskAmount": 0.004050522000000022,
+        "riskPercentage": 0,
+        "rewardRiskRatio": 2,
+        "portfolioExposure": 0,
+        "reasons": [],
+        "warnings": [
+          "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
+        ]
+      }
+    },
+    "external-reconcile:ALGOEUR:1792500646533": {
+      "id": "external-reconcile:ALGOEUR:1792500646533",
+      "symbol": "ALGO/EUR",
+      "quantity": 0.000028,
+      "initialQuantity": 0.000028,
+      "entryPrice": 0.0983,
+      "stopLoss": 0.0968255,
+      "takeProfit": 0.101249,
+      "highestPrice": 0.0983,
+      "lowestPrice": 0.0983,
+      "entrySlippage": 0,
+      "openedAt": 1792500646533,
+      "entryAssessment": {
+        "approved": true,
+        "asset": "ALGOEUR",
+        "entry": 0.0983,
+        "stopLoss": 0.0968255,
+        "takeProfit": 0.101249,
+        "positionSize": 0.000028,
+        "positionValue": 0.0000027524,
+        "riskAmount": 4.12860000000001e-8,
+        "riskPercentage": 0,
+        "rewardRiskRatio": 2,
+        "portfolioExposure": 0,
+        "reasons": [],
+        "warnings": [
+          "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
+        ]
+      }
+    }
+  },
   "telegram-unclaimed-messages": [
     {
       "updateId": 447905035,
