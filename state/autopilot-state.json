@@ -2785,7 +2785,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792454088255,
+    "at": 1792454452561,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -68257,27 +68257,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788403328134,
-      "intentId": "verify-symbol-exists",
-      "event": "rejected",
-      "mode": "live",
-      "detail": "'BTC-EUR' not found among 0 tradable pairs from revolut-x; no pair with base 'BTC' listed at all"
-    },
-    {
-      "timestamp": 1788403328144,
-      "intentId": "live-entry:XBTEUR",
-      "event": "rejected",
-      "mode": "live",
-      "detail": "could not verify 'BTC-EUR' as a currently tradable instrument on revolut-x (either it doesn't exist there, or the check itself failed) — refusing rather than guessing a symbol mapping"
-    },
-    {
-      "timestamp": 1788404068563,
-      "intentId": "live-entry:XBTEUR",
-      "event": "awaiting-confirmation",
-      "mode": "live",
-      "detail": "confirmation request sent to Telegram"
-    },
-    {
       "timestamp": 1788404087893,
       "intentId": "live-entry:XBTEUR",
       "event": "confirmed",
@@ -75255,6 +75234,27 @@
       "event": "cancelled",
       "mode": "live",
       "detail": "stale resting exit for BTC/EUR cleared after 189 min (broker keeps answering 409 — treated as already final) — exit will be re-proposed at the current price"
+    },
+    {
+      "timestamp": 1792454474256,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792454452561",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1792454490732,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792454452561",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram (button)"
+    },
+    {
+      "timestamp": 1792454491576,
+      "intentId": "external-reconcile:XBTEUR:1791659014817:exit:1792454452561",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "Revolut X order 0609277d-31f5-e2d2-02c0-077d2bc2cccd: new"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -75267,10 +75267,6 @@
   },
   "live:live-external-btc-qty": 6.599999999999971e-7,
   "live:live-equity-history": [
-    {
-      "at": 1789738781259,
-      "equity": 45.41
-    },
     {
       "at": 1789739121540,
       "equity": 45.41
@@ -95266,6 +95262,10 @@
     {
       "at": 1792454088255,
       "equity": 61.54
+    },
+    {
+      "at": 1792454452561,
+      "equity": 61.54
     }
   ],
   "live:revolut-x-order-map": {
@@ -95300,7 +95300,8 @@
     "live-entry:ATOMEUR:1791212490247": "de093547-d768-e26d-02c0-07b979ceff82",
     "external-reconcile:XBTEUR:1791659014817:exit:1792021080508": "57c2af84-e143-e2ed-02c0-077910d786a6",
     "live-entry:LTCEUR:1790254633004:exit:1792274938261": "465fcd27-37ec-e271-02c0-07aecd1e972f",
-    "external-reconcile:XBTEUR:1791659014817:exit:1792430475419": "a3605c96-6641-e205-02c0-07e0635c9277"
+    "external-reconcile:XBTEUR:1791659014817:exit:1792430475419": "a3605c96-6641-e205-02c0-07e0635c9277",
+    "external-reconcile:XBTEUR:1791659014817:exit:1792454452561": "0609277d-31f5-e2d2-02c0-077d2bc2cccd"
   },
   "live:live-open-positions": {
     "external-reconcile:ALGOEUR:1790606205804": {
@@ -95391,7 +95392,8 @@
         "warnings": [
           "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
         ]
-      }
+      },
+      "outstandingExitSubmittedAt": 1792454452561
     }
   },
   "telegram-unclaimed-messages": [
@@ -95863,7 +95865,7 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447905093,
+  "telegram-shared-update-offset": 447905094,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
   "live:confirmation-gate-pending": {},
