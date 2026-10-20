@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PROMOTION_BAR, assessPromotion, maxDrawdownOfPnls, netPnl, probabilityMeanNotPositive, type PromotionTrade } from '../../src/core/autopilot/promotionBar';
+import { HIGH_RISK_MAX_DRAWDOWN_PCT, PROMOTION_BAR, assessPromotion, maxDrawdownOfPnls, netPnl, probabilityMeanNotPositive, type PromotionTrade } from '../../src/core/autopilot/promotionBar';
 
 function trade(i: number, pctMove: number, fees = 0): PromotionTrade {
   return { entryPrice: 100, exitPrice: 100 * (1 + pctMove / 100), positionSize: 10, fees, exitTimestamp: i };
@@ -60,5 +60,15 @@ describe('promotion bar (pre-registered)', () => {
   it('measures max drawdown on the closed-trade equity curve', () => {
     expect(maxDrawdownOfPnls([1000, -2000, 500], 10_000)).toBeCloseTo((2000 / 11_000) * 100, 8);
     expect(maxDrawdownOfPnls([100, 100], 10_000)).toBe(0);
+  });
+
+  it('high-risk tier widens only the drawdown ceiling', () => {
+    // Winners with one deep (~25%) dip: fails the standard 15% ceiling, passes the 35% high-risk one.
+    const t = [...series(60, [3, 3, -1]), { ...trade(60, -25), positionSize: 100 }, ...series(60, [3, 3, -1]).map((x) => ({ ...x, exitTimestamp: x.exitTimestamp + 100 }))];
+    const standard = assessPromotion(t, 10_000);
+    const high = assessPromotion(t, 10_000, HIGH_RISK_MAX_DRAWDOWN_PCT);
+    expect(standard.checks.drawdown).toBe(false);
+    expect(high.checks.drawdown).toBe(true);
+    expect(high.checks.profitFactor).toBe(standard.checks.profitFactor);
   });
 });

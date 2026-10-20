@@ -1,5 +1,19 @@
 # PROJECT_STATE
 
+## High-risk demo tier + stated goal (2026-10-20)
+
+David's goal: 30%+ per month (aspiration, up to 80-90%). Recorded as a GOAL only - it is not
+a promotion criterion and is never a reason to raise risk on the real account. Measured so far:
+net PF 1.09-1.14 and no candidate has an edge; a 30%/month target implies 50%+ drawdowns.
+
+Two shadow candidates (`risk-3x`, `risk-6x`) run the SAME entry signal as `live-mirror` with
+larger size caps (`ShadowCandidate.riskLimits`): 3%/trade, positions <=40%, <=4 open; and
+6%/trade, positions <=60%, <=3 open. Max total exposure stays <=100% (no leverage). They show what
+bigger bets do - more gain AND more loss, no new edge. Simulated money only; isolated
+`shadow:<key>:` namespaces. Judge in a few months: same promotion bar except max drawdown
+`HIGH_RISK_MAX_DRAWDOWN_PCT` = 35% (pre-registered; scorecard applies it to `risk-*`).
+Decision after review: keep as demo, upgrade the signal, or open a separate wallet.
+
 ## Promotion bar (pre-registered) + two new one-change shadows (2026-10-19)
 
 Goal: stop judging strategies by "looks good so far". `src/core/autopilot/promotionBar.ts`

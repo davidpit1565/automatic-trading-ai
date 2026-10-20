@@ -26,7 +26,7 @@ import { PortfolioEngine } from '../position/portfolioEngine';
 import { PositionEngine } from '../position/positionEngine';
 import { TradeJournal } from '../position/tradeJournal';
 import { tradeAnalytics } from '../position/analytics';
-import { DEFAULT_RISK_LIMITS } from '../risk/riskEngine';
+import { DEFAULT_RISK_LIMITS, type RiskLimits } from '../risk/riskEngine';
 import type { TrailingConfig } from '../risk/trailingStop';
 import type { ScanResult } from '../scan/marketScanner';
 import type { SignalDecision } from '../signal/signalEngine';
@@ -107,6 +107,12 @@ export interface ShadowCandidate {
    * exactly like `live-mirror`) when that's unavailable.
    */
   readonly correlationCap?: { readonly threshold: number; readonly maxExposurePct: number };
+  /**
+   * Overrides on `DEFAULT_RISK_LIMITS` for this candidate only (position size
+   * and exposure caps). Same entry signal, bigger bets: isolates what taking
+   * more risk does to the forward record. Omit for the production limits.
+   */
+  readonly riskLimits?: Partial<RiskLimits>;
 }
 
 export interface ShadowStanding {
@@ -280,13 +286,16 @@ async function runOne(
     ...(candidate.correlationCap && options.correlationBetween
       ? { correlationBetween: options.correlationBetween }
       : {}),
-    riskLimits: candidate.correlationCap
-      ? {
-          ...DEFAULT_RISK_LIMITS,
-          correlationThreshold: candidate.correlationCap.threshold,
-          maxCorrelatedExposurePct: candidate.correlationCap.maxExposurePct,
-        }
-      : DEFAULT_RISK_LIMITS,
+    riskLimits: {
+      ...DEFAULT_RISK_LIMITS,
+      ...(candidate.correlationCap
+        ? {
+            correlationThreshold: candidate.correlationCap.threshold,
+            maxCorrelatedExposurePct: candidate.correlationCap.maxExposurePct,
+          }
+        : {}),
+      ...candidate.riskLimits,
+    },
   });
 
   await pilot.runCycleOnce(options.now);
@@ -500,5 +509,44 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     confirmationTimeframe: '4h',
     useWhaleFlowCheck: true,
     useSentimentGate: true,
+  },
+  // 2026-10-20 (David: a separate HIGH-RISK demo, judged in a few months).
+  // Identical entry signal to 'live-mirror'; only the size caps change, so the
+  // record shows what bigger bets do — more gain AND more loss, no new edge.
+  // Judged on the promotion bar with a 35% drawdown ceiling
+  // (`HIGH_RISK_MAX_DRAWDOWN_PCT`, pre-registered). Simulated money only.
+  {
+    key: 'risk-3x',
+    label: 'HIGH RISK demo: live-mirror signal, 3% risk/trade, positions up to 40%, up to 4 open',
+    minConfidence: 40,
+    maxRsiForLong: 65,
+    trailing: AUTOPILOT_TRAILING,
+    confirmationTimeframe: '4h',
+    useWhaleFlowCheck: true,
+    riskLimits: {
+      maxRiskPerTradePct: 3,
+      maxPositionPct: 40,
+      maxExposurePerAssetPct: 40,
+      maxTotalExposurePct: 100,
+      maxOpenPositions: 4,
+      dailyLossLimitPct: 9,
+    },
+  },
+  {
+    key: 'risk-6x',
+    label: 'VERY HIGH RISK demo: live-mirror signal, 6% risk/trade, positions up to 60%, up to 3 open',
+    minConfidence: 40,
+    maxRsiForLong: 65,
+    trailing: AUTOPILOT_TRAILING,
+    confirmationTimeframe: '4h',
+    useWhaleFlowCheck: true,
+    riskLimits: {
+      maxRiskPerTradePct: 6,
+      maxPositionPct: 60,
+      maxExposurePerAssetPct: 60,
+      maxTotalExposurePct: 100,
+      maxOpenPositions: 3,
+      dailyLossLimitPct: 15,
+    },
   },
 ];

@@ -24,6 +24,13 @@ export const PROMOTION_BAR = {
   maxDrawdownPct: 15,
 } as const;
 
+/**
+ * High-risk demo tier (2026-10-20): same bar, but the drawdown ceiling is wider
+ * because bigger size makes bigger swings by construction. Fixed BEFORE any
+ * results exist; every other criterion is unchanged.
+ */
+export const HIGH_RISK_MAX_DRAWDOWN_PCT = 35;
+
 export interface PromotionTrade {
   readonly entryPrice: number;
   readonly exitPrice: number;
@@ -103,7 +110,11 @@ export interface PromotionVerdict {
   readonly passes: boolean;
 }
 
-export function assessPromotion(trades: readonly PromotionTrade[], initialEquity: number): PromotionVerdict {
+export function assessPromotion(
+  trades: readonly PromotionTrade[],
+  initialEquity: number,
+  maxDrawdownPct: number = PROMOTION_BAR.maxDrawdownPct,
+): PromotionVerdict {
   const ordered = [...trades].sort((a, b) => a.exitTimestamp - b.exitTimestamp);
   const pnls = ordered.map(netPnl);
   const returns = ordered.map((t) => (netPnl(t) / (t.entryPrice * t.positionSize)) * 100);
@@ -122,7 +133,7 @@ export function assessPromotion(trades: readonly PromotionTrade[], initialEquity
     profitFactor: pf !== null && pf >= PROMOTION_BAR.minProfitFactor,
     parts: partsProfitable >= PROMOTION_BAR.minPartsProfitable,
     significance: pMean <= PROMOTION_BAR.maxProbabilityMeanNotPositive,
-    drawdown: dd < PROMOTION_BAR.maxDrawdownPct,
+    drawdown: dd < maxDrawdownPct,
   };
   return {
     trades: ordered.length,
