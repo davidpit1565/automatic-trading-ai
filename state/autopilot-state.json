@@ -22,7 +22,7 @@
       "feesPaid": 6.185616758332692,
       "realizedPnl": -6.185616758332692,
       "highestPrice": 55.14,
-      "lowestPrice": 55.11,
+      "lowestPrice": 55.07,
       "confidence": 41.969092347783004,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -2889,7 +2889,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792604850919,
+    "at": 1792605234270,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -68866,73 +68866,12 @@
     }
   ],
   "live:telegram-unclaimed-callbacks": [],
-  "live:live-entry-pending": {
-    "LTCEUR": {
-      "opportunity": {
-        "symbol": "LTCEUR",
-        "timeframe": "1h",
-        "direction": "long",
-        "levels": {
-          "entry": 55.14,
-          "stopLoss": 54.242069279374455,
-          "takeProfit": 56.93586144125109,
-          "riskReward": 2
-        },
-        "confidence": 41.969092347783004,
-        "confidenceComponents": [
-          {
-            "label": "Scanner evidence",
-            "detail": "composite score 41 of 100",
-            "effect": 24.785763229155766
-          },
-          {
-            "label": "Trend strength",
-            "detail": "ADX 35.9",
-            "effect": 7.946818205741322
-          },
-          {
-            "label": "Volume participation",
-            "detail": "1.92× average volume",
-            "effect": 9.236510912885922
-          }
-        ],
-        "explanation": "LTCEUR on the 1h timeframe shows bullish technical evidence (score 41/100 over 150 candles), driven mainly by Trend (EMA 20/50 + ADX) (EMA20 54.71 vs EMA50 54.09, ADX 35.9), Volume (vs 20-bar average) (relative volume 1.92×), Stochastic %K 14 (%K 74.5). Suggested plan: enter near 55.14, stop loss at 54.24 (2× ATR below entry), take profit at 56.94 (4× ATR above), risk/reward 2.0. Confidence 42/90 reflects the strength of current evidence only — it is not a guarantee, and any position should be sized so its loss at the stop is acceptable.",
-        "warnings": [
-          "higher timeframe (4h) is neutral (score 18) — no confirmation from the larger trend"
-        ],
-        "basedOn": {
-          "score": 41.309605381926275,
-          "candleCount": 150
-        }
-      },
-      "queuedAt": 1792604466997,
-      "lastAssessment": {
-        "positionValue": 12.308002271672,
-        "riskAmount": 0.20043041982704554,
-        "riskPercentage": 0.32569122982428206,
-        "rewardRiskRatio": 2
-      }
-    }
-  },
+  "live:live-entry-pending": {},
   "live:manual-buy-pending-symbols": [
     "SYMBOL",
     "EURXBTEUR"
   ],
   "live:audit-log": [
-    {
-      "timestamp": 1788407976629,
-      "intentId": "live-entry:XBTEUR",
-      "event": "awaiting-confirmation",
-      "mode": "live",
-      "detail": "confirmation request sent to Telegram"
-    },
-    {
-      "timestamp": 1788407976863,
-      "intentId": "live-entry:XBTEUR",
-      "event": "confirmed",
-      "mode": "live",
-      "detail": "approved via Telegram"
-    },
     {
       "timestamp": 1788407977078,
       "intentId": "live-entry:XBTEUR",
@@ -75918,9 +75857,25 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1792605256510,
+      "intentId": "live-entry:LTCEUR:1792604466997",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram (text command)"
+    },
+    {
+      "timestamp": 1792605257666,
+      "intentId": "live-entry:LTCEUR:1792604466997",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "Revolut X order 41826ba2-66ca-e21e-02c0-07613e368238: new"
     }
   ],
-  "live:live-entry-outstanding-symbols": [],
+  "live:live-entry-outstanding-symbols": [
+    "LTCEUR"
+  ],
   "live:kill-switch-keyboard-sent": true,
   "education-tip-last-sent-at": 1792459244413,
   "education-tip-index": 24,
@@ -75930,10 +75885,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1789997192858,
-      "equity": 55.66
-    },
     {
       "at": 1789997530346,
       "equity": 55.61
@@ -95929,6 +95880,10 @@
     {
       "at": 1792604850919,
       "equity": 61.54
+    },
+    {
+      "at": 1792605234270,
+      "equity": 61.54
     }
   ],
   "live:revolut-x-order-map": {
@@ -95964,7 +95919,8 @@
     "external-reconcile:XBTEUR:1791659014817:exit:1792021080508": "57c2af84-e143-e2ed-02c0-077910d786a6",
     "live-entry:LTCEUR:1790254633004:exit:1792274938261": "465fcd27-37ec-e271-02c0-07aecd1e972f",
     "external-reconcile:XBTEUR:1791659014817:exit:1792430475419": "a3605c96-6641-e205-02c0-07e0635c9277",
-    "external-reconcile:XBTEUR:1791659014817:exit:1792454452561": "0609277d-31f5-e2d2-02c0-077d2bc2cccd"
+    "external-reconcile:XBTEUR:1791659014817:exit:1792454452561": "0609277d-31f5-e2d2-02c0-077d2bc2cccd",
+    "live-entry:LTCEUR:1792604466997": "41826ba2-66ca-e21e-02c0-07613e368238"
   },
   "live:live-open-positions": {
     "external-reconcile:XBTEUR:1792500646533": {
@@ -96497,17 +96453,10 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447905096,
+  "telegram-shared-update-offset": 447905098,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {
-    "live-entry:LTCEUR:1792604466997": {
-      "sentAt": 1792604489646,
-      "messageId": 1402,
-      "token": "mviefgku.1g99jkk",
-      "readyAt": 1792604489878
-    }
-  },
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 3058.7850927217805,
@@ -103258,226 +103207,6 @@
   "state-merge-collisions": [
     {
       "key": "shadow:funding-crowding:open-positions",
-      "at": 1792595084044,
-      "label": "cycle 50/52"
-    },
-    {
-      "key": "shadow:funding-crowding:portfolio-engine",
-      "at": 1792595084044,
-      "label": "cycle 50/52"
-    },
-    {
-      "key": "shadow:f2-gated:open-positions",
-      "at": 1792595084044,
-      "label": "cycle 50/52"
-    },
-    {
-      "key": "shadow:f2-gated:portfolio-engine",
-      "at": 1792595084044,
-      "label": "cycle 50/52"
-    },
-    {
-      "key": "shadow:risk-3x:open-positions",
-      "at": 1792595084044,
-      "label": "cycle 50/52"
-    },
-    {
-      "key": "shadow:risk-3x:portfolio-engine",
-      "at": 1792595084044,
-      "label": "cycle 50/52"
-    },
-    {
-      "key": "shadow:risk-6x:open-positions",
-      "at": 1792595084044,
-      "label": "cycle 50/52"
-    },
-    {
-      "key": "shadow:risk-6x:portfolio-engine",
-      "at": 1792595084044,
-      "label": "cycle 50/52"
-    },
-    {
-      "key": "shadow:candidate-watch:audit-log",
-      "at": 1792595084044,
-      "label": "cycle 50/52"
-    },
-    {
-      "key": "shadow:breakout:audit-log",
-      "at": 1792595084044,
-      "label": "cycle 50/52"
-    },
-    {
-      "key": "live:live-open-positions",
-      "at": 1792595084044,
-      "label": "cycle 50/52"
-    },
-    {
-      "key": "daily-summary",
-      "at": 1792595084044,
-      "label": "cycle 50/52"
-    },
-    {
-      "key": "autopilot-last-run",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "live:live-equity-history",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:breakout:open-positions",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow-standings",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:candidate-watch:open-positions",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "candidate-watch-standings",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "equity-history",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "real-money-readiness",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:live-mirror:audit-log",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:no-confirm:open-positions",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:no-confirm:portfolio-engine",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:no-confirm:audit-log",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:trailing-forward-test:audit-log",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:top-trader:audit-log",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:ai-judgment:audit-log",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:correlation-capped:audit-log",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:funding-crowding:audit-log",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:f2-gated:audit-log",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:risk-3x:audit-log",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:risk-6x:audit-log",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "audit-log",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:closed-bars:open-positions",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:closed-bars:portfolio-engine",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:closed-bars:audit-log",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:live-mirror:open-positions",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:live-mirror:portfolio-engine",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:trailing-forward-test:open-positions",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:trailing-forward-test:portfolio-engine",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:ai-judgment:open-positions",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:ai-judgment:portfolio-engine",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:correlation-capped:open-positions",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:correlation-capped:portfolio-engine",
-      "at": 1792595454922,
-      "label": "cycle 51/52"
-    },
-    {
-      "key": "shadow:funding-crowding:open-positions",
       "at": 1792595454922,
       "label": "cycle 51/52"
     },
@@ -103755,6 +103484,226 @@
       "key": "daily-summary",
       "at": 1792595847662,
       "label": "cycle 52/52"
+    },
+    {
+      "key": "autopilot-last-run",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "live:live-equity-history",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "live:live-entry-pending",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:breakout:audit-log",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow-standings",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "candidate-watch-standings",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "equity-history",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "real-money-readiness",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:candidate-watch:open-positions",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:candidate-watch:audit-log",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:live-mirror:open-positions",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:no-confirm:open-positions",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:trailing-forward-test:open-positions",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:breakout:open-positions",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:ai-judgment:open-positions",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:correlation-capped:open-positions",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:funding-crowding:open-positions",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:closed-bars:open-positions",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:f2-gated:open-positions",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:risk-3x:open-positions",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:risk-6x:open-positions",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "live:live-open-positions",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "open-positions",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "portfolio-engine",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "audit-log",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "move-alert-buckets",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "live:audit-log",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "live:confirmation-gate-pending",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:live-mirror:portfolio-engine",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:live-mirror:audit-log",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:trailing-forward-test:portfolio-engine",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:trailing-forward-test:audit-log",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:top-trader:audit-log",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:ai-judgment:portfolio-engine",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:ai-judgment:audit-log",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:correlation-capped:portfolio-engine",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:correlation-capped:audit-log",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:funding-crowding:portfolio-engine",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:funding-crowding:audit-log",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:f2-gated:portfolio-engine",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:f2-gated:audit-log",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:risk-3x:portfolio-engine",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:risk-3x:audit-log",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
+    },
+    {
+      "key": "shadow:risk-6x:audit-log",
+      "at": 1792605261845,
+      "label": "live-mirror: after auto-approved entries"
     }
   ],
   "shadow:correlation-capped:open-positions": [
@@ -105484,7 +105433,38 @@
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
-  "live:live-resting-entry-intents": {},
+  "live:live-resting-entry-intents": {
+    "LTCEUR": {
+      "id": "live-entry:LTCEUR:1792604466997",
+      "createdAt": 1792605234270,
+      "mode": "live",
+      "symbol": "LTC/EUR",
+      "side": "buy",
+      "quantity": 0.22321410825418936,
+      "limitPrice": 55.14,
+      "stopLoss": 54.242069279374455,
+      "takeProfit": 56.93586144125109,
+      "assessment": {
+        "approved": true,
+        "asset": "LTCEUR",
+        "entry": 55.14,
+        "stopLoss": 54.242069279374455,
+        "takeProfit": 56.93586144125109,
+        "positionSize": 0.22321410825418936,
+        "positionValue": 12.308025929136,
+        "riskAmount": 0.2004308050784728,
+        "riskPercentage": 0.3256912298242821,
+        "rewardRiskRatio": 2,
+        "portfolioExposure": 20,
+        "reasons": [
+          "risking 0.20 (0.33% of equity) for a 2.0:1 reward/risk — within every configured limit"
+        ],
+        "warnings": [
+          "size capped by the 20% single-position limit"
+        ]
+      }
+    }
+  },
   "shadow:high-conviction:open-positions": [],
   "shadow:high-conviction:audit-log": [
     {
