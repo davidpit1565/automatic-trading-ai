@@ -2813,7 +2813,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792580275341,
+    "at": 1792580643318,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2829,10 +2829,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1789967396497,
-      "equity": 10364.8
-    },
     {
       "at": 1789967729727,
       "equity": 10367.34
@@ -22828,6 +22824,10 @@
     {
       "at": 1792580275341,
       "equity": 10309.36
+    },
+    {
+      "at": 1792580643318,
+      "equity": 10309.36
     }
   ],
   "trade-journal": [
@@ -25255,7 +25255,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -28.39% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -28.61% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25353,7 +25353,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792580275341,
+    "at": 1792580643318,
     "standings": [
       {
         "key": "live-mirror",
@@ -25369,8 +25369,8 @@
       {
         "key": "no-confirm",
         "label": "No higher-timeframe gate (isolates what the 4h gate contributes)",
-        "equity": 10973.391190685907,
-        "returnPct": 9.733911906859067,
+        "equity": 10977.795352512881,
+        "returnPct": 9.777953525128815,
         "trades": 79,
         "winRatePct": 51.89873417721519,
         "profitFactor": 1.4998215616169948,
@@ -25413,8 +25413,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 8663.195902823314,
-        "returnPct": -13.36804097176686,
+        "equity": 8672.251023841396,
+        "returnPct": -13.27748976158604,
         "trades": 361,
         "winRatePct": 39.335180055401665,
         "profitFactor": 1.0262033113713904,
@@ -25468,12 +25468,12 @@
       {
         "key": "closed-bars",
         "label": "Mirror of production, entries decided on CLOSED bars only (tests the forming-candle repaint)",
-        "equity": 10000,
-        "returnPct": 0,
+        "equity": 9998.732435384056,
+        "returnPct": -0.012675646159441384,
         "trades": 0,
         "winRatePct": null,
         "profitFactor": null,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1792444562905
       },
       {
@@ -49608,7 +49608,7 @@
       "takeProfit": 56.64053804675849,
       "feesPaid": 6.584622309674933,
       "realizedPnl": -6.584622309674933,
-      "highestPrice": 54.96,
+      "highestPrice": 55.07,
       "lowestPrice": 54.69,
       "confidence": 41.58881723143687,
       "validationVerdict": null,
@@ -75620,10 +75620,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1789967396497,
-      "equity": 55.2
-    },
-    {
       "at": 1789967729727,
       "equity": 55.21
     },
@@ -95618,6 +95614,10 @@
     {
       "at": 1792580275341,
       "equity": 61.54
+    },
+    {
+      "at": 1792580643318,
+      "equity": 61.54
     }
   ],
   "live:revolut-x-order-map": {
@@ -96202,13 +96202,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1792580275341,
+    "at": 1792580643318,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 7655.491716408103,
-        "returnPct": -23.445082835918974,
+        "equity": 7654.336320000648,
+        "returnPct": -23.45663679999352,
         "trades": 121,
         "winRatePct": 31.40495867768595,
         "profitFactor": 0.6977219875091122,
@@ -106335,7 +106335,7 @@
   },
   "shadow:closed-bars:shadow-started-at": 1792444562905,
   "shadow:closed-bars:portfolio-engine": {
-    "cash": 10000,
+    "cash": 7994,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": 0,
@@ -106507,6 +106507,36 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "whale flow filter refused LTCEUR: large trades show heavy net selling"
+    }
+  ],
+  "shadow:closed-bars:open-positions": [
+    {
+      "id": "LTCEUR:1792580643318:0",
+      "symbol": "LTCEUR",
+      "openedAt": 1792580643318,
+      "entryPrice": 54.94,
+      "quantity": 36.40334910811795,
+      "initialQuantity": 36.40334910811795,
+      "stopLoss": 54.008304895399064,
+      "takeProfit": 56.803390209201865,
+      "feesPaid": 6.000000000000001,
+      "realizedPnl": -6.000000000000001,
+      "highestPrice": 54.94,
+      "lowestPrice": 54.94,
+      "confidence": 43.88987999740294,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
+  "shadow:closed-bars:audit-log": [
+    {
+      "timestamp": 1792580643318,
+      "intentId": "LTCEUR:1792580643318:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry LTCEUR: 36.40334910811795 @ 54.94 (stop 54.008304895399064, target 56.803390209201865, confidence 44)"
     }
   ]
 }
