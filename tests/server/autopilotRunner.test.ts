@@ -546,10 +546,9 @@ describe('runLiveMirror (real-money wiring stays off until deliberately turned o
     delete process.env['LIVE_STARTING_CASH_EUR'];
   });
 
-  // David asked for this 2026-09-03: an always-visible kill-switch button
-  // instead of remembering to type /pause — sent once, tracked, never
-  // resent every cycle (a persistent reply keyboard stays pinned regardless).
-  it('sends the persistent kill-switch keyboard exactly once, the first time real money is enabled', async () => {
+  // David (2026-10-21) asked to drop the persistent /pause /resume buttons: a
+  // one-time remove_keyboard message, tracked, never resent and never re-adding them.
+  it('sends the keyboard-removal message exactly once and never sends a reply keyboard', async () => {
     process.env['REAL_MONEY_ENABLED'] = 'true';
     process.env['REVOLUT_X_API_KEY'] = 'key';
     process.env['REVOLUT_X_PRIVATE_KEY_PEM'] = 'pem';
@@ -559,17 +558,16 @@ describe('runLiveMirror (real-money wiring stays off until deliberately turned o
       return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
     }) as unknown as typeof fetch;
     const trackingTelegram = { token: 'T', chatId: 'C', fetchFn: trackingFetch };
+    const removals = () =>
+      sendMessageCalls.filter((c) => (c as { reply_markup?: { remove_keyboard?: boolean } }).reply_markup?.remove_keyboard);
 
     await runLiveMirror(store, fakeSource(), [btcInstrument], trackingTelegram, [], {}, 1000);
-    expect(store.get('live:kill-switch-keyboard-sent')).toBe(true);
-    const keyboardSends = sendMessageCalls.filter((c) => (c as { reply_markup?: { keyboard?: unknown } }).reply_markup?.keyboard);
-    expect(keyboardSends).toHaveLength(1);
+    expect(store.get('live:kill-switch-keyboard-removed')).toBe(true);
+    expect(removals()).toHaveLength(1);
 
     await runLiveMirror(store, fakeSource(), [btcInstrument], trackingTelegram, [], {}, 2000);
-    const keyboardSendsAfterSecondCycle = sendMessageCalls.filter(
-      (c) => (c as { reply_markup?: { keyboard?: unknown } }).reply_markup?.keyboard,
-    );
-    expect(keyboardSendsAfterSecondCycle).toHaveLength(1); // still just the one
+    expect(removals()).toHaveLength(1); // still just the one
+    expect(sendMessageCalls.some((c) => (c as { reply_markup?: { keyboard?: unknown } }).reply_markup?.keyboard)).toBe(false);
   });
 
   // Regression, 2026-09-04 (full-system safety re-audit): `/pause`/`/resume`
