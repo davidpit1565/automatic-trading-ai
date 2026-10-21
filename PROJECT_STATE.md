@@ -1,5 +1,20 @@
 # PROJECT_STATE
 
+## /retry for a missed entry + auto-resend of the command list (2026-10-21)
+
+Incident: David answered a SOLEUR confirmation after its 20-min expiry; the entry was lost
+(correct: stale taps must not trade) but he had no way to ask for a re-check.
+- `/retry` (or `/שוב`, `server/retryEntryCommand.mts`): re-validates the LAST declined/expired signal
+  entry (`live-entry-last-declined`, recorded in `mirrorApprovedEntries` on a `rejected` outcome;
+  manual /buy, confidence 0, is not recorded) against the current price using the ORIGINAL stop/target.
+  Refuses if stopped out, at target, >1% above the signal price (chasing), past halfway to the stop,
+  or older than 24h. If sound: fresh opportunity -> `mirrorApprovedEntries` (live sizing, caps, symbol
+  check, kill switch) -> a NEW Telegram confirmation that again needs an explicit tap. `/retry` itself
+  never approves or orders anything. Single use per declined entry; replies in Hebrew either way.
+- `maybeSendHelpOnChange`: the command list (HELP_MESSAGE) is sent automatically once whenever its text
+  changes (hash in `help-message-version`), so the owner can re-pin it.
+- Not re-run: the entry signal itself (only price levels are re-validated).
+
 ## High-risk demo tier + stated goal (2026-10-20)
 
 David's goal: 30%+ per month (aspiration, up to 80-90%). Recorded as a GOAL only - it is not
