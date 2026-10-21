@@ -12,6 +12,7 @@
  */
 
 import { execSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -73,6 +74,7 @@ import { FileStore } from './fileStore.mts';
 import { checkManualKillSwitchCommands, type ManualKillSwitchOutcome } from './manualKillSwitchCommand.mts';
 import { checkManualSellRequests } from './manualSellCommand.mts';
 import { checkManualBuyRequests } from './manualBuyCommand.mts';
+import { checkRetryRequests } from './retryEntryCommand.mts';
 import { checkTipRequests } from './manualTipCommand.mts';
 import { checkDiscoverRequests } from './manualDiscoverCommand.mts';
 import { expireStaleEntryOrders, mirrorApprovedEntries, type LiveEntryOutcome } from './liveEntryMirror.mts';
@@ -888,6 +890,7 @@ async function runCycle(
 ): Promise<boolean> {
   const now = Date.now();
   await checkHelpRequests(store, telegram);
+  await maybeSendHelpOnChange(store, telegram);
   await checkTipRequests(store, telegram, autopilot, now);
   await checkStatusRequests(store, source, portfolio, journal, telegram, now);
   await checkDiscoverRequests(store, telegram, source);
@@ -1313,6 +1316,21 @@ export async function runLiveMirror(
     );
     await notifyLiveEntryOutcomes(telegram, manualBuyOutcomes);
     if (hasSubmittedOrder(manualBuyOutcomes)) persistStateToGit(store, 'live-mirror: after manual buy');
+    // `/retry`: re-check the last declined/expired entry; a still-valid one gets a NEW confirmation tap.
+    const retryOutcomes = await checkRetryRequests(
+      liveStore,
+      telegram,
+      source,
+      ENTRY_TF,
+      instruments,
+      prices,
+      flowParams,
+      now,
+      liveEntryOptions,
+      store,
+    );
+    await notifyLiveEntryOutcomes(telegram, retryOutcomes);
+    if (hasSubmittedOrder(retryOutcomes)) persistStateToGit(store, 'live-mirror: after retried entry');
     const newlyApproved = cycleOpened
       .map((o) => o.opportunity)
       .filter((o): o is NonNullable<typeof o> => o !== undefined);
@@ -2086,10 +2104,31 @@ export const HELP_MESSAGE = [
   '/discover — סקר שוק על-פי דרישה: בודק מטבעות שעדיין לא ברשימת המסחר על נתונים אמיתיים ומדווח אם משהו שווה הוספה. לא מוסיף כלום אוטומטית.',
   '/buy SYMBOL — פתיחת פוזיציה אמיתית ידנית (למשל /buy XBTEUR). עובר את אותה שרשרת בטיחות (אישור בטלגרם, מתג חירום).',
   '/sell SYMBOL — סגירת פוזיציה אמיתית פתוחה ידנית (למשל /sell XBTEUR).',
+  '/retry — בודק מחדש את העסקה האחרונה שדחית או שפג תוקפה. אם היא עדיין שווה (המחיר לא ברח ולא פגע בסטופ), נשלחת בקשת אישור חדשה — עדיין צריך ללחוץ ✅. (אפשר גם /שוב)',
   '/pause — עצירת חירום מיידית: אין הזמנות אמיתיות חדשות עד /resume.',
   '/resume — ביטול /pause, חזרה לפעילות רגילה.',
   '/help — ההודעה הזו.',
 ].join('\n');
+
+const HELP_VERSION_KEY = 'help-message-version';
+
+/**
+ * Sends the command list once whenever its text changes (and once the first
+ * time), so the owner always has the current list to re-pin without asking.
+ * The version is only recorded after a successful send, so a failure retries.
+ */
+export async function maybeSendHelpOnChange(
+  store: KeyValueStore,
+  telegram: { token: string; chatId: string },
+): Promise<boolean> {
+  if (!telegram.token || !telegram.chatId) return false;
+  const version = createHash('sha256').update(HELP_MESSAGE).digest('hex').slice(0, 16);
+  if (store.get<string>(HELP_VERSION_KEY) === version) return false;
+  const result = await sendTelegramMessage(`🆕 עודכנה רשימת הפקודות — כדאי להצמיד מחדש:\n\n${HELP_MESSAGE}`, telegram);
+  if (!result.sent) return false;
+  store.set(HELP_VERSION_KEY, version);
+  return true;
+}
 
 /**
  * `/help` — a pinnable list of every command (David asked 2026-09-03).

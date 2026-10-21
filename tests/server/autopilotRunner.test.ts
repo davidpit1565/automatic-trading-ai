@@ -21,6 +21,7 @@ import {
   breakerEngaged,
   buildLiveEntryResultMessage,
   checkHelpRequests,
+  maybeSendHelpOnChange,
   checkStatusRequests,
   localDayAndHour,
   maybeSendMoveAlerts,
@@ -1027,6 +1028,30 @@ describe('checkHelpRequests (David asked 2026-09-03 for a pinnable command list)
 
     expect(answered).toBe(false);
     expect(store.get<unknown[]>('telegram-unclaimed-messages')).toHaveLength(1);
+  });
+});
+
+describe('maybeSendHelpOnChange', () => {
+  const capture = (sent: string[]) => ({
+    token: 'T',
+    chatId: 'C',
+    fetchFn: (async (_u: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.body) sent.push(JSON.parse(init.body as string).text);
+      return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 });
+    }) as unknown as typeof fetch,
+  });
+  it('sends the current list once, includes /retry, then stays quiet until the text changes', async () => {
+    const sent: string[] = [];
+    expect(await maybeSendHelpOnChange(store, capture(sent))).toBe(true);
+    expect(sent[0]).toContain('/retry');
+    expect(await maybeSendHelpOnChange(store, capture(sent))).toBe(false);
+    expect(sent).toHaveLength(1);
+  });
+  it('does not record the version when the send fails, so it retries', async () => {
+    const failing = { token: 'T', chatId: 'C', fetchFn: (async () => new Response('{"ok":false}', { status: 500 })) as unknown as typeof fetch };
+    expect(await maybeSendHelpOnChange(store, failing)).toBe(false);
+    const sent: string[] = [];
+    expect(await maybeSendHelpOnChange(store, capture(sent))).toBe(true);
   });
 });
 

@@ -42,6 +42,21 @@ import { toRevolutXSymbol } from './revolutXBrokerAdapter.mts';
 const PENDING_KEY = 'live-entry-pending';
 const OUTSTANDING_KEY = 'live-entry-outstanding-symbols';
 const RESTING_ENTRY_KEY = 'live-resting-entry-intents';
+const LAST_DECLINED_KEY = 'live-entry-last-declined';
+
+/** The most recent signal entry a human declined or let expire — what `/retry` re-checks. */
+export interface DeclinedEntry {
+  readonly opportunity: TradeOpportunity;
+  readonly declinedAt: number;
+}
+
+export function readLastDeclinedEntry(store: KeyValueStore): DeclinedEntry | null {
+  return store.get<DeclinedEntry>(LAST_DECLINED_KEY) ?? null;
+}
+
+export function clearLastDeclinedEntry(store: KeyValueStore): void {
+  store.remove(LAST_DECLINED_KEY);
+}
 
 function readRestingEntryIntents(store: KeyValueStore): Record<string, OrderIntent> {
   return store.get<Record<string, OrderIntent>>(RESTING_ENTRY_KEY) ?? {};
@@ -456,6 +471,11 @@ export async function mirrorApprovedEntries(
       );
       const result = await runLiveOrderFlow({ ...flowParams, intent });
       outcomes.push({ symbol, ...result });
+      // Remember a declined/expired SIGNAL entry (a manual /buy has confidence 0
+      // and is not worth re-checking) so `/retry` can re-validate it later.
+      if (result.outcome === 'rejected' && opportunity.confidence > 0) {
+        store.set(LAST_DECLINED_KEY, { opportunity, declinedAt: now } satisfies DeclinedEntry);
+      }
       if (result.outcome !== 'pending') delete pending[symbol];
       // Only a report that represents REAL, still-live exposure (a genuine
       // fill, partial or full, or a resting order still open at the broker)
