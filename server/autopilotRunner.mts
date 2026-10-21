@@ -99,14 +99,14 @@ import {
   buildCycleMessage,
   buildDailySummary,
   buildDrawdownHaltAlert,
-  buildKillSwitchKeyboardIntro,
   buildMoveAlert,
   buildPeriodReport,
   buildRiskHaltAlert,
   buildSafetyAlert,
   buildTestMessage,
   getSummaryTimezone,
-  killSwitchKeyboard,
+  KEYBOARD_REMOVED_NOTICE,
+  removeKeyboardMarkup,
   maybeSendEducationTip,
   pollAllTelegramUpdates,
   sendTelegramMessage,
@@ -1089,7 +1089,7 @@ async function notifyLiveEntryOutcomes(
 /**
  * Found in a full-system safety re-audit, 2026-09-04: `/pause` and `/resume`
  * (both the typed command and the persistent keyboard button, which sends
- * the same text — `killSwitchKeyboard()`) DID engage/disengage the kill
+ * the same text; that button has since been removed) DID engage/disengage the kill
  * switch correctly and DID audit it, but `runLiveMirror` discarded
  * `checkManualKillSwitchCommands`'s return value, so a human tapping the
  * one-and-only emergency stop got zero Telegram confirmation it actually
@@ -1134,13 +1134,12 @@ export async function runLiveMirror(
 
   const liveStore = new PrefixedStore(store, 'live');
   initLiveCash(liveStore, liveStartingCashEur());
-  // Send the always-visible kill-switch keyboard once (David asked for
-  // this 2026-09-03) — a persistent reply keyboard stays pinned at the
-  // bottom of the chat regardless of later inline-keyboard messages, so
-  // one send is enough; tracked so it's never re-sent every cycle.
-  if (!liveStore.get<boolean>('kill-switch-keyboard-sent')) {
-    const result = await sendTelegramMessage(buildKillSwitchKeyboardIntro(), telegram, killSwitchKeyboard());
-    if (result.sent) liveStore.set('kill-switch-keyboard-sent', true);
+  // David (2026-10-21) asked to drop the persistent /pause /resume buttons he
+  // got in 2026-09. A reply keyboard persists on his device until a message
+  // removes it, so send the removal once, tracked so it is never re-sent.
+  if (!liveStore.get<boolean>('kill-switch-keyboard-removed')) {
+    const result = await sendTelegramMessage(KEYBOARD_REMOVED_NOTICE, telegram, removeKeyboardMarkup());
+    if (result.sent) liveStore.set('kill-switch-keyboard-removed', true);
   }
   const killSwitch = new PersistedKillSwitch(liveStore);
   const audit = new PersistedAuditLog(liveStore);

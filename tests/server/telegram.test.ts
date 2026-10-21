@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { answerCallbackQuery, buildAllClearMessage, buildCycleMessage, buildDailySummary, buildKillSwitchKeyboardIntro, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, EDUCATION_TIPS, editTelegramMessage, killSwitchKeyboard, maybeSendEducationTip, pollAllTelegramUpdates, readinessLineHe, sendTelegramMessage, SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
+import { answerCallbackQuery, buildAllClearMessage, buildCycleMessage, buildDailySummary, buildMoveAlert, buildPeriodReport, buildRiskHaltAlert, buildSafetyAlert, buildStockCycleMessage, buildTestMessage, EDUCATION_TIPS, editTelegramMessage, KEYBOARD_REMOVED_NOTICE, removeKeyboardMarkup, maybeSendEducationTip, pollAllTelegramUpdates, readinessLineHe, sendTelegramMessage, SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED, stashUnclaimedTelegramUpdates } from '../../server/telegram.mts';
 import { assessRealMoneyReadiness, READINESS_THRESHOLDS } from '../../src/core/feedback/realMoneyReadiness';
 import { MemoryStore } from '../../src/core/data/storage';
 
@@ -645,29 +645,18 @@ describe('sendTelegramMessage with an inline keyboard (confirmation-gate buttons
   });
 });
 
-// David asked for this 2026-09-03: a persistent kill-switch button instead
-// of remembering to type /pause. Its buttons are literally the text
-// '/pause'/'/resume' — tapping a reply-keyboard button just sends that text
-// as an ordinary message, so no new command-parsing is needed at all.
-describe('killSwitchKeyboard / buildKillSwitchKeyboardIntro', () => {
-  it('sends a persistent reply keyboard whose buttons are the existing /pause and /resume commands', async () => {
+// David (2026-10-21) asked to remove the persistent /pause /resume buttons.
+describe('removeKeyboardMarkup / KEYBOARD_REMOVED_NOTICE', () => {
+  it('sends a remove_keyboard markup, and the notice says the typed commands still work', async () => {
     let sentReplyMarkup: unknown = null;
     const fakeFetch = (async (_url: string, init: { body: string }) => {
       sentReplyMarkup = (JSON.parse(init.body) as { reply_markup?: unknown }).reply_markup;
       return new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 });
     }) as unknown as typeof fetch;
-    await sendTelegramMessage(buildKillSwitchKeyboardIntro(), { token: 'T', chatId: 'C', fetchFn: fakeFetch }, killSwitchKeyboard());
-    expect(sentReplyMarkup).toEqual({
-      keyboard: [[{ text: '/pause' }], [{ text: '/resume' }]],
-      resize_keyboard: true,
-      is_persistent: true,
-    });
-  });
-
-  it('the intro message explains what the two buttons do', () => {
-    const text = buildKillSwitchKeyboardIntro();
-    expect(text).toContain('/pause');
-    expect(text).toContain('/resume');
+    await sendTelegramMessage(KEYBOARD_REMOVED_NOTICE, { token: 'T', chatId: 'C', fetchFn: fakeFetch }, removeKeyboardMarkup());
+    expect(sentReplyMarkup).toEqual({ remove_keyboard: true });
+    expect(KEYBOARD_REMOVED_NOTICE).toContain('/pause');
+    expect(KEYBOARD_REMOVED_NOTICE).toContain('/resume');
   });
 });
 

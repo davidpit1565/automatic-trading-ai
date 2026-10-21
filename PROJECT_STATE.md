@@ -1,5 +1,12 @@
 # PROJECT_STATE
 
+## Persistent /pause /resume keyboard removed (2026-10-21)
+
+David asked to drop the always-visible /pause /resume buttons (2026-09-03 feature). `runLiveMirror` now
+sends ONE `remove_keyboard` message (`live:kill-switch-keyboard-removed`) and never sends a reply keyboard;
+`killSwitchKeyboard`/`buildKillSwitchKeyboardIntro` are gone. `/pause` and `/resume` still work typed.
+Approve/reject typed words are unchanged (`/אשר אשר /approve approve`, `/דחה דחה /דחייה דחייה /reject reject /deny deny`).
+
 ## /retry for a missed entry + auto-resend of the command list (2026-10-21)
 
 Incident: David answered a SOLEUR confirmation after its 20-min expiry; the entry was lost

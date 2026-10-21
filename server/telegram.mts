@@ -406,19 +406,15 @@ export function buildTestMessage(): string {
   return '✅ הסוכן מחובר! מעכשיו תקבל כאן התראה על כל קנייה/מכירה. כסף מדומה בלבד.';
 }
 
-/** The always-visible kill-switch keyboard (David asked for this 2026-09-03:
- * a permanent button instead of remembering to type /pause). Once sent, it
- * stays pinned at the bottom of the chat regardless of later messages'
- * inline keyboards — a persistent reply keyboard and a message's inline
- * keyboard are separate Telegram UI layers. Sent once (tracked by the
- * caller), not on every message. */
-export function killSwitchKeyboard(): TelegramReplyMarkup {
-  return {
-    keyboard: [[{ text: '/pause' }], [{ text: '/resume' }]],
-    resize_keyboard: true,
-    is_persistent: true,
-  };
+/** Telegram markup that removes a previously sent persistent reply keyboard.
+ * David asked 2026-10-21 to drop the always-visible /pause /resume buttons;
+ * the commands themselves still work when typed. */
+export function removeKeyboardMarkup(): TelegramReplyMarkup {
+  return { remove_keyboard: true };
 }
+
+export const KEYBOARD_REMOVED_NOTICE =
+  'הסרתי את כפתורי /pause ו-/resume הקבועים. שתי הפקודות ממשיכות לעבוד כשכותבים אותן ידנית.';
 
 /** Short, beginner-level trading tips (David asked 2026-09-03 to be taught
  * gradually, "one or two tips every day or two" — he has near-zero trading
@@ -469,14 +465,6 @@ export async function maybeSendEducationTip(
   store.set(EDUCATION_TIP_LAST_SENT_KEY, now);
   store.set(EDUCATION_TIP_INDEX_KEY, index + 1);
   return true;
-}
-
-export function buildKillSwitchKeyboardIntro(): string {
-  return (
-    '🔒 כפתור עצירת החירום זמין עכשיו תמיד למטה.\n\n' +
-    '/pause — עוצר את כל המסחר בכסף אמיתי מיידית.\n' +
-    '/resume — ממשיך אחרי עצירה.'
-  );
 }
 
 /** Alert sent once when a safety limit pauses new buying for the day. */
@@ -667,6 +655,7 @@ export interface ReplyKeyboardButton {
 }
 
 export type TelegramReplyMarkup =
+  | { readonly remove_keyboard: true }
   | { readonly inline_keyboard: readonly (readonly InlineKeyboardButton[])[] }
   | {
       readonly keyboard: readonly (readonly ReplyKeyboardButton[])[];
