@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792653117939,
+    "at": 1792653501435,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1790055967897,
-      "equity": 10575.57
-    },
     {
       "at": 1790056328771,
       "equity": 10578.83
@@ -22905,6 +22901,10 @@
     {
       "at": 1792653117939,
       "equity": 10208.56
+    },
+    {
+      "at": 1792653501435,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25476,7 +25476,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792653117939,
+    "at": 1792653501435,
     "standings": [
       {
         "key": "live-mirror",
@@ -25525,8 +25525,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8525.35442532108,
-        "returnPct": -14.746455746789197,
+        "equity": 8530.850151935723,
+        "returnPct": -14.691498480642768,
         "trades": 177,
         "winRatePct": 40.11299435028249,
         "profitFactor": 0.7912120112469896,
@@ -41084,7 +41084,7 @@
       "takeProfit": 95.4365639194076,
       "feesPaid": 5.118062433914896,
       "realizedPnl": -5.118062433914896,
-      "highestPrice": 92.61,
+      "highestPrice": 92.78,
       "lowestPrice": 92.61,
       "confidence": 31.621141514036452,
       "validationVerdict": null,
@@ -69202,13 +69202,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788422339146,
-      "intentId": "live-entry:ADAEUR",
-      "event": "awaiting-confirmation",
-      "mode": "live",
-      "detail": "confirmation request sent to Telegram"
-    },
-    {
       "timestamp": 1788423658673,
       "intentId": "live-entry:ADAEUR",
       "event": "rejected",
@@ -76200,6 +76193,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "rejected via Telegram (button)"
+    },
+    {
+      "timestamp": 1792653530155,
+      "intentId": "live-entry:LTCEUR:1792604466997:exit:1792653501435",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -76214,10 +76214,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1790055967897,
-      "equity": 55.5
-    },
     {
       "at": 1790056328771,
       "equity": 55.5
@@ -96213,6 +96209,10 @@
     {
       "at": 1792653117939,
       "equity": 61.15
+    },
+    {
+      "at": 1792653501435,
+      "equity": 61.15
     }
   ],
   "live:revolut-x-order-map": {
@@ -96821,8 +96821,20 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905105,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:live-exit-pending": {
+    "live-entry:LTCEUR:1792604466997": {
+      "reason": "stop-loss",
+      "queuedAt": 1792653501435
+    }
+  },
+  "live:confirmation-gate-pending": {
+    "live-entry:LTCEUR:1792604466997:exit:1792653501435": {
+      "sentAt": 1792653529955,
+      "messageId": 1421,
+      "token": "mvj7mkbn.1sxnyzj",
+      "readyAt": 1792653530181
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 4552.937256863401,
@@ -96835,13 +96847,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1792653117939,
+    "at": 1792653501435,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 7622.777849614045,
-        "returnPct": -23.772221503859544,
+        "equity": 7618.755504547474,
+        "returnPct": -23.812444954525265,
         "trades": 127,
         "winRatePct": 31.496062992125985,
         "profitFactor": 0.6932058794308612,
