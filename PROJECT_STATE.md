@@ -1,5 +1,23 @@
 # PROJECT_STATE
 
+## Big-rise predictability study + `big-rise-momentum` forward test (2026-10-22)
+
+David: "we must be able to predict big rises". Study (`research/big-rise-study/`, 28 coins, Coinbase EUR daily
+2018-2026 + Fear&Greed; target close+7d >= +10%; thresholds from train <2023 only; test 2023-2026):
+- Base rate of a >=10% week is high (15-18% of coin-days), so predictors must be judged on net P&L, not hit rate.
+- Features whose top quintile raised the odds in BOTH train and test: 30-day momentum (lift 1.27/1.39), RSI14 (1.28/1.36),
+  20-day range position (1.22/1.29), BTC 30d momentum (1.28/1.84), 7d momentum. Lifts are ~1.3x: even the best bucket
+  misses ~78% of the time. Low Fear&Greed predicts FEWER big rises (test lift 0.52). Squeeze/breakout/volume-surge: inconsistent.
+- Frozen rule (train 80th pct: mom30>=22.8%, RSI>=58.4, range pos>=0.74), 7-day hold, 0.4% costs, non-overlapping:
+  test mean +2.6%/trade vs +0.1% baseline, BUT: median -0.4%, win 48.7%, 90% CI of the edge by month [-0.8%, +5.7%]
+  (includes 0), +6.8% in 2024 vs -1.8% in 2025 and -0.1% in 2026, +0.8% without the top 3% of winners, and with a 7-10%
+  stop the edge disappears. Survivorship bias: only coins still listed. Verdict: momentum persists in bull markets (what the
+  bot already does); NO proven predictor of big rises was found.
+- Forward test: `momentumBasketShadow.ts` (frozen rule, one decision per UTC day on closed daily bars over the traded
+  symbols, execution at the open, 0.2%/side, hold 7 days, no stop, <=5 equal slots, namespace `shadow:big-rise-momentum`,
+  standings `big-rise-momentum-standings`). The scorecard reads its `trade-journal` like any shadow. Judge with the promotion
+  bar (>=100 trades takes months; ~5 trades/week at most).
+
 ## Exit-rule shadows + realistic stop-out loss in confirmations (2026-10-22)
 
 Analysis on the 102 simulated trades (Jul-Oct): entries after BIGGER prior run-ups did better, weak-momentum

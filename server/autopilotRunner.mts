@@ -40,6 +40,7 @@ import { getFundingRateHistory } from '../src/core/data/okxFunding';
 import { outageNotice, pingHealthcheck } from './heartbeat.mts';
 import { decideSentimentTrend } from '../src/core/signal/sentimentTrend';
 import { getFearGreedHistory } from '../src/core/data/fearGreed';
+import { stepMomentumBasket, type MomentumBasketInput } from '../src/core/autopilot/momentumBasketShadow';
 import { stepSentimentShadow } from '../src/core/autopilot/sentimentShadow';
 import { buildFundingGate } from '../src/core/signal/fundingGate';
 import { isAiJudgmentBearish, type AiJudgmentInput } from '../src/core/signal/aiJudgment';
@@ -1003,6 +1004,7 @@ async function runCycle(
   await runShadows(store, source, symbols, now, cyclePrices);
   await runLongTermShadow(store, source, symbols, now);
   await runSentimentShadow(store, source, now);
+  await runMomentumBasketShadow(store, source, symbols, now);
   await runCandidateWatch(store, source, now);
   await recordEquity(store, source, portfolio, journal, now, cyclePrices);
   await maybeSendSummaries(store, source, portfolio, journal, telegram, now);
@@ -1491,6 +1493,52 @@ async function runLongTermShadow(
     }
   } catch (cause) {
     console.error('Long-term shadow evaluation skipped:', cause instanceof Error ? cause.message : cause);
+  }
+}
+
+const MOMENTUM_BASKET_STANDINGS_KEY = 'big-rise-momentum-standings';
+const MOMENTUM_BASKET_NAMESPACE = 'shadow:big-rise-momentum';
+
+/**
+ * "Big-rise momentum" forward test (2026-10-22, see `momentumBasketShadow.ts`):
+ * one paper decision per UTC day over the traded symbols on closed daily bars.
+ * Purely diagnostic/simulated — no order path; a failure is logged and never
+ * allowed to affect the real cycle. Not marked done on failure, so it retries.
+ */
+async function runMomentumBasketShadow(
+  store: FileStore,
+  source: MarketDataSource,
+  symbols: readonly string[],
+  now: number,
+): Promise<void> {
+  const day = new Date(now).toISOString().slice(0, 10);
+  if (store.get<{ day?: string }>(MOMENTUM_BASKET_STANDINGS_KEY)?.day === day) return;
+  try {
+    const dayStart = Date.parse(`${day}T00:00:00Z`);
+    const caching = new CachingSource(source);
+    const markets: Record<string, MomentumBasketInput['markets'][string]> = {};
+    for (const symbol of symbols) {
+      const candles = await caching.getCandles(symbol, '1d', 200);
+      if (!candles.ok || candles.value.length < 2) continue;
+      const forming = candles.value[candles.value.length - 1]!;
+      // The last bar must be today's forming bar; a stale series would decide on the wrong day.
+      if (forming.timestamp !== dayStart) continue;
+      markets[symbol] = { closed: candles.value.slice(0, -1), todayOpen: forming.open, markPrice: forming.close };
+    }
+    if (Object.keys(markets).length === 0) {
+      console.error('Momentum basket shadow skipped: no current daily bars');
+      return;
+    }
+    const standing = stepMomentumBasket(new PrefixedStore(store, MOMENTUM_BASKET_NAMESPACE), {
+      day,
+      dayStart,
+      markets,
+      initialCash: INITIAL_CASH,
+      entryPaused: ENTRY_PAUSED_SYMBOLS,
+    });
+    store.set(MOMENTUM_BASKET_STANDINGS_KEY, { at: now, day, standing });
+  } catch (cause) {
+    console.error('Momentum basket shadow skipped:', cause instanceof Error ? cause.message : cause);
   }
 }
 
