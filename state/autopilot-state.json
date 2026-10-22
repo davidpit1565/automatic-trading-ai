@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792680134301,
+    "at": 1792680504233,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1790096572581,
-      "equity": 10670.75
-    },
     {
       "at": 1790096928412,
       "equity": 10687.18
@@ -22905,6 +22901,10 @@
     {
       "at": 1792680134301,
       "equity": 10208.56
+    },
+    {
+      "at": 1792680504233,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -27.45% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -27.37% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25476,7 +25476,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792680134301,
+    "at": 1792680504233,
     "standings": [
       {
         "key": "live-mirror",
@@ -25525,8 +25525,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8520.098926025199,
-        "returnPct": -14.79901073974801,
+        "equity": 8503.46992581891,
+        "returnPct": -14.965300741810896,
         "trades": 177,
         "winRatePct": 40.11299435028249,
         "profitFactor": 0.7912120112469896,
@@ -69262,13 +69262,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788438371685,
-      "intentId": "live-entry:XBTEUR",
-      "event": "confirmed",
-      "mode": "live",
-      "detail": "approved via Telegram"
-    },
-    {
       "timestamp": 1788438372095,
       "intentId": "live-entry:XBTEUR",
       "event": "rejected",
@@ -76260,6 +76253,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1792680530536,
+      "intentId": "live-entry:LTCEUR:1792604466997:exit:1792680504233",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -76274,10 +76274,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1790096572581,
-      "equity": 55.47
-    },
     {
       "at": 1790096928412,
       "equity": 55.47
@@ -96273,6 +96269,10 @@
     {
       "at": 1792680134301,
       "equity": 61.04
+    },
+    {
+      "at": 1792680504233,
+      "equity": 60.98
     }
   ],
   "live:revolut-x-order-map": {
@@ -96881,31 +96881,43 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905105,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:live-exit-pending": {
+    "live-entry:LTCEUR:1792604466997": {
+      "reason": "stop-loss",
+      "queuedAt": 1792680504233
+    }
+  },
+  "live:confirmation-gate-pending": {
+    "live-entry:LTCEUR:1792604466997:exit:1792680504233": {
+      "sentAt": 1792680530373,
+      "messageId": 1427,
+      "token": "mvjnp9z9.10cad02",
+      "readyAt": 1792680530552
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
-    "cash": 3268.2958237578305,
+    "cash": 4679.340777949987,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -1913.1584584845677,
+    "closedRealizedPnl": -2020.5282769717533,
     "dayAnchor": {
       "day": "2026-10-22",
       "equity": 7758.496732654625
     }
   },
   "candidate-watch-standings": {
-    "at": 1792680134301,
+    "at": 1792680504233,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 7551.422312928941,
-        "returnPct": -24.485776870710588,
-        "trades": 128,
-        "winRatePct": 31.25,
-        "profitFactor": 0.6888272175776121,
-        "openPositions": 3,
+        "equity": 7501.899782868146,
+        "returnPct": -24.981002171318544,
+        "trades": 129,
+        "winRatePct": 31.007751937984494,
+        "profitFactor": 0.6770043094957798,
+        "openPositions": 2,
         "startedAt": 1788551468687
       }
     ]
@@ -96944,25 +96956,6 @@
       "highestPrice": 0.05826,
       "lowestPrice": 0.05217,
       "confidence": 50.38555903957348,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "VVVEUR:1792669538819:2",
-      "symbol": "VVVEUR",
-      "openedAt": 1792669538819,
-      "entryPrice": 24.816,
-      "quantity": 61.00391494276607,
-      "initialQuantity": 61.00391494276607,
-      "stopLoss": 23.792101679697222,
-      "takeProfit": 26.86379664060555,
-      "feesPaid": 4.5416194596590485,
-      "realizedPnl": -4.5416194596590485,
-      "highestPrice": 24.816,
-      "lowestPrice": 23.898,
-      "confidence": 54.21663738232094,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -101092,6 +101085,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry VVVEUR: 61.00391494276607 @ 24.816 (stop 23.792101679697222, target 26.86379664060555, confidence 54)"
+    },
+    {
+      "timestamp": 1792680504233,
+      "intentId": "VVVEUR:1792669538819:2",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit VVVEUR: 61.00391494276607 @ 23.2 (stop-loss)"
     }
   ],
   "live:live-blackout-queue": {},
@@ -104042,6 +104042,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 49.18629399805673,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "VVVEUR:1792669538819:2",
+      "symbol": "VVVEUR",
+      "entryTimestamp": 1792669538819,
+      "exitTimestamp": 1792680504233,
+      "entryPrice": 24.816,
+      "exitPrice": 23.2,
+      "positionSize": 61.00391494276607,
+      "stopLoss": 23.792101679697222,
+      "takeProfit": 26.86379664060555,
+      "exitReason": "stop-loss",
+      "fees": 8.787491939675567,
+      "slippage": 0,
+      "holdingDurationMs": 10965414,
+      "mfePct": 0,
+      "maePct": 6.511927788523532,
+      "realizedPnl": -107.36981848718551,
+      "returnPct": -7.092392005157961,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 54.21663738232094,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
