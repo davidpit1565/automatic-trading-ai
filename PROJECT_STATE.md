@@ -1,5 +1,20 @@
 # PROJECT_STATE
 
+## Exit-rule shadows + realistic stop-out loss in confirmations (2026-10-22)
+
+Analysis on the 102 simulated trades (Jul-Oct): entries after BIGGER prior run-ups did better, weak-momentum
+entries worse (so "buys after big rises" is not the loss source; in-sample, small n). 59/102 end at the stop
+(by design: avg win 5.2%, avg loss 3.2%, break-even win rate 38% vs 42% actual => thin edge, net PF 1.06).
+Real findings: stop exits land on average 0.3% of entry BELOW the stop (12/59 by >0.5%, worst 3.1%) because
+checks run every few minutes; and winners are not protected (16/59 stop-outs had first been up >=2%; live LTC
+peaked +9.5%, closed -12%).
+- New shadows `breakeven-lock` (stop to entry after +0.8R) and `trail-tight` (activate +1R, trail 1R); each
+  differs from `live-mirror` only in the exit rule. Existing `trailing-forward-test` is the wider 1.5R/1.5R trail.
+- Entry confirmation now adds "real loss if the stop is hit": planned risk + position*(0.3% typical / 3% worst
+  overshoot + 0.18% round-trip taker fees) (`STOP_OVERSHOOT_*` in telegramConfirmationGate.mts).
+Scorecard on 2026-10-22: no candidate is testable yet; best-looking (fixed-stop PF 1.73, whale-flow PF 2.44
+on 29 trades, ai-judgment PF 1.36) are subject to best-of-many bias across ~20 candidates.
+
 ## Persistent /pause /resume keyboard removed (2026-10-21)
 
 David asked to drop the always-visible /pause /resume buttons (2026-09-03 feature). `runLiveMirror` now

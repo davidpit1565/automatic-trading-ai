@@ -190,7 +190,7 @@ describe('shadow evaluation', () => {
   it('keeps every single-variable-isolation candidate\'s trailing config wired to the live AUTOPILOT_TRAILING reference, not a value that can silently drift', () => {
     const exempt = new Set(['mean-reversion', 'breakout']);
     for (const c of SHADOW_CANDIDATES) {
-      if (exempt.has(c.key) || c.key === 'trailing-forward-test') continue;
+      if (exempt.has(c.key) || ['trailing-forward-test', 'breakeven-lock', 'trail-tight'].includes(c.key)) continue;
       expect(c.trailing, `${c.key} should reference AUTOPILOT_TRAILING`).toBe(AUTOPILOT_TRAILING);
     }
   });
@@ -201,7 +201,7 @@ describe('shadow evaluation', () => {
   // own feature with "no whale-flow". Same drift class as the trailing bug
   // above, on a different field.
   it('keeps whale-flow on every candidate that isolates one change against live-mirror', () => {
-    const productionRelative = ['live-mirror', 'ai-judgment', 'correlation-capped', 'trailing-forward-test', 'funding-crowding'];
+    const productionRelative = ['live-mirror', 'ai-judgment', 'correlation-capped', 'trailing-forward-test', 'funding-crowding', 'breakeven-lock', 'trail-tight'];
     for (const key of productionRelative) {
       const c = SHADOW_CANDIDATES.find((x) => x.key === key);
       if (!c) continue; // a retired candidate is fine; a present one must match production
@@ -455,3 +455,20 @@ describe('2026-10-20 high-risk demo candidates', () => {
     expect(SHADOW_CANDIDATES.map((c) => c.key)).toEqual([...new Set(SHADOW_CANDIDATES.map((c) => c.key))]);
   });
 });
+
+describe('2026-10-22 exit-rule candidates', () => {
+  it('breakeven-lock and trail-tight differ from live-mirror only in the trailing rule', () => {
+    const mirror = SHADOW_CANDIDATES.find((c) => c.key === 'live-mirror')!;
+    for (const key of ['breakeven-lock', 'trail-tight']) {
+      const c = SHADOW_CANDIDATES.find((x) => x.key === key)!;
+      expect(c).toBeDefined();
+      expect(c.minConfidence).toBe(mirror.minConfidence);
+      expect(c.maxRsiForLong).toBe(mirror.maxRsiForLong);
+      expect(c.confirmationTimeframe).toBe(mirror.confirmationTimeframe);
+      expect(c.useWhaleFlowCheck).toBe(mirror.useWhaleFlowCheck);
+      expect(c.riskLimits).toBeUndefined();
+      expect(c.trailing).toBeDefined();
+    }
+  });
+});
+

@@ -510,6 +510,30 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     useWhaleFlowCheck: true,
     useSentimentGate: true,
   },
+  // 2026-10-22 (David: winners turn into losses — LTC peaked +9.5% and closed
+  // -12%; 16 of 59 paper stop-outs had first been up >=2%). Each differs from
+  // 'live-mirror' ONLY in the exit rule, so the record says what protecting an
+  // open profit is worth (the earlier 'trailing-forward-test' is a wider trail).
+  //  - breakeven-lock: once price runs +0.8R (~+2%), the stop moves to entry.
+  //  - trail-tight: trails 1R behind the best price once +1R is reached.
+  {
+    key: 'breakeven-lock',
+    label: 'Mirror of production, stop moves to break-even after a +0.8R run',
+    minConfidence: 40,
+    maxRsiForLong: 65,
+    trailing: { activateR: 0.8, trailR: 5 },
+    confirmationTimeframe: '4h',
+    useWhaleFlowCheck: true,
+  },
+  {
+    key: 'trail-tight',
+    label: 'Mirror of production, tight trailing stop (activates at +1R, trails 1R)',
+    minConfidence: 40,
+    maxRsiForLong: 65,
+    trailing: { activateR: 1, trailR: 1 },
+    confirmationTimeframe: '4h',
+    useWhaleFlowCheck: true,
+  },
   // 2026-10-20 (David: a separate HIGH-RISK demo, judged in a few months).
   // Identical entry signal to 'live-mirror'; only the size caps change, so the
   // record shows what bigger bets do — more gain AND more loss, no new edge.

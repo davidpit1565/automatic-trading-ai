@@ -198,6 +198,10 @@ describe('TelegramConfirmationGate (real network I/O — the human safety gate f
     expect(msg).toContain('מוכר אוטומטית אם המחיר עולה');
     expect(msg).toContain('הכי הרבה שאפשר להפסיד');
     expect(msg).toContain('אם זה מצליח, הרווח הפוטנציאלי גדול פי');
+    // Realistic stop-out loss (fixture: position EUR 200, planned risk EUR 10):
+    // typical = 10 + 200*(0.3+0.18)% = 10.96, worst = 10 + 200*(3+0.18)% = 16.36.
+    expect(msg).toContain('הפסד אמיתי אם הסטופ נפגע: בדרך כלל כ-€10.96');
+    expect(msg).toContain('עד כ-€16.36');
   });
 
   // David asked (2026-09-03): with an existing open position already tying
