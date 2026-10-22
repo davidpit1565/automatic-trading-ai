@@ -188,6 +188,17 @@ function expiryLine(deadlineMs: number): string {
  * shown here was correct even with other positions open; this only adds the
  * free-cash figures for full transparency, exactly as he asked for "both."
  */
+/**
+ * Measured 2026-10-22 on 59 simulated stop-loss exits (checks run every few
+ * minutes, so price can pass the stop before the exit): the exit price landed
+ * on average 0.3% of entry BELOW the stop, worst case 3.1%. Round-trip taker
+ * fees on Revolut X add ~0.18%. The planned "max loss" therefore understates a
+ * realistic stop-out (David, 2026-10-22: "the risks don't look real").
+ */
+export const STOP_OVERSHOOT_TYPICAL_PCT = 0.3;
+export const STOP_OVERSHOOT_WORST_PCT = 3;
+export const ROUND_TRIP_TAKER_FEE_PCT = 0.18;
+
 function buildConfirmationMessage(intent: OrderIntent, deadlineMs: number, cashBefore: number): string {
   if (intent.side === 'sell') return buildExitConfirmationMessage(intent, deadlineMs);
   const a = intent.assessment;
@@ -214,6 +225,9 @@ function buildConfirmationMessage(intent: OrderIntent, deadlineMs: number, cashB
     `🎯 יעד (מוכר אוטומטית אם המחיר עולה לכאן, כדי לממש רווח): ${intent.takeProfit}\n` +
     `⚠️ הכי הרבה שאפשר להפסיד בעסקה הזו אם היא נכשלת: €${a.riskAmount.toFixed(2)} ` +
     `(${a.riskPercentage.toFixed(2)}% מכל התיק — סכום קטן בכוונה)\n` +
+    `📉 הפסד אמיתי אם הסטופ נפגע: בדרך כלל כ-€${(a.riskAmount + (a.positionValue * (STOP_OVERSHOOT_TYPICAL_PCT + ROUND_TRIP_TAKER_FEE_PCT)) / 100).toFixed(2)}, ` +
+    `במקרה גרוע עד כ-€${(a.riskAmount + (a.positionValue * (STOP_OVERSHOOT_WORST_PCT + ROUND_TRIP_TAKER_FEE_PCT)) / 100).toFixed(2)} — ` +
+    `הסטופ לא מבטיח יציאה במחירו בדיוק, והמחיר יכול לעבור אותו בין בדיקה לבדיקה (כולל עמלות)\n` +
     `📊 יחס סיכוי-סיכון ${a.rewardRiskRatio.toFixed(1)}:1 — אם זה מצליח, הרווח הפוטנציאלי גדול פי ${a.rewardRiskRatio.toFixed(1)} מהסיכון\n` +
     `📌 אחרי העסקה הזו, ${a.portfolioExposure.toFixed(1)}% מכל התיק (לא רק מהחלק הפנוי) יהיו קשורים בפוזיציות פתוחות\n\n` +
     `${expiryLine(deadlineMs)}\n\n` +
