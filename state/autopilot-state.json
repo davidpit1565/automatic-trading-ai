@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792716032822,
+    "at": 1792716395110,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1790133590676,
-      "equity": 10831.39
-    },
     {
       "at": 1790133938414,
       "equity": 10846.66
@@ -22905,6 +22901,10 @@
     {
       "at": 1792716032822,
       "equity": 10208.56
+    },
+    {
+      "at": 1792716395110,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -26.25% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -26.49% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25476,7 +25476,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792716032822,
+    "at": 1792716395110,
     "standings": [
       {
         "key": "live-mirror",
@@ -25525,8 +25525,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8449.154831821717,
-        "returnPct": -15.508451681782825,
+        "equity": 8454.771306770928,
+        "returnPct": -15.452286932290718,
         "trades": 181,
         "winRatePct": 39.226519337016576,
         "profitFactor": 0.7702196357489742,
@@ -69297,13 +69297,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788443811027,
-      "intentId": "live-entry:XBTEUR",
-      "event": "confirmed",
-      "mode": "live",
-      "detail": "approved via Telegram"
-    },
-    {
       "timestamp": 1788443811340,
       "intentId": "live-entry:XBTEUR",
       "event": "rejected",
@@ -76295,6 +76288,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1792716418208,
+      "intentId": "live-entry:LTCEUR:1792604466997:exit:1792716395110",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -76309,10 +76309,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1790133590676,
-      "equity": 55.58
-    },
     {
       "at": 1790133938414,
       "equity": 55.61
@@ -96308,6 +96304,10 @@
     {
       "at": 1792716032822,
       "equity": 60.86
+    },
+    {
+      "at": 1792716395110,
+      "equity": 60.89
     }
   ],
   "live:revolut-x-order-map": {
@@ -96916,8 +96916,20 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905105,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:live-exit-pending": {
+    "live-entry:LTCEUR:1792604466997": {
+      "reason": "stop-loss",
+      "queuedAt": 1792716395110
+    }
+  },
+  "live:confirmation-gate-pending": {
+    "live-entry:LTCEUR:1792604466997:exit:1792716395110": {
+      "sentAt": 1792716418035,
+      "messageId": 1433,
+      "token": "mvk92h2r.y0actk",
+      "readyAt": 1792716418232
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 4679.340777949987,
@@ -96930,13 +96942,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1792716032822,
+    "at": 1792716395110,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 7429.1943980417,
-        "returnPct": -25.708056019582997,
+        "equity": 7427.6538694984265,
+        "returnPct": -25.723461305015732,
         "trades": 129,
         "winRatePct": 31.007751937984494,
         "profitFactor": 0.6770043094957798,
