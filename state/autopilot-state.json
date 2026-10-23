@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792771888630,
+    "at": 1792772263742,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -69363,20 +69363,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788477254782,
-      "intentId": "live-entry:XBTEUR:1788446384199:exit:1788476199224",
-      "event": "awaiting-confirmation",
-      "mode": "live",
-      "detail": "confirmation request sent to Telegram"
-    },
-    {
-      "timestamp": 1788477600000,
-      "intentId": "live-entry:XBTEUR:1788446384199:manual-reconcile-sell",
-      "event": "filled",
-      "mode": "live",
-      "detail": "MANUAL RECONCILIATION (2026-09-04): this position was actually sold on Revolut X (Activity tab: Sell 0.00011673 BTC-EUR @ €69,875.14, \"Today 01:20\" Israel time) but the workflow processing the exit confirmation was cancelled before this could be recorded — see PROJECT_STATE.md's 2026-09-03 entry. Realized P&L (real entry €68,560.62 -> real exit €69,875.14): +€0.1534."
-    },
-    {
       "timestamp": 1788478320000,
       "intentId": "live-entry:ADAEUR:manual-reconcile-20260904",
       "event": "filled",
@@ -76361,6 +76347,20 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1792772289497,
+      "intentId": "live-entry:LTCEUR:1792604466997:exit:1792772263742",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "שבת/חג — יציאה הגנתית אושרה אוטומטית ללא אישור טלגרם"
+    },
+    {
+      "timestamp": 1792772290699,
+      "intentId": "live-entry:LTCEUR:1792604466997:exit:1792772263742",
+      "event": "submitted",
+      "mode": "live",
+      "detail": "Revolut X order f959695d-ec6d-e277-02c0-07702e6b4046: new"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -76375,10 +76375,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1790196186427,
-      "equity": 55.26
-    },
     {
       "at": 1790196532131,
       "equity": 55.23
@@ -96374,6 +96370,10 @@
     {
       "at": 1792771888630,
       "equity": 60.85
+    },
+    {
+      "at": 1792772263742,
+      "equity": 60.83
     }
   ],
   "live:revolut-x-order-map": {
@@ -96410,7 +96410,8 @@
     "live-entry:LTCEUR:1790254633004:exit:1792274938261": "465fcd27-37ec-e271-02c0-07aecd1e972f",
     "external-reconcile:XBTEUR:1791659014817:exit:1792430475419": "a3605c96-6641-e205-02c0-07e0635c9277",
     "external-reconcile:XBTEUR:1791659014817:exit:1792454452561": "0609277d-31f5-e2d2-02c0-077d2bc2cccd",
-    "live-entry:LTCEUR:1792604466997": "41826ba2-66ca-e21e-02c0-07613e368238"
+    "live-entry:LTCEUR:1792604466997": "41826ba2-66ca-e21e-02c0-07613e368238",
+    "live-entry:LTCEUR:1792604466997:exit:1792772263742": "f959695d-ec6d-e277-02c0-07702e6b4046"
   },
   "live:live-open-positions": {
     "external-reconcile:XBTEUR:1792500646533": {
@@ -96503,7 +96504,8 @@
         "warnings": [
           "size capped by the 20% single-position limit"
         ]
-      }
+      },
+      "outstandingExitSubmittedAt": 1792772263742
     }
   },
   "telegram-unclaimed-messages": [
@@ -96983,7 +96985,7 @@
       }
     ]
   },
-  "live:live-blackout-active": false,
+  "live:live-blackout-active": true,
   "telegram-shared-update-offset": 447905111,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {},
@@ -104463,61 +104465,6 @@
   },
   "state-merge-collisions": [
     {
-      "key": "live:live-exit-cooldown",
-      "at": 1792768585037,
-      "label": "cycle 3/52"
-    },
-    {
-      "key": "autopilot-last-run",
-      "at": 1792768959174,
-      "label": "cycle 4/52"
-    },
-    {
-      "key": "live:live-equity-history",
-      "at": 1792768959174,
-      "label": "cycle 4/52"
-    },
-    {
-      "key": "shadow-standings",
-      "at": 1792768959174,
-      "label": "cycle 4/52"
-    },
-    {
-      "key": "candidate-watch-standings",
-      "at": 1792768959174,
-      "label": "cycle 4/52"
-    },
-    {
-      "key": "equity-history",
-      "at": 1792768959174,
-      "label": "cycle 4/52"
-    },
-    {
-      "key": "real-money-readiness",
-      "at": 1792768959174,
-      "label": "cycle 4/52"
-    },
-    {
-      "key": "live:confirmation-gate-pending",
-      "at": 1792768959174,
-      "label": "cycle 4/52"
-    },
-    {
-      "key": "live:audit-log",
-      "at": 1792768959174,
-      "label": "cycle 4/52"
-    },
-    {
-      "key": "live:live-exit-pending",
-      "at": 1792768959174,
-      "label": "cycle 4/52"
-    },
-    {
-      "key": "live:live-exit-cooldown",
-      "at": 1792768959174,
-      "label": "cycle 4/52"
-    },
-    {
       "key": "shadow:candidate-watch:open-positions",
       "at": 1792768959174,
       "label": "cycle 4/52"
@@ -104961,6 +104908,61 @@
       "key": "shadow:candidate-watch:open-positions",
       "at": 1792771962225,
       "label": "cycle 12/52"
+    },
+    {
+      "key": "autopilot-last-run",
+      "at": 1792772294681,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:live-equity-history",
+      "at": 1792772294681,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow-standings",
+      "at": 1792772294681,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "candidate-watch-standings",
+      "at": 1792772294681,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "equity-history",
+      "at": 1792772294681,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "real-money-readiness",
+      "at": 1792772294681,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:confirmation-gate-pending",
+      "at": 1792772294681,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:audit-log",
+      "at": 1792772294681,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:live-exit-pending",
+      "at": 1792772294681,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "live:live-exit-cooldown",
+      "at": 1792772294681,
+      "label": "live-mirror: after automatic exits"
+    },
+    {
+      "key": "shadow:candidate-watch:open-positions",
+      "at": 1792772294681,
+      "label": "live-mirror: after automatic exits"
     }
   ],
   "shadow:correlation-capped:open-positions": [],
