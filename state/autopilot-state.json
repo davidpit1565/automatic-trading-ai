@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792758812035,
+    "at": 1792759175836,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1790183380233,
-      "equity": 10408.82
-    },
     {
       "at": 1790183747094,
       "equity": 10408.82
@@ -22905,6 +22901,10 @@
     {
       "at": 1792758812035,
       "equity": 10208.56
+    },
+    {
+      "at": 1792759175836,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -27.14% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -27.23% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25476,7 +25476,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792758812035,
+    "at": 1792759175836,
     "standings": [
       {
         "key": "live-mirror",
@@ -25525,8 +25525,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8483.398040380222,
-        "returnPct": -15.166019596197785,
+        "equity": 8480.815450862809,
+        "returnPct": -15.191845491371915,
         "trades": 181,
         "winRatePct": 39.226519337016576,
         "profitFactor": 0.7702196357489742,
@@ -25536,8 +25536,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 8652.938641046665,
-        "returnPct": -13.47061358953335,
+        "equity": 8647.001613959212,
+        "returnPct": -13.529983860407881,
         "trades": 365,
         "winRatePct": 39.178082191780824,
         "profitFactor": 1.0237146210907786,
@@ -69336,13 +69336,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788476216538,
-      "intentId": "live-entry:XBTEUR:1788446384199:exit:1788476199224",
-      "event": "awaiting-confirmation",
-      "mode": "live",
-      "detail": "Telegram send failed: Telegram HTTP 400 — will retry next run"
-    },
-    {
       "timestamp": 1788476544421,
       "intentId": "live-entry:XBTEUR:1788446384199:exit:1788476199224",
       "event": "awaiting-confirmation",
@@ -76334,6 +76327,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "rejected via Telegram (text command)"
+    },
+    {
+      "timestamp": 1792759199229,
+      "intentId": "live-entry:LTCEUR:1792604466997:exit:1792759175836",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [
@@ -76348,10 +76348,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1790183380233,
-      "equity": 55.06
-    },
     {
       "at": 1790183747094,
       "equity": 55.09
@@ -96347,6 +96343,10 @@
     {
       "at": 1792758812035,
       "equity": 60.94
+    },
+    {
+      "at": 1792759175836,
+      "equity": 60.94
     }
   ],
   "live:revolut-x-order-map": {
@@ -96955,8 +96955,20 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905109,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:live-exit-pending": {
+    "live-entry:LTCEUR:1792604466997": {
+      "reason": "stop-loss",
+      "queuedAt": 1792759175836
+    }
+  },
+  "live:confirmation-gate-pending": {
+    "live-entry:LTCEUR:1792604466997:exit:1792759175836": {
+      "sentAt": 1792759199087,
+      "messageId": 1442,
+      "token": "mvkyjf5b.1eakb1u",
+      "readyAt": 1792759199255
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 6328.136896980355,
@@ -96969,13 +96981,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1792758812035,
+    "at": 1792759175836,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 7691.119241412263,
-        "returnPct": -23.088807585877365,
+        "equity": 7689.760787248377,
+        "returnPct": -23.102392127516232,
         "trades": 130,
         "winRatePct": 31.538461538461537,
         "profitFactor": 0.6933875994015839,
