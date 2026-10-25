@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792910928668,
+    "at": 1792911304553,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1790361157694,
-      "equity": 10538.53
-    },
     {
       "at": 1790361534559,
       "equity": 10535.69
@@ -22905,6 +22901,10 @@
     {
       "at": 1792910928668,
       "equity": 10208.56
+    },
+    {
+      "at": 1792911304553,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -25.27% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -25.21% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25455,7 +25455,7 @@
   },
   "shadow:mean-reversion:shadow-started-at": 1785254092443,
   "shadow:mean-reversion:portfolio-engine": {
-    "cash": 8261.19730529888,
+    "cash": 6604.001125855924,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -1016.1997628892454,
@@ -25476,7 +25476,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792910928668,
+    "at": 1792911304553,
     "standings": [
       {
         "key": "live-mirror",
@@ -25525,12 +25525,12 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8261.19730529888,
-        "returnPct": -17.388026947011205,
+        "equity": 8256.240586915701,
+        "returnPct": -17.43759413084299,
         "trades": 187,
         "winRatePct": 37.967914438502675,
         "profitFactor": 0.7304072006430374,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1785254092443
       },
       {
@@ -41125,15 +41125,28 @@
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
-  "shadow:mean-reversion:open-positions": [],
-  "shadow:mean-reversion:audit-log": [
+  "shadow:mean-reversion:open-positions": [
     {
-      "timestamp": 1789496126519,
-      "intentId": "FILEUR:1789496126519",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused FILEUR: maximum open positions reached (5/5)"
-    },
+      "id": "DOTEUR:1792911304553:0",
+      "symbol": "DOTEUR",
+      "openedAt": 1792911304553,
+      "entryPrice": 0.9112,
+      "quantity": 1813.2566517337314,
+      "initialQuantity": 1813.2566517337314,
+      "stopLoss": 0.8937189839057305,
+      "takeProfit": 0.9461620321885391,
+      "feesPaid": 4.956718383179328,
+      "realizedPnl": -4.956718383179328,
+      "highestPrice": 0.9112,
+      "lowestPrice": 0.9112,
+      "confidence": 31.44902827385002,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
+  "shadow:mean-reversion:audit-log": [
     {
       "timestamp": 1789496471079,
       "intentId": "FILEUR:1789496471079",
@@ -48126,6 +48139,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 9003.81470535067 @ 0.181734 (stop-loss)"
+    },
+    {
+      "timestamp": 1792911304553,
+      "intentId": "DOTEUR:1792911304553:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry DOTEUR: 1813.2566517337314 @ 0.9112 (stop 0.8937189839057305, target 0.9461620321885391, confidence 31)"
     }
   ],
   "shadow:live-mirror:open-positions": [],
@@ -76476,10 +76496,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1790361157694,
-      "equity": 56.98
-    },
-    {
       "at": 1790361534559,
       "equity": 56.99
     },
@@ -96474,6 +96490,10 @@
     {
       "at": 1792910928668,
       "equity": 60.82
+    },
+    {
+      "at": 1792911304553,
+      "equity": 60.82
     }
   ],
   "live:revolut-x-order-map": {
@@ -97069,7 +97089,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1792910928668,
+    "at": 1792911304553,
     "standings": [
       {
         "key": "candidate-watch",
