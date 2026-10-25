@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792960377849,
+    "at": 1792960757939,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1790415029039,
-      "equity": 10565.31
-    },
     {
       "at": 1790415387542,
       "equity": 10581.1
@@ -22905,6 +22901,10 @@
     {
       "at": 1792960377849,
       "equity": 10208.56
+    },
+    {
+      "at": 1792960757939,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -25.14% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -25.10% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25476,7 +25476,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792960377849,
+    "at": 1792960757939,
     "standings": [
       {
         "key": "live-mirror",
@@ -25525,8 +25525,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8274.01050210269,
-        "returnPct": -17.259894978973097,
+        "equity": 8276.549061415119,
+        "returnPct": -17.234509385848813,
         "trades": 187,
         "winRatePct": 37.967914438502675,
         "profitFactor": 0.7304072006430374,
@@ -76496,10 +76496,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1790415029039,
-      "equity": 57.27
-    },
-    {
       "at": 1790415387542,
       "equity": 57.31
     },
@@ -96494,6 +96490,10 @@
     {
       "at": 1792960377849,
       "equity": 60.82
+    },
+    {
+      "at": 1792960757939,
+      "equity": 60.82
     }
   ],
   "live:revolut-x-order-map": {
@@ -97079,7 +97079,7 @@
   "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
-    "cash": 7324.602319508031,
+    "cash": 5855.28709421472,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -2177.3737737246515,
@@ -97089,22 +97089,42 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1792960377849,
+    "at": 1792960757939,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 7324.602319508031,
-        "returnPct": -26.753976804919695,
+        "equity": 7309.928216018156,
+        "returnPct": -26.900717839818444,
         "trades": 134,
         "winRatePct": 30.597014925373134,
         "profitFactor": 0.6657866492813472,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1788551468687
       }
     ]
   },
-  "shadow:candidate-watch:open-positions": [],
+  "shadow:candidate-watch:open-positions": [
+    {
+      "id": "GRASSEUR:1792960757939:0",
+      "symbol": "GRASSEUR",
+      "openedAt": 1792960757939,
+      "entryPrice": 0.6413,
+      "quantity": 2284.2982440380574,
+      "initialQuantity": 2284.2982440380574,
+      "stopLoss": 0.6230967364033186,
+      "takeProfit": 0.6777065271933628,
+      "feesPaid": 4.394761391704819,
+      "realizedPnl": -4.394761391704819,
+      "highestPrice": 0.6413,
+      "lowestPrice": 0.6413,
+      "confidence": 50.26519535013629,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:candidate-watch:audit-log": [
     {
       "timestamp": 1788598183187,
@@ -101347,6 +101367,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit DASHEUR: 31.62245294441979 @ 46.546 (stop-loss)"
+    },
+    {
+      "timestamp": 1792960757939,
+      "intentId": "GRASSEUR:1792960757939:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry GRASSEUR: 2284.2982440380574 @ 0.6413 (stop 0.6230967364033186, target 0.6777065271933628, confidence 50)"
     }
   ],
   "live:live-blackout-queue": {},
