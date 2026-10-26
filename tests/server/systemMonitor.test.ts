@@ -44,6 +44,23 @@ describe('fetchSystemState', () => {
     expect(state.openPositionCount).toBe(1);
   });
 
+  it('reports net P&L from prices and fees (not the stored realizedPnl, which omits the entry fee on old rows) and equity from the runner history', async () => {
+    const mockStore = {
+      get: (key: string) => {
+        if (key === 'trade-journal') {
+          // written before 2026-10-17: stored realizedPnl 47 left out the EUR 3 entry fee; the truth is (105-100)*10 - 6 = 44
+          return [{ entryPrice: 100, exitPrice: 105, positionSize: 10, fees: 6, realizedPnl: 47, entryTimestamp: 1000, exitTimestamp: 2000 }];
+        }
+        if (key === 'equity-history') return [{ at: 1, equity: 10_100 }, { at: 2, equity: 10_044 }];
+        return null;
+      },
+      set: () => {},
+    };
+    const state = await fetchSystemState(mockStore as any, Date.now());
+    expect(state.realizedPnlTotal).toBe(44);
+    expect(state.equity).toBe(10_044); // the last recorded equity point, which includes open positions
+  });
+
   it('handles missing data gracefully', async () => {
     const mockStore = {
       get: () => null,

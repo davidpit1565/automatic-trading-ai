@@ -13,6 +13,7 @@
  */
 
 import type { KeyValueStore } from '../src/core/data/storage';
+import { netPnl } from '../src/core/position/analytics';
 import { FileStore } from './fileStore.mts';
 import { hasLiveAccount } from './liveLedger.mts';
 import { sendTelegramMessage, SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED } from './telegram.mts';
@@ -71,7 +72,12 @@ export async function fetchSystemState(store: FileStore, now: number): Promise<S
     const journal = store.get<any[]>('trade-journal');
     if (Array.isArray(journal)) {
       closedTradeCount = journal.length;
-      realizedPnlTotal = journal.reduce((sum: number, e: any) => sum + (e.realizedPnl ?? 0), 0);
+      // Net of ALL fees from prices (`netPnl`), not the stored `realizedPnl`, which omits the entry fee on rows written before 2026-10-17.
+      realizedPnlTotal = journal.reduce(
+        (sum: number, e: any) =>
+          sum + ([e.entryPrice, e.exitPrice, e.positionSize, e.fees].every((n) => typeof n === 'number') ? netPnl(e) : (e.realizedPnl ?? 0)),
+        0,
+      );
     }
   } catch (e) {
     // Fallback
@@ -118,9 +124,12 @@ export async function fetchSystemState(store: FileStore, now: number): Promise<S
     // Fallback
   }
 
-  // Compute equity: 10k - realized losses + realized gains
+  // Equity: the runner's own last recorded point (cash + open positions at market). The old formula,
+  // 10k + realized, ignored open positions and used the stored (inflated) realized figure.
   const initialCash = 10_000;
-  equity = initialCash + realizedPnlTotal;
+  const history = store.get<Array<{ equity?: number }>>('equity-history');
+  const lastEquity = Array.isArray(history) ? history[history.length - 1]?.equity : undefined;
+  equity = typeof lastEquity === 'number' ? lastEquity : initialCash + realizedPnlTotal;
 
   return {
     timestamp: now,

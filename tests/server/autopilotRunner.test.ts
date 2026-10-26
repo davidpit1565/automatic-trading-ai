@@ -18,7 +18,11 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileStore } from '../../server/fileStore.mts';
 import {
+  advanceBreakerState,
   breakerEngaged,
+  realEntriesPaused,
+  releaseRealEntryPauseOnResume,
+  updateRealEntryPause,
   buildLiveEntryResultMessage,
   checkHelpRequests,
   maybeSendHelpOnChange,
@@ -33,6 +37,7 @@ import {
   runLiveMirror,
 } from '../../server/autopilotRunner.mts';
 import type { LiveEntryOutcome } from '../../server/liveEntryMirror.mts';
+import { PersistedKillSwitch } from '../../src/core/autopilot/killSwitch';
 import { PrefixedStore } from '../../src/core/data/prefixedStore';
 import { PortfolioEngine } from '../../src/core/position/portfolioEngine';
 import { PositionEngine } from '../../src/core/position/positionEngine';
@@ -1134,5 +1139,216 @@ describe('checkStatusRequests (David asked 2026-09-03: "what\'s the situation no
 
     expect(answered).toBe(false);
     expect(store.get<unknown[]>('telegram-unclaimed-messages')).toHaveLength(1);
+  });
+});
+
+describe('advanceBreakerState (the breaker must not become a one-way door)', () => {
+  const HOUR = 3_600_000;
+  const base = 1_800_000_000_000;
+
+  it('is ok while within the allowed drawdown and clears any halt clock', () => {
+    store.set('equity-peak', 10_000);
+    store.set('dd-halt-since', base - HOUR);
+    expect(advanceBreakerState(store, 9_500, base)).toBe('ok');
+    expect(store.get('dd-halt-since')).toBeUndefined();
+  });
+
+  it('starts the clock on the first breached cycle and stays halted before the limit', () => {
+    store.set('equity-peak', 10_000);
+    expect(advanceBreakerState(store, 9_100, base)).toBe('halted');
+    expect(store.get<number>('dd-halt-since')).toBe(base);
+    expect(advanceBreakerState(store, 9_100, base + 71 * HOUR)).toBe('halted');
+    expect(store.get<number>('equity-peak')).toBe(10_000);
+  });
+
+  it('re-bases the peak after the maximum pause, so entries can resume', () => {
+    store.set('equity-peak', 10_000);
+    store.set('equity-history', [{ at: base, equity: 9_100 }]);
+    advanceBreakerState(store, 9_100, base);
+    expect(breakerEngaged(store)).toBe(true);
+    expect(advanceBreakerState(store, 9_100, base + 72 * HOUR)).toBe('resumed');
+    expect(store.get<number>('equity-peak')).toBe(9_100);
+    expect(breakerEngaged(store)).toBe(false);
+    expect(store.get('dd-halt-since')).toBeUndefined();
+  });
+
+  it('the paper breaker has no permanent state: even far below the floor it re-bases after the pause', () => {
+    store.set('equity-peak', 10_000);
+    advanceBreakerState(store, 7_000, base);
+    expect(advanceBreakerState(store, 7_000, base + 72 * HOUR)).toBe('resumed');
+    expect(store.get<number>('equity-peak')).toBe(7_000);
+  });
+});
+
+describe('real-entry pause (paper breaker or 80% floor stop NEW real entries only; stops and exits keep working)', () => {
+  const HOUR = 3_600_000;
+  const base = 1_800_000_000_000;
+  const live = () => new PrefixedStore(store, 'live');
+  const pause = () => live().get<{ since: number; reason: string; peak: number }>('entry-pause');
+
+  it('does nothing while equity is inside the breaker band and above the floor', () => {
+    store.set('equity-peak', 10_000);
+    expect(updateRealEntryPause(store, 9_500, 10_000, base)).toBe('unchanged');
+    expect(realEntriesPaused(live())).toBe(false);
+  });
+
+  it('pauses on the first breached cycle, queues ONE alert, and never touches the live kill switch', () => {
+    store.set('equity-peak', 10_000);
+    expect(updateRealEntryPause(store, 9_100, 10_000, base)).toBe('paused');
+    expect(pause()).toMatchObject({ reason: 'breaker', peak: 10_000, since: base });
+    expect(store.get('dd-real-pause-alert-pending')).toMatchObject({ reason: 'breaker', equity: 9_100 });
+    store.remove('dd-real-pause-alert-pending');
+    expect(updateRealEntryPause(store, 9_050, 10_000, base + HOUR)).toBe('unchanged');
+    expect(store.get('dd-real-pause-alert-pending')).toBeUndefined(); // no second alert
+    // The kill switch refuses ALL orders including sells: the pause must never engage it.
+    expect(new PersistedKillSwitch(live()).isEngaged()).toBe(false);
+  });
+
+  it('stays paused after the PAPER breaker re-bases its peak at 72 h (real money does not restart by timer)', () => {
+    store.set('equity-peak', 10_000);
+    updateRealEntryPause(store, 9_100, 10_000, base);
+    advanceBreakerState(store, 9_100, base);
+    updateRealEntryPause(store, 9_100, 10_000, base + 72 * HOUR);
+    expect(advanceBreakerState(store, 9_100, base + 72 * HOUR)).toBe('resumed');
+    expect(store.get<number>('equity-peak')).toBe(9_100); // paper may trade again ...
+    updateRealEntryPause(store, 9_100, 10_000, base + 73 * HOUR);
+    expect(realEntriesPaused(live())).toBe(true); // ... real entries may not
+    expect(pause()!.peak).toBe(10_000);
+  });
+
+  it('a breaker pause ends by itself once equity is back inside the band of the peak it was set against', () => {
+    store.set('equity-peak', 10_000);
+    updateRealEntryPause(store, 9_100, 10_000, base);
+    expect(updateRealEntryPause(store, 9_150, 10_000, base + HOUR)).toBe('unchanged');
+    expect(updateRealEntryPause(store, 9_300, 10_000, base + 2 * HOUR)).toBe('released');
+    expect(realEntriesPaused(live())).toBe(false);
+  });
+
+  it('pauses under 80% of the start, and that pause is never auto-released while under the floor', () => {
+    store.set('equity-peak', 10_000);
+    expect(updateRealEntryPause(store, 7_900, 10_000, base)).toBe('paused');
+    expect(pause()).toMatchObject({ reason: 'floor' });
+    expect(updateRealEntryPause(store, 9_900, 10_000, base + HOUR)).toBe('unchanged'); // floor pauses are the owner's to end
+    expect(realEntriesPaused(live())).toBe(true);
+  });
+
+  it('a breaker pause that becomes a floor pause is upgraded (and alerts again), keeping its start time', () => {
+    store.set('equity-peak', 10_000);
+    updateRealEntryPause(store, 9_100, 10_000, base);
+    store.remove('dd-real-pause-alert-pending');
+    expect(updateRealEntryPause(store, 7_900, 10_000, base + HOUR)).toBe('paused');
+    expect(pause()).toMatchObject({ reason: 'floor', since: base });
+    expect(store.get('dd-real-pause-alert-pending')).toMatchObject({ reason: 'floor' });
+  });
+
+  const resume = (date: number) => [{ command: 'resume' as const, applied: false, messageDate: date }];
+
+  it('/resume sent AFTER the pause ends it, and the same breach does not pause again next cycle', () => {
+    store.set('equity-peak', 10_000);
+    updateRealEntryPause(store, 7_900, 10_000, base);
+    expect(releaseRealEntryPauseOnResume(store, resume(Math.floor((base + HOUR) / 1000)))).toBe(true);
+    expect(realEntriesPaused(live())).toBe(false);
+    expect(updateRealEntryPause(store, 7_800, 10_000, base + 2 * HOUR)).toBe('unchanged'); // owner accepted this
+    expect(realEntriesPaused(live())).toBe(false);
+  });
+
+  it('a /resume sent BEFORE the pause (a replayed old command) does not end it, nor one without a date', () => {
+    store.set('equity-peak', 10_000);
+    updateRealEntryPause(store, 7_900, 10_000, base);
+    expect(releaseRealEntryPauseOnResume(store, resume(Math.floor((base - HOUR) / 1000)))).toBe(false);
+    expect(releaseRealEntryPauseOnResume(store, [{ command: 'resume', applied: false }])).toBe(false);
+    expect(releaseRealEntryPauseOnResume(store, [{ command: 'pause', applied: true, messageDate: Math.floor((base + HOUR) / 1000) }])).toBe(false);
+    expect(realEntriesPaused(live())).toBe(true);
+  });
+
+  it('after an acknowledged floor breach recovers above the floor, the next crossing pauses again', () => {
+    store.set('equity-peak', 10_000);
+    updateRealEntryPause(store, 7_900, 10_000, base);
+    releaseRealEntryPauseOnResume(store, resume(Math.floor((base + HOUR) / 1000)));
+    updateRealEntryPause(store, 8_300, 10_000, base + 2 * HOUR); // above the floor: acknowledgement forgotten
+    expect(updateRealEntryPause(store, 7_950, 10_000, base + 3 * HOUR)).toBe('paused');
+    expect(realEntriesPaused(live())).toBe(true);
+  });
+
+  // The mirror itself, end to end: same approved paper entry, with and without the pause. The control run proves
+  // the confirmation prompt is reachable in this harness, so the paused run is not passing for the wrong reason.
+  describe('runLiveMirror with the pause', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+      delete process.env['LIVE_STARTING_CASH_EUR'];
+    });
+    async function mirrorOneApprovedEntry(paused: boolean): Promise<{ prompts: number; pending: unknown }> {
+      process.env['REAL_MONEY_ENABLED'] = 'true';
+      process.env['REVOLUT_X_API_KEY'] = 'key';
+      process.env['REVOLUT_X_PRIVATE_KEY_PEM'] = generateKeyPairSync('ed25519', {
+        privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+        publicKeyEncoding: { type: 'spki', format: 'pem' },
+      }).privateKey;
+      process.env['LIVE_STARTING_CASH_EUR'] = '100';
+      if (paused) live().set('entry-pause', { since: 0, reason: 'floor', peak: 10_000, equity: 7_900 });
+      vi.stubGlobal('fetch', (async (url: string | URL) => {
+        if (String(url).includes('/balances')) return new Response(JSON.stringify([{ currency: 'EUR', total: '100' }]), { status: 200 });
+        if (String(url).includes('/configuration/pairs')) return new Response(JSON.stringify({ 'BTC/EUR': { base: 'BTC', quote: 'EUR' } }), { status: 200 });
+        return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
+      }) as unknown as typeof fetch);
+      const sent: { text: string }[] = [];
+      const trackingFetch = (async (url: string, init?: { body?: string }) => {
+        if (String(url).includes('/sendMessage') && init?.body) sent.push(JSON.parse(init.body));
+        return new Response(JSON.stringify({ ok: true, result: [] }), { status: 200 });
+      }) as unknown as typeof fetch;
+      const opportunity = {
+        symbol: 'BTC-EUR', timeframe: '1h' as const, direction: 'long' as const,
+        levels: { entry: 100, stopLoss: 95, takeProfit: 115, riskReward: 3 },
+        confidence: 70, confidenceComponents: [], explanation: 'test', warnings: [], basedOn: { score: 70, candleCount: 200 },
+      };
+      vi.useFakeTimers({ toFake: ['setTimeout'] }); // the confirmation gate polls for a tap with 3 s sleeps
+      const run = runLiveMirror(
+        store, fakeSource(), [btcInstrument], { token: 'T', chatId: 'C', fetchFn: trackingFetch },
+        [{ symbol: 'BTC-EUR', quantity: 0, entry: 100, opportunity }], { 'BTC-EUR': 100 }, 1000,
+      );
+      await vi.advanceTimersByTimeAsync(60_000);
+      await run;
+      return { prompts: sent.filter((m) => m.text.includes('מחכה לאישור')).length, pending: live().get('confirmation-gate-pending') };
+    }
+
+    it('control: an approved paper entry reaches the real confirmation prompt', async () => {
+      const r = await mirrorOneApprovedEntry(false);
+      expect(r.prompts).toBe(1);
+    });
+
+    it('paused: the same entry produces no prompt, no pending confirmation and no kill switch', async () => {
+      const r = await mirrorOneApprovedEntry(true);
+      expect(r.prompts).toBe(0);
+      expect(r.pending).toBeUndefined();
+      expect(store.get<{ engaged?: boolean }>('live:kill-switch')?.engaged ?? false).toBe(false);
+    });
+  });
+
+  it('the alert says what stays working and how to end the pause (floor: /resume only; breaker: recovery or /resume)', async () => {
+    const { buildRealEntryPauseAlert } = await import('../../server/telegram.mts');
+    const floor = buildRealEntryPauseAlert('floor', 7_900, 8_000);
+    const breaker = buildRealEntryPauseAlert('breaker', 9_100, 9_200);
+    for (const text of [floor, breaker]) {
+      expect(text).toContain('/resume');
+      expect(text).toContain('סטופים ויציאות'); // stops and exits keep working
+      expect(text).toContain('/buy');
+    }
+    expect(floor).toContain('€8000');
+    expect(breaker).toContain('חוזר מעל הקו');
+  });
+
+  it('only the real-entry mirror reads the pause: no other server module may reference it', async () => {
+    const { readdirSync } = await import('node:fs');
+    const { join: joinPath } = await import('node:path');
+    const serverDir = joinPath(__dirname, '..', '..', 'server');
+    const readers = readdirSync(serverDir)
+      .filter((f) => f.endsWith('.mts'))
+      .flatMap((f) => {
+        const text = readFileSync(joinPath(serverDir, f), 'utf8');
+        return (text.match(/realEntriesPaused\(/g) ?? []).map(() => f);
+      });
+    // the definition and exactly one call, both in the runner (which hosts runLiveMirror)
+    expect(readers).toEqual(['autopilotRunner.mts', 'autopilotRunner.mts']);
   });
 });

@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildEquityCurve,
   monthlyPerformance,
+  netPnl,
   rollingDrawdownPct,
   tradeAnalytics,
 } from '../../src/core/position/analytics';
@@ -143,5 +144,30 @@ describe('monthlyPerformance', () => {
       { month: '2026-01', pnl: 70, tradeCount: 2 },
       { month: '2026-03', pnl: 70, tradeCount: 1 },
     ]);
+  });
+});
+
+describe('netPnl (legacy journal rows without the entry fee)', () => {
+  // A row written before 2026-10-17: realizedPnl subtracted only the EXIT fee.
+  const legacy = (): JournalEntry =>
+    trade(0, {
+      entryPrice: 100,
+      exitPrice: 105,
+      positionSize: 10,
+      fees: 6, // entry 3 + exit 3
+      realizedPnl: 47, // (105-100)*10 - 3 (exit fee only): the stored, inflated figure
+    });
+
+  it('uses (exit - entry) * size - all fees, ignoring the stored realizedPnl', () => {
+    expect(netPnl(legacy())).toBeCloseTo(44, 9);
+  });
+
+  it('feeds tradeAnalytics, monthlyPerformance and the equity curve', () => {
+    const rows = [legacy(), trade(-30, { fees: 0 })];
+    const a = tradeAnalytics(rows, { initialCash: 1_000 });
+    expect(a.totalPnl).toBeCloseTo(14, 9);
+    expect(a.profitFactor).toBeCloseTo(44 / 30, 9);
+    expect(buildEquityCurve(rows, 1_000).at(-1)!.equity).toBeCloseTo(1_014, 9);
+    expect(monthlyPerformance(rows).reduce((s, m) => s + m.pnl, 0)).toBeCloseTo(14, 9);
   });
 });

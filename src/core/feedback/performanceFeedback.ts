@@ -9,7 +9,7 @@
  * analytics; describes the past and promises nothing about the future.
  */
 
-import { tradeAnalytics, type TradeAnalytics } from '../position/analytics';
+import { netPnl, tradeAnalytics, type TradeAnalytics } from '../position/analytics';
 import type { ExitReason, JournalEntry } from '../position/tradeJournal';
 
 // ---------------------------------------------------------------------------
@@ -38,8 +38,8 @@ export function confidenceCalibration(entries: readonly JournalEntry[]): Confide
     const inBucket = entries.filter(
       (t) => t.confidence !== null && t.confidence >= min && t.confidence < max,
     );
-    const wins = inBucket.filter((t) => t.realizedPnl > 0).length;
-    const totalPnl = inBucket.reduce((sum, t) => sum + t.realizedPnl, 0);
+    const wins = inBucket.filter((t) => netPnl(t) > 0).length;
+    const totalPnl = inBucket.reduce((sum, t) => sum + netPnl(t), 0);
     return {
       label,
       minConfidence: min,
@@ -73,8 +73,8 @@ export function exitReasonBreakdown(entries: readonly JournalEntry[]): ExitReaso
   }
   return [...byReason.entries()]
     .map(([reason, trades]) => {
-      const wins = trades.filter((t) => t.realizedPnl > 0).length;
-      const totalPnl = trades.reduce((sum, t) => sum + t.realizedPnl, 0);
+      const wins = trades.filter((t) => netPnl(t) > 0).length;
+      const totalPnl = trades.reduce((sum, t) => sum + netPnl(t), 0);
       return {
         reason,
         tradeCount: trades.length,
@@ -128,7 +128,7 @@ export function efficiencyReport(entries: readonly JournalEntry[]): EfficiencyRe
     avgCapturePct: captures.length > 0 ? avg(captures) : null,
     tradesThatSawProfit: entries.filter((t) => t.mfePct >= SAW_PROFIT_MFE_PCT).length,
     losersThatWereProfitable: entries.filter(
-      (t) => t.realizedPnl < 0 && t.mfePct >= SAW_PROFIT_MFE_PCT,
+      (t) => netPnl(t) < 0 && t.mfePct >= SAW_PROFIT_MFE_PCT,
     ).length,
   };
 }
@@ -187,7 +187,7 @@ export function benchmarkComparison(
   );
   if (symbols.length === 0) return null;
 
-  const totalPnl = entries.reduce((sum, t) => sum + t.realizedPnl, 0);
+  const totalPnl = entries.reduce((sum, t) => sum + netPnl(t), 0);
   const strategyReturnPct = (totalPnl / initialCash) * 100;
   const holdReturnPct =
     symbols.reduce((sum, symbol) => {

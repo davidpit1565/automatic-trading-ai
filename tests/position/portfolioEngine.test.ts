@@ -49,6 +49,28 @@ describe('cash accounting', () => {
     expect(portfolio.snapshot({}, T + 2).realizedPnl).toBeCloseTo(84, 10);
   });
 
+  it('snapshot realized P&L comes from the cash identity, so a legacy-inflated closedRealizedPnl counter cannot overstate it', () => {
+    const { portfolio, store } = makePortfolio();
+    const opened = portfolio.open({ ...openInput, timestamp: T, fee: 5 });
+    if (!opened.ok) throw new Error('open failed');
+    portfolio.exit(opened.value.id, { quantity: 10, price: 110, timestamp: T + 1, reason: 'take-profit', fee: 11 });
+    // Simulate rows folded in before 2026-10-17, when the counter left out entry fees: +EUR 500 too high.
+    const raw = store.get<{ closedRealizedPnl: number }>('portfolio-engine')!;
+    store.set('portfolio-engine', { ...raw, closedRealizedPnl: raw.closedRealizedPnl + 500 });
+    const reloaded = new PortfolioEngine(store, new PositionEngine(store, new TradeJournal(store)), { initialCash: 10_000, baseCurrency: 'USD' });
+    expect(reloaded.snapshot({}, T + 2).realizedPnl).toBeCloseTo(84, 10); // what cash actually gained
+  });
+
+  it('an open position contributes only its entry fee to realized P&L; price moves stay unrealized', () => {
+    const { portfolio } = makePortfolio();
+    const opened = portfolio.open({ ...openInput, timestamp: T, fee: 5 });
+    if (!opened.ok) throw new Error('open failed');
+    const snap = portfolio.snapshot({ 'BTC-USD': 120 }, T + 1);
+    expect(snap.realizedPnl).toBeCloseTo(-5, 10);
+    expect(snap.unrealizedPnl).toBeCloseTo(200, 10);
+    expect(snap.equity - 10_000).toBeCloseTo(195, 10);
+  });
+
   it('opens from an approved trade proposal and refuses rejected ones', () => {
     const { portfolio } = makePortfolio();
     const assessment = {

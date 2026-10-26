@@ -172,7 +172,10 @@ export class PortfolioEngine {
     }
     const dayStart = this.state.dayAnchor.equity;
 
-    const realizedPnl = this.state.closedRealizedPnl + this.positions.openRealizedPnl();
+    // Realized P&L from the cash identity (equity = initial cash + realized + unrealized), not from the running
+    // `closedRealizedPnl` counter: that counter is a sum of per-trade figures that left out the ENTRY fee until
+    // 2026-10-17 and was never restated (stored +EUR 726.02 against the true +EUR 208.56 on the committed state).
+    const realizedPnl = equity - this.state.initialCash - this.positions.unrealizedPnl(prices);
     return {
       timestamp,
       baseCurrency: this.state.baseCurrency,

@@ -1,5 +1,22 @@
 # PROJECT_STATE
 
+## Arena fixes applied: one net-P&L definition, a breaker that can release, real-entry pause, no coins by backtest (2026-10-26)
+
+Source: the arena run of 2026-10-23..25 (16 candidate reports, champion a001; Part C patches P1+P2 applied unchanged except
+for the "owner approval pending" comments). Owner approved 2026-10-25 (items 1, 2, 4); the exchange-held stop (item 3) is NOT approved.
+- P1 `netPnl` = (exit - entry) x size - all fees, for EVERY journal row (old rows lacked the entry fee: stored realized sum +726.0 vs true +208.6).
+  Used by `tradeAnalytics` (readiness gate, shadow standings, reports), `performanceFeedback`, `systemMonitor`, the portfolio's realized P&L
+  (cash identity) and re-used by `promotionBar`. On the state file: total +208.6, PF 1.060 (< the 1.2 readiness threshold: NOT READY).
+- P2 paper drawdown breaker re-bases its peak after 72 h in breach (`DD_BREAKER_MAX_PAUSE_MS`; before, a flat account 8% under its peak could never restart);
+  breaker alert is sent when real money is enabled (stays muted paper-only); NEW real entries pause while paper equity is >8% under its peak or under
+  80% of the start (`DD_HARD_FLOOR_FRACTION`), ending by recovery (breaker reason) or the owner's /resume sent after the pause began. The pause reads
+  only the real-entry mirror; real stops, exits, /sell, /buy and /retry are untouched (it does not use the kill switch).
+- Coins: stop adding by backtest (candidate-watch forward PF 0.63, -EUR 2,416). The weekly coin-review routine no longer adds coins; promotion only by
+  the existing forward-record rule (>= 20 trades). `ENTRY_PAUSED_SYMBOLS` not extended.
+- Not done (not approved / lower priority): exchange-held stop orders (Revolut X `tpsl`), P3 scorecard changes, P4 new shadows, P5 corrupt-state repair.
+- Arena finding for context: net PF 1.06, costs = 84% of gross edge, no demonstrable entry skill, big rises not reliably predictable
+  (best honest candidate: BTC+ETH 7-day regime sleeve, grade B, paper only, not built here).
+
 ## Big-rise predictability study + `big-rise-momentum` forward test (2026-10-22)
 
 David: "we must be able to predict big rises". Study (`research/big-rise-study/`, 28 coins, Coinbase EUR daily
