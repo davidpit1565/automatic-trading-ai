@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1792984340619,
+    "at": 1792984703016,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1790442506683,
-      "equity": 10775.11
-    },
     {
       "at": 1790442883378,
       "equity": 10770.35
@@ -22905,6 +22901,10 @@
     {
       "at": 1792984340619,
       "equity": 10208.56
+    },
+    {
+      "at": 1792984703016,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,12 +25378,12 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -23.67% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -23.53% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
         "ok": true,
-        "detail": "max drawdown 5.6% (limit 10%)"
+        "detail": "max drawdown 5.5% (limit 10%)"
       },
       {
         "key": "consistency",
@@ -25476,7 +25476,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1792984340619,
+    "at": 1792984703016,
     "standings": [
       {
         "key": "live-mirror",
@@ -25525,8 +25525,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8251.95407992553,
-        "returnPct": -17.4804592007447,
+        "equity": 8249.239685965345,
+        "returnPct": -17.507603140346546,
         "trades": 187,
         "winRatePct": 37.967914438502675,
         "profitFactor": 0.7304072006430374,
@@ -76515,10 +76515,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1790442506683,
-      "equity": 58.06
-    },
-    {
       "at": 1790442883378,
       "equity": 58.04
     },
@@ -96513,6 +96509,10 @@
     {
       "at": 1792984340619,
       "equity": 60.81
+    },
+    {
+      "at": 1792984703016,
+      "equity": 60.81
     }
   ],
   "live:revolut-x-order-map": {
@@ -97098,52 +97098,32 @@
   "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
-    "cash": 5855.28709421472,
+    "cash": 7262.292831015931,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -2177.3737737246515,
+    "closedRealizedPnl": -2239.683262216751,
     "dayAnchor": {
       "day": "2026-10-26",
       "equity": 7341.908391434688
     }
   },
   "candidate-watch-standings": {
-    "at": 1792984340619,
+    "at": 1792984703016,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 7303.989040583656,
-        "returnPct": -26.96010959416344,
-        "trades": 134,
-        "winRatePct": 30.597014925373134,
-        "profitFactor": 0.6657866492813472,
-        "openPositions": 1,
+        "equity": 7262.292831015931,
+        "returnPct": -27.377071689840687,
+        "trades": 135,
+        "winRatePct": 30.37037037037037,
+        "profitFactor": 0.659479310360656,
+        "openPositions": 0,
         "startedAt": 1788551468687
       }
     ]
   },
-  "shadow:candidate-watch:open-positions": [
-    {
-      "id": "GRASSEUR:1792960757939:0",
-      "symbol": "GRASSEUR",
-      "openedAt": 1792960757939,
-      "entryPrice": 0.6413,
-      "quantity": 2284.2982440380574,
-      "initialQuantity": 2284.2982440380574,
-      "stopLoss": 0.6230967364033186,
-      "takeProfit": 0.6777065271933628,
-      "feesPaid": 4.394761391704819,
-      "realizedPnl": -4.394761391704819,
-      "highestPrice": 0.6603,
-      "lowestPrice": 0.6298,
-      "confidence": 50.26519535013629,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "shadow:candidate-watch:open-positions": [],
   "shadow:candidate-watch:audit-log": [
     {
       "timestamp": 1788598183187,
@@ -101393,6 +101373,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry GRASSEUR: 2284.2982440380574 @ 0.6413 (stop 0.6230967364033186, target 0.6777065271933628, confidence 50)"
+    },
+    {
+      "timestamp": 1792984703016,
+      "intentId": "GRASSEUR:1792960757939:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit GRASSEUR: 2284.2982440380574 @ 0.6178 (stop-loss)"
     }
   ],
   "live:live-blackout-queue": {},
@@ -104481,6 +104468,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 48.172992623481534,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "GRASSEUR:1792960757939:0",
+      "symbol": "GRASSEUR",
+      "entryTimestamp": 1792960757939,
+      "exitTimestamp": 1792984703016,
+      "entryPrice": 0.6413,
+      "exitPrice": 0.6178,
+      "positionSize": 2284.2982440380574,
+      "stopLoss": 0.6230967364033186,
+      "takeProfit": 0.6777065271933628,
+      "exitReason": "stop-loss",
+      "fees": 8.628479757204953,
+      "slippage": 0,
+      "holdingDurationMs": 23945077,
+      "mfePct": 2.9627319507250927,
+      "maePct": 3.664431623265237,
+      "realizedPnl": -62.30948849209923,
+      "returnPct": -4.253438328395442,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 50.26519535013629,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
