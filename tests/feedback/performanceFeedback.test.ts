@@ -24,7 +24,7 @@ const HOUR = 3_600_000;
 let counter = 0;
 function trade(overrides: Partial<JournalEntry> = {}): JournalEntry {
   counter++;
-  return {
+  const entry: JournalEntry = {
     id: `t${counter}`,
     symbol: 'BTC-USD',
     entryTimestamp: T + counter * HOUR,
@@ -48,7 +48,22 @@ function trade(overrides: Partial<JournalEntry> = {}): JournalEntry {
     notes: null,
     ...overrides,
   };
+  // Analytics now derive net P&L from prices and fees (see `netPnl`), so keep the
+  // fixture's exit price consistent with the realizedPnl each test asks for.
+  return overrides.exitPrice !== undefined
+    ? entry
+    : { ...entry, exitPrice: entry.entryPrice + (entry.realizedPnl + entry.fees) / entry.positionSize };
 }
+
+describe('legacy rows (entry fee missing from the stored realizedPnl, before 2026-10-17)', () => {
+  it('every report uses net P&L from prices and fees, not the stored figure', () => {
+    // stored realizedPnl 47 = (105-100)*10 - 3 (exit fee only); the truth is 50 - 6 = 44
+    const legacy = trade({ confidence: 70, entryPrice: 100, exitPrice: 105, positionSize: 10, fees: 6, realizedPnl: 47, exitReason: 'take-profit' });
+    const high = confidenceCalibration([legacy]).find((b) => b.label === '60–90')!;
+    expect(high.totalPnl).toBeCloseTo(44, 9);
+    expect(exitReasonBreakdown([legacy]).find((r) => r.reason === 'take-profit')!.totalPnl).toBeCloseTo(44, 9);
+  });
+});
 
 describe('confidenceCalibration', () => {
   it('groups trades into confidence buckets with win rate and expectancy', () => {

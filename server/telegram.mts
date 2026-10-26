@@ -524,7 +524,27 @@ export function buildPeriodReport(i: PeriodReportInput): string {
 export function buildDrawdownHaltAlert(limitPct: number): string {
   return (
     `🛑 בלם ביטחון: התיק ירד יותר מ-${limitPct}% מהשיא, אז עצרתי קניות חדשות — הגנה על ההון.\n` +
-    'הפוזיציות הפתוחות ממשיכות להיות מנוהלות עם סטופ/יעד. הקניות יתחדשו אוטומטית כשהתיק יתאושש. (כסף מדומה)'
+    'הפוזיציות הפתוחות ממשיכות להיות מנוהלות עם סטופ/יעד. הקניות המדומות יתחדשו אוטומטית כשהתיק יתאושש, או לכל המאוחר אחרי 72 שעות. כניסות אמיתיות נשארות עצורות בנפרד עד שהתיק מתאושש או עד /resume. (כסף מדומה)'
+  );
+}
+
+/**
+ * Alert when the real-entry mirror is paused. Real stops and exits keep working: this does NOT use the kill switch.
+ * `lineEur` is the paper-equity level the pause is measured against (the 80% floor, or the breaker line).
+ */
+export function buildRealEntryPauseAlert(reason: 'breaker' | 'floor', equityEur: number, lineEur: number): string {
+  const why =
+    reason === 'floor'
+      ? `התיק המדומה ירד ל-€${Math.round(equityEur)}, מתחת לרצפה של €${Math.round(lineEur)} (80% מההון ההתחלתי)`
+      : `התיק המדומה ירד ל-€${Math.round(equityEur)}, יותר מהמותר מהשיא (קו הבלם: €${Math.round(lineEur)})`;
+  const back =
+    reason === 'floor'
+      ? 'כניסות אמיתיות חדשות לא יוצעו עד ששלחת /resume.'
+      : 'כניסות אמיתיות חדשות לא יוצעו עד שהתיק המדומה חוזר מעל הקו, או עד ששלחת /resume.';
+  return (
+    `🛑 ${why}. ${back}\n` +
+    'סטופים ויציאות של פוזיציות אמיתיות פתוחות ממשיכים לעבוד כרגיל (קיל סוויץ\' לא הופעל). המסחר המדומה ממשיך (הוא כלי המחקר). ' +
+    'קנייה ידנית (/buy) עדיין אפשרית ודורשת אישור שלך.'
   );
 }
 

@@ -95,7 +95,7 @@ describe('checkManualKillSwitchCommands', () => {
       'C',
       1000,
     );
-    expect(outcomes).toEqual([{ command: 'resume', applied: true }]);
+    expect(outcomes).toMatchObject([{ command: 'resume', applied: true }]);
     expect(killSwitch.isEngaged()).toBe(false);
     expect(audit.entries().map((e) => e.event)).toEqual(['kill-switch-disengaged']);
   });
@@ -113,7 +113,7 @@ describe('checkManualKillSwitchCommands', () => {
       'C',
       1000,
     );
-    expect(outcomes).toEqual([{ command: 'resume', applied: false }]);
+    expect(outcomes).toMatchObject([{ command: 'resume', applied: false }]);
     expect(audit.entries()).toEqual([]);
   });
 
@@ -150,7 +150,7 @@ describe('checkManualKillSwitchCommands', () => {
       'C',
       1000,
     );
-    expect(outcomes).toEqual([
+    expect(outcomes).toMatchObject([
       { command: 'pause', applied: true },
       { command: 'resume', applied: true },
     ]);
@@ -220,7 +220,7 @@ describe('stale /resume (red-team F7, 2026-10-17)', () => {
       killSwitch.engage('broker uncertainty');
       const fetchFn = seedTelegram([{ update_id: 1, message: { text: '/resume', ...(date !== undefined ? { date } : {}), chat: { id: 'C' } } }]);
       const outcomes = await checkManualKillSwitchCommands(store, { token: 'T', chatId: 'C', fetchFn }, killSwitch, audit, 'C', 1000);
-      expect(outcomes).toEqual([{ command: 'resume', applied: false }]);
+      expect(outcomes).toMatchObject([{ command: 'resume', applied: false }]);
       expect(killSwitch.isEngaged()).toBe(true);
     }
   });

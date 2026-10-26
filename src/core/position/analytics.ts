@@ -17,6 +17,20 @@ import type { JournalEntry } from './tradeJournal';
 
 const MS_PER_YEAR = 365 * 86_400_000;
 
+/**
+ * Net P&L of a closed trade: (exit - entry) * size - ALL fees (entry + exit).
+ *
+ * Why not just `entry.realizedPnl`: until 2026-10-17 the journal's `realizedPnl`
+ * left out the ENTRY fee, and old rows were never rewritten, so summing the stored
+ * field overstated production by EUR 517 over 97 of 102 rows (journal +726 vs the
+ * real cash change +209; profit factor 1.23 vs 1.06). Every statistic that decides
+ * "is it profitable / ready / promotable" must use this one definition.
+ * Full-close trades only (the paper autopilot never partially closes).
+ */
+export function netPnl<T extends Pick<JournalEntry, 'entryPrice' | 'exitPrice' | 'positionSize' | 'fees'>>(entry: T): number {
+  return (entry.exitPrice - entry.entryPrice) * entry.positionSize - entry.fees;
+}
+
 export interface TradeAnalytics {
   readonly tradeCount: number;
   readonly winRatePct: number | null;
@@ -41,16 +55,16 @@ export function tradeAnalytics(
   options: { initialCash?: number } = {},
 ): TradeAnalytics {
   const sorted = [...entries].sort((a, b) => a.exitTimestamp - b.exitTimestamp);
-  const wins = sorted.filter((t) => t.realizedPnl > 0);
-  const losses = sorted.filter((t) => t.realizedPnl < 0);
+  const wins = sorted.filter((t) => netPnl(t) > 0);
+  const losses = sorted.filter((t) => netPnl(t) < 0);
   const shared = profitStats(
     sorted.map((t) => ({
-      pnl: t.realizedPnl,
+      pnl: netPnl(t),
       entryTimestamp: t.entryTimestamp,
       exitTimestamp: t.exitTimestamp,
     })),
   );
-  const totalPnl = sorted.reduce((sum, t) => sum + t.realizedPnl, 0);
+  const totalPnl = sorted.reduce((sum, t) => sum + netPnl(t), 0);
 
   // Streaks over the chronological win/loss sequence.
   let maxConsecutiveWins = 0;
@@ -58,10 +72,10 @@ export function tradeAnalytics(
   let winStreak = 0;
   let lossStreak = 0;
   for (const trade of sorted) {
-    if (trade.realizedPnl > 0) {
+    if (netPnl(trade) > 0) {
       winStreak++;
       lossStreak = 0;
-    } else if (trade.realizedPnl < 0) {
+    } else if (netPnl(trade) < 0) {
       lossStreak++;
       winStreak = 0;
     } else {
@@ -92,8 +106,8 @@ export function tradeAnalytics(
     expectancy: shared.expectancy,
     avgWinner: wins.length > 0 ? shared.grossProfit / wins.length : null,
     avgLoser: losses.length > 0 ? -shared.grossLoss / losses.length : null,
-    largestGain: wins.length > 0 ? Math.max(...wins.map((t) => t.realizedPnl)) : null,
-    largestLoss: losses.length > 0 ? Math.min(...losses.map((t) => t.realizedPnl)) : null,
+    largestGain: wins.length > 0 ? Math.max(...wins.map(netPnl)) : null,
+    largestLoss: losses.length > 0 ? Math.min(...losses.map(netPnl)) : null,
     maxConsecutiveWins,
     maxConsecutiveLosses,
     avgHoldingMs: shared.avgHoldingTimeMs,
@@ -119,7 +133,7 @@ export function buildEquityCurve(
   ];
   let equity = initialCash;
   for (const trade of sorted) {
-    equity += trade.realizedPnl;
+    equity += netPnl(trade);
     curve.push({ timestamp: trade.exitTimestamp, equity });
   }
   return curve;
@@ -147,7 +161,7 @@ export function monthlyPerformance(
   for (const trade of entries) {
     const month = new Date(trade.exitTimestamp).toISOString().slice(0, 7);
     const bucket = byMonth.get(month) ?? { pnl: 0, tradeCount: 0 };
-    bucket.pnl += trade.realizedPnl;
+    bucket.pnl += netPnl(trade);
     bucket.tradeCount++;
     byMonth.set(month, bucket);
   }

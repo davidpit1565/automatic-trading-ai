@@ -9,6 +9,8 @@
  * data and is run by hand — see PROJECT_STATE.md "Promotion bar".
  */
 
+import { netPnl } from '../position/analytics';
+
 export const PROMOTION_BAR = {
   /** Fewer closed trades than this is NOT TESTABLE yet, never "pass". */
   minTrades: 100,
@@ -40,10 +42,8 @@ export interface PromotionTrade {
   readonly exitTimestamp: number;
 }
 
-/** NET P&L of one closed trade — works for every journal row, old or new. */
-export function netPnl(t: PromotionTrade): number {
-  return (t.exitPrice - t.entryPrice) * t.positionSize - t.fees;
-}
+// ONE definition of net P&L for the whole project (it lives with the trade analytics): re-exported here.
+export { netPnl };
 
 function profitFactor(pnls: readonly number[]): number | null {
   const gain = pnls.filter((p) => p > 0).reduce((s, p) => s + p, 0);

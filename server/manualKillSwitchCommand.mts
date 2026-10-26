@@ -39,6 +39,8 @@ export interface ManualKillSwitchOutcome {
   /** false when the switch was already in the requested state — a no-op,
    * not an error (e.g. `/pause` while already paused). */
   readonly applied: boolean;
+  /** Telegram's send time of the command (unix seconds), when known: lets a caller tell a fresh /resume from a replayed one. */
+  readonly messageDate?: number;
 }
 
 /**
@@ -94,7 +96,7 @@ export async function checkManualKillSwitchCommands(
           detail: `kill switch engaged manually by ${decidedBy}`,
         });
       }
-      outcomes.push({ command, applied });
+      outcomes.push({ command, applied, ...(message.date !== undefined ? { messageDate: message.date } : {}) });
     } else {
       // A /resume must be NEWER than the engage it would undo (red-team F7,
       // 2026-10-17): after a killed run the Telegram offset can replay an old
@@ -114,7 +116,7 @@ export async function checkManualKillSwitchCommands(
           detail: `kill switch disengaged manually by ${decidedBy}`,
         });
       }
-      outcomes.push({ command, applied });
+      outcomes.push({ command, applied, ...(message.date !== undefined ? { messageDate: message.date } : {}) });
     }
   }
   return outcomes;

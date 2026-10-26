@@ -99,6 +99,7 @@ import {
   buildAllClearMessage,
   buildCycleMessage,
   buildDailySummary,
+  buildRealEntryPauseAlert,
   buildDrawdownHaltAlert,
   buildMoveAlert,
   buildPeriodReport,
@@ -383,6 +384,138 @@ const MOVE_BUCKETS_KEY = 'move-alert-buckets';
 /** Pause NEW buying when equity is this % below its all-time peak. */
 const DD_BREAKER_PCT = Number(process.env['DD_BREAKER_PCT']) || 8;
 const EQUITY_PEAK_KEY = 'equity-peak';
+/** When the current breach began (ms). Cleared as soon as the breaker is no longer breached. */
+const DD_HALT_SINCE_KEY = 'dd-halt-since';
+/**
+ * Longest the breaker may keep NEW entries paused before the peak is re-based to the
+ * current equity. UNMEASURED design value, chosen on 2026-10-23 before any data on it exists
+ * (change it only with a dated PROJECT_STATE entry). Without it the breaker is a one-way door: equity only changes through
+ * open positions, so once flat and more than DD_BREAKER_PCT under the all-time peak
+ * nothing can ever lift equity back over the line and trading stops for good, silently.
+ */
+export const DD_BREAKER_MAX_PAUSE_MS = 72 * 60 * 60 * 1000;
+/**
+ * Paper equity under this share of the starting cash is the second reason (after the paper drawdown breaker)
+ * to pause REAL-money ENTRIES. UNMEASURED design value, proposed 2026-10-23, approved by the owner 2026-10-25.
+ */
+export const DD_HARD_FLOOR_FRACTION = 0.8;
+/** Key inside the 'live' namespace. Present = the real-entry mirror is paused. EXITS AND STOPS ARE NEVER READ FROM IT. */
+const REAL_ENTRY_PAUSE_KEY = 'entry-pause';
+/** Conditions the owner has already acknowledged with /resume; each clears by itself once its condition ends. */
+const REAL_ENTRY_PAUSE_ACK_KEY = 'entry-pause-ack';
+const REAL_ENTRY_PAUSE_ALERT_KEY = 'dd-real-pause-alert-pending';
+
+export interface RealEntryPause {
+  readonly since: number;
+  readonly reason: 'breaker' | 'floor';
+  /** The all-time peak when the pause began (the paper breaker may re-base its own peak later; this one is kept). */
+  readonly peak: number;
+  readonly equity: number;
+}
+interface RealEntryPauseAck {
+  breaker?: boolean;
+  floor?: boolean;
+}
+
+/**
+ * Advances the breaker's cool-off clock; call once per cycle after the equity peak is updated.
+ * 'halted' = still paused, 'resumed' = peak re-based this cycle (entries allowed again).
+ */
+export function advanceBreakerState(
+  store: KeyValueStore,
+  equity: number,
+  now: number,
+): 'ok' | 'halted' | 'resumed' {
+  const peak = store.get<number>(EQUITY_PEAK_KEY) ?? equity;
+  if (!drawdownBreached({ peakEquity: peak, currentEquity: equity, maxDrawdownPct: DD_BREAKER_PCT })) {
+    store.remove(DD_HALT_SINCE_KEY);
+    return 'ok';
+  }
+  const since = store.get<number>(DD_HALT_SINCE_KEY);
+  if (since === undefined) {
+    store.set(DD_HALT_SINCE_KEY, now);
+    return 'halted';
+  }
+  if (now - since < DD_BREAKER_MAX_PAUSE_MS) return 'halted';
+  store.set(EQUITY_PEAK_KEY, equity);
+  store.remove(DD_HALT_SINCE_KEY);
+  return 'resumed';
+}
+
+/**
+ * Real-money ENTRY pause. It stops the real mirror from proposing NEW real entries; it does not touch the
+ * live kill switch, so every real stop-loss / take-profit exit keeps working (the kill switch refuses ALL
+ * orders, sells included: `RevolutXBrokerAdapter.submit`, `runLiveOrderFlow` revalidation, `expireStaleExitOrders`).
+ * Owner-typed /buy and /retry still work (the owner is deciding, and every real order still needs the tap).
+ *
+ * Pauses when (a) the paper drawdown breaker is breached, or (b) paper equity is under 80% of the start.
+ * Unlike the paper breaker (which re-bases after 72 h so that paper trading, the research instrument, can restart),
+ * this one has no timer: it ends when equity recovers (breaker reason only: back within the breaker band of the
+ * peak it was set against) or when the owner sends /resume (see `releaseRealEntryPauseOnResume`). Call once per
+ * cycle, BEFORE `advanceBreakerState`, after the equity peak has been updated.
+ */
+export function updateRealEntryPause(
+  store: KeyValueStore,
+  equity: number,
+  initialCash: number,
+  now: number,
+): 'paused' | 'released' | 'unchanged' {
+  const live = new PrefixedStore(store, 'live');
+  const peak = store.get<number>(EQUITY_PEAK_KEY) ?? equity;
+  const floor = initialCash * DD_HARD_FLOOR_FRACTION;
+  const underFloor = equity < floor;
+  const breached = drawdownBreached({ peakEquity: peak, currentEquity: equity, maxDrawdownPct: DD_BREAKER_PCT });
+
+  // An acknowledged condition is forgotten once it has ended, so the next crossing pauses again.
+  const ack = live.get<RealEntryPauseAck>(REAL_ENTRY_PAUSE_ACK_KEY) ?? {};
+  if (ack.breaker && !breached) ack.breaker = false;
+  if (ack.floor && !underFloor) ack.floor = false;
+  if (ack.breaker || ack.floor) live.set(REAL_ENTRY_PAUSE_ACK_KEY, ack);
+  else live.remove(REAL_ENTRY_PAUSE_ACK_KEY);
+
+  const current = live.get<RealEntryPause>(REAL_ENTRY_PAUSE_KEY);
+  const start = (reason: RealEntryPause['reason'], startedAt: number): 'paused' => {
+    live.set(REAL_ENTRY_PAUSE_KEY, { since: startedAt, reason, peak: current?.peak ?? peak, equity: Math.round(equity) } satisfies RealEntryPause);
+    store.set(REAL_ENTRY_PAUSE_ALERT_KEY, { reason, equity: Math.round(equity), peak: Math.round(current?.peak ?? peak) });
+    return 'paused';
+  };
+  if (current) {
+    if (current.reason === 'breaker' && !underFloor && !drawdownBreached({ peakEquity: current.peak, currentEquity: equity, maxDrawdownPct: DD_BREAKER_PCT })) {
+      live.remove(REAL_ENTRY_PAUSE_KEY);
+      return 'released';
+    }
+    // The situation got worse: a breaker pause becomes a floor pause, which only the owner can end.
+    if (current.reason === 'breaker' && underFloor && !ack.floor) return start('floor', current.since);
+    return 'unchanged';
+  }
+  if (underFloor && !ack.floor) return start('floor', now);
+  if (breached && !ack.breaker && !underFloor) return start('breaker', now);
+  return 'unchanged';
+}
+
+/** True while the real-entry mirror must not propose new entries. Read ONLY by the entry mirror in `runLiveMirror`. */
+export function realEntriesPaused(liveStore: KeyValueStore): boolean {
+  return liveStore.get<RealEntryPause>(REAL_ENTRY_PAUSE_KEY) !== undefined;
+}
+
+/**
+ * The owner's /resume also ends the real-entry pause, but only a /resume SENT AFTER the pause began (a replayed
+ * old command, after a killed run, must not lift it). The condition the owner just accepted is remembered so the
+ * next cycle does not pause again until that condition has ended and returned. Returns true if it released.
+ */
+export function releaseRealEntryPauseOnResume(
+  store: KeyValueStore,
+  outcomes: readonly ManualKillSwitchOutcome[],
+): boolean {
+  const live = new PrefixedStore(store, 'live');
+  const pause = live.get<RealEntryPause>(REAL_ENTRY_PAUSE_KEY);
+  if (!pause) return false;
+  const fresh = outcomes.some((o) => o.command === 'resume' && o.messageDate !== undefined && o.messageDate * 1000 >= pause.since);
+  if (!fresh) return false;
+  live.remove(REAL_ENTRY_PAUSE_KEY);
+  live.set(REAL_ENTRY_PAUSE_ACK_KEY, { breaker: true, floor: pause.reason === 'floor' } satisfies RealEntryPauseAck);
+  return true;
+}
 
 /** Portfolio circuit-breaker state, derived live from the stored peak + last equity. */
 export function breakerEngaged(store: FileStore): boolean {
@@ -950,14 +1083,24 @@ async function runCycle(
 
   // Circuit-breaker alert: tell the user (once per day) that new buying is
   // paused while the portfolio recovers toward its peak.
-  // Simulated-only (breakerEngaged reads the paper equity history) — silenced,
-  // see SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED.
-  if (SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED && telegram.token && telegram.chatId && breakerEngaged(store)) {
+  // Muted for a paper-only setup (SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED, David 2026-09-06), but NOT when real
+  // money is enabled (approved by the owner 2026-10-25): the paper breaker then also gates every real
+  // entry, so a silent halt is an outage. One message per day while it lasts.
+  if ((SIMULATED_TELEGRAM_NOTIFICATIONS_ENABLED || realMoneyEnabled()) && telegram.token && telegram.chatId && breakerEngaged(store)) {
     const { day } = localDayAndHour(now, getSummaryTimezone());
     if (store.get<string>('dd-halt-alert-day') !== day) {
       const a = await sendTelegramMessage(buildDrawdownHaltAlert(DD_BREAKER_PCT), telegram);
       if (a.sent) store.set('dd-halt-alert-day', day);
     }
+  }
+
+  // Real-entry pause alert: the real mirror was just paused (paper breaker breached, or paper equity under 80% of
+  // the start). Not muted: it needs a human decision (/resume ends it). Retried each cycle until it is sent.
+  const pauseAlert = store.get<{ reason: 'breaker' | 'floor'; equity: number; peak: number }>(REAL_ENTRY_PAUSE_ALERT_KEY);
+  if (pauseAlert !== undefined && realMoneyEnabled() && telegram.token && telegram.chatId) {
+    const line = pauseAlert.reason === 'floor' ? INITIAL_CASH * DD_HARD_FLOOR_FRACTION : pauseAlert.peak * (1 - DD_BREAKER_PCT / 100);
+    const a = await sendTelegramMessage(buildRealEntryPauseAlert(pauseAlert.reason, pauseAlert.equity, line), telegram);
+    if (a.sent) store.remove(REAL_ENTRY_PAUSE_ALERT_KEY);
   }
 
   // Tell the user (once per day) when a safety limit pauses new buying.
@@ -1279,6 +1422,9 @@ export async function runLiveMirror(
     // being alive (other commands answered fine).
     const killSwitchOutcomes = await checkManualKillSwitchCommands(store, telegram, killSwitch, audit, 'david', now);
     await notifyKillSwitchOutcomes(telegram, killSwitchOutcomes);
+    if (releaseRealEntryPauseOnResume(store, killSwitchOutcomes)) {
+      await sendTelegramMessage('▶️ עצירת הכניסות האמיתיות הוסרה (/resume). כניסה חדשה עדיין דורשת אישור שלך בלחיצה.', telegram);
+    }
     const manualSellOutcomes = await checkManualSellRequests(
       liveStore, telegram, source, ENTRY_TF, flowParams, now, recordLiveRealizedPnl, store, liveJournal, COST_RATE,
     );
@@ -1332,9 +1478,13 @@ export async function runLiveMirror(
     );
     await notifyLiveEntryOutcomes(telegram, retryOutcomes);
     if (hasSubmittedOrder(retryOutcomes)) persistStateToGit(store, 'live-mirror: after retried entry');
-    const newlyApproved = cycleOpened
-      .map((o) => o.opportunity)
-      .filter((o): o is NonNullable<typeof o> => o !== undefined);
+    // Real-entry pause (paper breaker breached, or paper equity under 80% of the start): propose no new real
+    // entries. This is the ONLY reader of the pause: exits, stops, expiry and manual /sell are untouched.
+    const newlyApproved = realEntriesPaused(liveStore)
+      ? []
+      : cycleOpened
+          .map((o) => o.opportunity)
+          .filter((o): o is NonNullable<typeof o> => o !== undefined);
     // Unfilled buy limit orders are cancelled after an hour — see
     // `expireStaleEntryOrders` (a stale resting buy only fills if price falls).
     // Isolated: a failure here must never skip this cycle's stop-loss checks.
@@ -1752,6 +1902,9 @@ async function recordEquity(
   // Track the all-time equity peak for the drawdown circuit-breaker.
   const peak = store.get<number>(EQUITY_PEAK_KEY) ?? equity;
   store.set(EQUITY_PEAK_KEY, Math.max(peak, equity));
+  // Real-entry pause BEFORE the paper breaker may re-base its peak (it must see the breach first).
+  updateRealEntryPause(store, equity, INITIAL_CASH, now);
+  advanceBreakerState(store, equity, now);
   const history = store.get<Array<{ at: number; equity: number }>>(EQUITY_HISTORY_KEY) ?? [];
   const firstAt = history[0]?.at ?? now;
   history.push({ at: now, equity: Math.round(equity * 100) / 100 });
