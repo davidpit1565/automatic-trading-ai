@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1793040504921,
+    "at": 1793040880656,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1790529971549,
-      "equity": 10600.3
-    },
     {
       "at": 1790530333261,
       "equity": 10605.32
@@ -22905,6 +22901,10 @@
     {
       "at": 1793040504921,
       "equity": 10208.56
+    },
+    {
+      "at": 1793040880656,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -24.74% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -24.59% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25468,17 +25468,17 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 3389.440162153771,
+    "cash": 3390.5091572661686,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": 51.46511519444593,
+    "closedRealizedPnl": 51.440947840320334,
     "dayAnchor": {
       "day": "2026-10-26",
       "equity": 8483.26947950267
     }
   },
   "shadow-standings": {
-    "at": 1793040504921,
+    "at": 1793040880656,
     "standings": [
       {
         "key": "live-mirror",
@@ -25527,8 +25527,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8276.282909532922,
-        "returnPct": -17.237170904670784,
+        "equity": 8272.353460275797,
+        "returnPct": -17.276465397242028,
         "trades": 188,
         "winRatePct": 35.638297872340424,
         "profitFactor": 0.5954677623701835,
@@ -25538,12 +25538,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 8421.71232286144,
-        "returnPct": -15.782876771385599,
-        "trades": 368,
-        "winRatePct": 37.22826086956522,
-        "profitFactor": 0.8411898137097116,
-        "openPositions": 4,
+        "equity": 8416.34830128647,
+        "returnPct": -15.83651698713529,
+        "trades": 369,
+        "winRatePct": 37.12737127371274,
+        "profitFactor": 0.8411876851200859,
+        "openPositions": 3,
         "startedAt": 1785254092443
       },
       {
@@ -25690,7 +25690,7 @@
       "feesPaid": 5.084261669860034,
       "realizedPnl": -5.084261669860034,
       "highestPrice": 10.3816,
-      "lowestPrice": 10.1794,
+      "lowestPrice": 10.16933,
       "confidence": 65.25846400060801,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -25715,35 +25715,9 @@
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
       "exits": []
-    },
-    {
-      "id": "SOLEUR:1793029839461:3",
-      "symbol": "SOLEUR",
-      "openedAt": 1793029839461,
-      "entryPrice": 91.23,
-      "quantity": 0.011946648998783043,
-      "initialQuantity": 0.011946648998783043,
-      "stopLoss": 89.79421898171734,
-      "takeProfit": 94.10156203656534,
-      "feesPaid": 0.003269678364476931,
-      "realizedPnl": -0.003269678364476931,
-      "highestPrice": 91.23,
-      "lowestPrice": 89.83,
-      "confidence": 70,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1790337236574,
-      "intentId": "UNIEUR:1790337236574",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused UNIEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1790337236574,
       "intentId": "ETHEUR:1790337236574",
@@ -32736,6 +32710,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused XBTEUR: no exposure headroom: 5084.17 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1793040880656,
+      "intentId": "SOLEUR:1793029839461:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit SOLEUR: 0.011946648998783043 @ 89.75 (stop-loss)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -41201,6 +41182,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 61.96636847197999,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "SOLEUR:1793029839461:3",
+      "symbol": "SOLEUR",
+      "entryTimestamp": 1793029839461,
+      "exitTimestamp": 1793040880656,
+      "entryPrice": 91.23,
+      "exitPrice": 89.75000000000001,
+      "positionSize": 0.011946648998783043,
+      "stopLoss": 89.79421898171734,
+      "takeProfit": 94.10156203656534,
+      "exitReason": "stop-loss",
+      "fees": 0.006486313607399266,
+      "slippage": 0,
+      "holdingDurationMs": 11041195,
+      "mfePct": 0,
+      "maePct": 1.6222733749863025,
+      "realizedPnl": -0.024167354125598214,
+      "returnPct": -2.2174065548613435,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 70,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
@@ -76617,10 +76621,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1790529971549,
-      "equity": 57.94
-    },
-    {
       "at": 1790530333261,
       "equity": 57.94
     },
@@ -96615,6 +96615,10 @@
     {
       "at": 1793040504921,
       "equity": 60.82
+    },
+    {
+      "at": 1793040880656,
+      "equity": 60.82
     }
   ],
   "live:revolut-x-order-map": {
@@ -97210,7 +97214,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1793040504921,
+    "at": 1793040880656,
     "standings": [
       {
         "key": "candidate-watch",
