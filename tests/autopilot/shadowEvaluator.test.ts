@@ -472,3 +472,18 @@ describe('2026-10-22 exit-rule candidates', () => {
   });
 });
 
+describe('2026-10-27 RSI-ceiling candidate', () => {
+  it('rsi-ceiling-75 differs from live-mirror only in the RSI ceiling', () => {
+    const mirror = SHADOW_CANDIDATES.find((c) => c.key === 'live-mirror')!;
+    const c = SHADOW_CANDIDATES.find((x) => x.key === 'rsi-ceiling-75')!;
+    expect(c).toBeDefined();
+    expect(c.maxRsiForLong).toBe(75);
+    expect(mirror.maxRsiForLong).toBe(65);
+    expect(c.minConfidence).toBe(mirror.minConfidence);
+    expect(c.confirmationTimeframe).toBe(mirror.confirmationTimeframe);
+    expect(c.useWhaleFlowCheck).toBe(mirror.useWhaleFlowCheck);
+    expect(c.trailing).toBe(mirror.trailing);
+    expect(c.riskLimits).toBeUndefined();
+  });
+});
+

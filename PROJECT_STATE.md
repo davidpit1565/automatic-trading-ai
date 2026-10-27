@@ -1,5 +1,14 @@
 # PROJECT_STATE
 
+## "No trades for a week" diagnosis + `rsi-ceiling-75` shadow (2026-10-27)
+
+David saw no trades since 2026-10-21 and suspected a crash. Checked: runner alive (heartbeat 2 min, 0 equity gaps > 20 min in 7 days), scan fine (0 failures,
+20/20 curated symbols evaluated), no gate engaged (kill switch off, breaker not breached: -6.4% vs the 8% line, nothing pending). Reasons on 2026-10-27:
+14 of 20 coins had too little bullish evidence (score < 30), 7 weak trend (ADX < 20), and 6 were refused as "overextended" by the RSI-65 ceiling
+(BTC RSI 72.5, XRP 68.9, DOGE 68.7, HNT 70.3 [paused], XLM, ETH). Not a bug: a quiet, partly rising market with a strict filter.
+The ceiling was measured on ~30 days of 5 coins (2026-08); the 2018-2026 study says high momentum/RSI raises continuation odds, with other exits.
+Forward test only: shadow `rsi-ceiling-75` = `live-mirror` with the ceiling at 75. Judge with the promotion bar; production unchanged.
+
 ## Arena fixes applied: one net-P&L definition, a breaker that can release, real-entry pause, no coins by backtest (2026-10-26)
 
 Source: the arena run of 2026-10-23..25 (16 candidate reports, champion a001; Part C patches P1+P2 applied unchanged except
