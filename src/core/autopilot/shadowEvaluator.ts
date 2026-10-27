@@ -534,6 +534,22 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     confirmationTimeframe: '4h',
     useWhaleFlowCheck: true,
   },
+  // 2026-10-27 (David: "no trades all week"). Nothing is broken: the scan runs and
+  // every gate is open, but 6 of 20 coins (BTC RSI 72.5, XRP 68.9, DOGE 68.7...) were refused
+  // as "overextended" by the RSI-65 ceiling, while the rest had too little bullish evidence.
+  // That ceiling was measured on ~30 days of 5 coins (PROJECT_STATE, 2026-08), and the arena
+  // audit found settings fitted to tiny windows; the 2018-2026 study found trend-continuation
+  // features (high momentum / RSI) raise the odds of further gains. One change vs 'live-mirror':
+  // ceiling 75 (the value the ceiling was originally lowered from). Forward-test only.
+  {
+    key: 'rsi-ceiling-75',
+    label: 'Mirror of production, RSI entry ceiling 75 instead of 65 (are hot coins refused for nothing?)',
+    minConfidence: 40,
+    maxRsiForLong: 75,
+    trailing: AUTOPILOT_TRAILING,
+    confirmationTimeframe: '4h',
+    useWhaleFlowCheck: true,
+  },
   // 2026-10-20 (David: a separate HIGH-RISK demo, judged in a few months).
   // Identical entry signal to 'live-mirror'; only the size caps change, so the
   // record shows what bigger bets do — more gain AND more loss, no new edge.
