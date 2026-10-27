@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1793105155024,
+    "at": 1793105526000,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1790614808094,
-      "equity": 10788.48
-    },
     {
       "at": 1790615158638,
       "equity": 10788.48
@@ -22905,6 +22901,10 @@
     {
       "at": 1793105155024,
       "equity": 10208.56
+    },
+    {
+      "at": 1793105526000,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -25.41% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -25.52% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25468,7 +25468,7 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 5014.075177329349,
+    "cash": 3361.1499066333304,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -33.509776456624266,
@@ -25478,7 +25478,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1793105155024,
+    "at": 1793105526000,
     "standings": [
       {
         "key": "live-mirror",
@@ -25527,8 +25527,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8271.777665744727,
-        "returnPct": -17.282223342552733,
+        "equity": 8274.732804837688,
+        "returnPct": -17.252671951623125,
         "trades": 189,
         "winRatePct": 35.44973544973545,
         "profitFactor": 0.5896214672903035,
@@ -25538,12 +25538,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 8405.604304232143,
-        "returnPct": -15.943956957678566,
+        "equity": 8411.954142347575,
+        "returnPct": -15.880458576524251,
         "trades": 371,
         "winRatePct": 36.92722371967655,
         "profitFactor": 0.8337714593724448,
-        "openPositions": 2,
+        "openPositions": 3,
         "startedAt": 1785254092443
       },
       {
@@ -25689,9 +25689,28 @@
       "takeProfit": 1.2081259836309244,
       "feesPaid": 5.032329669792664,
       "realizedPnl": -5.032329669792664,
-      "highestPrice": 1.18,
+      "highestPrice": 1.18203,
       "lowestPrice": 1.15754,
       "confidence": 68.06679786489283,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "ETHEUR:1793105526000:2",
+      "symbol": "ETHEUR",
+      "openedAt": 1793105526000,
+      "entryPrice": 2093.07,
+      "quantity": 0.7873512719191764,
+      "initialQuantity": 0.7873512719191764,
+      "stopLoss": 2065.7398571737203,
+      "takeProfit": 2147.73028565256,
+      "feesPaid": 4.943943980147612,
+      "realizedPnl": -4.943943980147612,
+      "highestPrice": 2093.07,
+      "lowestPrice": 2093.07,
+      "confidence": 59.57924630325738,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -25699,20 +25718,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1790338609326,
-      "intentId": "UNIEUR:1790338609326",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused UNIEUR: maximum open positions reached (5/5)"
-    },
-    {
-      "timestamp": 1790338952450,
-      "intentId": "XRPEUR:1790338952450",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused XRPEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1790338952450,
       "intentId": "UNIEUR:1790338952450",
@@ -32698,6 +32703,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ADAEUR: 9104.189298577994 @ 0.181488 (stop-loss)"
+    },
+    {
+      "timestamp": 1793105526000,
+      "intentId": "ETHEUR:1793105526000:2",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry ETHEUR: 0.7873512719191764 @ 2093.07 (stop 2065.7398571737203, target 2147.73028565256, confidence 60)"
+    },
+    {
+      "timestamp": 1793105526000,
+      "intentId": "LINKEUR:1793105526000",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LINKEUR: no exposure headroom: 5049.14 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -41247,7 +41266,7 @@
       "takeProfit": 2108.0793288606287,
       "feesPaid": 4.939825001663523,
       "realizedPnl": -4.939825001663523,
-      "highestPrice": 2091.11,
+      "highestPrice": 2093.07,
       "lowestPrice": 2044.93,
       "confidence": 30.303103505298367,
       "validationVerdict": null,
@@ -76652,10 +76671,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1790614808094,
-      "equity": 58.3
-    },
-    {
       "at": 1790615158638,
       "equity": 58.3
     },
@@ -96650,6 +96665,10 @@
     {
       "at": 1793105155024,
       "equity": 60.82
+    },
+    {
+      "at": 1793105526000,
+      "equity": 60.82
     }
   ],
   "live:revolut-x-order-map": {
@@ -97245,13 +97264,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1793105155024,
+    "at": 1793105526000,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 7153.244070564119,
-        "returnPct": -28.467559294358807,
+        "equity": 7151.71512821013,
+        "returnPct": -28.482848717898694,
         "trades": 137,
         "winRatePct": 29.927007299270077,
         "profitFactor": 0.5956584851320519,
