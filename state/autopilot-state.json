@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1793157535914,
+    "at": 1793157913976,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1790693330106,
-      "equity": 10788.48
-    },
     {
       "at": 1790693687572,
       "equity": 10788.48
@@ -22905,6 +22901,10 @@
     {
       "at": 1793157535914,
       "equity": 10208.56
+    },
+    {
+      "at": 1793157913976,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -26.68% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -26.80% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25468,17 +25468,17 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 3361.0588469837203,
+    "cash": 5103.639748908707,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -33.509776456624266,
+    "closedRealizedPnl": 7.327267880126108,
     "dayAnchor": {
       "day": "2026-10-28",
       "equity": 8463.052427005725
     }
   },
   "shadow-standings": {
-    "at": 1793157535914,
+    "at": 1793157913976,
     "standings": [
       {
         "key": "live-mirror",
@@ -25538,12 +25538,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 8488.897211583422,
-        "returnPct": -15.111027884165779,
-        "trades": 371,
-        "winRatePct": 36.92722371967655,
-        "profitFactor": 0.8337714593724448,
-        "openPositions": 4,
+        "equity": 8489.805536529035,
+        "returnPct": -15.101944634709652,
+        "trades": 372,
+        "winRatePct": 37.096774193548384,
+        "profitFactor": 0.8380096184197664,
+        "openPositions": 3,
         "startedAt": 1785254092443
       },
       {
@@ -25671,25 +25671,6 @@
   },
   "shadow:breakout:open-positions": [
     {
-      "id": "DOGEEUR:1793026193349:0",
-      "symbol": "DOGEEUR",
-      "openedAt": 1793026193349,
-      "entryPrice": 0.069404,
-      "quantity": 24446.05348251591,
-      "initialQuantity": 24446.05348251591,
-      "stopLoss": 0.0684169456079618,
-      "takeProfit": 0.07137810878407638,
-      "feesPaid": 5.089961687701602,
-      "realizedPnl": -5.089961687701602,
-      "highestPrice": 0.0713346,
-      "lowestPrice": 0.0687187,
-      "confidence": 70,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
       "id": "XRPEUR:1793059048228:2",
       "symbol": "XRPEUR",
       "openedAt": 1793059048228,
@@ -25748,13 +25729,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1790343507854,
-      "intentId": "AAVEEUR:1790343507854",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused AAVEEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1790343507854,
       "intentId": "XRPEUR:1790343507854",
@@ -32747,6 +32721,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused LINKEUR: no exposure headroom: 5119.37 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1793157913976,
+      "intentId": "DOGEEUR:1793026193349:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit DOGEEUR: 24446.05348251591 @ 0.0714972 (take-profit)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -41278,6 +41259,29 @@
       "maePct": 2.004319654427642,
       "realizedPnl": -43.809941572872354,
       "returnPct": -2.598306695464359,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 70,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "DOGEEUR:1793026193349:0",
+      "symbol": "DOGEEUR",
+      "entryTimestamp": 1793026193349,
+      "exitTimestamp": 1793157913976,
+      "entryPrice": 0.069404,
+      "exitPrice": 0.0714972,
+      "positionSize": 24446.05348251591,
+      "stopLoss": 0.0684169456079618,
+      "takeProfit": 0.07137810878407638,
+      "exitReason": "take-profit",
+      "fees": 10.333434812852012,
+      "slippage": 0,
+      "holdingDurationMs": 131720627,
+      "mfePct": 3.015964497723479,
+      "maePct": 0.9874070658751655,
+      "realizedPnl": 40.837044336750374,
+      "returnPct": 2.4069166042303087,
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 70,
@@ -76704,10 +76708,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1790693330106,
-      "equity": 53.93
-    },
-    {
       "at": 1790693687572,
       "equity": 53.93
     },
@@ -96702,6 +96702,10 @@
     {
       "at": 1793157535914,
       "equity": 60.82
+    },
+    {
+      "at": 1793157913976,
+      "equity": 60.82
     }
   ],
   "live:revolut-x-order-map": {
@@ -97297,7 +97301,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1793157535914,
+    "at": 1793157913976,
     "standings": [
       {
         "key": "candidate-watch",
