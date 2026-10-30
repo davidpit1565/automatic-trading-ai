@@ -1,5 +1,13 @@
 # PROJECT_STATE
 
+## Exchange-held stop: schema found, build deferred (2026-10-30)
+
+Revolut X `POST /1.0/orders` (docs `operations/place-order.md`): `order_configuration` takes exactly one of `market|limit|conditional|tpsl`.
+Cleanest spot stop: `side:"sell"`, `conditional:{base_size, trigger_price}` (no `limit_price` = market sell on activation; direction derived from trigger vs market; trigger watches `index_price`).
+`tpsl:{base_size, take_profit?:{trigger_price,limit_price?}, stop_loss?:{trigger_price,limit_price?}}` is "for a position" (spot semantics unverified). Cancel by `venue_order_id` (DELETE /orders/{id}); replace supports tpsl/conditional.
+NOT verified (needs one live test, owner tap, tiny size): does the stop reserve the held balance (would block our own limit exits unless cancelled first), behaviour on partial fills, `client_order_id` idempotency on retry.
+Not built: the benefit at ~EUR 60 real size is ~EUR 1 per stop-out (arena F4, n=4) and the change touches the entry-fill, trailing-stop, exit, stale-cancel and blackout paths. Build when real size grows; design: place the stop after an approved entry fills, cancel it before any bot exit, move it with the trailing stop, behind a default-off flag.
+
 ## regime-switch shadow (2026-10-30)
 
 New paper-only shadow `shadow:regime-switch` (standings `regime-switch-standings`), same daily engine as `big-rise-momentum` (`stepMomentumBasket` now takes an optional `evaluate` rule):
