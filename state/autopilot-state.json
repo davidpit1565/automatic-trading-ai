@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1793356119749,
+    "at": 1793356494469,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1790981587694,
-      "equity": 10449.8
-    },
     {
       "at": 1790981956368,
       "equity": 10446.28
@@ -22905,6 +22901,10 @@
     {
       "at": 1793356119749,
       "equity": 10208.56
+    },
+    {
+      "at": 1793356494469,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -20.21% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -20.49% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25478,7 +25478,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1793356119749,
+    "at": 1793356494469,
     "standings": [
       {
         "key": "live-mirror",
@@ -25549,8 +25549,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8277.209797127001,
-        "returnPct": -17.227902028729986,
+        "equity": 8290.67255387712,
+        "returnPct": -17.093274461228795,
         "trades": 199,
         "winRatePct": 35.678391959798994,
         "profitFactor": 0.6102022411534211,
@@ -70171,13 +70171,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788525191914,
-      "intentId": "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788525170373",
-      "event": "awaiting-confirmation",
-      "mode": "live",
-      "detail": "confirmation request sent to Telegram"
-    },
-    {
       "timestamp": 1788525541101,
       "intentId": "verify-symbol-exists",
       "event": "rejected",
@@ -77169,6 +77162,13 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1793356517255,
+      "intentId": "external-reconcile:XBTEUR:1793340930699:exit:1793354993805",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -77181,10 +77181,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1790981587694,
-      "equity": 58.6
-    },
     {
       "at": 1790981956368,
       "equity": 58.59
@@ -97180,6 +97176,10 @@
     {
       "at": 1793356119749,
       "equity": 60.63
+    },
+    {
+      "at": 1793356494469,
+      "equity": 60.66
     }
   ],
   "live:revolut-x-order-map": {
@@ -97791,20 +97791,8 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905111,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "external-reconcile:XBTEUR:1793340930699": {
-      "reason": "stop-loss",
-      "queuedAt": 1793354993805
-    }
-  },
-  "live:confirmation-gate-pending": {
-    "external-reconcile:XBTEUR:1793340930699:exit:1793354993805": {
-      "sentAt": 1793355016635,
-      "messageId": 1485,
-      "token": "mvut9uwr.vt97wf",
-      "readyAt": 1793355016782
-    }
-  },
+  "live:live-exit-pending": {},
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 6878.88095708453,
@@ -97817,7 +97805,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1793356119749,
+    "at": 1793356494469,
     "standings": [
       {
         "key": "candidate-watch",
@@ -110973,6 +110961,11 @@
     "live-entry:LTCEUR:1792604466997": {
       "at": 1792768131915,
       "price": 52.33,
+      "decidedBy": "system"
+    },
+    "external-reconcile:XBTEUR:1793340930699": {
+      "at": 1793356494469,
+      "price": 69161.3,
       "decidedBy": "system"
     }
   },
