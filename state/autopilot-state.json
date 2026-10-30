@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1793338619640,
+    "at": 1793338767517,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1790951357359,
-      "equity": 10703.42
-    },
     {
       "at": 1790951722700,
       "equity": 10695.8
@@ -22905,6 +22901,10 @@
     {
       "at": 1793338619640,
       "equity": 10208.56
+    },
+    {
+      "at": 1793338767517,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -22.51% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -22.45% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25478,7 +25478,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1793338619640,
+    "at": 1793338767517,
     "standings": [
       {
         "key": "live-mirror",
@@ -25490,6 +25490,28 @@
         "profitFactor": 1.2823144822355583,
         "openPositions": 0,
         "startedAt": 1785254092443
+      },
+      {
+        "key": "no-whale",
+        "label": "Mirror of production WITHOUT the whale-flow gate (isolates what the gate has contributed)",
+        "equity": 10000,
+        "returnPct": 0,
+        "trades": 0,
+        "winRatePct": null,
+        "profitFactor": null,
+        "openPositions": 0,
+        "startedAt": 1793338767517
+      },
+      {
+        "key": "wide-stop",
+        "label": "Mirror of production with stop and target 2x wider (4 / 8 ATR): tests cost drag per unit of risk",
+        "equity": 10000,
+        "returnPct": 0,
+        "trades": 0,
+        "winRatePct": null,
+        "profitFactor": null,
+        "openPositions": 0,
+        "startedAt": 1793338767517
       },
       {
         "key": "no-confirm",
@@ -25527,8 +25549,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8353.269094827596,
-        "returnPct": -16.46730905172404,
+        "equity": 8351.628774035877,
+        "returnPct": -16.483712259641234,
         "trades": 199,
         "winRatePct": 35.678391959798994,
         "profitFactor": 0.6102022411534211,
@@ -77160,10 +77182,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1790951357359,
-      "equity": 58.81
-    },
-    {
       "at": 1790951722700,
       "equity": 58.75
     },
@@ -97158,6 +97176,10 @@
     {
       "at": 1793338619640,
       "equity": 60.81
+    },
+    {
+      "at": 1793338767517,
+      "equity": 60.81
     }
   ],
   "live:revolut-x-order-map": {
@@ -97753,7 +97775,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1793338619640,
+    "at": 1793338767517,
     "standings": [
       {
         "key": "candidate-watch",
@@ -111082,5 +111104,71 @@
       "confidence": 41.13942946212311,
       "notes": "opened autonomously by the paper autopilot"
     }
-  ]
+  ],
+  "shadow:no-whale:shadow-started-at": 1793338767517,
+  "shadow:no-whale:portfolio-engine": {
+    "cash": 10000,
+    "initialCash": 10000,
+    "baseCurrency": "EUR",
+    "closedRealizedPnl": 0,
+    "dayAnchor": {
+      "day": "2026-10-30",
+      "equity": 10000
+    }
+  },
+  "shadow:wide-stop:shadow-started-at": 1793338767517,
+  "shadow:wide-stop:portfolio-engine": {
+    "cash": 10000,
+    "initialCash": 10000,
+    "baseCurrency": "EUR",
+    "closedRealizedPnl": 0,
+    "dayAnchor": {
+      "day": "2026-10-30",
+      "equity": 10000
+    }
+  },
+  "shadow:regime-majors:state": {
+    "startedAt": "2026-10-30",
+    "initialCash": 10000,
+    "cash": 10000,
+    "positions": [],
+    "lastDay": "2026-10-30"
+  },
+  "shadow:regime-majors:trade-journal": [],
+  "regime-majors-standings": {
+    "at": 1793338767517,
+    "day": "2026-10-30",
+    "standing": {
+      "startedAt": "2026-10-30",
+      "equity": 10000,
+      "returnPct": 0,
+      "windows": 0,
+      "openLegs": [],
+      "regimeOn": false,
+      "btcMom30": -0.05648409905970553,
+      "entriesToday": [],
+      "exitsToday": [],
+      "unconditionalMean": null,
+      "unconditionalDays": 0
+    },
+    "verdict": {
+      "windows": 0,
+      "meanReturn": null,
+      "winRate": null,
+      "worstWindow": null,
+      "accountDrawdown": 0,
+      "probabilityMeanNotPositive": 1,
+      "status": "continue",
+      "reasons": [
+        "only 0/12 windows",
+        "only 0.0/6 months",
+        "mean below the bar",
+        "win rate below the bar",
+        "a window lost more than the bar allows",
+        "profit factor n/a below the project bar",
+        "only 0/3 time parts profitable",
+        "P(mean<=0) 1.00 above the project bar"
+      ]
+    }
+  }
 }
