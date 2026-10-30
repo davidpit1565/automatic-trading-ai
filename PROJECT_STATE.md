@@ -1,5 +1,14 @@
 # PROJECT_STATE
 
+## RMM-7 regime forward test + two control shadows (2026-10-30, arena patch P4)
+
+Built from the arena champion's Part C (P4), applied unchanged: `regimeMajorsShadow.ts` (RMM-7: when BTC's 30-day return >= +21.9%, buy BTC+ETH in equal parts, 30% of the
+starting cash, hold 7 days, 15% disaster stop, 0.30%/side; one decision per UTC day on closed daily bars; paper only, no order path), its always-on control and pre-committed
+verdict `assessRegimeMajors` (standings `regime-majors-standings`, journal `shadow:regime-majors:trade-journal`), plus shadows `no-whale` (live-mirror minus the whale-flow gate)
+and `wide-stop` (2x wider stop/target). Evidence grade B: +2.4% net per window over 94 windows 2018-2026 (t 2.3), 2023-26 holdout +2.3% (90% CI +0.05..+4.56), positive in only part of
+2025-26, not significant after counting later variants. It fires rarely (5 times in 22 months; off today, BTC 30d is negative) and will most likely end "inconclusive" within 2 years.
+It is a confirmation rule, not a forecast. Not for real money until the bar in the code is met. Complements (does not replace) `big-rise-momentum`.
+
 ## Spike / rotation study: no net edge in chasing +20-40% days (2026-10-30)
 
 David asked for a strategy that catches coins rising 20-40% a day and trades constantly. `research/spike-study/` (482 Kraken EUR pairs, 346 liquid, 2024-11..2026-10,

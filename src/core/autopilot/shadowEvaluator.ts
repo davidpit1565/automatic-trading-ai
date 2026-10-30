@@ -29,7 +29,7 @@ import { tradeAnalytics } from '../position/analytics';
 import { DEFAULT_RISK_LIMITS, type RiskLimits } from '../risk/riskEngine';
 import type { TrailingConfig } from '../risk/trailingStop';
 import type { ScanResult } from '../scan/marketScanner';
-import type { SignalDecision } from '../signal/signalEngine';
+import type { SignalCriteria, SignalDecision } from '../signal/signalEngine';
 import { breakoutSignal, meanReversionSignal } from '../signal/alternativeSignals';
 import type { Timeframe } from '../types';
 import { PersistedAuditLog } from './auditLog';
@@ -113,6 +113,8 @@ export interface ShadowCandidate {
    * more risk does to the forward record. Omit for the production limits.
    */
   readonly riskLimits?: Partial<RiskLimits>;
+  /** Overrides on the production signal criteria, e.g. wider ATR stop/target multiples. */
+  readonly signalCriteria?: Partial<SignalCriteria>;
 }
 
 export interface ShadowStanding {
@@ -286,6 +288,7 @@ async function runOne(
     ...(candidate.correlationCap && options.correlationBetween
       ? { correlationBetween: options.correlationBetween }
       : {}),
+    ...(candidate.signalCriteria ? { signalCriteria: candidate.signalCriteria } : {}),
     riskLimits: {
       ...DEFAULT_RISK_LIMITS,
       ...(candidate.correlationCap
@@ -345,6 +348,35 @@ export const SHADOW_CANDIDATES: readonly ShadowCandidate[] = [
     trailing: AUTOPILOT_TRAILING,
     confirmationTimeframe: '4h',
     useWhaleFlowCheck: true,
+  },
+  // CONTROL (2026-10-23). Whale-flow went into production on 2026-09-09 on a 29-trade record
+  // (PF 2.44, best of ~11 candidates). Since then production runs PF 0.97 (37 trades) and every
+  // arm still has the gate, so nothing isolates what it contributes. This is 'live-mirror'
+  // MINUS the gate and nothing else; compare it to 'live-mirror' over the same dates.
+  {
+    key: 'no-whale',
+    label: 'Mirror of production WITHOUT the whale-flow gate (isolates what the gate has contributed)',
+    minConfidence: 40,
+    maxRsiForLong: 65,
+    trailing: AUTOPILOT_TRAILING,
+    confirmationTimeframe: '4h',
+  },
+  // 2026-10-23: costs are 0.6% per round trip against a 2.56% average stop, i.e. 24% of one unit of risk.
+  // The cost arithmetic is exact: a stop twice as wide halves the cost per unit of risk (0.6% / 2.56% = 24% of R
+  // today). Whether that helps net of everything else is NOT established: random entries run through the same
+  // exits averaged -0.39% at today's width and +0.28% at 2x (20 coins, 4h bars, Jul-Oct 2026), but -0.84% and -2.16%
+  // in the last 30 days at 1h bars, with block standard errors of 0.3-1.1 points: the sign flips with the period, so
+  // the control supports neither width. This candidate widens stop and target 2x (4 / 8 ATR) and changes nothing
+  // else; position size shrinks automatically (same % risk). A pre-registered test, not a finding.
+  {
+    key: 'wide-stop',
+    label: 'Mirror of production with stop and target 2x wider (4 / 8 ATR): tests cost drag per unit of risk',
+    minConfidence: 40,
+    maxRsiForLong: 65,
+    trailing: AUTOPILOT_TRAILING,
+    confirmationTimeframe: '4h',
+    useWhaleFlowCheck: true,
+    signalCriteria: { atrStopMultiple: 4, atrTargetMultiple: 8 },
   },
   {
     key: 'no-confirm',

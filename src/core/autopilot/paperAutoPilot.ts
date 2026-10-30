@@ -40,6 +40,7 @@ import {
   DEFAULT_SIGNAL_CRITERIA,
   evaluateScan,
   MAX_CONFIDENCE,
+  type SignalCriteria,
   type SignalDecision,
   type TradeOpportunity,
 } from '../signal/signalEngine';
@@ -170,6 +171,12 @@ export interface AutoPilotOptions {
    * a real exchange so paper results predict live results. Default 0.
    */
   readonly costRate?: number;
+  /**
+   * Overrides on the production signal criteria (e.g. the ATR multiples that set stop and target
+   * distance). Omit for production. Exists so a shadow can test ONE exit-geometry change; it never
+   * applies to `evaluate`-based signal families, which carry their own parameters.
+   */
+  readonly signalCriteria?: Partial<SignalCriteria>;
   /**
    * Minimum signal confidence required to open (0..MAX_CONFIDENCE). Defaults
    * to 0 (open any qualifying signal). Production sets AUTOPILOT_MIN_CONFIDENCE.
@@ -589,6 +596,7 @@ export class PaperAutoPilot {
             ...DEFAULT_SIGNAL_CRITERIA,
             maxRsiForLong: this.options.maxRsiForLong ?? DEFAULT_SIGNAL_CRITERIA.maxRsiForLong,
             minConfidence: floor,
+            ...this.options.signalCriteria,
           });
       if (decision.kind === 'rejected') continue; // no signal / below floor — nothing to audit
 
@@ -849,6 +857,7 @@ export class PaperAutoPilot {
             ...DEFAULT_SIGNAL_CRITERIA,
             maxRsiForLong: this.options.maxRsiForLong ?? DEFAULT_SIGNAL_CRITERIA.maxRsiForLong,
             minConfidence: floor,
+            ...this.options.signalCriteria,
           });
       if (decision.kind === 'rejected') continue; // no signal at all — not a near-miss worth reporting
 

@@ -201,7 +201,7 @@ describe('shadow evaluation', () => {
   // own feature with "no whale-flow". Same drift class as the trailing bug
   // above, on a different field.
   it('keeps whale-flow on every candidate that isolates one change against live-mirror', () => {
-    const productionRelative = ['live-mirror', 'ai-judgment', 'correlation-capped', 'trailing-forward-test', 'funding-crowding', 'breakeven-lock', 'trail-tight'];
+    const productionRelative = ['live-mirror', 'ai-judgment', 'correlation-capped', 'trailing-forward-test', 'funding-crowding', 'breakeven-lock', 'trail-tight', 'wide-stop'];
     for (const key of productionRelative) {
       const c = SHADOW_CANDIDATES.find((x) => x.key === key);
       if (!c) continue; // a retired candidate is fine; a present one must match production
@@ -487,3 +487,39 @@ describe('2026-10-27 RSI-ceiling candidate', () => {
   });
 });
 
+
+describe('2026-10-23 control and exit-geometry candidates', () => {
+  const mirror = SHADOW_CANDIDATES.find((c) => c.key === 'live-mirror')!;
+
+  it('no-whale differs from live-mirror ONLY by lacking the whale-flow gate', () => {
+    const c = SHADOW_CANDIDATES.find((x) => x.key === 'no-whale')!;
+    expect(c).toBeDefined();
+    expect(c.useWhaleFlowCheck).toBeUndefined();
+    expect(mirror.useWhaleFlowCheck).toBe(true);
+    expect(c.minConfidence).toBe(mirror.minConfidence);
+    expect(c.maxRsiForLong).toBe(mirror.maxRsiForLong);
+    expect(c.confirmationTimeframe).toBe(mirror.confirmationTimeframe);
+    expect(c.trailing).toBe(mirror.trailing);
+  });
+
+  it('wide-stop differs from live-mirror ONLY by 2x ATR stop/target, and really widens the stop', async () => {
+    const c = SHADOW_CANDIDATES.find((x) => x.key === 'wide-stop')!;
+    expect(c.signalCriteria).toEqual({ atrStopMultiple: 4, atrTargetMultiple: 8 });
+    expect(c.useWhaleFlowCheck).toBe(mirror.useWhaleFlowCheck);
+    expect(c.minConfidence).toBe(mirror.minConfidence);
+
+    const open = async (candidate: ShadowCandidate) => {
+      const store = new MemoryStore();
+      const { source } = makeSource();
+      await runShadowCycle([{ ...candidate, minConfidence: 0, maxRsiForLong: 100, confirmationTimeframe: undefined, useWhaleFlowCheck: false }], baseOptions(store, source));
+      return (store.get<{ entryPrice: number; stopLoss: number }[]>(`shadow:${candidate.key}:open-positions`) ?? [])[0];
+    };
+    const normal = await open({ ...mirror, key: 'x-normal' });
+    const wide = await open({ ...mirror, key: 'x-wide', signalCriteria: c.signalCriteria });
+    // the synthetic QUAL series qualifies; if it ever stopped doing so the test must say so, not pass vacuously
+    expect(normal).toBeDefined();
+    expect(wide).toBeDefined();
+    const dist = (p: { entryPrice: number; stopLoss: number }) => p.entryPrice - p.stopLoss;
+    expect(dist(wide!) / dist(normal!)).toBeCloseTo(2, 6);
+  });
+});

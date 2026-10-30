@@ -41,6 +41,13 @@ import { outageNotice, pingHealthcheck } from './heartbeat.mts';
 import { decideSentimentTrend } from '../src/core/signal/sentimentTrend';
 import { getFearGreedHistory } from '../src/core/data/fearGreed';
 import { stepMomentumBasket, type MomentumBasketInput } from '../src/core/autopilot/momentumBasketShadow';
+import {
+  REGIME_MAJORS_RULE,
+  assessRegimeMajors,
+  stepRegimeMajors,
+  type RegimeMajorsInput,
+  type RegimeTrade,
+} from '../src/core/autopilot/regimeMajorsShadow';
 import { stepSentimentShadow } from '../src/core/autopilot/sentimentShadow';
 import { buildFundingGate } from '../src/core/signal/fundingGate';
 import { isAiJudgmentBearish, type AiJudgmentInput } from '../src/core/signal/aiJudgment';
@@ -1148,6 +1155,7 @@ async function runCycle(
   await runLongTermShadow(store, source, symbols, now);
   await runSentimentShadow(store, source, now);
   await runMomentumBasketShadow(store, source, symbols, now);
+  await runRegimeMajorsShadow(store, source, now);
   await runCandidateWatch(store, source, now);
   await recordEquity(store, source, portfolio, journal, now, cyclePrices);
   await maybeSendSummaries(store, source, portfolio, journal, telegram, now);
@@ -1689,6 +1697,48 @@ async function runMomentumBasketShadow(
     store.set(MOMENTUM_BASKET_STANDINGS_KEY, { at: now, day, standing });
   } catch (cause) {
     console.error('Momentum basket shadow skipped:', cause instanceof Error ? cause.message : cause);
+  }
+}
+
+const REGIME_MAJORS_STANDINGS_KEY = 'regime-majors-standings';
+const REGIME_MAJORS_NAMESPACE = 'shadow:regime-majors';
+
+/**
+ * "Regime-confirmed majors momentum" forward test (2026-10-23, see `regimeMajorsShadow.ts`): one
+ * paper decision per UTC day on BTC + ETH closed daily bars. Purely diagnostic/simulated — no
+ * order path; a failure is logged and never allowed to affect the real cycle. Not marked done on
+ * failure, so it retries. The standing carries the pre-committed verdict (abort/continue/pass).
+ */
+async function runRegimeMajorsShadow(store: FileStore, source: MarketDataSource, now: number): Promise<void> {
+  const day = new Date(now).toISOString().slice(0, 10);
+  if (store.get<{ day?: string }>(REGIME_MAJORS_STANDINGS_KEY)?.day === day) return;
+  try {
+    const dayStart = Date.parse(`${day}T00:00:00Z`);
+    const caching = new CachingSource(source);
+    const markets: Record<string, RegimeMajorsInput['markets'][string]> = {};
+    for (const symbol of REGIME_MAJORS_RULE.legs) {
+      const candles = await caching.getCandles(symbol, '1d', 200);
+      if (!candles.ok || candles.value.length < 2) continue;
+      const forming = candles.value[candles.value.length - 1]!;
+      // The last bar must be today's forming bar; a stale series would decide on the wrong day.
+      if (forming.timestamp !== dayStart) continue;
+      markets[symbol] = { closed: candles.value.slice(0, -1), todayOpen: forming.open, markPrice: forming.close };
+    }
+    if (Object.keys(markets).length === 0) {
+      console.error('Regime-majors shadow skipped: no current daily bars');
+      return;
+    }
+    const ns = new PrefixedStore(store, REGIME_MAJORS_NAMESPACE);
+    const standing = stepRegimeMajors(ns, { day, dayStart, markets, initialCash: INITIAL_CASH });
+    const verdict = assessRegimeMajors(ns.get<RegimeTrade[]>('trade-journal') ?? [], INITIAL_CASH, {
+      unconditionalMean: standing.unconditionalMean,
+      unconditionalDays: standing.unconditionalDays,
+      startedAt: Date.parse(`${standing.startedAt}T00:00:00Z`),
+      now,
+    });
+    store.set(REGIME_MAJORS_STANDINGS_KEY, { at: now, day, standing, verdict });
+  } catch (cause) {
+    console.error('Regime-majors shadow skipped:', cause instanceof Error ? cause.message : cause);
   }
 }
 
