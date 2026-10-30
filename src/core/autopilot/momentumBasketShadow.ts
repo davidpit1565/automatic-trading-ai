@@ -117,6 +117,45 @@ export interface MomentumBasketInput {
   /** Symbols that get no new entries (exits are unaffected). */
   readonly entryPaused?: ReadonlySet<string>;
   readonly costRate?: number;
+  /** Entry rule on CLOSED bars; defaults to the frozen momentum rule. `rank`: higher is taken first. */
+  readonly evaluate?: (closed: readonly Candle[]) => { readonly qualifies: boolean; readonly rank: number } | null;
+}
+
+/** Wilder RSI below this AND a 7-day drop deeper than OVERSOLD_DROP7 = "deeply oversold" (the bear-regime rule). */
+export const OVERSOLD_RULE = { rsiMax: 25, drop7: -0.15 } as const;
+const REGIME_SMA_DAYS = 100;
+
+/** BTC regime: last closed close above its 100-day average. Null with too little history. */
+export function btcRegimeUp(btcClosed: readonly Candle[]): boolean | null {
+  if (btcClosed.length < REGIME_SMA_DAYS) return null;
+  const last = btcClosed[btcClosed.length - 1]!.close;
+  const sma = btcClosed.slice(-REGIME_SMA_DAYS).reduce((a, b) => a + b.close, 0) / REGIME_SMA_DAYS;
+  return last > sma;
+}
+
+/** Deeply oversold rebound candidate: RSI(14) < 25 and 7-day return < -15% (rank: deeper drop first). */
+export function evaluateOversold(bars: readonly Candle[]): { qualifies: boolean; rank: number } | null {
+  if (bars.length < MOMENTUM_BASKET_MIN_BARS) return null;
+  const closes = bars.map((b) => b.close);
+  const rsi = wilderRsi(closes);
+  const drop7 = closes[closes.length - 1]! / closes[closes.length - 8]! - 1;
+  if (rsi === null) return null;
+  return { qualifies: rsi < OVERSOLD_RULE.rsiMax && drop7 < OVERSOLD_RULE.drop7, rank: -drop7 };
+}
+
+/**
+ * Regime switch: BTC above its 100-day average -> the frozen momentum rule; below -> the oversold rebound;
+ * unknown regime -> no entries. Study 2018-2026 (28 coins): momentum +2.3%/7d when BTC is up but -3.6% when down.
+ */
+export function evaluateRegimeSwitch(regimeUp: boolean | null) {
+  return (bars: readonly Candle[]): { qualifies: boolean; rank: number } | null => {
+    if (regimeUp === null) return null;
+    if (regimeUp) {
+      const sig = evaluateMomentumBasket(bars);
+      return sig ? { qualifies: sig.qualifies, rank: sig.mom30 } : null;
+    }
+    return evaluateOversold(bars);
+  };
 }
 
 export interface MomentumBasketStanding {
@@ -177,8 +216,13 @@ export function stepMomentumBasket(store: KeyValueStore, input: MomentumBasketIn
     const candidates: { symbol: string; mom30: number }[] = [];
     for (const [symbol, m] of Object.entries(input.markets)) {
       if (held.has(symbol) || input.entryPaused?.has(symbol) || !(m.todayOpen > 0)) continue;
-      const sig = evaluateMomentumBasket(m.closed);
-      if (sig?.qualifies) candidates.push({ symbol, mom30: sig.mom30 });
+      const sig = input.evaluate
+        ? input.evaluate(m.closed)
+        : (() => {
+            const r = evaluateMomentumBasket(m.closed);
+            return r ? { qualifies: r.qualifies, rank: r.mom30 } : null;
+          })();
+      if (sig?.qualifies) candidates.push({ symbol, mom30: sig.rank });
     }
     candidates.sort((a, b) => b.mom30 - a.mom30);
     // Sized so that maxPositions slots PLUS their entry fees fit in the starting cash.

@@ -114,3 +114,38 @@ describe('stepMomentumBasket', () => {
     expect(next.exitsToday).toEqual(['AAA']);
   });
 });
+
+import { OVERSOLD_RULE, btcRegimeUp, evaluateOversold, evaluateRegimeSwitch } from '../../src/core/autopilot/momentumBasketShadow';
+
+describe('regime switch', () => {
+  const falling = (n = 60): Candle[] => Array.from({ length: n }, (_, i) => bar(i, i < 50 ? 100 : 100 * 0.97 ** (i - 49), 0.2));
+
+  it('btcRegimeUp: above the 100-day average, below it, and too little history', () => {
+    const rise = Array.from({ length: 120 }, (_, i) => bar(i, 100 + i));
+    const fall = Array.from({ length: 120 }, (_, i) => bar(i, 220 - i));
+    expect(btcRegimeUp(rise)).toBe(true);
+    expect(btcRegimeUp(fall)).toBe(false);
+    expect(btcRegimeUp(rise.slice(0, 50))).toBeNull();
+  });
+
+  it('evaluateOversold: a sharp 10-day slide qualifies, a flat series does not', () => {
+    const slide = evaluateOversold(falling())!;
+    expect(slide.qualifies).toBe(true);
+    expect(slide.rank).toBeGreaterThan(-OVERSOLD_RULE.drop7);
+    expect(evaluateOversold(flat())!.qualifies).toBe(false);
+  });
+
+  it('uses momentum when BTC is up (and ignores the oversold slide), the oversold rule when down, nothing when unknown', () => {
+    expect(evaluateRegimeSwitch(true)(rising())!.qualifies).toBe(true);
+    expect(evaluateRegimeSwitch(true)(falling())!.qualifies).toBe(false);
+    expect(evaluateRegimeSwitch(false)(falling())!.qualifies).toBe(true);
+    expect(evaluateRegimeSwitch(false)(rising())!.qualifies).toBe(false);
+    expect(evaluateRegimeSwitch(null)(rising())).toBeNull();
+  });
+
+  it('stepMomentumBasket takes the custom rule and ranks by it', () => {
+    const store = new MemoryStore();
+    const r = stepMomentumBasket(store, { ...input(0, { AAA: { closed: falling(), open: 80 }, BBB: { closed: rising(), open: 200 } }), evaluate: evaluateRegimeSwitch(false) });
+    expect(r.entriesToday).toEqual(['AAA']);
+  });
+});

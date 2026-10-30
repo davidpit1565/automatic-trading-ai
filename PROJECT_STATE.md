@@ -1,5 +1,13 @@
 # PROJECT_STATE
 
+## regime-switch shadow (2026-10-30)
+
+New paper-only shadow `shadow:regime-switch` (standings `regime-switch-standings`), same daily engine as `big-rise-momentum` (`stepMomentumBasket` now takes an optional `evaluate` rule):
+BTC close > its 100-day average -> the frozen momentum rule; BTC <= SMA100 -> deeply-oversold rebound (RSI14 < 25 and 7d drop > 15%, ranked by drop); unknown regime -> cash.
+Evidence grade C (UNVALIDATED): the 2018-2026 study says momentum only works with BTC up, but the daily backtest on Kraken data is not positive in the last 12 months on majors
+(41 trades, -1.1%/trade) and only marginal over the broad list since 2024-12 (+0.77%/trade). Fires ~3-5 trades/month, so 100 trades would take ~2 years; first read at ~20 trades.
+Forward test only; no order path, not for real money.
+
 ## RMM-7 regime forward test + two control shadows (2026-10-30, arena patch P4)
 
 Built from the arena champion's Part C (P4), applied unchanged: `regimeMajorsShadow.ts` (RMM-7: when BTC's 30-day return >= +21.9%, buy BTC+ETH in equal parts, 30% of the

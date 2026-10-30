@@ -40,7 +40,7 @@ import { getFundingRateHistory } from '../src/core/data/okxFunding';
 import { outageNotice, pingHealthcheck } from './heartbeat.mts';
 import { decideSentimentTrend } from '../src/core/signal/sentimentTrend';
 import { getFearGreedHistory } from '../src/core/data/fearGreed';
-import { stepMomentumBasket, type MomentumBasketInput } from '../src/core/autopilot/momentumBasketShadow';
+import { btcRegimeUp, evaluateRegimeSwitch, stepMomentumBasket, type MomentumBasketInput } from '../src/core/autopilot/momentumBasketShadow';
 import {
   REGIME_MAJORS_RULE,
   assessRegimeMajors,
@@ -1656,6 +1656,8 @@ async function runLongTermShadow(
 
 const MOMENTUM_BASKET_STANDINGS_KEY = 'big-rise-momentum-standings';
 const MOMENTUM_BASKET_NAMESPACE = 'shadow:big-rise-momentum';
+const REGIME_SWITCH_NAMESPACE = 'shadow:regime-switch';
+const REGIME_SWITCH_STANDINGS_KEY = 'regime-switch-standings';
 
 /**
  * "Big-rise momentum" forward test (2026-10-22, see `momentumBasketShadow.ts`):
@@ -1694,6 +1696,17 @@ async function runMomentumBasketShadow(
       initialCash: INITIAL_CASH,
       entryPaused: ENTRY_PAUSED_SYMBOLS,
     });
+    // Regime-switch variant (2026-10-30): same engine, entry rule chosen by the BTC regime.
+    const regimeUp = btcRegimeUp(markets['XBTEUR']?.closed ?? []);
+    const switchStanding = stepMomentumBasket(new PrefixedStore(store, REGIME_SWITCH_NAMESPACE), {
+      day,
+      dayStart,
+      markets,
+      initialCash: INITIAL_CASH,
+      entryPaused: ENTRY_PAUSED_SYMBOLS,
+      evaluate: evaluateRegimeSwitch(regimeUp),
+    });
+    store.set(REGIME_SWITCH_STANDINGS_KEY, { at: now, day, regimeUp, standing: switchStanding });
     store.set(MOMENTUM_BASKET_STANDINGS_KEY, { at: now, day, standing });
   } catch (cause) {
     console.error('Momentum basket shadow skipped:', cause instanceof Error ? cause.message : cause);
