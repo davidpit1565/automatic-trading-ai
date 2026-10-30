@@ -114,6 +114,8 @@ export function assessPromotion(
   trades: readonly PromotionTrade[],
   initialEquity: number,
   maxDrawdownPct: number = PROMOTION_BAR.maxDrawdownPct,
+  /** Only for forward tests whose unit is rarer than a trade (e.g. one 7-day window); production leaves it at 100. */
+  minTrades: number = PROMOTION_BAR.minTrades,
 ): PromotionVerdict {
   const ordered = [...trades].sort((a, b) => a.exitTimestamp - b.exitTimestamp);
   const pnls = ordered.map(netPnl);
@@ -129,7 +131,7 @@ export function assessPromotion(
   const pMean = probabilityMeanNotPositive(returns);
   const dd = maxDrawdownOfPnls(pnls, initialEquity);
   const checks = {
-    trades: ordered.length >= PROMOTION_BAR.minTrades,
+    trades: ordered.length >= minTrades,
     profitFactor: pf !== null && pf >= PROMOTION_BAR.minProfitFactor,
     parts: partsProfitable >= PROMOTION_BAR.minPartsProfitable,
     significance: pMean <= PROMOTION_BAR.maxProbabilityMeanNotPositive,
