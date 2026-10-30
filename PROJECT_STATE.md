@@ -1,5 +1,12 @@
 # PROJECT_STATE
 
+## Spike / rotation study: no net edge in chasing +20-40% days (2026-10-30)
+
+David asked for a strategy that catches coins rising 20-40% a day and trades constantly. `research/spike-study/` (482 Kraken EUR pairs, 346 liquid, 2024-11..2026-10,
+costs 0.30%/side): buying after a >= 20% day lost -1.8% (1d) to -4.8% (7d) net; entering early on a +5..20% intraday trigger lost -0.9..-3.8% same-day; buying dips has no robust edge;
+weekly momentum rotation lost 80-95% (about flat with a BTC>SMA50 filter). A random liquid coin lost 0.77%/day net (alts bled; BTC -2.8%). Survivorship-biased (current listings),
+so real results would be worse. No code or strategy change; production unchanged. Consistent with the arena finding: no demonstrable entry edge, costs dominate.
+
 ## "No trades for a week" diagnosis + `rsi-ceiling-75` shadow (2026-10-27)
 
 David saw no trades since 2026-10-21 and suspected a crash. Checked: runner alive (heartbeat 2 min, 0 equity gaps > 20 min in 7 days), scan fine (0 failures,
