@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1793354631709,
+    "at": 1793354993805,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1790980117003,
-      "equity": 10466.09
-    },
     {
       "at": 1790980486006,
       "equity": 10467.43
@@ -22905,6 +22901,10 @@
     {
       "at": 1793354631709,
       "equity": 10208.56
+    },
+    {
+      "at": 1793354993805,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -20.41% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -20.28% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25478,7 +25478,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1793354631709,
+    "at": 1793354993805,
     "standings": [
       {
         "key": "live-mirror",
@@ -25549,8 +25549,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8269.00293456553,
-        "returnPct": -17.309970654344706,
+        "equity": 8266.275962913038,
+        "returnPct": -17.337240370869623,
         "trades": 199,
         "winRatePct": 35.678391959798994,
         "profitFactor": 0.6102022411534211,
@@ -70171,13 +70171,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788478320000,
-      "intentId": "live-entry:ADAEUR:manual-reconcile-20260904",
-      "event": "filled",
-      "mode": "live",
-      "detail": "MANUAL RECONCILIATION (2026-09-04): two real ADA/EUR buys (42.2331 @ €0.19028 + 33.8098 @ €0.19006, per Revolut X Activity) merged into one tracked position (76.0429 ADA @ weighted-avg €0.190182) after a workflow-cancellation gap left both untracked — see PROJECT_STATE.md's 2026-09-03 entry."
-    },
-    {
       "timestamp": 1788525191914,
       "intentId": "live-entry:ADAEUR:manual-reconcile-20260904:exit:1788525170373",
       "event": "awaiting-confirmation",
@@ -77169,6 +77162,13 @@
       "event": "submitted",
       "mode": "live",
       "detail": "Revolut X order f959695d-ec6d-e277-02c0-07702e6b4046: new"
+    },
+    {
+      "timestamp": 1793355016755,
+      "intentId": "external-reconcile:XBTEUR:1793340930699:exit:1793354993805",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -77181,10 +77181,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1790980117003,
-      "equity": 58.6
-    },
     {
       "at": 1790980486006,
       "equity": 58.62
@@ -97180,6 +97176,10 @@
     {
       "at": 1793354631709,
       "equity": 60.65
+    },
+    {
+      "at": 1793354993805,
+      "equity": 60.64
     }
   ],
   "live:revolut-x-order-map": {
@@ -97289,7 +97289,7 @@
       "stopLoss": 69078.838,
       "takeProfit": 72234.724,
       "highestPrice": 70239.9,
-      "lowestPrice": 69115,
+      "lowestPrice": 69071.7,
       "entrySlippage": 0,
       "openedAt": 1793340930699,
       "entryAssessment": {
@@ -97791,8 +97791,20 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905111,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:live-exit-pending": {
+    "external-reconcile:XBTEUR:1793340930699": {
+      "reason": "stop-loss",
+      "queuedAt": 1793354993805
+    }
+  },
+  "live:confirmation-gate-pending": {
+    "external-reconcile:XBTEUR:1793340930699:exit:1793354993805": {
+      "sentAt": 1793355016635,
+      "messageId": 1485,
+      "token": "mvut9uwr.vt97wf",
+      "readyAt": 1793355016782
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 6878.88095708453,
@@ -97805,7 +97817,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1793354631709,
+    "at": 1793354993805,
     "standings": [
       {
         "key": "candidate-watch",
