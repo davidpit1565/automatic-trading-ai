@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1793534456380,
+    "at": 1793534827843,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1791313674719,
-      "equity": 10527.29
-    },
     {
       "at": 1791314039765,
       "equity": 10531.2
@@ -22905,6 +22901,10 @@
     {
       "at": 1793534456380,
       "equity": 10208.56
+    },
+    {
+      "at": 1793534827843,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -21.66% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -21.70% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25468,17 +25468,17 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 3270.9817657666413,
+    "cash": 4880.956301128886,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -231.54989829469415,
+    "closedRealizedPnl": -267.4857508812637,
     "dayAnchor": {
       "day": "2026-11-01",
       "equity": 8184.271858214407
     }
   },
   "shadow-standings": {
-    "at": 1793534456380,
+    "at": 1793534827843,
     "standings": [
       {
         "key": "live-mirror",
@@ -25549,8 +25549,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8354.451154210277,
-        "returnPct": -16.45548845789723,
+        "equity": 8353.769528963467,
+        "returnPct": -16.462304710365334,
         "trades": 199,
         "winRatePct": 35.678391959798994,
         "profitFactor": 0.6102022411534211,
@@ -25560,12 +25560,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 8171.605515323552,
-        "returnPct": -18.28394484676448,
-        "trades": 384,
-        "winRatePct": 36.45833333333333,
-        "profitFactor": 0.8183644270195797,
-        "openPositions": 4,
+        "equity": 8163.7298368152515,
+        "returnPct": -18.362701631847486,
+        "trades": 385,
+        "winRatePct": 36.36363636363637,
+        "profitFactor": 0.8154071482116116,
+        "openPositions": 3,
         "startedAt": 1785254092443
       },
       {
@@ -25712,25 +25712,6 @@
       "exits": []
     },
     {
-      "id": "AVAXEUR:1793510785912:1",
-      "symbol": "AVAXEUR",
-      "openedAt": 1793510785912,
-      "entryPrice": 7.964,
-      "quantity": 206.05065616170248,
-      "initialQuantity": 206.05065616170248,
-      "stopLoss": 7.838377891469957,
-      "takeProfit": 8.215244217060087,
-      "feesPaid": 4.922962277015396,
-      "realizedPnl": -4.922962277015396,
-      "highestPrice": 8.046,
-      "lowestPrice": 7.855,
-      "confidence": 70,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
       "id": "XBTEUR:1793526944760:2",
       "symbol": "XBTEUR",
       "openedAt": 1793526944760,
@@ -25770,13 +25751,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1790386714120,
-      "intentId": "DOTEUR:1790386714120",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused DOTEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1790387062856,
       "intentId": "DOTEUR:1790387062856",
@@ -32769,6 +32743,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry XRPEUR: 0.44271799660844735 @ 1.12532 (stop 1.1157932837063407, target 1.144373432587319, confidence 62)"
+    },
+    {
+      "timestamp": 1793534827843,
+      "intentId": "AVAXEUR:1793510785912:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit AVAXEUR: 206.05065616170248 @ 7.837 (stop-loss)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -41599,6 +41580,29 @@
       "maePct": 0.6189555125725344,
       "realizedPnl": 34.111684743963814,
       "returnPct": 2.0869503546099355,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 70,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "AVAXEUR:1793510785912:1",
+      "symbol": "AVAXEUR",
+      "entryTimestamp": 1793510785912,
+      "exitTimestamp": 1793534827843,
+      "entryPrice": 7.964,
+      "exitPrice": 7.837,
+      "positionSize": 206.05065616170248,
+      "stopLoss": 7.838377891469957,
+      "takeProfit": 8.215244217060087,
+      "exitReason": "stop-loss",
+      "fees": 9.767419254033182,
+      "slippage": 0,
+      "holdingDurationMs": 24041931,
+      "mfePct": 1.0296333500753259,
+      "maePct": 1.5946760421898627,
+      "realizedPnl": -35.93585258656953,
+      "returnPct": -2.189892014063293,
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 70,
@@ -77328,10 +77332,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1791313674719,
-      "equity": 60.11
-    },
-    {
       "at": 1791314039765,
       "equity": 60.12
     },
@@ -97326,6 +97326,10 @@
     {
       "at": 1793534456380,
       "equity": 60.75
+    },
+    {
+      "at": 1793534827843,
+      "equity": 60.75
     }
   ],
   "live:revolut-x-order-map": {
@@ -97951,7 +97955,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1793534456380,
+    "at": 1793534827843,
     "standings": [
       {
         "key": "candidate-watch",
