@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1793741451879,
+    "at": 1793741833125,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1791704139378,
-      "equity": 10447.54
-    },
     {
       "at": 1791704499602,
       "equity": 10447.54
@@ -22905,6 +22901,10 @@
     {
       "at": 1793741451879,
       "equity": 10208.56
+    },
+    {
+      "at": 1793741833125,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -21.16% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -21.23% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25478,7 +25478,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1793741451879,
+    "at": 1793741833125,
     "standings": [
       {
         "key": "live-mirror",
@@ -25549,8 +25549,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8316.325159088094,
-        "returnPct": -16.83674840911906,
+        "equity": 8319.364809652365,
+        "returnPct": -16.80635190347635,
         "trades": 199,
         "winRatePct": 35.678391959798994,
         "profitFactor": 0.6102022411534211,
@@ -25560,8 +25560,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 8120.766032383419,
-        "returnPct": -18.792339676165813,
+        "equity": 8119.199590640498,
+        "returnPct": -18.808004093595017,
         "trades": 390,
         "winRatePct": 36.15384615384615,
         "profitFactor": 0.812213559006564,
@@ -25779,7 +25779,7 @@
       "takeProfit": 0.0687689879293584,
       "feesPaid": 0.0030302608581587267,
       "realizedPnl": -0.0030302608581587267,
-      "highestPrice": 0.067469,
+      "highestPrice": 0.067477,
       "lowestPrice": 0.066946,
       "confidence": 59.216718355562385,
       "validationVerdict": null,
@@ -77485,10 +77485,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1791704139378,
-      "equity": 62.4
-    },
-    {
       "at": 1791704499602,
       "equity": 62.4
     },
@@ -97483,6 +97479,10 @@
     {
       "at": 1793741451879,
       "equity": 60.89
+    },
+    {
+      "at": 1793741833125,
+      "equity": 60.91
     }
   ],
   "live:revolut-x-order-map": {
@@ -98162,7 +98162,7 @@
   "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
-    "cash": 6859.432286008883,
+    "cash": 5483.430169435502,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -2642.5438072237985,
@@ -98172,22 +98172,42 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1793741451879,
+    "at": 1793741833125,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 6859.432286008883,
-        "returnPct": -31.40567713991117,
+        "equity": 6855.316626637278,
+        "returnPct": -31.446833733627216,
         "trades": 156,
         "winRatePct": 30.128205128205128,
         "profitFactor": 0.5882168989095342,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1788551468687
       }
     ]
   },
-  "shadow:candidate-watch:open-positions": [],
+  "shadow:candidate-watch:open-positions": [
+    {
+      "id": "NIGHTEUR:1793741833125:0",
+      "symbol": "NIGHTEUR",
+      "openedAt": 1793741833125,
+      "entryPrice": 0.03793,
+      "quantity": 36168.90211446815,
+      "initialQuantity": 36168.90211446815,
+      "stopLoss": 0.0370420297936613,
+      "takeProfit": 0.039705940412677394,
+      "feesPaid": 4.1156593716053305,
+      "realizedPnl": -4.1156593716053305,
+      "highestPrice": 0.03793,
+      "lowestPrice": 0.03793,
+      "confidence": 50.5782812509306,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:candidate-watch:audit-log": [
     {
       "timestamp": 1788598183187,
@@ -102892,6 +102912,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit NPCEUR: 92087.94237632766 @ 0.01521 (take-profit)"
+    },
+    {
+      "timestamp": 1793741833125,
+      "intentId": "NIGHTEUR:1793741833125:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry NIGHTEUR: 36168.90211446815 @ 0.03793 (stop 0.0370420297936613, target 0.039705940412677394, confidence 51)"
     }
   ],
   "live:live-blackout-queue": {},
