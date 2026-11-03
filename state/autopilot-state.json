@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1793716508743,
+    "at": 1793716895429,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1791667351534,
-      "equity": 10447.54
-    },
     {
       "at": 1791667711555,
       "equity": 10447.54
@@ -22905,6 +22901,10 @@
     {
       "at": 1793716508743,
       "equity": 10208.56
+    },
+    {
+      "at": 1793716895429,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -20.47% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -20.42% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25468,7 +25468,7 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 3252.726022925379,
+    "cash": 3249.0197340694162,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -312.97355302265,
@@ -25478,7 +25478,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1793716508743,
+    "at": 1793716895429,
     "standings": [
       {
         "key": "live-mirror",
@@ -25549,8 +25549,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8300.265107077345,
-        "returnPct": -16.997348929226554,
+        "equity": 8297.404945392567,
+        "returnPct": -17.025950546074327,
         "trades": 199,
         "winRatePct": 35.678391959798994,
         "profitFactor": 0.6102022411534211,
@@ -25560,12 +25560,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 8126.684445550427,
-        "returnPct": -18.73315554449573,
+        "equity": 8122.565565980454,
+        "returnPct": -18.774344340195455,
         "trades": 390,
         "winRatePct": 36.15384615384615,
         "profitFactor": 0.812213559006564,
-        "openPositions": 3,
+        "openPositions": 4,
         "startedAt": 1785254092443
       },
       {
@@ -25748,16 +25748,28 @@
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
       "exits": []
+    },
+    {
+      "id": "ETHEUR:1793716895429:3",
+      "symbol": "ETHEUR",
+      "openedAt": 1793716895429,
+      "entryPrice": 2044.59,
+      "quantity": 0.0018073076979854554,
+      "initialQuantity": 0.0018073076979854554,
+      "stopLoss": 2019.0845433865165,
+      "takeProfit": 2095.600913226967,
+      "feesPaid": 0.011085609738672246,
+      "realizedPnl": -0.011085609738672246,
+      "highestPrice": 2044.59,
+      "lowestPrice": 2044.59,
+      "confidence": 54.1801616444334,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1790437071186,
-      "intentId": "ATOMEUR:1790437071186",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused ATOMEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1790437071186,
       "intentId": "AVAXEUR:1790437071186",
@@ -32750,6 +32762,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused DOGEEUR: no exposure headroom: 4881.22 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1793716895429,
+      "intentId": "ETHEUR:1793716895429:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry ETHEUR: 0.0018073076979854554 @ 2044.59 (stop 2019.0845433865165, target 2095.600913226967, confidence 54)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -70436,13 +70455,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788847310840,
-      "intentId": "external-reconcile:XBTEUR:1788714682711:exit:1788847284307",
-      "event": "awaiting-confirmation",
-      "mode": "live",
-      "detail": "confirmation request sent to Telegram"
-    },
-    {
       "timestamp": 1788847687535,
       "intentId": "external-reconcile:XBTEUR:1788641205858:exit:1788847662123",
       "event": "awaiting-confirmation",
@@ -77434,6 +77446,13 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1793716920930,
+      "intentId": "external-reconcile:XBTEUR:1793340930699:exit:1793715350568",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -77446,10 +77465,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1791667351534,
-      "equity": 62.43
-    },
     {
       "at": 1791667711555,
       "equity": 62.42
@@ -97445,6 +97460,10 @@
     {
       "at": 1793716508743,
       "equity": 60.8
+    },
+    {
+      "at": 1793716895429,
+      "equity": 60.79
     }
   ],
   "live:revolut-x-order-map": {
@@ -98120,20 +98139,8 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905117,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "external-reconcile:XBTEUR:1793340930699": {
-      "reason": "stop-loss",
-      "queuedAt": 1793715350568
-    }
-  },
-  "live:confirmation-gate-pending": {
-    "external-reconcile:XBTEUR:1793340930699:exit:1793715350568": {
-      "sentAt": 1793715375970,
-      "messageId": 1533,
-      "token": "mw0rtlya.ltisvb",
-      "readyAt": 1793715376145
-    }
-  },
+  "live:live-exit-pending": {},
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 6859.432286008883,
@@ -98146,7 +98153,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1793716508743,
+    "at": 1793716895429,
     "standings": [
       {
         "key": "candidate-watch",
@@ -111498,8 +111505,8 @@
       "decidedBy": "system"
     },
     "external-reconcile:XBTEUR:1793340930699": {
-      "at": 1793707934738,
-      "price": 68867.2,
+      "at": 1793716895429,
+      "price": 69105.3,
       "decidedBy": "system"
     }
   },
