@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1793813709589,
+    "at": 1793814082769,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1791809061744,
-      "equity": 10376.61
-    },
     {
       "at": 1791824189598,
       "equity": 10376.61
@@ -22905,6 +22901,10 @@
     {
       "at": 1793813709589,
       "equity": 10208.56
+    },
+    {
+      "at": 1793814082769,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -24.50% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -24.45% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25478,7 +25478,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1793813709589,
+    "at": 1793814082769,
     "standings": [
       {
         "key": "live-mirror",
@@ -25549,8 +25549,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8257.023732987067,
-        "returnPct": -17.429762670129332,
+        "equity": 8257.022942717264,
+        "returnPct": -17.429770572827366,
         "trades": 207,
         "winRatePct": 36.71497584541063,
         "profitFactor": 0.6221742857103755,
@@ -25560,8 +25560,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 8025.906334052398,
-        "returnPct": -19.74093665947602,
+        "equity": 8021.3642931207105,
+        "returnPct": -19.786357068792896,
         "trades": 398,
         "winRatePct": 35.678391959798994,
         "profitFactor": 0.8069695718583917,
@@ -25723,7 +25723,7 @@
       "feesPaid": 4.811602331863071,
       "realizedPnl": -4.811602331863071,
       "highestPrice": 50.63,
-      "lowestPrice": 49.71,
+      "lowestPrice": 49.67,
       "confidence": 70,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -25742,7 +25742,7 @@
       "feesPaid": 0.015624914233490017,
       "realizedPnl": -0.015624914233490017,
       "highestPrice": 71893.9,
-      "lowestPrice": 71404,
+      "lowestPrice": 71396.1,
       "confidence": 70,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -25761,7 +25761,7 @@
       "feesPaid": 0.008538886999966053,
       "realizedPnl": -0.008538886999966053,
       "highestPrice": 2175.16,
-      "lowestPrice": 2154.5,
+      "lowestPrice": 2154.4,
       "confidence": 70,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -70747,13 +70747,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788851764451,
-      "intentId": "external-reconcile:XBTEUR:1788785369138:exit:1788850461988",
-      "event": "rejected",
-      "mode": "live",
-      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
-    },
-    {
       "timestamp": 1788852140698,
       "intentId": "external-reconcile:XBTEUR:1788714682711:exit:1788850855227",
       "event": "rejected",
@@ -77745,6 +77738,13 @@
       "event": "filled",
       "mode": "live",
       "detail": "Revolut X order 75e7dc2e-94c4-e23a-02c0-07204e6bab57: filled"
+    },
+    {
+      "timestamp": 1793814110525,
+      "intentId": "external-reconcile:XBTEUR:1793666925796:exit:1793814082769",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -77757,10 +77757,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1791809061744,
-      "equity": 62.47
-    },
     {
       "at": 1791824189598,
       "equity": 62.24
@@ -97756,6 +97752,10 @@
     {
       "at": 1793813709589,
       "equity": 61.64
+    },
+    {
+      "at": 1793814082769,
+      "equity": 61.63
     }
   ],
   "live:revolut-x-order-map": {
@@ -98402,8 +98402,20 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905119,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:live-exit-pending": {
+    "external-reconcile:XBTEUR:1793666925796": {
+      "reason": "take-profit",
+      "queuedAt": 1793814082769
+    }
+  },
+  "live:confirmation-gate-pending": {
+    "external-reconcile:XBTEUR:1793666925796:exit:1793814082769": {
+      "sentAt": 1793814110290,
+      "messageId": 1548,
+      "token": "mw2eltua.hpihe7",
+      "readyAt": 1793814110558
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 2705.4300241321907,
@@ -98416,13 +98428,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1793813709589,
+    "at": 1793814082769,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 6838.908849750144,
-        "returnPct": -31.610911502498556,
+        "equity": 6841.121440465302,
+        "returnPct": -31.58878559534698,
         "trades": 159,
         "winRatePct": 29.559748427672954,
         "profitFactor": 0.5784493321991122,
@@ -98462,7 +98474,7 @@
       "takeProfit": 0.03001505540190008,
       "feesPaid": 4.040274139831087,
       "realizedPnl": -4.040274139831087,
-      "highestPrice": 0.02974,
+      "highestPrice": 0.02982,
       "lowestPrice": 0.02852,
       "confidence": 43.308908628963366,
       "validationVerdict": null,
@@ -98501,7 +98513,7 @@
       "feesPaid": 0.05739433548929083,
       "realizedPnl": -0.05739433548929083,
       "highestPrice": 21.22,
-      "lowestPrice": 20.325,
+      "lowestPrice": 20.298,
       "confidence": 43.9111055149591,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
