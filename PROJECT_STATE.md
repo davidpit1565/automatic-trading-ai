@@ -1,5 +1,14 @@
 # PROJECT_STATE
 
+## 3-year hourly backtest of the entry rules: no robust edge (2026-11-04)
+
+`research/hourly-3y/`: the production signal rules (signal engine + 4h confirmation + risk engine, RSI<=65, 2xATR stop / 4xATR target; NOT whale-flow, correlation cap, AI judgment or sizing) on 10 majors,
+Coinbase hourly EUR 2023-11..2026-11 (~26k bars each), 6 half-year chunks. Floor 40 (production): 450 trades, win 36%, PF **0.80** at 0.3%/side, PF 1.00 at 0.1%/side; with the daily EMA100 regime filter 242 trades PF 0.89 / 1.07.
+Only 2 of 6 chunks positive; floors 20/30 worse (PF 0.69). Closer targets (1R/2R/3R) give 63%/48%/39% win but PF 0.41-0.74 at 0.3% (0.74-0.81 at 0.1%); trailing worse. So a higher win rate does not make money.
+Slow trend (daily Donchian 20/50/100, 27 coins 2018-2026): holdout 2023-26 +13%/yr Sharpe 0.41 vs equal-weight hold +27% (DD -81% vs -53%), BTC hold +51%; not distinguishable from random timing (p 0.35-0.39).
+Costs: modeled 0.3%/side everywhere; Revolut X official fee 0.09%/side (maker 0% or 0.09%, sources differ); journal fees are modeled, real fee not stored; fill slippage vs limit ~0 in 11 of 13 real fills. Sensitivity: forward-demo PF rises ~1.06 -> 1.30 (PRODUCTION) if true cost ~0.1%/side, but the 3-year test says the base rule is ~breakeven even then.
+Conclusion: forward PF 1.26-1.36 of live-mirror/no-confirm/ai-judgment is not supported by a multi-year test of the base rules (3 months, best-of-many, extra gates untested). Decision point stays: ai-judgment at 100 trades (~early Dec). Do not tune entries further.
+
 ## Exchange-held stop: schema found, build deferred (2026-10-30)
 
 Revolut X `POST /1.0/orders` (docs `operations/place-order.md`): `order_configuration` takes exactly one of `market|limit|conditional|tpsl`.
