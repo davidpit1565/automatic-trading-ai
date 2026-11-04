@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1793812568464,
+    "at": 1793812959313,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -70723,7 +70723,7 @@
     ]
   },
   "longterm-shadow-last-run-day": "2026-11-04",
-  "live:live-cash-eur": 42.53,
+  "live:live-cash-eur": 48.100012052,
   "live:telegram-shared-update-offset": 447904572,
   "live:telegram-unclaimed-messages": [
     {
@@ -70746,20 +70746,6 @@
     "EURXBTEUR"
   ],
   "live:audit-log": [
-    {
-      "timestamp": 1788851306375,
-      "intentId": "external-reconcile:XBTEUR:1788672047315:exit:1788849643766",
-      "event": "rejected",
-      "mode": "live",
-      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
-    },
-    {
-      "timestamp": 1788851714841,
-      "intentId": "external-reconcile:XBTEUR:1788672047315:exit:1788851673811",
-      "event": "awaiting-confirmation",
-      "mode": "live",
-      "detail": "confirmation request sent to Telegram"
-    },
     {
       "timestamp": 1788851764451,
       "intentId": "external-reconcile:XBTEUR:1788785369138:exit:1788850461988",
@@ -77745,6 +77731,20 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1793812984415,
+      "intentId": "external-reconcile:ETHEUR:1793666925796:exit:1793812568464",
+      "event": "confirmed",
+      "mode": "live",
+      "detail": "approved via Telegram (text command)"
+    },
+    {
+      "timestamp": 1793812985605,
+      "intentId": "external-reconcile:ETHEUR:1793666925796:exit:1793812568464",
+      "event": "filled",
+      "mode": "live",
+      "detail": "Revolut X order 75e7dc2e-94c4-e23a-02c0-07204e6bab57: filled"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -77757,10 +77757,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1791807958083,
-      "equity": 62.52
-    },
     {
       "at": 1791808325964,
       "equity": 62.51
@@ -97756,6 +97752,10 @@
     {
       "at": 1793812568464,
       "equity": 61.64
+    },
+    {
+      "at": 1793812959313,
+      "equity": 61.66
     }
   ],
   "live:revolut-x-order-map": {
@@ -97793,7 +97793,8 @@
     "external-reconcile:XBTEUR:1791659014817:exit:1792430475419": "a3605c96-6641-e205-02c0-07e0635c9277",
     "external-reconcile:XBTEUR:1791659014817:exit:1792454452561": "0609277d-31f5-e2d2-02c0-077d2bc2cccd",
     "live-entry:LTCEUR:1792604466997": "41826ba2-66ca-e21e-02c0-07613e368238",
-    "live-entry:LTCEUR:1792604466997:exit:1792772263742": "f959695d-ec6d-e277-02c0-07702e6b4046"
+    "live-entry:LTCEUR:1792604466997:exit:1792772263742": "f959695d-ec6d-e277-02c0-07702e6b4046",
+    "external-reconcile:ETHEUR:1793666925796:exit:1793812568464": "75e7dc2e-94c4-e23a-02c0-07204e6bab57"
   },
   "live:live-open-positions": {
     "external-reconcile:XBTEUR:1792500646533": {
@@ -97907,36 +97908,6 @@
         "positionSize": 0.00004355,
         "positionValue": 2.9971458400000004,
         "riskAmount": 0.04495718760000023,
-        "riskPercentage": 0,
-        "rewardRiskRatio": 2,
-        "portfolioExposure": 0,
-        "reasons": [],
-        "warnings": [
-          "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
-        ]
-      }
-    },
-    "external-reconcile:ETHEUR:1793666925796": {
-      "id": "external-reconcile:ETHEUR:1793666925796",
-      "symbol": "ETH/EUR",
-      "quantity": 0.00258086,
-      "initialQuantity": 0.00495782,
-      "entryPrice": 2014.98,
-      "stopLoss": 1984.7553,
-      "takeProfit": 2075.4294,
-      "highestPrice": 2176.74,
-      "lowestPrice": 1982.19,
-      "entrySlippage": 0,
-      "openedAt": 1793666925796,
-      "entryAssessment": {
-        "approved": true,
-        "asset": "ETHEUR",
-        "entry": 2014.98,
-        "stopLoss": 1984.7553,
-        "takeProfit": 2075.4294,
-        "positionSize": 0.00495782,
-        "positionValue": 9.9899081436,
-        "riskAmount": 0.1498486221539999,
         "riskPercentage": 0,
         "rewardRiskRatio": 2,
         "portfolioExposure": 0,
@@ -98429,22 +98400,10 @@
     ]
   },
   "live:live-blackout-active": false,
-  "telegram-shared-update-offset": 447905117,
+  "telegram-shared-update-offset": 447905119,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "external-reconcile:ETHEUR:1793666925796": {
-      "reason": "take-profit",
-      "queuedAt": 1793812568464
-    }
-  },
-  "live:confirmation-gate-pending": {
-    "external-reconcile:ETHEUR:1793666925796:exit:1793812568464": {
-      "sentAt": 1793812596792,
-      "messageId": 1546,
-      "token": "mw2dpe0o.1pyr59j",
-      "readyAt": 1793812597034
-    }
-  },
+  "live:live-exit-pending": {},
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 2705.4300241321907,
