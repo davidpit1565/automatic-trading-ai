@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1793890878073,
+    "at": 1793891256423,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1791915453405,
-      "equity": 10376.61
-    },
     {
       "at": 1791915831140,
       "equity": 10376.61
@@ -22905,6 +22901,10 @@
     {
       "at": 1793890878073,
       "equity": 10208.56
+    },
+    {
+      "at": 1793891256423,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -21.01% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -20.21% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25457,7 +25457,7 @@
   },
   "shadow:mean-reversion:shadow-started-at": 1785254092443,
   "shadow:mean-reversion:portfolio-engine": {
-    "cash": 8256.995009604987,
+    "cash": 4945.282423670822,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -1020.4020585831356,
@@ -25478,7 +25478,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1793890878073,
+    "at": 1793891256423,
     "standings": [
       {
         "key": "live-mirror",
@@ -25549,12 +25549,12 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8256.995009604987,
-        "returnPct": -17.430049903950128,
+        "equity": 8253.524121348146,
+        "returnPct": -17.46475878651854,
         "trades": 208,
         "winRatePct": 36.53846153846153,
         "profitFactor": 0.6221742212605783,
-        "openPositions": 0,
+        "openPositions": 2,
         "startedAt": 1785254092443
       },
       {
@@ -41942,22 +41942,47 @@
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
-  "shadow:mean-reversion:open-positions": [],
+  "shadow:mean-reversion:open-positions": [
+    {
+      "id": "XBTEUR:1793891256423:0",
+      "symbol": "XBTEUR",
+      "openedAt": 1793891256423,
+      "entryPrice": 69122.9,
+      "quantity": 0.023890765606202832,
+      "initialQuantity": 0.023890765606202832,
+      "stopLoss": 68107.14277541173,
+      "takeProfit": 71154.41444917652,
+      "feesPaid": 4.9541970057629925,
+      "realizedPnl": -4.9541970057629925,
+      "highestPrice": 69122.9,
+      "lowestPrice": 69122.9,
+      "confidence": 33.67042794644348,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    },
+    {
+      "id": "ETHEUR:1793891256423:1",
+      "symbol": "ETHEUR",
+      "openedAt": 1793891256423,
+      "entryPrice": 2060.79,
+      "quantity": 0.8008618842870185,
+      "initialQuantity": 0.8008618842870185,
+      "stopLoss": 2023.5641047042036,
+      "takeProfit": 2135.2417905915927,
+      "feesPaid": 4.951224487559535,
+      "realizedPnl": -4.951224487559535,
+      "highestPrice": 2060.79,
+      "lowestPrice": 2060.79,
+      "confidence": 30.82350623282946,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:mean-reversion:audit-log": [
-    {
-      "timestamp": 1790580588996,
-      "intentId": "ADAEUR:1790580588996",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused ADAEUR: maximum open positions reached (5/5)"
-    },
-    {
-      "timestamp": 1790580588996,
-      "intentId": "XRPEUR:1790580588996",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused XRPEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1790580588996,
       "intentId": "ATOMEUR:1790580588996",
@@ -48943,6 +48968,20 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit DOGEEUR: 11.848123001190162 @ 0.0659327 (stop-loss)"
+    },
+    {
+      "timestamp": 1793891256423,
+      "intentId": "XBTEUR:1793891256423:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry XBTEUR: 0.023890765606202832 @ 69122.9 (stop 68107.14277541173, target 71154.41444917652, confidence 34)"
+    },
+    {
+      "timestamp": 1793891256423,
+      "intentId": "ETHEUR:1793891256423:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry ETHEUR: 0.8008618842870185 @ 2060.79 (stop 2023.5641047042036, target 2135.2417905915927, confidence 31)"
     }
   ],
   "shadow:live-mirror:open-positions": [],
@@ -77776,10 +77815,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1791915453405,
-      "equity": 62.06
-    },
-    {
       "at": 1791915831140,
       "equity": 62.06
     },
@@ -97774,6 +97809,10 @@
     {
       "at": 1793890878073,
       "equity": 61.45
+    },
+    {
+      "at": 1793891256423,
+      "equity": 61.42
     }
   ],
   "live:revolut-x-order-map": {
@@ -98404,13 +98443,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1793890878073,
+    "at": 1793891256423,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 6668.421936335119,
-        "returnPct": -33.3157806366488,
+        "equity": 6658.3440492263335,
+        "returnPct": -33.416559507736665,
         "trades": 160,
         "winRatePct": 29.375,
         "profitFactor": 0.5783664091668324,
@@ -98451,7 +98490,7 @@
       "feesPaid": 4.040274139831087,
       "realizedPnl": -4.040274139831087,
       "highestPrice": 0.02982,
-      "lowestPrice": 0.02824,
+      "lowestPrice": 0.02804,
       "confidence": 43.308908628963366,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
