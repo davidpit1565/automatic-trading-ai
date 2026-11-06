@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1793950025115,
+    "at": 1793950396332,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1791998620229,
-      "equity": 10376.61
-    },
     {
       "at": 1791998995419,
       "equity": 10376.61
@@ -22905,6 +22901,10 @@
     {
       "at": 1793950025115,
       "equity": 10208.56
+    },
+    {
+      "at": 1793950396332,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -17.33% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -17.42% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25478,7 +25478,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1793950025115,
+    "at": 1793950396332,
     "standings": [
       {
         "key": "live-mirror",
@@ -25549,8 +25549,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8059.030154570491,
-        "returnPct": -19.409698454295093,
+        "equity": 8055.388426823214,
+        "returnPct": -19.44611573176786,
         "trades": 213,
         "winRatePct": 35.68075117370892,
         "profitFactor": 0.5982333879029597,
@@ -70919,13 +70919,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788871110609,
-      "intentId": "external-reconcile:XBTEUR:1788714682711:exit:1788869539125",
-      "event": "rejected",
-      "mode": "live",
-      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
-    },
-    {
       "timestamp": 1788871111730,
       "intentId": "external-reconcile:XBTEUR:1788757321243:exit:1788871085331",
       "event": "awaiting-confirmation",
@@ -77917,6 +77910,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1793950422252,
+      "intentId": "external-reconcile:XBTEUR:1793666925796:exit:1793950396332",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -77929,10 +77929,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1791998620229,
-      "equity": 61.86
-    },
     {
       "at": 1791998995419,
       "equity": 61.85
@@ -97928,6 +97924,10 @@
     {
       "at": 1793950025115,
       "equity": 61.38
+    },
+    {
+      "at": 1793950396332,
+      "equity": 61.39
     }
   ],
   "live:revolut-x-order-map": {
@@ -98604,8 +98604,20 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905127,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:live-exit-pending": {
+    "external-reconcile:XBTEUR:1793666925796": {
+      "reason": "stop-loss",
+      "queuedAt": 1793950396332
+    }
+  },
+  "live:confirmation-gate-pending": {
+    "external-reconcile:XBTEUR:1793666925796:exit:1793950396332": {
+      "sentAt": 1793950422098,
+      "messageId": 1582,
+      "token": "mw4nrgpe.19u2cmy",
+      "readyAt": 1793950422283
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 3983.08599445197,
@@ -98618,13 +98630,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1793950025115,
+    "at": 1793950396332,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 6578.853474729665,
-        "returnPct": -34.21146525270335,
+        "equity": 6579.214351352315,
+        "returnPct": -34.20785648647685,
         "trades": 163,
         "winRatePct": 28.834355828220858,
         "profitFactor": 0.5689612450319694,
