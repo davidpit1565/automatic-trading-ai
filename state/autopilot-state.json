@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1794085343961,
+    "at": 1794085719756,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1792177731655,
-      "equity": 10309.36
-    },
     {
       "at": 1792178109241,
       "equity": 10309.36
@@ -22905,6 +22901,10 @@
     {
       "at": 1794085343961,
       "equity": 10208.56
+    },
+    {
+      "at": 1794085719756,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -18.23% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -18.17% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25468,17 +25468,17 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 6260.774953301345,
+    "cash": 7823.590284824404,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -567.222423928969,
+    "closedRealizedPnl": -608.2140794838201,
     "dayAnchor": {
       "day": "2026-11-07",
       "equity": 7907.94207702403
     }
   },
   "shadow-standings": {
-    "at": 1794085343961,
+    "at": 1794085719756,
     "standings": [
       {
         "key": "live-mirror",
@@ -25549,8 +25549,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8057.999703784153,
-        "returnPct": -19.42000296215847,
+        "equity": 8053.763481275905,
+        "returnPct": -19.462365187240948,
         "trades": 213,
         "winRatePct": 35.68075117370892,
         "profitFactor": 0.5982333879029597,
@@ -25560,12 +25560,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 7832.622998383749,
-        "returnPct": -21.673770016162507,
-        "trades": 405,
-        "winRatePct": 35.06172839506173,
-        "profitFactor": 0.7931696446345916,
-        "openPositions": 1,
+        "equity": 7823.590284824404,
+        "returnPct": -21.76409715175596,
+        "trades": 406,
+        "winRatePct": 34.97536945812808,
+        "profitFactor": 0.7900329515150616,
+        "openPositions": 0,
         "startedAt": 1785254092443
       },
       {
@@ -25691,35 +25691,8 @@
       }
     ]
   },
-  "shadow:breakout:open-positions": [
-    {
-      "id": "SOLEUR:1793968272853:1",
-      "symbol": "SOLEUR",
-      "openedAt": 1793968272853,
-      "entryPrice": 81.24,
-      "quantity": 19.682545017310343,
-      "initialQuantity": 19.682545017310343,
-      "stopLoss": 79.70881594921096,
-      "takeProfit": 84.30236810157808,
-      "feesPaid": 4.797029871618876,
-      "realizedPnl": -4.797029871618876,
-      "highestPrice": 81.8,
-      "lowestPrice": 79.79,
-      "confidence": 57.13750450408869,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "shadow:breakout:open-positions": [],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1790670553706,
-      "intentId": "UNIEUR:1790670553706",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused UNIEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1790670906354,
       "intentId": "ETHEUR:1790670906354",
@@ -32712,6 +32685,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit LINKEUR: 160.97618449097718 @ 9.64365 (stop-loss)"
+    },
+    {
+      "timestamp": 1794085719756,
+      "intentId": "SOLEUR:1793968272853:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit SOLEUR: 19.682545017310343 @ 79.64 (stop-loss)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -42028,6 +42008,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 68.85829112423018,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "SOLEUR:1793968272853:1",
+      "symbol": "SOLEUR",
+      "entryTimestamp": 1793968272853,
+      "exitTimestamp": 1794085719756,
+      "entryPrice": 81.24,
+      "exitPrice": 79.64,
+      "positionSize": 19.682545017310343,
+      "stopLoss": 79.70881594921096,
+      "takeProfit": 84.30236810157808,
+      "exitReason": "stop-loss",
+      "fees": 9.499583527154662,
+      "slippage": 0,
+      "holdingDurationMs": 117446903,
+      "mfePct": 0.6893156080748428,
+      "maePct": 1.9694731659281075,
+      "realizedPnl": -40.9916555548511,
+      "returnPct": -2.5635647464303233,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 57.13750450408869,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
@@ -78019,10 +78022,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1792177731655,
-      "equity": 61.66
-    },
-    {
       "at": 1792178109241,
       "equity": 61.69
     },
@@ -98017,6 +98016,10 @@
     {
       "at": 1794085343961,
       "equity": 61.68
+    },
+    {
+      "at": 1794085719756,
+      "equity": 61.66
     }
   ],
   "live:revolut-x-order-map": {
@@ -98707,13 +98710,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1794085343961,
+    "at": 1794085719756,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 6459.324938133544,
-        "returnPct": -35.40675061866456,
+        "equity": 6456.437925152343,
+        "returnPct": -35.435620748476566,
         "trades": 166,
         "winRatePct": 28.313253012048197,
         "profitFactor": 0.5584418434726796,
