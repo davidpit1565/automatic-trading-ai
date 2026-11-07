@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1794068179067,
+    "at": 1794068552668,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1792153642780,
-      "equity": 10361.92
-    },
     {
       "at": 1792154013196,
       "equity": 10361.37
@@ -22905,6 +22901,10 @@
     {
       "at": 1794068179067,
       "equity": 10208.56
+    },
+    {
+      "at": 1794068552668,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -18.39% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -18.41% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25478,7 +25478,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1794068179067,
+    "at": 1794068552668,
     "standings": [
       {
         "key": "live-mirror",
@@ -25549,8 +25549,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8068.158688368012,
-        "returnPct": -19.31841311631988,
+        "equity": 8068.8003695324805,
+        "returnPct": -19.311996304675194,
         "trades": 213,
         "winRatePct": 35.68075117370892,
         "profitFactor": 0.5982333879029597,
@@ -25560,8 +25560,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 7857.96321086257,
-        "returnPct": -21.420367891374298,
+        "equity": 7861.887503993898,
+        "returnPct": -21.381124960061022,
         "trades": 404,
         "winRatePct": 35.148514851485146,
         "profitFactor": 0.7959823659205788,
@@ -71004,13 +71004,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1788897048975,
-      "intentId": "external-reconcile:XBTEUR:1788714682711:exit:1788897029098",
-      "event": "awaiting-confirmation",
-      "mode": "live",
-      "detail": "confirmation request sent to Telegram"
-    },
-    {
       "timestamp": 1788897405666,
       "intentId": "external-reconcile:XBTEUR:1788714682711:exit:1788897029098",
       "event": "rejected",
@@ -78002,6 +77995,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1794068579295,
+      "intentId": "external-reconcile:XBTEUR:1793340930699:exit:1794068552668",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -78014,10 +78014,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1792153642780,
-      "equity": 61.94
-    },
     {
       "at": 1792154013196,
       "equity": 61.95
@@ -98013,6 +98009,10 @@
     {
       "at": 1794068179067,
       "equity": 61.75
+    },
+    {
+      "at": 1794068552668,
+      "equity": 61.76
     }
   ],
   "live:revolut-x-order-map": {
@@ -98689,8 +98689,20 @@
   "live:live-blackout-active": true,
   "telegram-shared-update-offset": 447905127,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:live-exit-pending": {
+    "external-reconcile:XBTEUR:1793340930699": {
+      "reason": "stop-loss",
+      "queuedAt": 1794068552668
+    }
+  },
+  "live:confirmation-gate-pending": {
+    "external-reconcile:XBTEUR:1793340930699:exit:1794068552668": {
+      "sentAt": 1794068579131,
+      "messageId": 1606,
+      "token": "mw6m3z97.1pr6h7e",
+      "readyAt": 1794068579325
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 5139.238252479691,
@@ -98703,7 +98715,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1794068179067,
+    "at": 1794068552668,
     "standings": [
       {
         "key": "candidate-watch",
