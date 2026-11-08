@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1794120114360,
+    "at": 1794120479299,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1792220645972,
-      "equity": 10309.36
-    },
     {
       "at": 1792221016661,
       "equity": 10309.36
@@ -22905,6 +22901,10 @@
     {
       "at": 1794120114360,
       "equity": 10208.56
+    },
+    {
+      "at": 1794120479299,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -18.37% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -18.44% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25478,7 +25478,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1794120114360,
+    "at": 1794120479299,
     "standings": [
       {
         "key": "live-mirror",
@@ -25549,8 +25549,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8082.844797518324,
-        "returnPct": -19.17155202481676,
+        "equity": 8081.627628806823,
+        "returnPct": -19.183723711931773,
         "trades": 213,
         "winRatePct": 35.68075117370892,
         "profitFactor": 0.5982333879029597,
@@ -71030,13 +71030,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1789044476043,
-      "intentId": "external-reconcile:XBTEUR:1788970622093:exit:1789044439080",
-      "event": "rejected",
-      "mode": "live",
-      "detail": "rejected via Telegram"
-    },
-    {
       "timestamp": 1789044477170,
       "intentId": "external-reconcile:XBTEUR:1788978020562:exit:1789044439080",
       "event": "awaiting-confirmation",
@@ -78028,6 +78021,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1794120503658,
+      "intentId": "external-reconcile:XBTEUR:1793340930699:exit:1794120479299",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -78040,10 +78040,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1792220645972,
-      "equity": 61.72
-    },
     {
       "at": 1792221016661,
       "equity": 61.73
@@ -98039,6 +98035,10 @@
     {
       "at": 1794120114360,
       "equity": 61.75
+    },
+    {
+      "at": 1794120479299,
+      "equity": 61.75
     }
   ],
   "live:revolut-x-order-map": {
@@ -98715,8 +98715,20 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905128,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:live-exit-pending": {
+    "external-reconcile:XBTEUR:1793340930699": {
+      "reason": "stop-loss",
+      "queuedAt": 1794120479299
+    }
+  },
+  "live:confirmation-gate-pending": {
+    "external-reconcile:XBTEUR:1793340930699:exit:1794120479299": {
+      "sentAt": 1794120503511,
+      "messageId": 1612,
+      "token": "mw7h0wd3.bswt4d",
+      "readyAt": 1794120503676
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 5139.238252479691,
@@ -98729,7 +98741,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1794120114360,
+    "at": 1794120479299,
     "standings": [
       {
         "key": "candidate-watch",
