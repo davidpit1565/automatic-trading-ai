@@ -2890,7 +2890,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1794157408907,
+    "at": 1794157791864,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2906,10 +2906,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1792276221271,
-      "equity": 10309.36
-    },
     {
       "at": 1792276592871,
       "equity": 10309.36
@@ -22905,6 +22901,10 @@
     {
       "at": 1794157408907,
       "equity": 10208.56
+    },
+    {
+      "at": 1794157791864,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25378,7 +25378,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -18.42% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -18.29% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25468,17 +25468,17 @@
   },
   "shadow:breakout:shadow-started-at": 1785254092443,
   "shadow:breakout:portfolio-engine": {
-    "cash": 6235.055707353008,
+    "cash": 7778.303530973326,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -628.5012848422351,
+    "closedRealizedPnl": -653.5008333348983,
     "dayAnchor": {
       "day": "2026-11-08",
       "equity": 7823.590284824404
     }
   },
   "shadow-standings": {
-    "at": 1794157408907,
+    "at": 1794157791864,
     "standings": [
       {
         "key": "live-mirror",
@@ -25549,8 +25549,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 8053.218695074527,
-        "returnPct": -19.46781304925473,
+        "equity": 8051.171464982251,
+        "returnPct": -19.48828535017749,
         "trades": 214,
         "winRatePct": 35.51401869158878,
         "profitFactor": 0.5975853687657434,
@@ -25560,12 +25560,12 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 7786.757660468499,
-        "returnPct": -22.13242339531501,
-        "trades": 407,
-        "winRatePct": 34.88943488943489,
-        "profitFactor": 0.788489728281704,
-        "openPositions": 1,
+        "equity": 7778.303530973326,
+        "returnPct": -22.216964690266742,
+        "trades": 408,
+        "winRatePct": 34.80392156862745,
+        "profitFactor": 0.7865963151071675,
+        "openPositions": 0,
         "startedAt": 1785254092443
       },
       {
@@ -25691,35 +25691,8 @@
       }
     ]
   },
-  "shadow:breakout:open-positions": [
-    {
-      "id": "AVAXEUR:1794152930531:1",
-      "symbol": "AVAXEUR",
-      "openedAt": 1794152930531,
-      "entryPrice": 7.386,
-      "quantity": 211.69194449051722,
-      "initialQuantity": 211.69194449051722,
-      "stopLoss": 7.319888018198905,
-      "takeProfit": 7.51822396360219,
-      "feesPaid": 4.690670106020881,
-      "realizedPnl": -4.690670106020881,
-      "highestPrice": 7.399,
-      "lowestPrice": 7.33,
-      "confidence": 54.697103915867736,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    }
-  ],
+  "shadow:breakout:open-positions": [],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1790670906354,
-      "intentId": "UNIEUR:1790670906354",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused UNIEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1790671259597,
       "intentId": "HNTEUR:1790671259597",
@@ -32712,6 +32685,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit ETHEUR: 0.7780563767191834 @ 1997.01 (stop-loss)"
+    },
+    {
+      "timestamp": 1794157791864,
+      "intentId": "AVAXEUR:1794152930531:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit AVAXEUR: 211.69194449051722 @ 7.312 (stop-loss)"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -42074,6 +42054,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 55.83620339299033,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "AVAXEUR:1794152930531:1",
+      "symbol": "AVAXEUR",
+      "entryTimestamp": 1794152930531,
+      "exitTimestamp": 1794157791864,
+      "entryPrice": 7.386,
+      "exitPrice": 7.312,
+      "positionSize": 211.69194449051722,
+      "stopLoss": 7.319888018198905,
+      "takeProfit": 7.51822396360219,
+      "exitReason": "stop-loss",
+      "fees": 9.334344600364867,
+      "slippage": 0,
+      "holdingDurationMs": 4861333,
+      "mfePct": 0.17600866504196996,
+      "maePct": 1.001895477931219,
+      "realizedPnl": -24.99954849266311,
+      "returnPct": -1.5988897914974254,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 54.697103915867736,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
@@ -71077,13 +71080,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1789046331753,
-      "intentId": "external-reconcile:XBTEUR:1788978020562:exit:1789046291328",
-      "event": "awaiting-confirmation",
-      "mode": "live",
-      "detail": "confirmation request sent to Telegram"
-    },
-    {
       "timestamp": 1789046688810,
       "intentId": "external-reconcile:XBTEUR:1788970622093:exit:1789045186390",
       "event": "rejected",
@@ -78075,6 +78071,13 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1794157816594,
+      "intentId": "external-reconcile:XBTEUR:1793340930699:exit:1794156257783",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -78087,10 +78090,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1792276221271,
-      "equity": 61.53
-    },
     {
       "at": 1792276592871,
       "equity": 61.53
@@ -98086,6 +98085,10 @@
     {
       "at": 1794157408907,
       "equity": 61.74
+    },
+    {
+      "at": 1794157791864,
+      "equity": 61.69
     }
   ],
   "live:revolut-x-order-map": {
@@ -98762,20 +98765,8 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905128,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "external-reconcile:XBTEUR:1793340930699": {
-      "reason": "stop-loss",
-      "queuedAt": 1794156257783
-    }
-  },
-  "live:confirmation-gate-pending": {
-    "external-reconcile:XBTEUR:1793340930699:exit:1794156257783": {
-      "sentAt": 1794156283183,
-      "messageId": 1619,
-      "token": "mw82bs4v.17aptf6",
-      "readyAt": 1794156283397
-    }
-  },
+  "live:live-exit-pending": {},
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 5139.238252479691,
@@ -98788,13 +98779,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1794157408907,
+    "at": 1794157791864,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 6440.198477133092,
-        "returnPct": -35.598015228669084,
+        "equity": 6436.048395972616,
+        "returnPct": -35.63951604027384,
         "trades": 166,
         "winRatePct": 28.313253012048197,
         "profitFactor": 0.5584418434726796,
@@ -112903,8 +112894,8 @@
       "decidedBy": "system"
     },
     "external-reconcile:XBTEUR:1793340930699": {
-      "at": 1794148871639,
-      "price": 68159.2,
+      "at": 1794157791864,
+      "price": 67918.4,
       "decidedBy": "system"
     },
     "external-reconcile:XBTEUR:1793666925796": {
