@@ -2911,7 +2911,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1794318080232,
+    "at": 1794318505487,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2927,10 +2927,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1792475028098,
-      "equity": 10309.36
-    },
     {
       "at": 1792475425890,
       "equity": 10309.36
@@ -22926,6 +22922,10 @@
     {
       "at": 1794318080232,
       "equity": 10208.56
+    },
+    {
+      "at": 1794318505487,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25399,7 +25399,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -14.93% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -15.02% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25499,7 +25499,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1794318080232,
+    "at": 1794318505487,
     "standings": [
       {
         "key": "live-mirror",
@@ -25570,8 +25570,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 7917.931424406573,
-        "returnPct": -20.820685755934274,
+        "equity": 7950.129228468938,
+        "returnPct": -20.498707715310623,
         "trades": 224,
         "winRatePct": 34.82142857142857,
         "profitFactor": 0.5926636579461547,
@@ -71574,20 +71574,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1790037501465,
-      "intentId": "manual-kill-switch",
-      "event": "kill-switch-disengaged",
-      "mode": "live",
-      "detail": "kill switch disengaged manually by david"
-    },
-    {
-      "timestamp": 1790044779718,
-      "intentId": "live-entry:ALGOEUR:1789874796154:exit:1790044757904",
-      "event": "awaiting-confirmation",
-      "mode": "live",
-      "detail": "confirmation request sent to Telegram"
-    },
-    {
       "timestamp": 1790045152245,
       "intentId": "live-entry:ALGOEUR:1789874796154:exit:1790044757904",
       "event": "confirmed",
@@ -78572,6 +78558,20 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1794318534070,
+      "intentId": "external-reconcile:XBTEUR:1793920665497:exit:1794317243282",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1794318535115,
+      "intentId": "external-reconcile:ETHEUR:1794183912583:exit:1794317243282",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -78584,10 +78584,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1792475028098,
-      "equity": 61.53
-    },
     {
       "at": 1792475425890,
       "equity": 61.53
@@ -98583,6 +98579,10 @@
     {
       "at": 1794318080232,
       "equity": 59.86
+    },
+    {
+      "at": 1794318505487,
+      "equity": 60.07
     }
   ],
   "live:revolut-x-order-map": {
@@ -99350,32 +99350,12 @@
   "telegram-shared-update-offset": 447905128,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {
-    "external-reconcile:XBTEUR:1793920665497": {
-      "reason": "stop-loss",
-      "queuedAt": 1794317243282
-    },
-    "external-reconcile:ETHEUR:1794183912583": {
-      "reason": "stop-loss",
-      "queuedAt": 1794317243282
-    },
     "external-reconcile:ETHEUR:1794234794397": {
       "reason": "stop-loss",
       "queuedAt": 1794317654527
     }
   },
   "live:confirmation-gate-pending": {
-    "external-reconcile:XBTEUR:1793920665497:exit:1794317243282": {
-      "sentAt": 1794317271747,
-      "messageId": 1700,
-      "token": "mwaq6bpf.12d84i9",
-      "readyAt": 1794317272000
-    },
-    "external-reconcile:ETHEUR:1794183912583:exit:1794317243282": {
-      "sentAt": 1794317286928,
-      "messageId": 1701,
-      "token": "mwaq6nf4.basro3",
-      "readyAt": 1794317287186
-    },
     "external-reconcile:ETHEUR:1794234794397:exit:1794317654527": {
       "sentAt": 1794317713825,
       "messageId": 1702,
@@ -99395,13 +99375,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1794318080232,
+    "at": 1794318505487,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 6372.9935006615315,
-        "returnPct": -36.270064993384686,
+        "equity": 6403.073268611988,
+        "returnPct": -35.96926731388012,
         "trades": 167,
         "winRatePct": 28.143712574850298,
         "profitFactor": 0.5558623048653727,
@@ -99460,7 +99440,7 @@
       "takeProfit": 1.0406891776833744,
       "feesPaid": 3.7776377309702562,
       "realizedPnl": -3.7776377309702562,
-      "highestPrice": 0.983,
+      "highestPrice": 0.986,
       "lowestPrice": 0.974,
       "confidence": 48.33495444413279,
       "validationVerdict": null,
@@ -113862,13 +113842,13 @@
       "decidedBy": "system"
     },
     "external-reconcile:ETHEUR:1794183912583": {
-      "at": 1794309920498,
-      "price": 1865.08,
+      "at": 1794318505487,
+      "price": 1855,
       "decidedBy": "system"
     },
     "external-reconcile:XBTEUR:1793920665497": {
-      "at": 1794309920498,
-      "price": 66126,
+      "at": 1794318505487,
+      "price": 66106.8,
       "decidedBy": "system"
     },
     "external-reconcile:ETHEUR:1794234794397": {
