@@ -2911,7 +2911,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1794325171440,
+    "at": 1794325595968,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -71623,7 +71623,7 @@
     ]
   },
   "longterm-shadow-last-run-day": "2026-11-10",
-  "live:live-cash-eur": 26.97,
+  "live:live-cash-eur": 45.46,
   "live:telegram-shared-update-offset": 447904572,
   "live:telegram-unclaimed-messages": [
     {
@@ -78657,10 +78657,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1792482144872,
-      "equity": 61.26
-    },
     {
       "at": 1792482512872,
       "equity": 61.26
@@ -98656,6 +98652,10 @@
     {
       "at": 1794325171440,
       "equity": 59.6
+    },
+    {
+      "at": 1794325595968,
+      "equity": 77.94
     }
   ],
   "live:revolut-x-order-map": {
@@ -98730,7 +98730,7 @@
     "external-reconcile:XBTEUR:1793920665497": {
       "id": "external-reconcile:XBTEUR:1793920665497",
       "symbol": "BTC/EUR",
-      "quantity": 0.00026914000000000007,
+      "quantity": 0.00011479000000000006,
       "initialQuantity": 0.00040849,
       "entryPrice": 67209.4,
       "stopLoss": 66201.25899999999,
@@ -98757,40 +98757,10 @@
         ]
       }
     },
-    "external-reconcile:ETHEUR:1793920665497": {
-      "id": "external-reconcile:ETHEUR:1793920665497",
-      "symbol": "ETH/EUR",
-      "quantity": 0.00347243,
-      "initialQuantity": 0.00347243,
-      "entryPrice": 1976.17,
-      "stopLoss": 1946.52745,
-      "takeProfit": 2035.4551000000001,
-      "highestPrice": 2017.57,
-      "lowestPrice": 1821.26,
-      "entrySlippage": 0,
-      "openedAt": 1793920665497,
-      "entryAssessment": {
-        "approved": true,
-        "asset": "ETHEUR",
-        "entry": 1976.17,
-        "stopLoss": 1946.52745,
-        "takeProfit": 2035.4551000000001,
-        "positionSize": 0.00347243,
-        "positionValue": 6.8621119931,
-        "riskAmount": 0.1029316798965001,
-        "riskPercentage": 0,
-        "rewardRiskRatio": 2,
-        "portfolioExposure": 0,
-        "reasons": [],
-        "warnings": [
-          "AUTO-RECONCILED (2026-09-04): bought directly in the Revolut X app, not through this bot. Entry price is the market price when this bot FIRST noticed the balance change — Revolut X reports no cost basis, so this is not necessarily the real fill price. Stop/target are the same fixed manual-override levels a /buy uses."
-        ]
-      }
-    },
     "external-reconcile:ETHEUR:1794183912583": {
       "id": "external-reconcile:ETHEUR:1794183912583",
       "symbol": "ETH/EUR",
-      "quantity": 0.0026763299999999998,
+      "quantity": 0.00151409,
       "initialQuantity": 0.0026763299999999998,
       "entryPrice": 1920.44,
       "stopLoss": 1891.6334,
@@ -104716,7 +104686,7 @@
   "live:live-blackout-queue": {},
   "live:daily-loss": {
     "day": "2026-11-10",
-    "loss": 0.5086127120000008
+    "loss": 1.4896379748000004
   },
   "shadow:candidate-watch:trade-journal": [
     {
@@ -111460,6 +111430,29 @@
       "maePct": 4.244065747564694,
       "realizedPnl": -0.14146316450500035,
       "returnPct": -4.719929294631867,
+      "strategyVersion": null,
+      "validationVerdict": null,
+      "confidence": null,
+      "notes": "live trade — fees are a cost-rate ESTIMATE (Revolut X reports no real fee figure); slippage is REAL (signal price vs actual broker fill, entry + exit)"
+    },
+    {
+      "id": "external-reconcile:ETHEUR:1793920665497",
+      "symbol": "ETH/EUR",
+      "entryTimestamp": 1793920665497,
+      "exitTimestamp": 1794325595968,
+      "entryPrice": 1976.17,
+      "exitPrice": 1806.27,
+      "positionSize": 0.00347243,
+      "stopLoss": 1946.52745,
+      "takeProfit": 2035.4551000000001,
+      "exitReason": "manual",
+      "fees": 0.039402774387599995,
+      "slippage": 0,
+      "holdingDurationMs": 404930471,
+      "mfePct": 2.094961465865784,
+      "maePct": 7.838900499450963,
+      "realizedPnl": -0.6293686313876001,
+      "returnPct": -9.171646164044594,
       "strategyVersion": null,
       "validationVerdict": null,
       "confidence": null,
