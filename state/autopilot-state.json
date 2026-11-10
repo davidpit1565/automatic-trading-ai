@@ -2911,7 +2911,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1794306757583,
+    "at": 1794307165696,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2927,10 +2927,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1792464132354,
-      "equity": 10309.36
-    },
     {
       "at": 1792464502918,
       "equity": 10309.36
@@ -22926,6 +22922,10 @@
     {
       "at": 1794306757583,
       "equity": 10208.56
+    },
+    {
+      "at": 1794307165696,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25399,7 +25399,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -15.10% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -15.01% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25499,7 +25499,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1794306757583,
+    "at": 1794307165696,
     "standings": [
       {
         "key": "live-mirror",
@@ -25526,8 +25526,8 @@
       {
         "key": "wide-stop",
         "label": "Mirror of production with stop and target 2x wider (4 / 8 ATR): tests cost drag per unit of risk",
-        "equity": 9947.228115073784,
-        "returnPct": -0.5277188492621644,
+        "equity": 9940.217918314907,
+        "returnPct": -0.5978208168509264,
         "trades": 0,
         "winRatePct": null,
         "profitFactor": null,
@@ -25570,8 +25570,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 7950.664949035334,
-        "returnPct": -20.493350509646664,
+        "equity": 7950.933384413386,
+        "returnPct": -20.490666155866137,
         "trades": 224,
         "winRatePct": 34.82142857142857,
         "profitFactor": 0.5926636579461547,
@@ -25636,8 +25636,8 @@
       {
         "key": "closed-bars",
         "label": "Mirror of production, entries decided on CLOSED bars only (tests the forming-candle repaint)",
-        "equity": 9791.731644711983,
-        "returnPct": -2.0826835528801713,
+        "equity": 9781.434321174858,
+        "returnPct": -2.1856567882514173,
         "trades": 4,
         "winRatePct": 0,
         "profitFactor": 0,
@@ -42206,7 +42206,7 @@
       "feesPaid": 4.739417896195475,
       "realizedPnl": -4.739417896195475,
       "highestPrice": 78.41,
-      "lowestPrice": 75.35,
+      "lowestPrice": 75.33,
       "confidence": 34.3542998590338,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -42244,7 +42244,7 @@
       "feesPaid": 4.781330544573783,
       "realizedPnl": -4.781330544573783,
       "highestPrice": 1865.97,
-      "lowestPrice": 1860.96,
+      "lowestPrice": 1860.67,
       "confidence": 30.96904457305098,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -71574,13 +71574,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1789996201508,
-      "intentId": "live-entry:ALGOEUR:1789874796154:exit:1789996179906",
-      "event": "cancelled",
-      "mode": "live",
-      "detail": "kill switch engaged — order never reached the confirmation gate"
-    },
-    {
       "timestamp": 1789996539774,
       "intentId": "live-entry:ALGOEUR:1789874796154:exit:1789996517354",
       "event": "cancelled",
@@ -78572,6 +78565,13 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1794307193993,
+      "intentId": "external-reconcile:XBTEUR:1793666925796:exit:1794305553407",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -78584,10 +78584,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1792464132354,
-      "equity": 61.53
-    },
     {
       "at": 1792464502918,
       "equity": 61.53
@@ -98583,6 +98579,10 @@
     {
       "at": 1794306757583,
       "equity": 60.09
+    },
+    {
+      "at": 1794307165696,
+      "equity": 60.1
     }
   ],
   "live:revolut-x-order-map": {
@@ -99350,22 +99350,12 @@
   "telegram-shared-update-offset": 447905128,
   "live:manual-sell-pending-symbols": [],
   "live:live-exit-pending": {
-    "external-reconcile:XBTEUR:1793666925796": {
-      "reason": "stop-loss",
-      "queuedAt": 1794305553407
-    },
     "external-reconcile:ETHEUR:1794234794397": {
       "reason": "stop-loss",
       "queuedAt": 1794306347563
     }
   },
   "live:confirmation-gate-pending": {
-    "external-reconcile:XBTEUR:1793666925796:exit:1794305553407": {
-      "sentAt": 1794305592353,
-      "messageId": 1693,
-      "token": "mwaj7ztt.a17mkj",
-      "readyAt": 1794305592619
-    },
     "external-reconcile:ETHEUR:1794234794397:exit:1794306347563": {
       "sentAt": 1794306390044,
       "messageId": 1694,
@@ -99385,13 +99375,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1794306757583,
+    "at": 1794307165696,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 6385.7770013743775,
-        "returnPct": -36.142229986256226,
+        "equity": 6382.889988393177,
+        "returnPct": -36.171100116068224,
         "trades": 167,
         "winRatePct": 28.143712574850298,
         "profitFactor": 0.5558623048653727,
@@ -113373,7 +113363,7 @@
       "feesPaid": 5.914267773547455,
       "realizedPnl": -5.914267773547455,
       "highestPrice": 7.772,
-      "lowestPrice": 7.404,
+      "lowestPrice": 7.387,
       "confidence": 43.35950047829829,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -113775,8 +113765,8 @@
       "decidedBy": "system"
     },
     "external-reconcile:XBTEUR:1793666925796": {
-      "at": 1794298146393,
-      "price": 66485.5,
+      "at": 1794307165696,
+      "price": 66100.1,
       "decidedBy": "system"
     },
     "external-reconcile:ETHEUR:1793666925796": {
@@ -114168,7 +114158,7 @@
       "feesPaid": 4.051017452034964,
       "realizedPnl": -4.051017452034964,
       "highestPrice": 7.772,
-      "lowestPrice": 7.404,
+      "lowestPrice": 7.387,
       "confidence": 40.223586258663566,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
