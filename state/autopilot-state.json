@@ -2918,7 +2918,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1794438520942,
+    "at": 1794438898585,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2934,10 +2934,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1792593129431,
-      "equity": 10309.36
-    },
     {
       "at": 1792593517096,
       "equity": 10309.36
@@ -22933,6 +22929,10 @@
     {
       "at": 1794438520942,
       "equity": 10208.56
+    },
+    {
+      "at": 1794438898585,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25406,7 +25406,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -15.53% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -15.35% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25506,7 +25506,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1794438520942,
+    "at": 1794438898585,
     "standings": [
       {
         "key": "live-mirror",
@@ -25533,8 +25533,8 @@
       {
         "key": "wide-stop",
         "label": "Mirror of production with stop and target 2x wider (4 / 8 ATR): tests cost drag per unit of risk",
-        "equity": 9978.423490650777,
-        "returnPct": -0.2157650934922276,
+        "equity": 9974.743137352369,
+        "returnPct": -0.2525686264763135,
         "trades": 0,
         "winRatePct": null,
         "profitFactor": null,
@@ -25577,8 +25577,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 7858.787495938742,
-        "returnPct": -21.41212504061258,
+        "equity": 7858.48249677515,
+        "returnPct": -21.4151750322485,
         "trades": 229,
         "winRatePct": 34.49781659388647,
         "profitFactor": 0.5806570940694722,
@@ -71868,13 +71868,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1790153237904,
-      "intentId": "live-entry:AEROEUR:1790153213674",
-      "event": "rejected",
-      "mode": "live",
-      "detail": "could not verify 'AERO/EUR' as a currently tradable instrument on revolut-x (either it doesn't exist there, or the check itself failed) — refusing rather than guessing a symbol mapping"
-    },
-    {
       "timestamp": 1790173143982,
       "intentId": "live-entry:LTCEUR:1790106276494:exit:1790173119930",
       "event": "awaiting-confirmation",
@@ -78866,6 +78859,13 @@
       "event": "rejected",
       "mode": "live",
       "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1794438926302,
+      "intentId": "external-reconcile:XBTEUR:1793920665497:exit:1794438898585",
+      "event": "awaiting-confirmation",
+      "mode": "live",
+      "detail": "confirmation request sent to Telegram"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -78878,10 +78878,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1792593129431,
-      "equity": 61.54
-    },
     {
       "at": 1792593517096,
       "equity": 61.54
@@ -98877,6 +98873,10 @@
     {
       "at": 1794438520942,
       "equity": 59.64
+    },
+    {
+      "at": 1794438898585,
+      "equity": 59.61
     }
   ],
   "live:revolut-x-order-map": {
@@ -99493,8 +99493,20 @@
   "live:live-blackout-active": false,
   "telegram-shared-update-offset": 447905128,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {},
-  "live:confirmation-gate-pending": {},
+  "live:live-exit-pending": {
+    "external-reconcile:XBTEUR:1793920665497": {
+      "reason": "stop-loss",
+      "queuedAt": 1794438898585
+    }
+  },
+  "live:confirmation-gate-pending": {
+    "external-reconcile:XBTEUR:1793920665497:exit:1794438898585": {
+      "sentAt": 1794438926097,
+      "messageId": 1745,
+      "token": "mwcqlssx.cor8kx",
+      "readyAt": 1794438926332
+    }
+  },
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 5079.45869319329,
@@ -99507,13 +99519,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1794438520942,
+    "at": 1794438898585,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 6331.186982377892,
-        "returnPct": -36.68813017622109,
+        "equity": 6327.630936101799,
+        "returnPct": -36.723690638982006,
         "trades": 174,
         "winRatePct": 28.160919540229884,
         "profitFactor": 0.5603321183921515,
