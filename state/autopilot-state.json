@@ -2911,7 +2911,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1794419131886,
+    "at": 1794419508845,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2927,10 +2927,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1792574277740,
-      "equity": 10309.36
-    },
     {
       "at": 1792574649282,
       "equity": 10309.36
@@ -22926,6 +22922,10 @@
     {
       "at": 1794419131886,
       "equity": 10208.56
+    },
+    {
+      "at": 1794419508845,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25399,7 +25399,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -16.99% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -16.94% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25499,7 +25499,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1794419131886,
+    "at": 1794419508845,
     "standings": [
       {
         "key": "live-mirror",
@@ -25526,8 +25526,8 @@
       {
         "key": "wide-stop",
         "label": "Mirror of production with stop and target 2x wider (4 / 8 ATR): tests cost drag per unit of risk",
-        "equity": 10018.90737693328,
-        "returnPct": 0.1890737693328083,
+        "equity": 10012.24769001235,
+        "returnPct": 0.12247690012349267,
         "trades": 0,
         "winRatePct": null,
         "profitFactor": null,
@@ -25570,8 +25570,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 7972.405727220274,
-        "returnPct": -20.275942727797265,
+        "equity": 7964.393209793234,
+        "returnPct": -20.35606790206766,
         "trades": 227,
         "winRatePct": 34.801762114537446,
         "profitFactor": 0.5820455566517758,
@@ -25581,8 +25581,8 @@
       {
         "key": "breakout",
         "label": "Breakout from compression (narrow base + volume)",
-        "equity": 7720.818601974242,
-        "returnPct": -22.791813980257583,
+        "equity": 7714.460485651977,
+        "returnPct": -22.85539514348023,
         "trades": 413,
         "winRatePct": 34.624697336561745,
         "profitFactor": 0.7790785375419009,
@@ -25680,12 +25680,12 @@
       {
         "key": "rsi-ceiling-75",
         "label": "Mirror of production, RSI entry ceiling 75 instead of 65 (are hot coins refused for nothing?)",
-        "equity": 9839.113993628247,
-        "returnPct": -1.6088600637175297,
+        "equity": 9831.697591250477,
+        "returnPct": -1.6830240874952322,
         "trades": 5,
         "winRatePct": 20,
         "profitFactor": 0.21596846106083892,
-        "openPositions": 0,
+        "openPositions": 1,
         "startedAt": 1793147703697
       },
       {
@@ -25772,34 +25772,6 @@
     }
   ],
   "shadow:breakout:audit-log": [
-    {
-      "timestamp": 1790875657365,
-      "intentId": "SOLEUR:1790875657365",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused SOLEUR: maximum open positions reached (5/5)"
-    },
-    {
-      "timestamp": 1790876031581,
-      "intentId": "LTCEUR:1790876031581",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused LTCEUR: maximum open positions reached (5/5)"
-    },
-    {
-      "timestamp": 1790876031581,
-      "intentId": "SOLEUR:1790876031581",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused SOLEUR: maximum open positions reached (5/5)"
-    },
-    {
-      "timestamp": 1790876404002,
-      "intentId": "LTCEUR:1790876404002",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused LTCEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1790876404002,
       "intentId": "SOLEUR:1790876404002",
@@ -32771,6 +32743,34 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused XBTEUR: no exposure headroom: 4668.50 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1794419508845,
+      "intentId": "LTCEUR:1794419508845",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused LTCEUR: no exposure headroom: 4660.36 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1794419508845,
+      "intentId": "SOLEUR:1794419508845",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused SOLEUR: no exposure headroom: 4660.36 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1794419508845,
+      "intentId": "ETHEUR:1794419508845",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused ETHEUR: no exposure headroom: 4660.36 already deployed of the 60% total-exposure limit"
+    },
+    {
+      "timestamp": 1794419508845,
+      "intentId": "XBTEUR:1794419508845",
+      "event": "rejected",
+      "mode": "paper",
+      "detail": "risk engine refused XBTEUR: no exposure headroom: 4660.36 already deployed of the 60% total-exposure limit"
     }
   ],
   "shadow:breakout:trade-journal": [
@@ -78735,10 +78735,6 @@
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
     {
-      "at": 1792574277740,
-      "equity": 61.54
-    },
-    {
       "at": 1792574649282,
       "equity": 61.54
     },
@@ -98733,6 +98729,10 @@
     {
       "at": 1794419131886,
       "equity": 59.73
+    },
+    {
+      "at": 1794419508845,
+      "equity": 59.73
     }
   ],
   "live:revolut-x-order-map": {
@@ -98842,7 +98842,7 @@
       "entryPrice": 66895.3,
       "stopLoss": 65891.8705,
       "takeProfit": 68902.159,
-      "highestPrice": 67170.3,
+      "highestPrice": 67178.4,
       "lowestPrice": 65333.6,
       "entrySlippage": 0,
       "openedAt": 1794270153718,
@@ -99363,13 +99363,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1794419131886,
+    "at": 1794419508845,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 6472.841317433986,
-        "returnPct": -35.271586825660144,
+        "equity": 6463.074549856272,
+        "returnPct": -35.36925450143728,
         "trades": 170,
         "winRatePct": 28.823529411764703,
         "profitFactor": 0.5680016321594314,
@@ -114109,7 +114109,7 @@
   },
   "shadow:rsi-ceiling-75:shadow-started-at": 1793147703697,
   "shadow:rsi-ceiling-75:portfolio-engine": {
-    "cash": 9839.113993628247,
+    "cash": 7865.38772650642,
     "initialCash": 10000,
     "baseCurrency": "EUR",
     "closedRealizedPnl": -160.8860063717534,
@@ -114118,7 +114118,27 @@
       "equity": 9839.113993628247
     }
   },
-  "shadow:rsi-ceiling-75:open-positions": [],
+  "shadow:rsi-ceiling-75:open-positions": [
+    {
+      "id": "AVAXEUR:1794419508845:0",
+      "symbol": "AVAXEUR",
+      "openedAt": 1794419508845,
+      "entryPrice": 7.804,
+      "quantity": 252.15566359887873,
+      "initialQuantity": 252.15566359887873,
+      "stopLoss": 7.634733982536555,
+      "takeProfit": 8.14253203492689,
+      "feesPaid": 5.903468396176949,
+      "realizedPnl": -5.903468396176949,
+      "highestPrice": 7.804,
+      "lowestPrice": 7.804,
+      "confidence": 40.22506790157439,
+      "validationVerdict": null,
+      "strategyVersion": "autopilot-paper-v1",
+      "notes": "opened autonomously by the paper autopilot",
+      "exits": []
+    }
+  ],
   "shadow:rsi-ceiling-75:audit-log": [
     {
       "timestamp": 1793175486734,
@@ -114189,6 +114209,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper exit AVAXEUR: 257.62485034361833 @ 7.417 (stop-loss)"
+    },
+    {
+      "timestamp": 1794419508845,
+      "intentId": "AVAXEUR:1794419508845:0",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper entry AVAXEUR: 252.15566359887873 @ 7.804 (stop 7.634733982536555, target 8.14253203492689, confidence 40)"
     }
   ],
   "shadow:rsi-ceiling-75:trade-journal": [
