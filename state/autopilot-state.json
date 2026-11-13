@@ -2918,7 +2918,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1794531083726,
+    "at": 1794531462282,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2934,10 +2934,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1792685796672,
-      "equity": 10208.56
-    },
     {
       "at": 1792686170910,
       "equity": 10208.56
@@ -22933,6 +22929,10 @@
     {
       "at": 1794531083726,
       "equity": 10208.56
+    },
+    {
+      "at": 1794531462282,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25406,7 +25406,7 @@
       {
         "key": "benchmark",
         "ok": false,
-        "detail": "vs buy-and-hold BTC -11.79% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC -11.90% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25485,10 +25485,10 @@
   },
   "shadow:mean-reversion:shadow-started-at": 1785254092443,
   "shadow:mean-reversion:portfolio-engine": {
-    "cash": 3110.4040185205085,
+    "cash": 4730.287920407744,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -1449.926881171792,
+    "closedRealizedPnl": -1406.3446076537668,
     "dayAnchor": {
       "day": "2026-11-13",
       "equity": 7916.371717420862
@@ -25506,7 +25506,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1794531083726,
+    "at": 1794531462282,
     "standings": [
       {
         "key": "live-mirror",
@@ -25533,8 +25533,8 @@
       {
         "key": "wide-stop",
         "label": "Mirror of production with stop and target 2x wider (4 / 8 ATR): tests cost drag per unit of risk",
-        "equity": 9963.526822538168,
-        "returnPct": -0.3647317746183216,
+        "equity": 9966.681411079662,
+        "returnPct": -0.3331858892033779,
         "trades": 0,
         "winRatePct": null,
         "profitFactor": null,
@@ -25577,12 +25577,12 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 7905.018576956913,
-        "returnPct": -20.949814230430867,
-        "trades": 231,
-        "winRatePct": 34.1991341991342,
-        "profitFactor": 0.5770756016341663,
-        "openPositions": 5,
+        "equity": 7915.960543890984,
+        "returnPct": -20.84039456109016,
+        "trades": 232,
+        "winRatePct": 34.48275862068966,
+        "profitFactor": 0.5855597230933384,
+        "openPositions": 4,
         "startedAt": 1785254092443
       },
       {
@@ -42294,25 +42294,6 @@
   ],
   "shadow:mean-reversion:open-positions": [
     {
-      "id": "LTCEUR:1794486529049:1",
-      "symbol": "LTCEUR",
-      "openedAt": 1794486529049,
-      "entryPrice": 44.04,
-      "quantity": 35.68544204736405,
-      "initialQuantity": 35.68544204736405,
-      "stopLoss": 43.33128830298614,
-      "takeProfit": 45.45742339402772,
-      "feesPaid": 4.714760603297738,
-      "realizedPnl": -4.714760603297738,
-      "highestPrice": 45.42,
-      "lowestPrice": 43.74,
-      "confidence": 40.4898173271383,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
       "id": "ETHEUR:1794489120011:2",
       "symbol": "ETHEUR",
       "openedAt": 1794489120011,
@@ -42342,7 +42323,7 @@
       "takeProfit": 0.15905242154711186,
       "feesPaid": 0.005378156813390888,
       "realizedPnl": -0.005378156813390888,
-      "highestPrice": 0.15838,
+      "highestPrice": 0.158833,
       "lowestPrice": 0.151092,
       "confidence": 30.45280828193097,
       "validationVerdict": null,
@@ -42380,7 +42361,7 @@
       "takeProfit": 0.7666824597621917,
       "feesPaid": 4.657790220875351,
       "realizedPnl": -4.657790220875351,
-      "highestPrice": 0.7565,
+      "highestPrice": 0.7578,
       "lowestPrice": 0.7366,
       "confidence": 32.841967904601205,
       "validationVerdict": null,
@@ -42390,13 +42371,6 @@
     }
   ],
   "shadow:mean-reversion:audit-log": [
-    {
-      "timestamp": 1791341827980,
-      "intentId": "ETHEUR:1791341827980",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused ETHEUR: no exposure headroom: 5541.89 already deployed of the 60% total-exposure limit"
-    },
     {
       "timestamp": 1791341827980,
       "intentId": "XLMEUR:1791341827980",
@@ -49389,6 +49363,13 @@
       "event": "rejected",
       "mode": "paper",
       "detail": "risk engine refused XBTEUR: maximum open positions reached (5/5)"
+    },
+    {
+      "timestamp": 1794531462282,
+      "intentId": "LTCEUR:1794486529049:1",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit LTCEUR: 35.68544204736405 @ 45.53 (take-profit)"
     }
   ],
   "shadow:live-mirror:open-positions": [],
@@ -64170,6 +64151,29 @@
       "strategyVersion": "autopilot-paper-v1",
       "validationVerdict": null,
       "confidence": 30.22695104730977,
+      "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "LTCEUR:1794486529049:1",
+      "symbol": "LTCEUR",
+      "entryTimestamp": 1794486529049,
+      "exitTimestamp": 1794531462282,
+      "entryPrice": 44.04,
+      "exitPrice": 45.53,
+      "positionSize": 35.68544204736405,
+      "stopLoss": 43.33128830298614,
+      "takeProfit": 45.45742339402772,
+      "exitReason": "take-profit",
+      "fees": 9.589035132547194,
+      "slippage": 0,
+      "holdingDurationMs": 44933233,
+      "mfePct": 3.383287920072666,
+      "maePct": 0.6811989100817375,
+      "realizedPnl": 43.58227351802531,
+      "returnPct": 2.773138056312448,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 40.4898173271383,
       "notes": "opened autonomously by the paper autopilot"
     }
   ],
@@ -79000,10 +79004,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1792685796672,
-      "equity": 60.93
-    },
     {
       "at": 1792686170910,
       "equity": 60.89
@@ -98999,6 +98999,10 @@
     {
       "at": 1794531083726,
       "equity": 59.4
+    },
+    {
+      "at": 1794531462282,
+      "equity": 59.41
     }
   ],
   "live:revolut-x-order-map": {
@@ -99629,13 +99633,13 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1794531083726,
+    "at": 1794531462282,
     "standings": [
       {
         "key": "candidate-watch",
         "label": "71 candidates, production defaults (forward test only — not real trading)",
-        "equity": 6276.857470075881,
-        "returnPct": -37.23142529924119,
+        "equity": 6277.468638825196,
+        "returnPct": -37.22531361174804,
         "trades": 175,
         "winRatePct": 28.000000000000004,
         "profitFactor": 0.555353809732098,
