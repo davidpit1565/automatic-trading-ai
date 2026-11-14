@@ -2918,7 +2918,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1794633179379,
+    "at": 1794633583484,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2934,10 +2934,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1792787340894,
-      "equity": 10208.56
-    },
     {
       "at": 1792787711610,
       "equity": 10208.56
@@ -22933,6 +22929,10 @@
     {
       "at": 1794633179379,
       "equity": 10208.56
+    },
+    {
+      "at": 1794633583484,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25506,7 +25506,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1794633179379,
+    "at": 1794633583484,
     "standings": [
       {
         "key": "live-mirror",
@@ -25577,8 +25577,8 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 7827.261138260136,
-        "returnPct": -21.72738861739864,
+        "equity": 7835.671524343439,
+        "returnPct": -21.64328475656561,
         "trades": 241,
         "winRatePct": 34.85477178423236,
         "profitFactor": 0.5820109856919782,
@@ -72228,20 +72228,6 @@
   ],
   "live:audit-log": [
     {
-      "timestamp": 1790526369440,
-      "intentId": "live-entry:VELOEUR:1790526343821",
-      "event": "rejected",
-      "mode": "live",
-      "detail": "could not verify 'VELO/EUR' as a currently tradable instrument on revolut-x (either it doesn't exist there, or the check itself failed) — refusing rather than guessing a symbol mapping"
-    },
-    {
-      "timestamp": 1790606586120,
-      "intentId": "external-reconcile:ALGOEUR:1790606205804:exit:1790606565595",
-      "event": "awaiting-confirmation",
-      "mode": "live",
-      "detail": "confirmation request sent to Telegram"
-    },
-    {
       "timestamp": 1790608062790,
       "intentId": "external-reconcile:ALGOEUR:1790606205804:exit:1790606565595",
       "event": "rejected",
@@ -79226,6 +79212,20 @@
       "event": "awaiting-confirmation",
       "mode": "live",
       "detail": "confirmation request sent to Telegram"
+    },
+    {
+      "timestamp": 1794633610857,
+      "intentId": "external-reconcile:XBTEUR:1793920665497:exit:1794632367292",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
+    },
+    {
+      "timestamp": 1794633611496,
+      "intentId": "external-reconcile:XBTEUR:1794270153718:exit:1794632367292",
+      "event": "rejected",
+      "mode": "live",
+      "detail": "auto-expired after 20m without a reply — the quoted price is likely stale"
     }
   ],
   "live:live-entry-outstanding-symbols": [],
@@ -79238,10 +79238,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1792787340894,
-      "equity": 60.82
-    },
     {
       "at": 1792787711610,
       "equity": 60.82
@@ -99237,6 +99233,10 @@
     {
       "at": 1794633179379,
       "equity": 59.17
+    },
+    {
+      "at": 1794633583484,
+      "equity": 59.17
     }
   ],
   "live:revolut-x-order-map": {
@@ -99853,30 +99853,8 @@
   "live:live-blackout-active": true,
   "telegram-shared-update-offset": 447905128,
   "live:manual-sell-pending-symbols": [],
-  "live:live-exit-pending": {
-    "external-reconcile:XBTEUR:1793920665497": {
-      "reason": "stop-loss",
-      "queuedAt": 1794632367292
-    },
-    "external-reconcile:XBTEUR:1794270153718": {
-      "reason": "stop-loss",
-      "queuedAt": 1794632367292
-    }
-  },
-  "live:confirmation-gate-pending": {
-    "external-reconcile:XBTEUR:1793920665497:exit:1794632367292": {
-      "sentAt": 1794632393751,
-      "messageId": 1793,
-      "token": "mwfxshef.4hheo9",
-      "readyAt": 1794632393953
-    },
-    "external-reconcile:XBTEUR:1794270153718:exit:1794632367292": {
-      "sentAt": 1794632408066,
-      "messageId": 1794,
-      "token": "mwfxssg2.1ds9hqc",
-      "readyAt": 1794632408273
-    }
-  },
+  "live:live-exit-pending": {},
+  "live:confirmation-gate-pending": {},
   "shadow:candidate-watch:shadow-started-at": 1788551468687,
   "shadow:candidate-watch:portfolio-engine": {
     "cash": 6245.355693645587,
@@ -99889,7 +99867,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1794633179379,
+    "at": 1794633583484,
     "standings": [
       {
         "key": "candidate-watch",
@@ -114920,8 +114898,8 @@
       "decidedBy": "system"
     },
     "external-reconcile:XBTEUR:1793920665497": {
-      "at": 1794624882279,
-      "price": 61370.5,
+      "at": 1794633583484,
+      "price": 60970.7,
       "decidedBy": "system"
     },
     "external-reconcile:ETHEUR:1794234794397": {
@@ -114930,8 +114908,8 @@
       "decidedBy": "system"
     },
     "external-reconcile:XBTEUR:1794270153718": {
-      "at": 1794624882279,
-      "price": 61370.5,
+      "at": 1794633583484,
+      "price": 60970.7,
       "decidedBy": "system"
     }
   },
