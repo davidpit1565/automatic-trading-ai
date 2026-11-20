@@ -2918,7 +2918,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1795194492220,
+    "at": 1795194867058,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2934,10 +2934,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1793349223607,
-      "equity": 10208.56
-    },
     {
       "at": 1793349583441,
       "equity": 10208.56
@@ -22933,6 +22929,10 @@
     {
       "at": 1795194492220,
       "equity": 10208.56
+    },
+    {
+      "at": 1795194867058,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25406,7 +25406,7 @@
       {
         "key": "benchmark",
         "ok": true,
-        "detail": "vs buy-and-hold BTC +6.08% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC +6.38% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25485,10 +25485,10 @@
   },
   "shadow:mean-reversion:shadow-started-at": 1785254092443,
   "shadow:mean-reversion:portfolio-engine": {
-    "cash": 2876.7156175945865,
+    "cash": 2903.7246801775213,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -2050.1079010704843,
+    "closedRealizedPnl": -2051.086080372051,
     "dayAnchor": {
       "day": "2026-11-20",
       "equity": 7477.601041432709
@@ -25506,7 +25506,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1795194492220,
+    "at": 1795194867058,
     "standings": [
       {
         "key": "live-mirror",
@@ -25577,12 +25577,12 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 7215.343387457187,
-        "returnPct": -27.846566125428122,
-        "trades": 257,
-        "winRatePct": 32.68482490272373,
-        "profitFactor": 0.5257641561912795,
-        "openPositions": 5,
+        "equity": 7206.376513773301,
+        "returnPct": -27.93623486226699,
+        "trades": 258,
+        "winRatePct": 32.55813953488372,
+        "profitFactor": 0.5256762080658915,
+        "openPositions": 4,
         "startedAt": 1785254092443
       },
       {
@@ -42627,27 +42627,8 @@
       "feesPaid": 4.361903268423848,
       "realizedPnl": -4.361903268423848,
       "highestPrice": 0.83604,
-      "lowestPrice": 0.82266,
+      "lowestPrice": 0.82187,
       "confidence": 38.8037484304412,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "ETHEUR:1795187957128:3",
-      "symbol": "ETHEUR",
-      "openedAt": 1795187957128,
-      "entryPrice": 1527.63,
-      "quantity": 0.01826589638238963,
-      "initialQuantity": 0.01826589638238963,
-      "stopLoss": 1484.175940767711,
-      "takeProfit": 1614.5381184645787,
-      "feesPaid": 0.08371059387188963,
-      "realizedPnl": -0.08371059387188963,
-      "highestPrice": 1529.4,
-      "lowestPrice": 1486.67,
-      "confidence": 32.70794400795074,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -42703,7 +42684,7 @@
       "feesPaid": 4.232125308508147,
       "realizedPnl": -4.232125308508147,
       "highestPrice": 0.128675,
-      "lowestPrice": 0.126821,
+      "lowestPrice": 0.126788,
       "confidence": 47.9227060303125,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
@@ -42712,13 +42693,6 @@
     }
   ],
   "shadow:mean-reversion:audit-log": [
-    {
-      "timestamp": 1791846258148,
-      "intentId": "DOGEEUR:1791846258148",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused DOGEEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1791846617576,
       "intentId": "DOGEEUR:1791846617576",
@@ -49711,6 +49685,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry ADAEUR: 11123.61861339512 @ 0.126821 (stop 0.12275197680066564, target 0.13495904639866868, confidence 48)"
+    },
+    {
+      "timestamp": 1795194867058,
+      "intentId": "ETHEUR:1795187957128:3",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit ETHEUR: 0.01826589638238963 @ 1483.11 (stop-loss)"
     }
   ],
   "shadow:live-mirror:open-positions": [],
@@ -65091,6 +65072,29 @@
       "validationVerdict": null,
       "confidence": 35.30782683094898,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "ETHEUR:1795187957128:3",
+      "symbol": "ETHEUR",
+      "entryTimestamp": 1795187957128,
+      "exitTimestamp": 1795194867058,
+      "entryPrice": 1527.63,
+      "exitPrice": 1483.11,
+      "positionSize": 0.01826589638238963,
+      "stopLoss": 1484.175940767711,
+      "takeProfit": 1614.5381184645787,
+      "exitReason": "stop-loss",
+      "fees": 0.1649815946229473,
+      "slippage": 0,
+      "holdingDurationMs": 6909930,
+      "mfePct": 0.11586575283281826,
+      "maePct": 2.914318257693303,
+      "realizedPnl": -0.9781793015669374,
+      "returnPct": -3.5055753029202235,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 32.70794400795074,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "shadow:whale-flow:shadow-started-at": 1786561343790,
@@ -79920,10 +79924,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1793349223607,
-      "equity": 60.72
-    },
     {
       "at": 1793349583441,
       "equity": 60.72
@@ -99919,6 +99919,10 @@
     {
       "at": 1795194492220,
       "equity": 59.06
+    },
+    {
+      "at": 1795194867058,
+      "equity": 59.06
     }
   ],
   "live:revolut-x-order-map": {
@@ -100489,7 +100493,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1795194492220,
+    "at": 1795194867058,
     "standings": [
       {
         "key": "candidate-watch",
