@@ -2918,7 +2918,7 @@
     }
   ],
   "autopilot-last-run": {
-    "at": 1795267806254,
+    "at": 1795268179147,
     "source": "Kraken public market data (read-only)",
     "opened": 0,
     "closed": 0,
@@ -2934,10 +2934,6 @@
   "daily-summary-evening": "2026-08-22",
   "allclear-last-at": 1787766347623,
   "equity-history": [
-    {
-      "at": 1793423857716,
-      "equity": 10208.56
-    },
     {
       "at": 1793424235308,
       "equity": 10208.56
@@ -22933,6 +22929,10 @@
     {
       "at": 1795267806254,
       "equity": 10208.56
+    },
+    {
+      "at": 1795268179147,
+      "equity": 10208.56
     }
   ],
   "trade-journal": [
@@ -25406,7 +25406,7 @@
       {
         "key": "benchmark",
         "ok": true,
-        "detail": "vs buy-and-hold BTC +5.68% (informational — not required for a risk-managed strategy)"
+        "detail": "vs buy-and-hold BTC +4.51% (informational — not required for a risk-managed strategy)"
       },
       {
         "key": "drawdown",
@@ -25485,10 +25485,10 @@
   },
   "shadow:mean-reversion:shadow-started-at": 1785254092443,
   "shadow:mean-reversion:portfolio-engine": {
-    "cash": 2805.236961749074,
+    "cash": 4292.586208691006,
     "initialCash": 10000,
     "baseCurrency": "EUR",
-    "closedRealizedPnl": -2236.9267912699142,
+    "closedRealizedPnl": -2149.79223994907,
     "dayAnchor": {
       "day": "2026-11-21",
       "equity": 7264.973429909554
@@ -25506,7 +25506,7 @@
     }
   },
   "shadow-standings": {
-    "at": 1795267806254,
+    "at": 1795268179147,
     "standings": [
       {
         "key": "live-mirror",
@@ -25577,12 +25577,12 @@
       {
         "key": "mean-reversion",
         "label": "Mean reversion (buys oversold stretch, refuses a falling knife)",
-        "equity": 7237.200668375972,
-        "returnPct": -27.62799331624028,
-        "trades": 262,
-        "winRatePct": 32.06106870229007,
-        "profitFactor": 0.5094846332498014,
-        "openPositions": 3,
+        "equity": 7281.398099866614,
+        "returnPct": -27.18601900133386,
+        "trades": 263,
+        "winRatePct": 32.31939163498099,
+        "profitFactor": 0.5239263994751636,
+        "openPositions": 2,
         "startedAt": 1785254092443
       },
       {
@@ -42626,7 +42626,7 @@
       "takeProfit": 6.056299779586631,
       "feesPaid": 4.241080828059053,
       "realizedPnl": -4.241080828059053,
-      "highestPrice": 5.984,
+      "highestPrice": 6.05,
       "lowestPrice": 5.52,
       "confidence": 42.709098688357756,
       "validationVerdict": null,
@@ -42645,28 +42645,9 @@
       "takeProfit": 0.6187297659269385,
       "feesPaid": 4.238536179562217,
       "realizedPnl": -4.238536179562217,
-      "highestPrice": 0.5953,
+      "highestPrice": 0.5988,
       "lowestPrice": 0.5688,
       "confidence": 39.06189672411617,
-      "validationVerdict": null,
-      "strategyVersion": "autopilot-paper-v1",
-      "notes": "opened autonomously by the paper autopilot",
-      "exits": []
-    },
-    {
-      "id": "XRPEUR:1795241769757:2",
-      "symbol": "XRPEUR",
-      "openedAt": 1795241769757,
-      "entryPrice": 0.78794,
-      "quantity": 1771.7422846584327,
-      "initialQuantity": 1771.7422846584327,
-      "stopLoss": 0.7631492648782776,
-      "takeProfit": 0.8375214702434447,
-      "feesPaid": 4.188079847321296,
-      "realizedPnl": -4.188079847321296,
-      "highestPrice": 0.83414,
-      "lowestPrice": 0.78794,
-      "confidence": 42.81884707353012,
       "validationVerdict": null,
       "strategyVersion": "autopilot-paper-v1",
       "notes": "opened autonomously by the paper autopilot",
@@ -42674,13 +42655,6 @@
     }
   ],
   "shadow:mean-reversion:audit-log": [
-    {
-      "timestamp": 1791847696775,
-      "intentId": "ADAEUR:1791847696775",
-      "event": "rejected",
-      "mode": "paper",
-      "detail": "risk engine refused ADAEUR: maximum open positions reached (5/5)"
-    },
     {
       "timestamp": 1791848055937,
       "intentId": "DOGEEUR:1791848055937",
@@ -49673,6 +49647,13 @@
       "event": "filled",
       "mode": "paper",
       "detail": "paper entry XRPEUR: 1771.7422846584327 @ 0.78794 (stop 0.7631492648782776, target 0.8375214702434447, confidence 43)"
+    },
+    {
+      "timestamp": 1795268179147,
+      "intentId": "XRPEUR:1795241769757:2",
+      "event": "filled",
+      "mode": "paper",
+      "detail": "paper exit XRPEUR: 1771.7422846584327 @ 0.84201 (take-profit)"
     }
   ],
   "shadow:live-mirror:open-positions": [],
@@ -65168,6 +65149,29 @@
       "validationVerdict": null,
       "confidence": 47.9227060303125,
       "notes": "opened autonomously by the paper autopilot"
+    },
+    {
+      "id": "XRPEUR:1795241769757:2",
+      "symbol": "XRPEUR",
+      "entryTimestamp": 1795241769757,
+      "exitTimestamp": 1795268179147,
+      "entryPrice": 0.78794,
+      "exitPrice": 0.84201,
+      "positionSize": 1771.7422846584327,
+      "stopLoss": 0.7631492648782776,
+      "takeProfit": 0.8375214702434447,
+      "exitReason": "take-profit",
+      "fees": 8.663554010637036,
+      "slippage": 0,
+      "holdingDurationMs": 26409390,
+      "mfePct": 6.86219762926112,
+      "maePct": 0,
+      "realizedPnl": 87.13455132084454,
+      "returnPct": 6.241611036373337,
+      "strategyVersion": "autopilot-paper-v1",
+      "validationVerdict": null,
+      "confidence": 42.81884707353012,
+      "notes": "opened autonomously by the paper autopilot"
     }
   ],
   "shadow:whale-flow:shadow-started-at": 1786561343790,
@@ -79997,10 +80001,6 @@
   },
   "live:live-external-btc-qty": 0,
   "live:live-equity-history": [
-    {
-      "at": 1793423857716,
-      "equity": 60.65
-    },
     {
       "at": 1793424235308,
       "equity": 60.65
@@ -99996,6 +99996,10 @@
     {
       "at": 1795267806254,
       "equity": 59.06
+    },
+    {
+      "at": 1795268179147,
+      "equity": 59.06
     }
   ],
   "live:revolut-x-order-map": {
@@ -100566,7 +100570,7 @@
     }
   },
   "candidate-watch-standings": {
-    "at": 1795267806254,
+    "at": 1795268179147,
     "standings": [
       {
         "key": "candidate-watch",
